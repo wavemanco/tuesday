@@ -1,0 +1,18 @@
+LICENSING MAP
+
+This repository uses per-directory licensing. The grant for any file is the
+LICENSE file in the nearest ancestor directory that contains one, per the
+map below. This root file is the authoritative map; the single license badge
+GitHub may display is not.
+
+  conventions/          MIT — see conventions/LICENSE
+  skills/<name>/        MIT — see the LICENSE file inside each skill folder
+  agent/                RESERVED. This directory does not exist yet. When it
+                        is created, it will carry its own LICENSE (planned:
+                        AGPL-3.0), which will govern its contents exclusively.
+  everything else       MIT — the grant in conventions/LICENSE applies
+                        (README, repository metadata, dist/ builds of the
+                        MIT-licensed skills).
+
+Staging note: grants are staged per the maintainer's working decision and are
+to be confirmed before any public release of this repository.

@@ -1,0 +1,66 @@
+# Tuesday
+
+Tuesday is an applicant-side evidence system, shipped first as a suite of Claude skills. The system's job: help a job seeker evaluate opportunities on evidence rather than vibes, recover truthful evidence their CV omits, prepare for real interviews, and never — at any point — coach a claim the evidence doesn't support.
+
+Skills are the first surface. A later orchestrating agent is a stated destination of the same repository, consuming the same contracts (see *Repository shape* and *Licensing*).
+
+## Why "Tuesday"
+
+Tuesday is *Mangalvaar* in Hindi — the day of Mangal, which names Mars and is also a word for auspiciousness. An auspicious day belonging to the god of war is exactly this system's register: it puts the applicant on a deliberate, well-armed path to the right opportunity rather than a spray of hopeful applications — and the only ammunition it ever issues is verified evidence. (Job-market folklore also holds that postings and applications peak on Tuesdays; treat that as a wink, not a citation.)
+
+## The one rule
+
+**Every skill stands alone.** Each runs to a complete, useful output from raw inputs (a JD, a CV, a prompt). Artifacts from sibling skills enhance; they never gate. Use one skill, use them all, use them in any order — the shared dossier makes order irrelevant, not mandatory.
+
+## What's here, what's next
+
+| Status | Skill | What it does |
+|---|---|---|
+| **Shipped** | [`skills/mock-interview`](skills/mock-interview/) | Persona-categorized interview prep packs with grounded per-question guidance, fit-gap mapping, values alignment, reverse questions, and live drill mode |
+| **Next** | `skills/job-underwriter` | Evaluate a specific role, recover overlooked truthful evidence, classify real gaps vs. CV omissions, surface opportunity risks, and reach a go / conditional-go / hold / no-go decision (spec complete) |
+| **Planned third** | `skills/resume-tailor` | Evidence-locked resume tailoring — consumes verified evidence and prohibited claims; the showcase for the human-review UI pattern |
+| **Absorbed** | Employer-question strategy, interview research briefs, answer coaching | Already live inside the two skills above (reverse questions + risk-verification questions; research tiers + interviewer reads; drill mode) |
+| **Deferred, trigger stated** | Application tracker (trigger: repeated real use — it's a persistence product), work-sample strategist (first life: an underwriter plan section), networking/outreach, search diagnostician (needs tracker data) | Built when their triggers fire, not before |
+
+## The cloth
+
+Coherence lives in [`conventions/`](conventions/) — canonical, and mirrored into each skill's `references/` with a synced-from header (canonical wins on conflict):
+
+- [`evidence-conventions.md`](conventions/evidence-conventions.md) — evidence source types, confidence bands, the gap taxonomy, content provenance labels, and the mapping that connects them. The truthfulness core every skill is bound by.
+- [`interaction-grammar.md`](conventions/interaction-grammar.md) — the standalone invariant, elicitation policy, degradation and upgrade menus, research tiers, privacy and scope, trigger hygiene.
+- [`dossier-schema.md`](conventions/dossier-schema.md) — the versioned shared artifact: read-if-present, append-always-offered, never required. One writer per section; handoffs in both directions.
+
+## Install
+
+Per-skill instructions live in each skill's README. The short version:
+
+- **claude.ai (web):** enable code execution (Settings → Capabilities), then Customize → Skills → upload the skill's zip. The zip root must be the skill folder itself.
+- **Desktop app:** skills follow your claude.ai account (Customize in the sidebar); a shared `.skill` file card offers one-click Save.
+- **Claude Code (CLI):** copy `skills/<name>/` to `~/.claude/skills/` (personal) or commit to `.claude/skills/` in a project. Also invokable as `/<name>`.
+
+Prebuilt installables live in [`dist/`](dist/) (`.skill` files; rebuildable from source — may graduate to GitHub Releases).
+
+## Repository shape
+
+```
+conventions/        canonical contracts — the cloth
+skills/<name>/      self-contained skill packages (SKILL.md, references/, evals/, docs/)
+dist/               built .skill installables
+agent/              (reserved — does not exist yet; arrives when its trigger fires)
+```
+
+Skills are dependency-free by rule: nothing outside a skill's folder is required at runtime, because installation is per-skill. The conventions are therefore a canonical-plus-mirrors system, not a runtime import; mirror drift is a defect.
+
+## Licensing
+
+Per-directory licensing, mapped in the root [`LICENSE`](LICENSE). Current staging, per the maintainer's working decision (finalize before any public release): `conventions/` and `skills/*` under MIT so the skills travel maximally; `agent/` is reserved for a copyleft grant (AGPL) decided when it exists. GitHub's sidebar shows a single license badge — the root LICENSE file is the authority. Contribution terms, including the CLA reservation for `agent/`, are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Tracked work
+
+- **job-underwriter v0.1** — build against `conventions/`, with the four spec adjustments agreed in design review (deliverables reshaped to skill anatomy; one dossier not six files; analysis-leads-questions-ride ordering; prose response modes).
+- **mock-interview v2** — adopt the conventions mirror (replacing its in-skill label definitions with the mirror), consume `handoff_to_mock_interview` (input-contract row + five behavior rules + eval expectation), emit `pack_feedback`.
+- **CI (when the repo goes live)** — per-skill packager validation, zip-root check, conventions-mirror byte check against canonical, evals lint.
+- **Clean-room validation — partially closed.** The skill's first real engagement ran in a fresh session and its output conformed to spec on inspection. Still open: running the three fixtures themselves in a session that has only the skill, so the eval expectations get graded outside the authoring context.
+- **Eval fixture 4 (spec sync)** — a recruiter-guidance + pre-declared-deliverable scenario asserting the graded-deliverables section, prep triage when time is stated, and that any n+x candidate arrives as a labeled offer rather than woven in.
+- **mock-interview voiced drill** — back-and-forth spoken rehearsal as a drill-mode enhancement; deferred until the hosting surface offers a voice loop the skill can rely on.
+- **Suite-level routing evals (once two skills coexist)** — a small prompt set asserting which skill fires on ambiguous requests ("help me with this job posting I'm considering"); per-skill evals cannot test triggering between skills.
