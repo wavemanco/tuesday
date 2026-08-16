@@ -17,7 +17,7 @@ Tuesday is *Mangalvaar* in Hindi — the day of Mangal, which names Mars and is 
 | Status | Skill | What it does |
 |---|---|---|
 | **Shipped** | [`skills/mock-interview`](skills/mock-interview/) | Persona-categorized interview prep packs with grounded per-question guidance, fit-gap mapping, values alignment, reverse questions, and live drill mode |
-| **Next** | `skills/job-underwriter` | Evaluate a specific role, recover overlooked truthful evidence, classify real gaps vs. CV omissions, surface opportunity risks, and reach a go / conditional-go / hold / no-go decision (spec complete) |
+| **Shipped** | [`skills/job-underwriter`](skills/job-underwriter/) | Evaluate a specific role, recover overlooked truthful evidence, classify real gaps vs. CV omissions, surface opportunity risks, and reach a go / conditional-go / hold / no-go decision — with an offered `tuesday-dossier.md` that hands verified evidence to mock-interview |
 | **Planned third** | `skills/resume-tailor` | Evidence-locked resume tailoring — consumes verified evidence and prohibited claims; the showcase for the human-review UI pattern |
 | **Absorbed** | Employer-question strategy, interview research briefs, answer coaching | Already live inside the two skills above (reverse questions + risk-verification questions; research tiers + interviewer reads; drill mode) |
 | **Deferred, trigger stated** | Application tracker (trigger: repeated real use — it's a persistence product), work-sample strategist (first life: an underwriter plan section), networking/outreach, search diagnostician (needs tracker data) | Built when their triggers fire, not before |
@@ -57,7 +57,6 @@ Per-directory licensing, mapped in the root [`LICENSE`](LICENSE). Current stagin
 
 ## Tracked work
 
-- **job-underwriter v0.1** — build against `conventions/`, with the four spec adjustments agreed in design review (deliverables reshaped to skill anatomy; one dossier not six files; analysis-leads-questions-ride ordering; prose response modes).
 - **mock-interview v2** — adopt the conventions mirror (replacing its in-skill label definitions with the mirror), consume `handoff_to_mock_interview` (input-contract row + five behavior rules + eval expectation), emit `pack_feedback`.
 - **CI (when the repo goes live)** — per-skill packager validation, zip-root check, conventions-mirror byte check against canonical, evals lint.
 - **Clean-room validation — partially closed.** The skill's first real engagement ran in a fresh session and its output conformed to spec on inspection. Still open: running the three fixtures themselves in a session that has only the skill, so the eval expectations get graded outside the authoring context.
