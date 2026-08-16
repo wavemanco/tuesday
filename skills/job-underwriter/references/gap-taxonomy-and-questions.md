@@ -23,7 +23,7 @@ Two classification disciplines keep the taxonomy honest:
 
 Each gap type has a distinct recovery move. Using the wrong one — asking a question where a proposal is due, proposing wording where the gap is real — wastes the turn.
 
-**`presentation` → the repositioning proposal.** Not a question; the evidence already exists. Show the current framing and the proposed truthful reframing side by side, source-cited, and mark it `resume_edits_pending_approval`. The proposal may reorganize, rename, and surface — it may never add a fact the evidence doesn't hold.
+**`presentation` → the repositioning proposal.** Not a question; the evidence already exists. Show the current framing and the proposed truthful reframing side by side, source-cited, and mark it `resume_edits_pending_approval`. The proposal may reorganize, rename, and surface — it may never add a fact the evidence doesn't hold. Check scope words one by one against the source claim: the drift from "the team uses it" to "adopted org-wide" is a new claim, not a reframe, and it fails the truthfulness core however natural it sounds in product language.
 
 **`discovery` → the recall prompt.** The workhorse. Structure every important discovery prompt like this:
 

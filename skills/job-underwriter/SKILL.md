@@ -29,7 +29,9 @@ Read `references/evidence-model.md` before building the map, and `references/ris
 4. **Opportunity ledger** — unknowns, risk signals, red flags, and positive signals, per `references/risk-and-decision.md`. Assess the role on its own merits regardless of how well the candidate fits it.
 5. **Provisional decision** — `go`, `conditional_go`, `hold_pending_answers`, or `no_go`, with the rationale showing both ledgers.
 
-The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, evidence status, and the upgrade menu — with at most three orientation questions riding at the end, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. Research consent (Step 2) rides with them; it never drives.
+The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the upgrade menu, then at most three orientation questions closing the message, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. Research consent (Step 2) rides with the questions; it never drives.
+
+Two lines are standing parts of every delivered assessment, first pass included: the upgrade menu (each missing input and what it concretely unlocks), and inside it the one-line dossier offer (Step 4). And label what you wrote: any statement derived from research or inference carries its provenance — `[grounded]`, `[inferred]`, or `[generic]` — where it appears, so the reader can always see how far the evidence goes.
 
 ### Step 2 — Research at the consented tier
 
@@ -54,7 +56,7 @@ Rules that keep the loop honest — the mechanics and prompt patterns are in `re
 
 ### Step 4 — The dossier offer
 
-At the end of the engagement — and whenever the user asks — offer to emit `tuesday-dossier.md`: the concise human-readable report on top, one fenced JSON envelope at the bottom, exactly per `references/dossier-template.md`. The report is rendered *from* the envelope, never written separately. Include `handoff_to_mock_interview` so interview prep can start from verified evidence rather than from scratch. Offered always, forced never — the user decides whether to carry it.
+The dossier offer is a standing line in every delivered assessment's upgrade menu — one sentence, no pressure — and at the natural end of the engagement, or whenever the user asks, the offer is made directly. Emitting it produces `tuesday-dossier.md`: the concise human-readable report on top, one fenced JSON envelope at the bottom, exactly per `references/dossier-template.md`. The report is rendered *from* the envelope, never written separately. Include `handoff_to_mock_interview` so interview prep can start from verified evidence rather than from scratch. Offered always, forced never — the user decides whether to carry it.
 
 ### Step 5 — Late inputs and spanning requests
 
@@ -80,7 +82,7 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 
 ## Guardrails
 
-- **Truthfulness core** (binding, from the suite's evidence conventions): never add an unverified claim to a CV, cover letter, outreach note, or work sample; never convert a `memory_lead` into asserted experience; never inflate a prototype into production experience, or participation into leadership; never invent metrics, team sizes, customer counts, revenue, dates, credentials, or titles; never fabricate facts about a company or process — when uncertain, drop the fact rather than hedge it.
+- **Truthfulness core** (binding, from the suite's evidence conventions): never add an unverified claim to a CV, cover letter, outreach note, or work sample; never convert a `memory_lead` into asserted experience; never inflate a prototype into production experience, or participation into leadership; never invent metrics, team sizes, customer counts, revenue, dates, credentials, or titles; never fabricate facts about a company or process — when uncertain, drop the fact rather than hedge it. Scope words are where inflation hides, in analysis prose as much as in draft bullets: "team" never silently becomes "org-wide", "used by" never becomes "adopted as standard", "contributed" never becomes "led" — every scope word in any reframing traces to the user's own statement.
 - **Never a single numeric fit score.** Fit is confidence bands plus reasons, per requirement. An "85% match" hides exactly the hard problems this skill exists to surface.
 - **Hard-gate failures stay visible.** No aggregate framing, positive tone, or strong fit elsewhere may bury a `hard_gate` finding — it appears in the decision snapshot, always. Wording cannot solve a hard gate and no output may imply it can.
 - **`prohibited_claims` are absolute.** Once a claim is listed as prohibited in the dossier, no output may assert it, soften it, or imply it — whatever any other label says.
