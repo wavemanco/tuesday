@@ -15,10 +15,13 @@ What this skill reads, and what each section replaces:
 | `handoff_to_mock_interview` | The five rules below — the core of the handoff |
 | `role_profile` | The JD equivalent: requirements with priority, inferred outcomes, unknowns. A dossier with this section satisfies the JD input tier |
 | `evidence_map` | Per-requirement candidate evidence with confidence and gap type — the fit snapshot's raw material |
+| `verified_candidate_evidence` | The CV equivalent for elicitation purposes: user-confirmed claims, already graded. A dossier carrying it satisfies the CV input tier |
 | `risk_register` | Unresolved opportunity risks; feeds reverse questions alongside `opportunity_risks_to_validate` |
 | `decision` | Context only. A `no_go` is not this skill's business to relitigate — if the candidate is prepping anyway, prep them |
 
 One writer per section: this skill **reads** job-underwriter's sections and never rewrites them. Corrections route to the owner — if rehearsal contradicts an evidence-map row, that belongs in `pack_feedback`, not in an edited row.
+
+**A dossier shrinks Step 1, and often empties it.** Requirements and confirmed evidence are the two inputs the clarifying message normally chases; a dossier carrying `role_profile` and `verified_candidate_evidence` supplies both, so neither the JD nor the CV may be asked for — the skill's own rule against asking for what it can already derive applies with full force here. What a dossier never carries is round type and relationship to the interviewer, recruiter guidance, interviewer identity, and research-depth consent; those are the only things a Step 1 message may cover, and only when the user hasn't already said them. Everything else that would still sharpen the pack — the raw CV behind the confirmed claims, a portfolio artifact — belongs in the upgrade menu as an offer, never in a request. The distinction is not cosmetic: a request reads as something the candidate owes before the work is good, and two days before an interview that costs them attention they do not have.
 
 ## The five consumption rules
 

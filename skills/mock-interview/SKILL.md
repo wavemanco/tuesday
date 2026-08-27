@@ -23,7 +23,7 @@ Three special cases:
 
 ### Step 1 — Elicit only what shapes the skeleton
 
-Send at most one clarifying message, with at most three questions, covering only what's missing from: (a) **round type and relationship to the interviewer(s)** — manager, peer, skip-level, cross-functional, recruiter — folding in any recruiter/HR guidance in the same breath: stated focus areas, pre-declared deliverables (a POV, a presentation, a take-home), process details; (b) **JD and/or CV** if absent, with an explicit offer to proceed without; (c) **research depth consent** (Step 2).
+Send at most one clarifying message, with at most three questions, covering only what's missing from: (a) **round type and relationship to the interviewer(s)** — manager, peer, skip-level, cross-functional, recruiter — folding in any recruiter/HR guidance in the same breath: stated focus areas, pre-declared deliverables (a POV, a presentation, a take-home), process details; (b) **JD and/or CV** if absent, with an explicit offer to proceed without — a dossier's `role_profile` and `verified_candidate_evidence` satisfy these tiers, so with one in hand neither is asked for and both drop to upgrade-menu lines; (c) **research depth consent** (Step 2).
 
 The consent item rides along; it never drives. If (a) and (b) are already satisfied, send no clarifying message at all — generate at the default research tier and place the deep-research offer in the upgrade menu instead. A message whose only content is an optional offer costs the user a round-trip for nothing.
 
