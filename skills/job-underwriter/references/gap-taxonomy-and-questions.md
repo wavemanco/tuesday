@@ -23,7 +23,17 @@ Two classification disciplines keep the taxonomy honest:
 
 Each gap type has a distinct recovery move. Using the wrong one — asking a question where a proposal is due, proposing wording where the gap is real — wastes the turn.
 
-**`presentation` → the repositioning proposal.** Not a question; the evidence already exists. Show the current framing and the proposed truthful reframing side by side, source-cited, and mark it `resume_edits_pending_approval`. The proposal may reorganize, rename, and surface — it may never add a fact the evidence doesn't hold. Check scope words one by one against the source claim: the drift from "the team uses it" to "adopted org-wide" is a new claim, not a reframe, and it fails the truthfulness core however natural it sounds in product language.
+**`presentation` → the repositioning proposal.** Not a question; the evidence already exists. Show the current framing and the proposed truthful reframing side by side, source-cited, and mark it `resume_edits_pending_approval`. The proposal may reorganize, rename, and surface — it may never add a fact the evidence doesn't hold.
+
+Audit every proposed line clause by clause against the source sentence, because inflation hides in the clause nobody suspects. Three axes, each checked separately:
+
+| Axis | The drift | Example |
+|---|---|---|
+| **Scope** | Who or how many it touched grows | "the team uses it" → "adopted org-wide" |
+| **Verb** | Participation becomes origination or ownership | "ran quarterly sessions" → "established a quarterly cadence" |
+| **Kind** | The activity becomes a different, higher-status kind of work | "collecting client feedback" → "synthesizing findings into structured feedback" |
+
+The verb is the claim on a resume, and a change in kind is not a change in intensity — "collected" and "synthesized" describe different work, so one cannot stand in for the other. Audit the whole line: a bullet whose ending was carefully checked while its opening verb drifted is the failure mode this table exists to catch. When a clause cannot be traced to the user's own sentence, cut it or ask about it — an asked question can turn a `presentation` reframe into confirmed evidence, whereas a guessed verb turns it into a claim the interview will test.
 
 **`discovery` → the recall prompt.** The workhorse. Structure every important discovery prompt like this:
 
