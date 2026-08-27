@@ -25,15 +25,30 @@ Each gap type has a distinct recovery move. Using the wrong one — asking a que
 
 **`presentation` → the repositioning proposal.** Not a question; the evidence already exists. Show the current framing and the proposed truthful reframing side by side, source-cited, and mark it `resume_edits_pending_approval`. The proposal may reorganize, rename, and surface — it may never add a fact the evidence doesn't hold.
 
-Audit every proposed line clause by clause against the source sentence, because inflation hides in the clause nobody suspects. Three axes, each checked separately:
+Run the reframing audit below on the proposal before showing it.
+
+### The reframing audit
+
+**What it governs: every word this skill proposes the candidate say, write, or send.** Resume bullets and summary lines, yes — but equally the positioning advice ("lead with…", "your first two sentences should be…"), suggested outreach and cover-letter phrasing, and interview framing. Drift migrates to whichever surface the audit isn't watching, and prose advice is the easiest place for it to hide, because it reads as strategy rather than as a claim. It is still a claim: the candidate will say it out loud to someone who can check.
+
+Audit clause by clause against the user's own sentences, on four axes:
 
 | Axis | The drift | Example |
 |---|---|---|
 | **Scope** | Who or how many it touched grows | "the team uses it" → "adopted org-wide" |
 | **Verb** | Participation becomes origination or ownership | "ran quarterly sessions" → "established a quarterly cadence" |
 | **Kind** | The activity becomes a different, higher-status kind of work | "collecting client feedback" → "synthesizing findings into structured feedback" |
+| **Relationship** | Which side of the transaction the candidate stood on changes | worked at the vendor integrating "our APIs" for clients → "you have been the customer of this product" |
 
-The verb is the claim on a resume, and a change in kind is not a change in intensity — "collected" and "synthesized" describe different work, so one cannot stand in for the other. Audit the whole line: a bullet whose ending was carefully checked while its opening verb drifted is the failure mode this table exists to catch. When a clause cannot be traced to the user's own sentence, cut it or ask about it — an asked question can turn a `presentation` reframe into confirmed evidence, whereas a guessed verb turns it into a claim the interview will test.
+Notes on the harder two. A change in **kind** is not a change in intensity — "collected" and "synthesized" describe different work, so one cannot stand in for the other. A **relationship** inversion is the subtlest of the four and the most dangerous, because it usually arrives as a flattering insight ("you *are* the user this team builds for") and collapses on the first follow-up question: a vendor-side implementer and a buyer-side customer have different knowledge, different incentives, and different stories, and an interviewer on either side will know within a sentence which one they are talking to.
+
+Three disciplines make the audit actually catch things:
+
+- **Audit the whole line, every line.** A bullet whose ending was carefully checked while its opening verb drifted is the characteristic failure. So is a table audited scrupulously while the paragraph above it runs free.
+- **Drift in the flattering direction is the one to hunt, but the rule is direction-agnostic** — untraceable language fails whether it raises or lowers the candidate.
+- **When a clause cannot be traced to the user's own sentence, cut it or ask about it.** An asked question can turn a reframe into confirmed evidence; a guessed one turns it into a claim the interview will test.
+
+Everything the audit governs is proposed, never applied: mark it `resume_edits_pending_approval` and place the approval statement so it visibly covers the prose advice too, not only the table beneath it.
 
 **`discovery` → the recall prompt.** The workhorse. Structure every important discovery prompt like this:
 
