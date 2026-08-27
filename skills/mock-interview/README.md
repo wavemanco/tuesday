@@ -45,10 +45,19 @@ The bare minimum also works — "Help me prep, final round at Stripe for Product
 | Required | Company + role title | The skill can't run |
 | Sharpens | JD text, your CV | Representative-JD research; self-assessment fit worksheet |
 | Optional | Interviewer profile, round schedule, a research note, a working-style assessment | Sections drop or genericize — never fabricate |
+| Optional, high-leverage | A `tuesday-dossier.md` from job-underwriter | The pack is built from your raw inputs as always; without it the likeliest objection is inferred rather than evidence-derived |
 
 The skill asks at most one clarifying message (three questions max, only for what's missing) and proceeds even if you ignore it. Late additions are cheap: paste the interviewer's profile mid-conversation and only the affected sections regenerate.
 
 **Privacy by design:** never upload government IDs — the skill refuses them. Personality/working-style assessments are accepted only if you offer them, feed only the delivery-coaching section, and the skill will never suggest mentioning one in an interview. Candidate-side prep only; it declines employer-side screening use.
+
+## Carrying a dossier
+
+If you underwrote the role first with [job-underwriter](../job-underwriter/), hand this skill the `tuesday-dossier.md` it offered you. The pack then builds on evidence you already confirmed: your verified claims become story-mapped guidance instead of "pick a time when…" scaffolds, the objection the underwriting flagged becomes the deepest rehearsal in the pack instead of a guess, the risks it left unresolved become reverse questions, and any claim it marked prohibited is fenced off from every line of guidance.
+
+At the end, the skill offers to write back — a `pack_feedback` section carrying the objections prep exposed, the requirements where no story surfaced, and the stories you told in rehearsal that your CV never mentions. Those go back to the underwriter as leads to verify, never as established facts.
+
+None of this is required. Skills in Tuesday stand alone; the dossier just means you stop re-explaining yourself.
 
 ## Modes
 
@@ -63,11 +72,13 @@ mock-interview/
 ├── SKILL.md                      # the skill itself — instructions Claude follows
 ├── references/
 │   ├── personas.md               # 7 interviewer personas, relationship priors, signal rules
-│   ├── question-rubric.md        # 5 question types, coverage rules, provenance labels
+│   ├── question-rubric.md        # 5 question types, coverage rules, guidance-writing rules
 │   ├── research-checklist.md     # L0/L1/L2 research tiers, budgets, archetype fallbacks
-│   └── output-template.md        # pack skeleton, loop mode, drill mode
+│   ├── output-template.md        # pack skeleton, loop mode, drill mode
+│   ├── dossier-handoff.md        # reading handoff_to_mock_interview, writing pack_feedback
+│   └── evidence-conventions.md   # mirror of the suite's canonical vocabulary (synced-from header)
 ├── evals/
-│   └── evals.json                # 3 test fixtures with verifiable expectations
+│   └── evals.json                # 4 test fixtures with verifiable expectations
 └── docs/
     └── workflow.html             # interactive install + first-use walkthrough (this repo only)
 ```

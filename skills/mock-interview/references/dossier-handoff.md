@@ -1,0 +1,65 @@
+# The dossier: reading the handoff, writing the feedback
+
+Tuesday's skills compose in any order or not at all. The dossier (`tuesday-dossier.md`) is how a candidate carries work between them without the skills coupling to each other: job-underwriter writes what it learned underwriting a role, mock-interview reads it and writes back what rehearsal exposed. Canonical rules live in `conventions/dossier-schema.md`; this file is the operative copy of what *this* skill does with it.
+
+The invariant that outranks everything here: **the dossier is an enhancer, never a gate.** A pack built without one is a complete pack. Never ask for a dossier as a precondition, never degrade the pack into an advertisement for job-underwriter, and never imply the candidate did prep wrong by not having one. Mention in the upgrade menu what it would add — one line — and move on.
+
+## Reading it — the intake check
+
+At Step 0, check context and uploads for `tuesday-dossier.md` (or a pasted JSON envelope carrying `dossier_version`). If present, parse the envelope and consume the sections below. If the envelope's major version is higher than this skill knows (currently 1.x), say so plainly in the pack's Sources section and build standalone rather than guessing at renamed fields. Unrecognized sections are ignored, not errors — forward compatibility is the default posture.
+
+What this skill reads, and what each section replaces:
+
+| Section | What it gives the pack |
+|---|---|
+| `handoff_to_mock_interview` | The five rules below — the core of the handoff |
+| `role_profile` | The JD equivalent: requirements with priority, inferred outcomes, unknowns. A dossier with this section satisfies the JD input tier |
+| `evidence_map` | Per-requirement candidate evidence with confidence and gap type — the fit snapshot's raw material |
+| `risk_register` | Unresolved opportunity risks; feeds reverse questions alongside `opportunity_risks_to_validate` |
+| `decision` | Context only. A `no_go` is not this skill's business to relitigate — if the candidate is prepping anyway, prep them |
+
+One writer per section: this skill **reads** job-underwriter's sections and never rewrites them. Corrections route to the owner — if rehearsal contradicts an evidence-map row, that belongs in `pack_feedback`, not in an edited row.
+
+## The five consumption rules
+
+These are what a handoff actually buys. Each replaces guesswork with something the underwriter established.
+
+1. **Verified evidence upgrades story-mapping to `[grounded]`.** Claims in `verified_candidate_evidence` are user-confirmed; guidance built on them is story-mapped and labeled `[grounded]`, not scaffolded as though the CV were absent. Watch the confidence caveat: an entry marked medium ("confirmed, limited inspectable proof") stays `[grounded]` but the guidance names the caveat, because a prober will find that seam — coach the candidate to volunteer the limit before it's extracted.
+
+2. **`allowed_interview_strategy` constrains what guidance may coach.** For each entry in `uncertain_or_weak_areas`, the strategy is binding, not advisory:
+   - `clarify` — the evidence may exist but wasn't established. Coach a question-shaped answer: what the candidate did do, plus an honest "here's what I'd want to confirm about how you define it."
+   - `bridge` — adjacent evidence exists. Coach the transferable case **with its limit named**, exactly as the underwriter framed it. A bridge that drops the limit becomes the inflation the suite forbids.
+   - `acknowledge_gap` — no credible evidence. Coach the plain acknowledgment plus a ramp plan. Never coach a bridge here; the underwriter already looked and found nothing, and inventing one live is how a candidate gets caught.
+
+3. **`likely_interviewer_objections` names the highest-ROI rehearsal.** The rubric normally asks you to infer the most predictable objection from the fit snapshot. When the underwriter named it, use theirs — it was derived from evidence the candidate confirmed, not from a document read cold. Give it the deepest rehearsal in the pack and say in the pack that the underwriter named it.
+
+4. **Risks and employer questions seed the reverse-question bank.** `opportunity_risks_to_validate` and `questions_for_employer` arrive interview-ready. Carry them into the reverse-question section with their "why it lands" written from the risk's own hypothesis — these questions do double duty: they read as diligence, and they answer something the candidate genuinely needs to know before accepting.
+
+5. **`prohibited_claims` are hard guardrails on every guidance cell.** Absolute, and they beat every other label in this skill. No question's guidance, no values-story mapping, no reverse question, and no drill feedback may assert a prohibited claim, soften it, or coach an answer that implies it. When a question's natural answer would brush one, coach the honest alternative and say why the line exists — a candidate who understands the boundary holds it under follow-up pressure.
+
+Say in the pack's Sources section that a dossier was consumed and which sections it supplied, so the candidate can see which parts of the pack rest on their own confirmed evidence versus the pack's inference.
+
+## Writing back — `pack_feedback`
+
+Preparation exposes things underwriting cannot: what happens when the candidate tries to *tell* the story out loud. That is genuinely new information, and the dossier's reverse channel exists to carry it back.
+
+Offer to emit or update the dossier with a `pack_feedback` section at the end of a pack, and again after any drill — one line, no pressure, same posture as the Word-conversion offer. Emit it only if the candidate wants it.
+
+```yaml
+pack_feedback:
+  surfaced_objections: []        # objections the fit snapshot or drills exposed
+  rehearsal_gaps:
+    - requirement: string        # where the candidate had no credible story
+      observed_in: fit_snapshot | drill
+      suggested_gap_type: presentation | discovery | transferability | capability
+  new_evidence_leads: []         # stories told in prep that the CV doesn't carry
+```
+
+Rules for writing it honestly:
+
+- **`suggested_gap_type` is a suggestion, and the field name says so.** The underwriter owns classification; this skill proposes from what it saw. A story the candidate told fluently but that never reached the CV is `presentation`; a blank where a story should be is `discovery` before it is ever `capability` — one bad rehearsal is not evidence of absent capability, and calling it that in a file the candidate carries around does real harm.
+- **`new_evidence_leads` are leads, not evidence.** Anything the candidate said mid-rehearsal is a self-report made under practice pressure. Record it as a lead for the underwriter to verify. Never phrase it as established, and never let a lead you recorded feed back into this same pack's guidance as though it were confirmed.
+- **Nothing personal.** Rehearsal reveals nerves, hesitation, and self-doubt. None of that belongs in a file the candidate carries between sessions and may hand to a tool later. Record requirements and stories, never assessments of the person.
+- **Write only this section.** `pack_feedback` is this skill's only writable section. Carry every other section through unchanged, including sections this skill doesn't recognize.
+
+When updating an existing dossier, preserve its envelope version and its other sections verbatim; when emitting a fresh dossier that carries only `pack_feedback` (the mock-interview-first ordering, where no underwriting has happened yet), fill `role` and `generated_by` from what this engagement knows and leave the underwriter's sections absent rather than stubbed — an absent section is honest, an empty one invites a consumer to think it was assessed.

@@ -15,8 +15,9 @@ The pack's credibility rests on a grounding discipline: everything is either tra
 
 Inventory every provided input against the contract below. Extract before you ask: seniority and team from an interviewer profile, company and level from a JD, round type from phrases like "final round" or "chat with the hiring manager". Asking for something already derivable wastes the candidate's prep time.
 
-Two special cases:
+Three special cases:
 
+- **`tuesday-dossier.md` in context or uploads.** Read `references/dossier-handoff.md` and consume it: `handoff_to_mock_interview` carries verified evidence, allowed strategies per weak area, the objection worth the deepest rehearsal, risks and employer questions for the reverse bank, and absolute `prohibited_claims`; `role_profile` satisfies the JD tier. A dossier sharpens the pack — it never gates it, and a pack built without one is still a complete pack.
 - **Government ID.** If an upload is or contains a passport, license, or ID number, don't use it, tell the user it isn't needed for interview prep, and proceed without it. (Files named "passport" are sometimes benign profile summaries — check content, not filename.)
 - **Personality / working-style assessments.** Accept if offered; never solicit one. They feed only the delivery-coaching section (Step 3) under the guardrails below.
 
@@ -40,17 +41,19 @@ Company values, loop structure, and current strategy must come from research or 
 
 Read `references/personas.md` and `references/question-rubric.md` before writing any question. Build in this order, because each layer feeds the next:
 
-1. **Fit snapshot** — JD requirement × candidate evidence × gap-and-bridge language. The gaps found here become the Skeptic and Pressure banks' best material.
+1. **Fit snapshot** — JD requirement × candidate evidence × gap-and-bridge language. The gaps found here become the Skeptic and Pressure banks' best material. With a dossier in hand, the underwriter's `evidence_map` supplies these rows already graded — its confidence bands and gap types are the vocabulary this skill uses too, per the mirror in `references/evidence-conventions.md`.
 2. **Interviewer read** — only when real interviewer information exists. Career pattern, self-described style, what will land with them and why.
 3. **Persona weights** — relationship priors adjusted by interviewer signals and company archetype, with the reasoning shown.
-4. **Question banks** — per persona, under the coverage rules in the rubric. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack.
+4. **Question banks** — per persona, under the coverage rules in the rubric. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
 5. **Values / principles cheat sheet** — only when a values-style round is detected; map each published value to a specific candidate story.
-6. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists.
+6. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in.
 7. **Delivery coaching** — only when an assessment was provided; see guardrails.
 
 ### Step 4 — Deliver
 
 Read `references/output-template.md` and follow its skeleton and conditionality table. Save the pack as a markdown file and present it; offer a Word version rather than defaulting to one. End every pack with the **upgrade menu** — each missing input and what adding it would unlock. The menu is how enhancers arrive without ever gating on them: make the value of more input visible and let the user pull.
+
+Two one-line offers ride the delivery, neither of them pushed: the drill (below), and the dossier — emitting or updating `tuesday-dossier.md` with this pack's `pack_feedback`, so the objections and gaps rehearsal exposed travel back to the underwriter as leads. Spec in `references/dossier-handoff.md`.
 
 ### Step 5 — Iterate
 
@@ -79,12 +82,14 @@ The sections this skill's spec defines are *n* — owed to the user, delivered c
 | Working-style assessment | Enhancer | Drop the delivery-coaching section | Never solicit; accept if offered |
 | Recruiter / HR guidance — focus areas, pre-declared deliverables, process details | Enhancer, high-leverage | Coverage assumed from round-type priors; no graded-deliverable sections | Fold into the round-and-relationship question when a Step 1 message is being sent anyway; otherwise upgrade menu — usually one email to the recruiter |
 | Prep time available | Structural-lite | Default to the full pack | Fold into the Step 1 message if natural |
+| `tuesday-dossier.md` from job-underwriter | Enhancer, high-leverage | Build from raw inputs as always — the standalone invariant holds. Without it, the highest-ROI objection is inferred rather than evidence-derived, weak areas carry no strategy constraint, and no `prohibited_claims` guardrail exists | Read if present; never request it as a precondition. One upgrade-menu line on what it would add |
 
 Degrade by dropping or genericizing sections and labeling provenance — never by inventing specifics. A smaller honest pack beats a full-looking fabricated one.
 
 ## Guardrails
 
-- **Truthful attribution.** The pack coaches candidates to defend real claims precisely and shrink inflated ones gracefully — "how much of that was actually you" questions exist to rehearse honesty under pressure, because interviewers ask them and candor is scored. Never draft answers that overstate the candidate's role or invent accomplishments.
+- **Truthful attribution.** The pack coaches candidates to defend real claims precisely and shrink inflated ones gracefully — "how much of that was actually you" questions exist to rehearse honesty under pressure, because interviewers ask them and candor is scored. Never draft answers that overstate the candidate's role or invent accomplishments. The suite's full never-do list is the truthfulness core in `references/evidence-conventions.md` §6 — it binds every cell of this pack.
+- **`prohibited_claims` are absolute.** When a dossier lists a claim as prohibited, no guidance, story mapping, reverse question, or drill feedback may assert it, soften it, or imply it — that override beats every provenance label and every persona's counter-strategy.
 - **Interviewer research** is public professional footprint only: roles, career pattern, published talks and writing, self-descriptions. No contact-detail hunting, nothing about personal life, no personality inference beyond what they've published about themselves. When a fact about the interviewer is uncertain, drop it rather than hedge it — the candidate may repeat it live.
 - **Assessments** are delivery tuning, not content: reflect only what the document itself says, in its own framing; never extend it into diagnosis or personality typing; never suggest the candidate mention it in the interview; the answers stay the same, the packaging adapts.
 - **Candidate-side only.** If an employer wants to use this to screen candidates, that's a different job with different obligations — decline the skill and help them design a structured interview directly instead. This skill's guidance is deliberately asymmetric coaching.
@@ -93,6 +98,8 @@ Degrade by dropping or genericizing sections and labeling provenance — never b
 ## Reference files
 
 - `references/personas.md` — the persona taxonomy, relationship priors, interviewer-signal adjustments, protective mini-bank. Read before weighting personas or writing any bank.
-- `references/question-rubric.md` — the five question types, coverage rules, provenance labels, guidance-writing rules. Read before writing any question.
+- `references/question-rubric.md` — the five question types, coverage rules, guidance-writing rules. Read before writing any question.
 - `references/research-checklist.md` — tier definitions, search targets, budgets, freshness rules, company-archetype fallbacks. Read before any research.
 - `references/output-template.md` — pack skeleton, conditionality table, loop-mode and drill-mode specs, file conventions. Read before delivering.
+- `references/dossier-handoff.md` — reading `handoff_to_mock_interview` (the five consumption rules) and writing `pack_feedback`. Read when a dossier is present, and before offering to emit one.
+- `references/evidence-conventions.md` — the suite's canonical vocabulary, mirrored: source types, confidence bands, the gap taxonomy, provenance labels, and the truthfulness core. This is where the labels used throughout the pack are defined; the mirror is a verbatim copy and canonical wins on conflict.
