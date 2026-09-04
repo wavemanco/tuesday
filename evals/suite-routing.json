@@ -1,0 +1,92 @@
+{
+  "suite": "tuesday",
+  "purpose": "Assert which skill fires on realistic requests, including the ambiguous ones the two skills' descriptions deliberately sit next to. Per-skill evals cannot test this: triggering is decided across the whole available-skills list, so the assertion has no home inside either skill's evals/.",
+  "routes": ["job-underwriter", "mock-interview", "either", "neither"],
+  "cases": [
+    {
+      "id": 1,
+      "expected": "job-underwriter",
+      "prompt": "found this posting on a job board last night and i keep going back and forth on it. Senior Data Engineer at a Series B fintech, 5+ yrs, dbt/Airflow/Snowflake, they want someone who's owned a migration end to end. i've got 6 years but only ~2 on dbt and i've never led a migration, i was one of four people on ours. worth applying or am i kidding myself",
+      "why": "Classic apply-or-not with a self-assessed gap. The 'worth applying' phrasing is the underwriter's reserved trigger."
+    },
+    {
+      "id": 2,
+      "expected": "job-underwriter",
+      "prompt": "Something about this listing feels off and I can't put my finger on it. 'Head of Community (contract-to-hire) — own community, content, social, partnerships and events. Fast-paced! Wear many hats! Comp DOE. Must be available across US and EU hours.' No company name on the posting, recruiter emailed me from a gmail address. Am I being paranoid?",
+      "why": "Vetting a suspicious posting — opportunity-quality assessment, which is the underwriter's second ledger. No rehearsal intent."
+    },
+    {
+      "id": 3,
+      "expected": "job-underwriter",
+      "prompt": "JD and my CV are attached. I'm a QA lead trying to move into SDET work and this role wants 3+ years writing production automation frameworks. Honestly just tell me whether my testing background actually counts for that or whether I'm reaching.",
+      "why": "JD + CV arriving together with a fit question and no interview context — the underwriter's gap-classification job."
+    },
+    {
+      "id": 4,
+      "expected": "job-underwriter",
+      "prompt": "my recruiter friend forwarded me a Staff Designer opening at a company I've never heard of. before I spend a saturday on the portfolio case study they want, is this actually a real opportunity worth that time? here's the posting: [link]",
+      "why": "Effort-allocation decision about a specific role. 'Worth that time' is evaluation, not preparation."
+    },
+    {
+      "id": 5,
+      "expected": "mock-interview",
+      "prompt": "got a call with the hiring manager at Datadog on thursday for a Solutions Architect role. 45 mins, first real round after the recruiter screen. can you get me ready — i always freeze on the 'walk me through a time you disagreed with an engineer' type stuff",
+      "why": "Upcoming round with a named stage and a rehearsal need. Squarely mock-interview."
+    },
+    {
+      "id": 6,
+      "expected": "mock-interview",
+      "prompt": "I'm interviewing with a woman named Priya who runs the platform team — found her talks on YouTube, she's very big on 'boring technology'. How do I tailor what I say for her specifically? Role is Senior Backend, I'm currently at a startup that rewrites things constantly.",
+      "why": "Tailoring to a specific interviewer — named in mock-interview's description as an explicit trigger."
+    },
+    {
+      "id": 7,
+      "expected": "mock-interview",
+      "prompt": "final round next week, four back-to-back sessions, one of them is described as 'values deep dive'. no idea what that means or how to not sound rehearsed. help",
+      "why": "Final-round loop prep with a values round. Never says 'mock interview'."
+    },
+    {
+      "id": 8,
+      "expected": "mock-interview",
+      "prompt": "can you actually play the interviewer and grill me on my resume gaps? i want to practice out loud before friday, not just read a list of questions",
+      "why": "Live drill request — mock-interview's drill mode. Explicitly not a document request."
+    },
+    {
+      "id": 9,
+      "expected": "either",
+      "prompt": "Should I apply to this Principal PM role, and if the answer is yes, prep me for it? JD attached, CV attached, they move fast so I'd likely hear back this week.",
+      "why": "The interaction grammar's own spanning example. Either may fire; whichever does must do its own job fully and name the sibling in one sentence rather than attempting both.",
+      "spanning_rule": "interaction-grammar.md section 6"
+    },
+    {
+      "id": 10,
+      "expected": "either",
+      "prompt": "I have an interview Thursday for a role I'm genuinely not sure I want. The scope sounds inflated for the title and the comp band is below what I'm on now, but I said yes to the call. Not sure whether to prep properly or cancel.",
+      "why": "Evaluation and rehearsal are both live and the user has not chosen between them. Either skill firing is defensible; neither may silently do the sibling's job."
+    },
+    {
+      "id": 11,
+      "expected": "neither",
+      "prompt": "I'm hiring a Senior Analyst and I've got 40 applications to get through this week. Can you build me a scoring rubric and tell me which of these resumes to move forward?",
+      "why": "Employer-side screening. Both skills decline it explicitly in their descriptions — a hard negative that shares almost all the domain vocabulary."
+    },
+    {
+      "id": 12,
+      "expected": "neither",
+      "prompt": "my resume is 2.5 pages and i've been told that's too long. can you cut it to one page and make the formatting consistent? not targeting anything specific right now, just want it tidy before i start looking",
+      "why": "Document formatting with no target role and no decision to make. Near-miss on CV vocabulary; belongs to resume-tailor when it exists."
+    },
+    {
+      "id": 13,
+      "expected": "neither",
+      "prompt": "what's the actual job market like for data analysts in the midlands right now, and where are people finding roles that aren't on the big boards? thinking about starting a search in the new year",
+      "why": "Market and search-channel strategy with no specific posting. Near-miss on job-search vocabulary; the deferred search-diagnostician's territory."
+    },
+    {
+      "id": 14,
+      "expected": "neither",
+      "prompt": "help me write a LinkedIn message to a second-degree connection at a company I admire. Not applying to anything yet, just want to start a conversation without sounding like every other cold outreach they get.",
+      "why": "Networking outreach with no role under evaluation and no interview scheduled. Deferred outreach skill's territory."
+    }
+  ]
+}
