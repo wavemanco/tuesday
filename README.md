@@ -45,6 +45,8 @@ Prebuilt installables live in [`dist/`](dist/) (`.skill` files; rebuildable from
 ```
 conventions/        canonical contracts — the cloth
 skills/<name>/      self-contained skill packages (SKILL.md, references/, evals/, docs/)
+evals/              suite-level evals — routing between skills, which no single skill can test
+ci/                 repository checks, standard-library only, with their own self-test
 dist/               built .skill installables
 agent/              (reserved — does not exist yet; arrives when its trigger fires)
 ```
@@ -57,9 +59,7 @@ Per-directory licensing, mapped in the root [`LICENSE`](LICENSE). Current stagin
 
 ## Tracked work
 
-- **job-underwriter conventions mirror** — v0.1 carries the shared vocabulary as operative copies inside its own reference files rather than as a synced mirror file, which is what mock-interview v2 now does. Adopt the same pattern (`references/evidence-conventions.md`, verbatim behind a synced-from header) so both skills present one shape to the byte check below.
-- **CI (when the repo goes live)** — per-skill packager validation, zip-root check, conventions-mirror byte check against canonical, evals lint. The first real mirror now exists (`skills/mock-interview/references/evidence-conventions.md`); the check strips the synced-from header comment and compares the remainder.
+- **Skill triggering strength — open, and the reason the routing evals exist.** The first full routing run scored 5/14: the four near-miss negatives passed cleanly (no over-triggering), but both skills fire only intermittently on their own reserved phrasings, and genuinely spanning requests reached neither. When a skill does not fire the model answers anyway — competently, but without the evidence map, the provenance labels, or the guardrails. The fix is description work (skill-creator's optimizer runs against `evals/suite-routing.json`), and it is deliberately not a quiet edit: pushier descriptions are exactly what risks the clean negatives, so any change re-runs the whole set, negatives included. Caveat on the measurement: the harness registers each skill as a project command, which is skill-creator's own proxy for the available-skills list and may under-report.
 - **Clean-room validation — partially closed.** The skill's first real engagement ran in a fresh session and its output conformed to spec on inspection. Still open: running the three fixtures themselves in a session that has only the skill, so the eval expectations get graded outside the authoring context.
-- **mock-interview spec-sync fixture** — still open, and distinct from the dossier-handoff fixture that took the id-4 slot: a recruiter-guidance + pre-declared-deliverable scenario asserting the graded-deliverables section, prep triage when time is stated, and that any n+x candidate arrives as a labeled offer rather than woven in.
 - **mock-interview voiced drill** — back-and-forth spoken rehearsal as a drill-mode enhancement; deferred until the hosting surface offers a voice loop the skill can rely on.
-- **Suite-level routing evals — trigger has fired.** Two skills now coexist, which was this item's stated condition. A small prompt set asserting which skill fires on ambiguous requests ("help me with this job posting I'm considering"); per-skill evals cannot test triggering between skills, so this needs a home outside both skills' `evals/`.
+- **Routing eval coverage — grows with the suite.** `evals/suite-routing.json` covers the two skills that exist. A third skill makes every existing case ambiguous again, so resume-tailor (or any successor) ships with its own positives, its own near-miss negatives, and a re-run of the whole set — routing is a property of the list, not of any one entry.
