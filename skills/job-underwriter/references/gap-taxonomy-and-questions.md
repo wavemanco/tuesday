@@ -1,18 +1,19 @@
 # Gap taxonomy and recovery questions
 
-"Missing from the CV" is four different situations wearing one costume, and only one of them is a real capability problem. This file is how the skill tells them apart, and how it asks the questions that convert one into another. Vocabulary is an operative copy of `conventions/evidence-conventions.md` (canonical — it wins on any conflict).
+How this skill tells four situations apart and asks the questions that convert one into another. The vocabulary it uses is defined in `references/evidence-conventions.md`, the suite's canonical file mirrored verbatim into this skill; what follows is this skill's own method for applying it.
 
-## Fit status
+## Fit status and gap type
 
-Per material requirement, `fit_status` is one of: `direct`, `adjacent`, `unclear`, `absent`, `hard_gate_fail`. When fit is not `direct`, classify the gap:
+Per material requirement, `fit_status` is one of `direct`, `adjacent`, `unclear`,
+`absent`, `hard_gate_fail`; when fit is not `direct`, the gap is classified as
+`presentation`, `discovery`, `transferability`, `capability`, or `hard_gate`.
 
-| Gap type | Definition | Appropriate next action |
-|---|---|---|
-| `presentation` | Verified evidence exists; the CV doesn't communicate it in role-relevant terms | Propose a truthful repositioning, contingent on user approval |
-| `discovery` | Evidence may exist; current inputs are inconclusive | Ask one targeted, example-rich question; suggest exact artifacts |
-| `transferability` | No direct match, but credible adjacent work | Make the transferable case *and its limits*; consider a work sample |
-| `capability` | No credible direct or adjacent evidence | Name a realistic closure path, or carry as material risk |
-| `hard_gate` | Eligibility, credential, or constraint not met | Surface prominently; wording cannot solve it and no output may imply otherwise |
+Both sets, and the definition of each gap type with its appropriate next action,
+live in `references/evidence-conventions.md` §3 — the suite's canonical
+vocabulary, mirrored verbatim into this skill. Read them there rather than from
+memory. The taxonomy earns its complexity because "missing from the CV" is four
+different situations wearing one costume, and only one of them is a real
+capability problem.
 
 Two classification disciplines keep the taxonomy honest:
 

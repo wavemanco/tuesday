@@ -21,7 +21,7 @@ Special cases:
 
 ### Step 1 — First-pass underwriting
 
-Read `references/evidence-model.md` before building the map, and `references/risk-and-decision.md` before writing the risk register or the decision. Build in this order, because each layer feeds the next:
+Read `references/evidence-conventions.md` for the vocabulary and `references/evidence-model.md` for the row shape before building the map, and `references/risk-and-decision.md` before writing the risk register or the decision. Build in this order, because each layer feeds the next:
 
 1. **Role profile** — title, organization, stated responsibilities; must-have, preferred, and implied requirements; hard gates (authorization, license, location, schedule, credentials, years, legal constraints — including conflicts with the candidate's stated non-negotiables); scope signals; first-90-days and first-year outcomes when stated or carefully inferred (labeled `[inferred]` with the derivation named); unknowns and contradictions. Never infer a requirement merely because a related buzzword appears. Where research reached the role-family sweep, close role reality with a **market calibration** line: where this title, seniority, and scope sit against role-family norms, labeled `[generic]` — it is a pattern, not a claim about this employer. Stated compensation gets calibrated against that band; unstated compensation gets the band plus the observation that the posting withholds it, which is itself worth a question.
 2. **Candidate evidence inventory** — from each source, claims attributable to the candidate: the claim, source quote, source type, project, period, stated ownership, scope, outcome, verifiability.
@@ -94,7 +94,8 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 
 ## Reference files
 
-- `references/evidence-model.md` — evidence vocabulary (source types, confidence bands, provenance labels, the confidence-to-provenance mapping), the evidence-map row shape, the confirmation card, worked micro-examples. Read before building or updating the map.
+- `references/evidence-conventions.md` — the suite's canonical vocabulary, mirrored: source types, confidence bands, the gap taxonomy, provenance labels, the mapping between them, and the truthfulness core. This is where every label used in the map and the plan is defined; the mirror is a verbatim copy and canonical wins on conflict.
+- `references/evidence-model.md` — the evidence-map row shape, the confirmation card, row-integrity rules, worked micro-examples. Read before building or updating the map.
 - `references/gap-taxonomy-and-questions.md` — fit statuses, the five gap types, per-gap recall-prompt patterns, the question-selection heuristic, response-mode phrasing, worked discovery prompts. Read before writing any question.
 - `references/risk-and-decision.md` — signal classes, detectable red-flag patterns, the risk-register record, severity, decision semantics for the four statuses. Read before the risk register or any decision.
 - `references/dossier-template.md` — emission rules and the full worked `tuesday-dossier.md` example, envelope included. Read before emitting a dossier.
