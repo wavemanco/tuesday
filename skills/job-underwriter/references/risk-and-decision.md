@@ -28,6 +28,27 @@ Patterns worth actively checking every JD for — each detectable from the posti
 
 The candidate's stated non-negotiables extend this list per engagement: a role attribute that conflicts with one is a red flag for *this* candidate whatever the market thinks of it.
 
+## Two standing entries
+
+These two are checked on every engagement rather than waiting to be noticed, because both were found to matter in every run and neither announces itself in the posting's language.
+
+**Employer not established.** When L1 research cannot attribute the employer to a real entity matching the posting's description — name collisions, no web presence, a careers page with no such role — record it:
+
+```yaml
+signal: "Employer not established from attributable sources"
+class: risk_signal
+severity: medium          # high when combined with other flags: comp withheld, off-domain contact, urgency pressure
+source_quote: "<the posting's own identifying language>"
+hypothesis: "The entity may be too new or small to have a footprint, the posting may be stale or aggregated, or it may not represent a real hiring employer."
+verification_question: "Can you point me at the role on your own careers site, and who would I be interviewing with?"
+decision_rule: "Verify the employer exists and the posting is live before investing application effort."
+status: unresolved
+```
+
+This caps the decision at `conditional_go` — "apply, once the posting verifies" — because effort spent on an unverified employer is the cheapest loss in the process to avoid. Say plainly what would clear it, and keep the severity proportionate: most small companies are simply small, and treating obscurity as fraud is its own failure.
+
+**Market calibration.** Where the role-family sweep ran, place the role's title, seniority, and scope against role-family norms and carry the result into role reality, labeled `[generic]` — a pattern, never a claim about this employer. Stated compensation is calibrated against that band, and a gap wide enough to change the decision becomes the seniority-compensation mismatch entry above. Unstated compensation is calibrated too: the band still tells the candidate what to expect, and the withholding itself is worth one verification question. Two disciplines keep this honest — name the band's basis (what was searched, how recent), and never present a market band as this employer's offer.
+
 ## The risk-register record
 
 ```yaml

@@ -18,8 +18,8 @@ Deliver these sections in this order. The conditionality column is binding — a
 | 10 | Values / principles cheat sheet | Values-style round detected | Table: value (official name) × working meaning (paraphrased) × the candidate's mapped story (or selection scaffold if no CV) |
 | 11 | Reverse questions | Always | ≥5, each with "why it lands"; ≥1 tied to the interviewer's path when a profile exists; 1 reciprocity question when peer |
 | 12 | Delivery coaching | Assessment provided | Table: assessed trait (the report's own framing) × where it helps in this loop × watch-out → counter-move, keyed to question IDs. Restate the ground rules: never mention the assessment in the interview; tuning, not content |
-| 13 | Sources | Always | Provided documents; web sources with URLs; the research tier used |
-| 14 | Upgrade menu | Always | Each missing input → what adding it unlocks, concretely ("interviewer's profile → personalized persona weights + a tailored reverse question"; "JD text → six `[inferred]` rows become `[grounded]`") |
+| 13 | Sources | Always | Provided documents; web sources with URLs; the research tier used. When a dossier was consumed, say so and name which sections it supplied |
+| 14 | Upgrade menu | Always | Each missing input → what adding it unlocks, concretely ("interviewer's profile → personalized persona weights + a tailored reverse question"; "JD text → six `[inferred]` rows become `[grounded]`"). With no dossier present, one line on what one would add — never phrased as a prerequisite |
 
 Formatting: markdown tables; no pipe characters inside cells; question IDs letter-by-persona (A1, A2, B1…) so the drill and the coaching section can reference them; cells crisp — guidance speakable in 90–120 seconds, rationales 2–3 sentences.
 
@@ -41,8 +41,14 @@ Running a drill:
 2. Adopt the persona's register and ask the question. Follow up at least twice, and make the follow-ups react to what the candidate actually said — a scripted follow-up teaches nothing. Pressure-persona drills interrupt and time-box; prober drills ask for the denominator; peer drills push on the seam.
 3. Stay in persona during the exchange. Break persona to give feedback only when the exchange is done.
 4. Score against three things: the pack's own guidance for that question, the pack's named rehearsal priorities, and the type-specific bar from `question-rubric.md` (metric answers name their weakest assumption; pressure answers hold-then-concede; values answers land the hard truth).
-5. Feedback format: what landed / what to change / one line worth stealing verbatim. Then offer another round or a different persona.
+5. Feedback format: what landed / what to change / one line worth stealing verbatim. Then offer another round or a different persona — and, once, the dossier offer above: a drill is where `rehearsal_gaps` with `observed_in: drill` actually come from.
 6. If the candidate shows real distress — interview anxiety is real and drills can spike it — drop the persona immediately and be a person about it. The drill serves the candidate, never the reverse.
+
+## The dossier offer
+
+One line at delivery, alongside the drill offer, and again after any drill: an offer to emit or update `tuesday-dossier.md` with this engagement's `pack_feedback` — the objections the fit snapshot exposed, the requirements where no credible story surfaced, and the stories told in prep that the CV doesn't carry. Full spec in `references/dossier-handoff.md`.
+
+Keep the offer to what it buys the candidate: those leads are what the underwriter would want to verify next, and carrying them costs one file. Never gate the pack on it, never re-offer after a decline, and never let a lead recorded in feedback flow back into this pack's guidance as though it were confirmed evidence.
 
 ## Regeneration (Step 5 of SKILL.md)
 

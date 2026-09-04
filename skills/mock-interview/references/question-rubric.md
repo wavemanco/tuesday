@@ -29,18 +29,19 @@ These exist because packs fail by omission, and the omissions are predictable:
 
 ## Provenance labels
 
-End every question's rationale cell with one label:
+End every question's rationale cell with one label. The three labels — `[grounded]`, `[inferred]`, `[generic]` — are defined in `references/evidence-conventions.md` §4, the suite's canonical vocabulary mirrored into this skill. Read the definitions there rather than from memory; the whole suite speaks one dialect, and a skill that quietly redefines a label breaks every consumer downstream of it.
 
-- `[grounded]` — traceable to a provided document or a research finding cited in Sources.
-- `[inferred]` — built from a researched *representative* artifact (e.g., a typical JD for the title) or a reasonable extension of a grounded fact. Say what it's inferred from.
-- `[generic]` — role-family boilerplate; useful rehearsal, no company-specific claim.
+Two connections that matter when writing a rationale cell:
 
-Why label at all: a candidate who rehearses a fabricated specific repeats it live and gets burned. The pack's honesty about its own epistemics is part of its quality — and the labels double as the argument for the upgrade menu ("these six `[generic]` rows become `[grounded]` if you add the JD text").
+- **Confidence and provenance are different axes.** Confidence (§2 of the mirror) grades the *candidate's* evidence; provenance grades *what this pack wrote* on top of it. The mapping in §5 says which is allowed from which — most usefully, a `low`-confidence claim may never be asserted as the candidate's story, only coached as a clarify-strategy note, and it is labeled `[inferred]` with the derivation named.
+- **A `[generic]` label is an upgrade-menu argument, not an apology.** "These six `[generic]` rows become `[grounded]` if you add the JD text" tells the candidate exactly what their next five minutes of effort buys.
+
+Why label at all: a candidate who rehearses a fabricated specific repeats it live and gets burned. The pack's honesty about its own epistemics is part of its quality.
 
 ## Writing the guidance cell
 
 - **Speakable in 90–120 seconds.** Guidance is scaffolding for a spoken answer, not an essay. If it can't be delivered aloud in two minutes, cut it.
-- **CV present → story-mapped.** Name the specific story from their material and the beat structure ("the two-org dashboard story: where interests diverged → the win-win constructed → the position held").
+- **CV present → story-mapped.** Name the specific story from their material and the beat structure ("the two-org dashboard story: where interests diverged → the win-win constructed → the position held"). A dossier's `verified_candidate_evidence` is the strongest version of this: user-confirmed claims, mapped and labeled `[grounded]`, with any medium-confidence caveat coached into the answer rather than left for a prober to find.
 - **CV absent → story-selection scaffold.** Give selection criteria instead: "pick a time you held a position under pressure from someone senior — it needs a named stake, a moment you didn't fold, and an intact relationship at the end."
 - **Metric questions include the weakest-assumption move.** Coach the candidate to name their least defensible assumption before the interviewer does — it converts a gotcha into a credibility gain.
 - **Pressure questions include the hold-then-concede structure.** Hold the position through two follow-ups, concede uncertainty explicitly and specifically, never fold on the core claim just to restore harmony.
