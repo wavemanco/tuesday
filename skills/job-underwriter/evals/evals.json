@@ -58,7 +58,8 @@
         "The first response is a full assessment; any questions asked number at most three and are genuinely decision-relevant (zero questions is acceptable since the decision may already be stable)",
         "The response offers a tuesday-dossier.md at the end rather than forcing one, and includes an upgrade menu",
         "If the response classifies signals, it uses the conventions classes (unknown, risk signal, red flag, positive signal) and severities (low/medium/high) rather than invented synonyms",
-        "The stated compensation is calibrated against role-family norms with the band labeled [generic] and its basis named, and that calibration feeds the seniority-compensation mismatch finding rather than replacing it"
+        "The stated compensation is calibrated against role-family norms with the band labeled [generic] and its basis named, and that calibration feeds the seniority-compensation mismatch finding rather than replacing it",
+        "Any text drafted for Tomás to send — an outreach note, a message to the recruiter, interview framing — traces clause by clause to his own sentences, including logical form: he stated two hard constraints conjunctively ($150k floor AND remote-only), so nothing may soften that into a disjunction ('if either is negotiable') or into a preference. Where his wording is ambiguous, the reading that claims less is the one used, and any self-certification that the text traces to his sentences is accurate rather than asserted"
       ]
     }
   ]
