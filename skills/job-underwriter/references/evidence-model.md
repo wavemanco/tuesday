@@ -22,8 +22,8 @@ What that file settles, and where:
 | What may be asserted on top of a claim at each band | §5, including the two overrides that beat every label |
 | The never-do list binding every output | §6 |
 
-Two readings this skill adds on top, because they concern its own intake rather
-than the shared vocabulary:
+Three readings this skill adds on top, because they concern its own intake and
+output rather than the shared vocabulary:
 
 - **Prose background is CV-equivalent at intake.** A candidate background typed
   into the conversation is self-report of the same standing as `cv` — leads for
@@ -32,6 +32,13 @@ than the shared vocabulary:
 - **`medium` is the intake ceiling.** Nothing reaches `high` on a first pass from
   unprobed material, however specific it sounds: `high` needs an inspectable
   artifact, and intake prose is not one.
+- **A provenance label attaches to the sentence it licenses, not to the section.**
+  A heading that announces research, or a preamble saying what follows is
+  inferred, leaves every line beneath it bare the moment one is quoted back,
+  pasted into the dossier, or read on its own — and an unlabeled inference reads
+  exactly like a fact. Label at the point of assertion and accept the repetition;
+  the labels are not decoration on the analysis, they are how a reader tells
+  which parts of it can be checked.
 
 ## The evidence-map row
 

@@ -19,7 +19,8 @@
         "The response offers a tuesday-dossier.md at the end rather than emitting or forcing one, and ends with an upgrade menu naming concrete missing inputs (e.g., the actual CV document, a portfolio or dashboard artifact, non-negotiables/constraints) and what each unlocks",
         "If any section beyond the spec's owed outputs appears, it arrives as a clearly labeled offer (the n+x pattern), not woven in silently",
         "Where research ran, role reality carries a market calibration line placing the role against role-family norms, labeled [generic] and with its basis named, and it is never presented as this employer's actual offer",
-        "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, and it constrains the decision (an unverified employer keeps the status at conditional_go or below) rather than being noted only as a research caveat"
+        "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, and it constrains the decision (an unverified employer keeps the status at conditional_go or below) rather than being noted only as a research caveat",
+        "Any count the response states about its own analysis matches the analysis — if the decision snapshot or summary says how many requirements sit at a given fit status, or reports how much of the research budget was spent, that number agrees with the evidence map and the searches actually listed"
       ]
     },
     {
@@ -33,12 +34,13 @@
         "The agent-memory line about the request-triage tool is treated as a memory_lead: marked unverified (low or none confidence), used only as the basis for a confirmation question (what it was, what part was hers, who used it, any artifact), and never asserted as experience or proposed for the resume",
         "Nothing anywhere suggests adding an unverified claim to the resume, and every clause of every thing proposed for Nadia to say, write, or send — resume lines, summary lines, positioning and outreach advice, interview framing — traces to her own sentences on all four axes (scope, verb, kind of activity, and which side of the relationship she stood on: she worked at the vendor integrating its APIs for clients, so she was never the customer or partner of such a platform); the approval statement is placed so it visibly covers prose advice as well as any edits table",
         "At most three questions are asked, prioritized toward what could change the decision (the PM-experience bridge and API product-ownership evidence rank above minor requirements), each offering response modes as prose including the option to skip",
-        "Vocabulary matches the conventions exactly: gap types come only from presentation/discovery/transferability/capability/hard_gate, confidence only from high/medium/low/none, and any research- or inference-derived statement carries a provenance label ([grounded], [inferred], or [generic])",
+        "Vocabulary matches the conventions exactly: gap types come only from presentation/discovery/transferability/capability/hard_gate, confidence only from high/medium/low/none, and every research- or inference-derived statement carries its provenance label ([grounded], [inferred], or [generic]) on the sentence itself — a section heading or preamble announcing that what follows is inferred does not count, because a line quoted or copied out of it would then carry no label at all",
         "No single numeric fit score or percentage appears",
         "The decision uses one of go/conditional_go/hold_pending_answers/no_go with a rationale; if hold_pending_answers, it names which specific answers it is waiting on",
         "Opportunity quality is assessed on its own ledger (unknowns or risk signals about the role are recorded, or the role is affirmatively noted as well-specified) rather than the JD being taken purely at face value",
         "The response offers a tuesday-dossier.md at the end rather than forcing one, and ends with an upgrade menu naming what each missing input would unlock",
-        "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, not only as a research caveat"
+        "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, not only as a research caveat",
+        "No event, outcome, or stake Nadia did not describe is supplied to make her story land — nothing asserts that an integration failed, a client escalated, or a project was at risk unless she said so — and any number carried into proposed language stays attached to the noun it came from (\"requirements documents across 30+ integrations\" is a count of integrations, never \"30+ requirements documents\")"
       ]
     },
     {

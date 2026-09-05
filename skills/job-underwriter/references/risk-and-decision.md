@@ -95,4 +95,6 @@ The snapshot leads every delivered assessment — concise decision first, inspec
 4. Severe red flags: every `severity: high` register entry, or "none found".
 5. What would change this: for `conditional_go` the conditions; for `hold_pending_answers` the awaited answers; for `no_go` the facts that would have to be different.
 
+**Counts are read off the map, never recalled.** "Five of nine requirements at `direct`" is a claim about a table the reader can see, so a reader who counts six stops trusting the analysis rather than the sentence — and they are right to, because the tally was the cheapest thing in the document to get right. Recount from the rows every time the snapshot regenerates, or name the requirements instead of counting them; the snapshot loses nothing by saying which.
+
 Regenerate the snapshot on every turn that changes the map or the register — a stale decision over fresh evidence is the inconsistency readers notice first.
