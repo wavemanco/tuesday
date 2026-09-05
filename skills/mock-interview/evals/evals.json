@@ -7,6 +7,7 @@
       "expected_output": "A complete markdown prep pack generated without any clarifying questions, with peer-weighted personas, grounded guidance mapped to Priya's stated stories, and every question carrying type tags, rationale, and a provenance label.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "No clarifying question is asked before generating (round type, relationship, JD, and CV context were all supplied)",
         "The output is a markdown pack containing persona-organized question-bank tables with columns covering the question, a type tag, answer guidance, and a rationale",
         "A Peer Evaluator persona appears with elevated likelihood explicitly justified by the stated peer relationship, and its bank includes at least one seam/boundary question and one credit-sharing or reciprocity question",
@@ -24,6 +25,7 @@
       "expected_output": "One compact clarifying exchange (round type + research consent), then a full pack that degrades honestly: no interviewer-read section, round-type persona priors, generic reverse questions, and an upgrade menu.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "Exactly one clarifying message is sent before generating, containing at most three questions, covering round type/relationship to the interviewer and research-depth consent — and generation proceeds even though interviewer identity remains unknown",
         "No 'Reading the interviewer' section appears in the pack, and no facts about any specific interviewer are invented",
         "Reverse questions are role-generic (about the team, the sites, success criteria) with no fabricated references to a named interviewer",
@@ -39,6 +41,7 @@
       "expected_output": "One bundled clarifying exchange, L1 research actually performed (official values/principles, documented loop structure), then an honest gate-only pack: inferred JD questions, a self-assessment fit worksheet, and heavy provenance labeling.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "At most one clarifying message is sent (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and the pack is generated after that single exchange even if the user supplies nothing further",
         "Web research is actually performed for Stripe's published operating principles/values and its documented interview process rather than answering from model memory, and the Sources section cites what was found",
         "JD-derived questions are labeled [inferred] and the pack states they were built from a researched representative JD for the title",
@@ -54,6 +57,7 @@
       "expected_output": "A full pack that consumes the handoff: story-mapped [grounded] guidance built on the verified evidence (with the medium-confidence caveat coached), strategy-constrained guidance per weak area, the dossier's named objection given the deepest rehearsal and attributed to the dossier, its risks and employer questions carried into the reverse bank, no prohibited claim asserted anywhere, a Sources note naming the dossier, and a one-line pack_feedback offer at the end.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "No clarifying question asks for the JD or the candidate's background — the dossier's role_profile and verified evidence already supply them; at most one clarifying message is sent and it covers only what the dossier does not carry (e.g. research-depth consent or interviewer identity)",
         "Guidance built on the dossier's verified_candidate_evidence is story-mapped to those specific claims (the 30+ integrations, the integration playbook, the quarterly roadmap-input sessions) and labeled [grounded] rather than written as story-selection scaffolds",
         "The roadmap-input-sessions claim, flagged medium confidence in the dossier, is coached with its verification caveat named — the guidance tells the candidate to volunteer the limit of inspectable proof rather than leaving it for a prober to extract",
@@ -72,6 +76,7 @@
       "expected_output": "A pack with a dedicated build section for the pre-declared POV (grounded in the supplied report, theses each with a concession, a differentiation strategy against the report's own consensus, and the operator-benefit close the recruiter named), a prep triage sized to four hours, panel-weighted personas for the two named interviewers, and any beyond-spec addition arriving as a labeled offer.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "A dedicated build section exists for the pre-declared POV deliverable — questions alone do not satisfy it, because an announced deliverable is a graded deliverable",
         "The POV section offers 2-3 defensible theses, and each carries an explicit concession rather than being argued as unqualified",
         "The POV section names a differentiation strategy against the supplied market report rather than reciting it, on the reasoning that a document circulated internally is equally available to the panel and to rival candidates — and where the role warrants saying no, an anti-pick appears",
