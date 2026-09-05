@@ -57,6 +57,40 @@ runs per case is the minimum that distinguishes "routes here" from "routes here
 sometimes". Cases are scored on consistency — a case that fires the right skill
 on two runs of three is a *fail*, because that is what a user meets.
 
+## Clean-room fixtures
+
+`run_fixtures.py` runs each skill's own `evals/evals.json` fixtures in a project
+that contains only that skill — no repository, no spec, no conversation about
+what the skill was meant to do — and grades the responses with graders that see
+only the response and the expectations.
+
+```bash
+python evals/run_fixtures.py --out /tmp/clean-room
+python evals/run_fixtures.py --skill job-underwriter --eval 3 --out /tmp/cr
+python evals/run_fixtures.py --out /tmp/cr --skip-execute   # re-grade, no re-run
+```
+
+The point is authoring context. A fixture graded in the session that wrote the
+skill is graded by a reader who already knows what it meant, supplies the
+charitable reading, and scores the intent rather than the output.
+
+Two things the first clean-room pass taught, both about the *expectations*
+rather than the skills:
+
+- **An expectation that refers to knowledge the grader lacks is unfalsifiable.**
+  One asked whether anything "beyond the spec's owed outputs" arrived as a
+  labeled offer. A grader who cannot see the spec cannot answer that, so it
+  guessed, and failed a section that was owed. Expectations are now written to
+  be self-contained — they name what they mean rather than pointing at a
+  document the grader does not have.
+- **A grader needs to be told what does not count as a failure.** The first
+  grader failed conditional expectations whose condition never occurred ("where
+  research ran…", in a run with no web access), and once wrote FAIL above a
+  sentence reasoning its way to PASS. Those rules are now in the grader prompt.
+
+Both are the kind of defect that only appears outside the room where the eval
+was written, which is the whole argument for running it there.
+
 These evals are not run in CI: they need a model, cost real tokens, and take
 minutes. Run them in a session against any change that could plausibly move
 triggering — a description edit, a new skill, a boundary reworded.

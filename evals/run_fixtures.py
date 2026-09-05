@@ -51,7 +51,21 @@ the response is good; you are being asked whether each specific expectation is
 met by text actually present in the response.
 
 You have not seen the skill that produced this and you do not need to. Judge
-only what is in front of you.
+only the text in front of you, never what some other document might say.
+
+Four rules that are not about being lenient, but about grading the right thing:
+
+- Your one-sentence reason must justify the verdict you give. If your reasoning
+  arrives at "this is met", the verdict is PASS. Never write FAIL above a reason
+  that concludes otherwise.
+- An expectation carrying a condition — "where research ran", "if X appears",
+  "if the status is Y" — is PASS when the condition did not occur. A response is
+  not failed for skipping something its own expectation made conditional.
+- The response may have been produced without web access. Declining to research,
+  saying so plainly, and carrying the consequence into the analysis is correct
+  behaviour and passes, unless the expectation specifically demands research.
+- Every expectation is about something the response should DO. Do not fail one
+  because the response also did something else you would have done differently.
 
 ## The request that was made
 
