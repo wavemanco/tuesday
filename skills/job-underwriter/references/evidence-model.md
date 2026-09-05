@@ -43,6 +43,11 @@ output rather than the shared vocabulary:
   about what roles of this kind are normally like is `[generic]`, whether or
   not any search ran. A run with no research is *more* inference, not less, so
   a response that labels nothing because it searched nothing has it backwards.
+  Check them last, as a scan rather than a writing rule: pass over every
+  sentence that is not quoting the user's own material or the JD, and confirm
+  it carries a label. Labels go missing while writing because the writer knows
+  where each claim came from; only a reader-shaped pass catches the ones that
+  read as plain fact on the page.
 
 ## The evidence-map row
 
