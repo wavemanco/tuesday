@@ -16,7 +16,7 @@
         "At least one case or company question is grounded in the supplied research note (Compass launch, profitability push, or the bundling threat) rather than generic strategy",
         "Every question's rationale ends with a provenance label ([grounded], [inferred], or [generic])",
         "The pack ends with an upgrade menu listing concrete missing inputs (e.g., full JD text, full CV document, Dan's full profile) and what each unlocks",
-        "The pack explicitly states that the company's published values and documented interview process could not be established from attributable sources, rather than silently omitting the values section"
+        "Where the company's published values or documented interview process could not be established — whether research came back non-attributable or could not run at all — the pack says so and says which, rather than silently omitting the values section or filling it from memory"
       ]
     },
     {
@@ -26,7 +26,7 @@
       "files": [],
       "expectations": [
         "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
-        "Exactly one clarifying message is sent before generating, containing at most three questions, covering round type/relationship to the interviewer and research-depth consent — and generation proceeds even though interviewer identity remains unknown",
+        "Any clarifying questions ride with the delivered pack rather than preceding it — at most three, covering round type/relationship to the interviewer and research-depth consent — and the pack is complete despite the interviewer's identity remaining unknown, with that assumption stated",
         "No 'Reading the interviewer' section appears in the pack, and no facts about any specific interviewer are invented",
         "Reverse questions are role-generic (about the team, the sites, success criteria) with no fabricated references to a named interviewer",
         "Each stated JD requirement (multi-site operations, on-time/cost metrics, team of 12, Power BI, Lean/Six Sigma) has at least one JD-tagged question, and the 3-supervisors-to-12 and Power BI gaps each get a Skeptic or Pressure question with bridge guidance",
@@ -42,11 +42,11 @@
       "files": [],
       "expectations": [
         "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
-        "At most one clarifying message is sent (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and the pack is generated after that single exchange even if the user supplies nothing further",
-        "Web research is actually performed for Stripe's published operating principles/values and its documented interview process rather than answering from model memory, and the Sources section cites what was found",
-        "JD-derived questions are labeled [inferred] and the pack states they were built from a researched representative JD for the title",
+        "At most three clarifying questions appear (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and they accompany a pack that is already complete rather than gating it",
+        "Nothing about Stripe's operating principles or interview process is answered from model memory: either research runs and the Sources section cites what it found, or the response says plainly that research was unavailable and treats those facts as unestablished",
+        "JD-derived questions carry a provenance label and the pack says what they were built from — [inferred] from a researched representative JD where research ran, [generic] from the role-family pattern where it did not — never presented as Stripe-specific without a source",
         "With no CV provided, the fit snapshot appears as a self-assessment worksheet variant with story-selection scaffolds instead of story-mapped guidance",
-        "A values/behavioral bank maps questions to the company's actual published principles found in research, by name",
+        "A values/behavioral bank exists, and either maps its questions to the company's actual published principles by name where research found them, or states that the principles could not be confirmed and labels the bank generic rather than inventing named values",
         "The pack ends with an upgrade menu, and no section fabricates a specific interviewer, team, or unverified company fact",
         "The pack states that the final round is typically multiple sessions, runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu once the schedule is known"
       ]

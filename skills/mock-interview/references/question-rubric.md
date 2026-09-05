@@ -18,7 +18,7 @@ Dual-tagging is normal — list the primary type first and let the rationale exp
 
 These exist because packs fail by omission, and the omissions are predictable:
 
-- **Every hard requirement in the JD gets at least one JD-tagged question.** The JD is the interviewer's scoring sheet; a requirement with no rehearsed answer is a free miss.
+- **Every hard requirement in the JD gets at least one JD-tagged question, and every other stated requirement gets one or a stated reason it does not.** The JD is the interviewer's scoring sheet; a requirement with no rehearsed answer is a free miss. The ones that go missing are never the headline requirements — they are the mid-list items, a named methodology or a specific tool, that appear once in the JD, get noted in the fit snapshot, and are never converted into a question. Check the finished banks against the JD's own list before delivering, not against your memory of it.
 - **Every headline metric on the CV gets a defend-the-number EXP question.** Quantified claims are magnet targets for probers; the rehearsal is precise attribution — the sizing shape, the sensitivity, the weakest assumption named first, and exactly what was the candidate's own contribution.
 - **Every published company value gets at least one VAL question with a mapped story** when research detects a values-style round. Slogan familiarity isn't the bar; a specific decision that demonstrates the value is.
 - **At least one CO or CASE question grounded in the company's current strategy** when research at L1+ succeeded. These are the differentiator questions most candidates can't touch — and they go generic without research, which is the honest cost of declining the deep tier.
