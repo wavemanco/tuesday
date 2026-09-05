@@ -44,13 +44,18 @@ REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview"]
 
 
-def install_skills(root: Path, run_id: str) -> dict[str, str]:
+def install_skills(root: Path, run_id: str,
+                   overrides: dict[str, Path] | None = None) -> dict[str, str]:
     """Copy each skill into the throwaway project; return skill -> installed name.
 
     The name carries a per-run suffix so a match in the stream can only have come
     from this run's copy, never from a skill the host machine happens to have
     installed. A skill's directory name and its frontmatter `name` must agree, so
     both are renamed together.
+
+    `overrides` substitutes a different SKILL.md for a skill without touching the
+    working tree — how a description generation is A/B'd against the one that
+    ships. Extract the old one with `git show <ref>:skills/<name>/SKILL.md`.
     """
     dest_root = root / ".claude" / "skills"
     dest_root.mkdir(parents=True, exist_ok=True)
@@ -65,6 +70,8 @@ def install_skills(root: Path, run_id: str) -> dict[str, str]:
         shutil.copytree(REPO / "skills" / skill, dest,
                         ignore=shutil.ignore_patterns("evals", "__pycache__", "*.pyc", ".DS_Store"))
         skill_md = dest / "SKILL.md"
+        if overrides and skill in overrides:
+            skill_md.write_text(overrides[skill].read_text())
         text = skill_md.read_text()
         renamed = re.sub(rf"^name:\s*{re.escape(skill)}\s*$", f"name: {name}", text,
                          count=1, flags=re.MULTILINE)
@@ -228,6 +235,8 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=240)
     ap.add_argument("--workers", type=int, default=3, help="parallel runs; high values invite rate limiting")
     ap.add_argument("--json-out", default=None, help="write full results here")
+    ap.add_argument("--skill-md", action="append", default=[], metavar="SKILL=PATH",
+                    help="substitute a SKILL.md for one skill, to A/B a description generation")
     args = ap.parse_args()
 
     spec = json.loads((REPO / "evals" / "suite-routing.json").read_text())
@@ -235,7 +244,13 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        names = install_skills(root, uuid.uuid4().hex[:8])
+        overrides = {}
+        for item in args.skill_md:
+            skill, _, path = item.partition("=")
+            if skill not in SKILLS or not path:
+                raise SystemExit(f"--skill-md expects one of {SKILLS} as SKILL=PATH, got {item!r}")
+            overrides[skill] = Path(path)
+        names = install_skills(root, uuid.uuid4().hex[:8], overrides)
 
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:

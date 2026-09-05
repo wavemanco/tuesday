@@ -40,6 +40,18 @@ python evals/run_routing.py --case 9 --case 10 # just the spanning cases
 python evals/run_routing.py --workers 1        # serial, if rate-limited
 ```
 
+To A/B a description generation against the one that ships, substitute a
+`SKILL.md` without touching the working tree:
+
+```bash
+git show <ref>:skills/job-underwriter/SKILL.md > /tmp/old-SKILL.md
+python evals/run_routing.py --skill-md job-underwriter=/tmp/old-SKILL.md
+```
+
+That control is not optional when a description changes. A rewrite can move
+which cases fire without moving how often anything fires, and only the previous
+generation measured on the same harness tells the two apart.
+
 Routing is probabilistic, so a single run proves little; the default of three
 runs per case is the minimum that distinguishes "routes here" from "routes here
 sometimes". Cases are scored on consistency — a case that fires the right skill
