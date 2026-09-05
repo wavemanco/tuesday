@@ -62,6 +62,8 @@ decision_rule: "Proceed only if authority and resources are concrete and consist
 status: unresolved | reduced | confirmed
 ```
 
+Severity is one value too — `low`, `medium`, or `high`. The same rule as the confidence bands applies and for the same reason: `severity: high` is what the decision snapshot must surface as a severe red flag, so a hybrid leaves the snapshot unable to decide whether the entry belongs there. When an entry sits between two, take the lower and put the reason in the hypothesis — over-stating severity manufactures the alarm this file warns against.
+
 Every register entry carries a `verification_question` the candidate can ask a live interviewer verbatim — the register doubles as interview preparation, and unresolved entries feed `opportunity_risks_to_validate` in the mock-interview handoff. `severity: high` entries are the "severe red flags" the decision snapshot must carry.
 
 ## Decision semantics

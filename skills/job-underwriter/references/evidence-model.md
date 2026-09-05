@@ -1,57 +1,37 @@
 # Evidence model
 
-The evidence map is the skill's spine: one row per material JD requirement, tracing claim → evidence → confidence, so that every downstream artifact — the gap queue, the application plan, the decision, the handoff — reads from rows rather than from impressions. This file defines the vocabulary and the row shape.
+The evidence map is the skill's spine: one row per material JD requirement, tracing claim → evidence → confidence, so that every downstream artifact — the gap queue, the application plan, the decision, the handoff — reads from rows rather than from impressions.
 
-Vocabulary here is an operative copy of `conventions/evidence-conventions.md` (canonical — it wins on any conflict). Do not coin synonyms; the suite has one dialect.
+The vocabulary it uses is defined in `references/evidence-conventions.md`, the suite's canonical file mirrored verbatim into this skill; what follows is the row shape this skill fills in with it.
 
-## Evidence source types
+## The vocabulary
 
-Every piece of candidate evidence records where it came from:
+Source types, confidence bands, provenance labels, and the mapping that connects
+them are defined in `references/evidence-conventions.md` — the suite's canonical
+vocabulary, mirrored verbatim into this skill. Read the definitions there rather
+than from memory: the whole suite speaks one dialect, and a skill that quietly
+redefines a band or coins a synonym breaks every consumer downstream of it.
 
-| Source type | Meaning | Reliability note |
-|---|---|---|
-| `jd_quote` | Exact language from the job description | Authoritative for what the employer *says*; not for what the role *is* |
-| `cv` | The candidate's current resume | Self-reported; claims here are leads for verification, not proof |
-| `prior_resume` | An earlier resume version | Often contains evidence the current CV dropped |
-| `attachment` | Uploaded document: review, brief, deck, certificate, work sample | Strong when inspectable; record what was actually inspected |
-| `link` | Portfolio, repository, published work | Strong when fetched and read; a URL alone proves nothing |
-| `user_confirmed_text` | The candidate answered a question in writing | Confirmed claim; strength depends on specificity |
-| `user_confirmed_voice` | The candidate answered by voice / pasted transcript | Same standing as confirmed text once extracted facts are user-approved |
-| `memory_lead` | Agent memory or prior context suggests relevant experience | **Unverified until the user confirms and specifies it.** Never cite as evidence; only as the basis for a question |
-| `web_research` | Fetched public material (official page, guide, forum) | Official material first; forum-only claims never rise above inferred |
-| `inference` | This skill's own derivation | Must name what it derives from; the weakest source by definition |
+What that file settles, and where:
 
-A candidate background stated in prose in the conversation is `cv`-equivalent self-report at intake; once the candidate answers a specific probe about it, the answer is `user_confirmed_text`.
-
-## Evidence confidence bands
-
-Confidence grades a **candidate claim**, not this skill's prose:
-
-| Confidence | Meaning |
+| Need | Section of the mirror |
 |---|---|
-| `high` | Specific, user-confirmed claim supported by an inspectable artifact — CV plus a document, link, or direct evidence |
-| `medium` | User-confirmed, specific, plausible — but limited inspectable proof |
-| `low` | Vague claim, indirect context, partial evidence, or an unconfirmed `memory_lead` |
-| `none` | No supporting evidence, or direct contradiction |
+| Which `source_type` a piece of evidence carries | §1 |
+| Which `confidence` band a candidate claim earns | §2 |
+| Whether a written line is `[grounded]`, `[inferred]`, or `[generic]` | §4 |
+| What may be asserted on top of a claim at each band | §5, including the two overrides that beat every label |
+| The never-do list binding every output | §6 |
 
-## Content provenance labels
+Two readings this skill adds on top, because they concern its own intake rather
+than the shared vocabulary:
 
-Provenance grades **what this skill wrote** — a fit row's reasoning, a research claim, an inferred outcome:
-
-- `[grounded]` — traceable to a provided document, a user-confirmed claim, or research cited in the sources.
-- `[inferred]` — derived from a representative or adjacent source, with the derivation named.
-- `[generic]` — role-family pattern with no entity-specific claim.
-
-## The mapping — what may be written on top of evidence
-
-| Evidence confidence | What this skill may write from it | Provenance of that output |
-|---|---|---|
-| `high` | Assert it as the candidate's story; build plan items and draft bullets on it | `[grounded]` |
-| `medium` | Assert it **with the verification caveat named** ("confirmed, limited inspectable proof — expect a probe") | `[grounded]`, caveat visible |
-| `low` | Never assert as the candidate's claim. May appear only as a discovery lead or a question | `[inferred]`, derivation named |
-| `none` | May not appear as candidate capability at all — only as a named gap or hard-gate surfacing | — |
-
-Two overrides beat every label: **`prohibited_claims` are absolute**, and **hard-gate failures stay visible** — no mapping row, tone, or aggregate framing may bury either.
+- **Prose background is CV-equivalent at intake.** A candidate background typed
+  into the conversation is self-report of the same standing as `cv` — leads for
+  verification, not proof. Once the candidate answers a specific probe about it,
+  that answer is `user_confirmed_text`.
+- **`medium` is the intake ceiling.** Nothing reaches `high` on a first pass from
+  unprobed material, however specific it sounds: `high` needs an inspectable
+  artifact, and intake prose is not one.
 
 ## The evidence-map row
 
@@ -81,6 +61,7 @@ Rules for building rows:
 
 - **Requirements come from the JD or from named inference, never from buzzword drift.** "Mentions Kafka once in a tools list" does not create a streaming-architecture requirement; if you infer a requirement, `requirement_source.type: inferred` and say why.
 - **`fit_status` and `gap_type` are decided per the taxonomy** in `references/gap-taxonomy-and-questions.md`. When fit is `direct` with solid evidence, `gap_type: none`.
+- **A band is one value, never a range.** `high`, `medium`, `low`, `none` — `low–medium` is not a band, and hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, split them — "medium (adjacent work) / none (the titled years)" assigns a real band to each, which is a different and legitimate thing.
 - **A cell restates the source claim; it never widens it.** The map is the spine — the plan, the handoff, and every draft line read from these rows, so a qualifier dropped here ("on custom builds" quietly becoming "across 30+ integrations") propagates into language the candidate says out loud. Carry the user's own qualifiers into the cell, and when a cell needs a broader claim to be true, that is a `next_action`, not a wording choice.
 - **Contradictions lower confidence to `none` and say so in `reasoning`** — a CV claiming 5 years against a portfolio showing 2 is a contradiction to surface, not average.
 - **`next_action` is where recovery starts.** A row with an unresolved gap and no concrete next action is an unfinished row.

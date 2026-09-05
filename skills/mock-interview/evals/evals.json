@@ -65,6 +65,26 @@
         "The pack ends with an upgrade menu and offers, in one line and without pressure, to emit or update the dossier with a pack_feedback section — it does not emit one unprompted and does not make the offer a condition of anything",
         "The pack does not relitigate the underwriter's conditional_go decision or tell the candidate whether to apply, and nothing in the pack treats the dossier as having been required for the pack to be built"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Second round on Tuesday for Senior Partnerships Manager at Kelverton Rail (UK rail-tech, ~600 staff, they sell scheduling software to train operating companies). The recruiter was unusually specific in her email, quoting it: \"The panel is Deepa (VP Partnerships, your future manager) and Ross (Commercial Director). 60 minutes. First 15 minutes we'd like you to present a short POV on where you'd take our operator partnerships over the next 18 months — no slides needed, just talk us through it. Please land on what it means for the operators themselves. Rest is Q&A, and Ross will push on commercials.\" She also attached the market report their strategy team circulated internally last quarter, which I've read. I've got about four hours of prep time total, spread over the weekend. MY BACKGROUND: 9 years in partnerships, last 4 at a payments company running the ISV channel — took it from 6 partners to 40, roughly £4M of influenced revenue. Before that, 5 years in transport consulting (bus and light rail network planning, so I know the operator world from the other side). Never sold into rail specifically and never carried a direct quota, only influenced revenue.",
+      "expected_output": "A pack with a dedicated build section for the pre-declared POV (grounded in the supplied report, theses each with a concession, a differentiation strategy against the report's own consensus, and the operator-benefit close the recruiter named), a prep triage sized to four hours, panel-weighted personas for the two named interviewers, and any beyond-spec addition arriving as a labeled offer.",
+      "files": [],
+      "expectations": [
+        "A dedicated build section exists for the pre-declared POV deliverable — questions alone do not satisfy it, because an announced deliverable is a graded deliverable",
+        "The POV section offers 2-3 defensible theses, and each carries an explicit concession rather than being argued as unqualified",
+        "The POV section names a differentiation strategy against the supplied market report rather than reciting it, on the reasoning that a document circulated internally is equally available to the panel and to rival candidates — and where the role warrants saying no, an anti-pick appears",
+        "The recruiter's named close is honoured: the POV lands on what the direction means for the train operating companies themselves, not only for Kelverton",
+        "A prep triage section appears, sized to the stated four hours, ordering the few things worth doing well and tying each to a pack section or question ID, and closing with an explicit line that everything else is insurance",
+        "The prep triage is not padded to fill the time — items the candidate should skip are named as skippable rather than dressed up as work",
+        "Persona weights reflect a two-person panel with the stated roles: the future manager and a commercial director whose stated behaviour is to push on commercials, with the reasoning shown rather than asserted",
+        "The never-carried-a-quota gap and the never-sold-into-rail gap each get a Skeptic or Pressure question with bridge guidance, and the influenced-revenue figure gets a defend-the-number EXP question that coaches precise attribution",
+        "The transport-consulting background is used as a genuine adjacency (operator-side domain knowledge) with its limit named, and is never presented as rail sales experience",
+        "Every question's rationale ends with a provenance label, and claims about Kelverton that research could not attribute are labeled or dropped rather than asserted",
+        "Any section beyond the skill's own spec arrives as a clearly labeled offer with one line on what it would add, rather than being woven into the pack unannounced",
+        "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition"
+      ]
     }
   ]
 }

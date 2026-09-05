@@ -1,0 +1,36 @@
+name: checks
+
+# The suite's structural invariants — the ones a reviewer would otherwise have
+# to verify by hand on every PR: that each dist/ build still matches its source,
+# that no conventions mirror has drifted, that every eval actually asserts
+# something, and that each skill still carries the trigger boundary the
+# interaction grammar reserves for it.
+#
+# Routing evals (evals/run_routing.py) are deliberately not run here: they need
+# a model, cost real tokens, and are probabilistic. They belong in a session,
+# run against a change that could plausibly move triggering.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # No install step on purpose: ci/check_skills.py uses only the standard
+      # library, so this job cannot break because of a dependency it never
+      # needed. The skills themselves are dependency-free by repository rule.
+      - name: Repository checks
+        run: python ci/check_skills.py
+
+      - name: Checks self-test
+        run: python ci/test_checks.py

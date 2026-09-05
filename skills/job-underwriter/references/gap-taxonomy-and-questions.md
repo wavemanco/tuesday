@@ -1,18 +1,19 @@
 # Gap taxonomy and recovery questions
 
-"Missing from the CV" is four different situations wearing one costume, and only one of them is a real capability problem. This file is how the skill tells them apart, and how it asks the questions that convert one into another. Vocabulary is an operative copy of `conventions/evidence-conventions.md` (canonical — it wins on any conflict).
+How this skill tells four situations apart and asks the questions that convert one into another. The vocabulary it uses is defined in `references/evidence-conventions.md`, the suite's canonical file mirrored verbatim into this skill; what follows is this skill's own method for applying it.
 
-## Fit status
+## Fit status and gap type
 
-Per material requirement, `fit_status` is one of: `direct`, `adjacent`, `unclear`, `absent`, `hard_gate_fail`. When fit is not `direct`, classify the gap:
+Per material requirement, `fit_status` is one of `direct`, `adjacent`, `unclear`,
+`absent`, `hard_gate_fail`; when fit is not `direct`, the gap is classified as
+`presentation`, `discovery`, `transferability`, `capability`, or `hard_gate`.
 
-| Gap type | Definition | Appropriate next action |
-|---|---|---|
-| `presentation` | Verified evidence exists; the CV doesn't communicate it in role-relevant terms | Propose a truthful repositioning, contingent on user approval |
-| `discovery` | Evidence may exist; current inputs are inconclusive | Ask one targeted, example-rich question; suggest exact artifacts |
-| `transferability` | No direct match, but credible adjacent work | Make the transferable case *and its limits*; consider a work sample |
-| `capability` | No credible direct or adjacent evidence | Name a realistic closure path, or carry as material risk |
-| `hard_gate` | Eligibility, credential, or constraint not met | Surface prominently; wording cannot solve it and no output may imply otherwise |
+Both sets, and the definition of each gap type with its appropriate next action,
+live in `references/evidence-conventions.md` §3 — the suite's canonical
+vocabulary, mirrored verbatim into this skill. Read them there rather than from
+memory. The taxonomy earns its complexity because "missing from the CV" is four
+different situations wearing one costume, and only one of them is a real
+capability problem.
 
 Two classification disciplines keep the taxonomy honest:
 
@@ -31,7 +32,7 @@ Run the reframing audit below on the proposal before showing it.
 
 **What it governs: every word this skill proposes the candidate say, write, or send.** Resume bullets and summary lines, yes — but equally the positioning advice ("lead with…", "your first two sentences should be…"), suggested outreach and cover-letter phrasing, and interview framing. Drift migrates to whichever surface the audit isn't watching, and prose advice is the easiest place for it to hide, because it reads as strategy rather than as a claim. It is still a claim: the candidate will say it out loud to someone who can check.
 
-Audit clause by clause against the user's own sentences, on four axes:
+Audit clause by clause against the user's own sentences, on five axes:
 
 | Axis | The drift | Example |
 |---|---|---|
@@ -39,14 +40,18 @@ Audit clause by clause against the user's own sentences, on four axes:
 | **Verb** | Participation becomes origination or ownership | "ran quarterly sessions" → "established a quarterly cadence" |
 | **Kind** | The activity becomes a different, higher-status kind of work | "collecting client feedback" → "synthesizing findings into structured feedback" |
 | **Relationship** | Which side of the transaction the candidate stood on changes | worked at the vendor integrating "our APIs" for clients → "you have been the customer of this product" |
+| **Logical form** | A statement's logic weakens or inverts | "two hard constraints" → "if *either* is negotiable"; "all of X" → "some of X"; a non-negotiable → a preference |
 
-Notes on the harder two. A change in **kind** is not a change in intensity — "collected" and "synthesized" describe different work, so one cannot stand in for the other. A **relationship** inversion is the subtlest of the four and the most dangerous, because it usually arrives as a flattering insight ("you *are* the user this team builds for") and collapses on the first follow-up question: a vendor-side implementer and a buyer-side customer have different knowledge, different incentives, and different stories, and an interviewer on either side will know within a sentence which one they are talking to.
+Notes on the harder three. **Logical form** is the easiest to write by accident, because the sentence still sounds like the candidate's: turning a conjunctive pair of non-negotiables ("I need X *and* Y") into a disjunctive one ("if *either* moves") reads as flexibility while quietly discarding half of what they told you they would not trade. On text the candidate actually sends, that costs them the outcome they set the constraint to protect. A change in **kind** is not a change in intensity — "collected" and "synthesized" describe different work, so one cannot stand in for the other. A **relationship** inversion is the subtlest of them and the most dangerous, because it usually arrives as a flattering insight ("you *are* the user this team builds for") and collapses on the first follow-up question: a vendor-side implementer and a buyer-side customer have different knowledge, different incentives, and different stories, and an interviewer on either side will know within a sentence which one they are talking to.
 
-Three disciplines make the audit actually catch things:
+Four disciplines make the audit actually catch things:
 
 - **Audit the whole line, every line.** A bullet whose ending was carefully checked while its opening verb drifted is the characteristic failure. So is a table audited scrupulously while the paragraph above it runs free.
+- **Ambiguity resolves downward.** When the candidate's own sentence admits two readings — "growth lead, then Head of Growth, at two companies" is one Head-of tenure or two — take the reading that claims less, or ask. Resolving upward and then labelling the result `[grounded]` is how a fabricated credential acquires a citation.
 - **Drift in the flattering direction is the one to hunt, but the rule is direction-agnostic** — untraceable language fails whether it raises or lowers the candidate.
 - **When a clause cannot be traced to the user's own sentence, cut it or ask about it.** An asked question can turn a reframe into confirmed evidence; a guessed one turns it into a claim the interview will test.
+
+A self-certification is part of the audited text, not a substitute for it. Writing "every claim here traces to a sentence you wrote" above a line that does not is worse than writing nothing: it tells the candidate to stop checking. Make the claim only after the clause-by-clause pass, and if a clause cannot be traced, cut the clause rather than soften the certification.
 
 Everything the audit governs is proposed, never applied: mark it `resume_edits_pending_approval` and place the approval statement so it visibly covers the prose advice too, not only the table beneath it.
 
