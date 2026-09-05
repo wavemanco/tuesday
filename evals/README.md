@@ -13,13 +13,25 @@ near-miss that must not pull either skill). The near-misses matter most — they
 share the domain's whole vocabulary and are where over-triggering shows up.
 
 `run_routing.py` puts both skills in front of the model at once and records
-which one it reaches for. Two properties keep it honest:
+which one it reaches for. Three properties keep it honest:
 
-- **It reads the live frontmatter descriptions** from each `SKILL.md` rather
-  than copying them here, so the eval always tests what actually ships.
-- **A timed-out run reports `timeout`, never `neither`.** Folding those
-  together would let a slow or rate-limited harness manufacture negatives that
-  look like findings.
+- **It installs the real skills**, copying each one into a throwaway project's
+  `.claude/skills/`, so they reach the model the way installed skills do and
+  carry the descriptions that actually ship. Nothing is duplicated here.
+- **Registration is the production surface.** The first version registered each
+  skill as a project *command* instead, which put a caveat under every number it
+  produced: commands are addressed to the model as things the user invokes, so
+  "the harness under-reports" was always available as the competing explanation
+  for a low score. Installing the real skills retires it.
+- **A negative has to be a negative the harness actually read.** The first read
+  loop broke out the moment the CLI process exited, discarding whatever was
+  still sitting unparsed in the pipe — so a run that fired a skill and finished
+  quickly was recorded as `neither`. It cost two rounds of chasing a triggering
+  problem that was partly a reading problem, and it was only caught by running a
+  "never fires" case by hand and watching it fire. Runs that time out or error
+  are reported as `timeout` and `error` for the same reason: a run that never
+  reached a verdict is not evidence about routing, and folding either into
+  `neither` lets a slow or throttled harness manufacture findings.
 
 ```bash
 python evals/run_routing.py                    # every case, 3 runs each

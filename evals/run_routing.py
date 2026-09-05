@@ -6,11 +6,17 @@ across the whole available-skills list, so it has no home inside either skill's
 evals/. This runner puts both skills in front of the model at once and records
 which one fires.
 
-Method: each skill's real frontmatter description is read from its SKILL.md and
-registered as a project command, so the model sees the same text it would see
-installed. `claude -p` then answers the case prompt, and the stream is watched
-for which skill it reaches for. Descriptions are never duplicated here — the
-eval always tests what actually ships.
+Method: each skill is copied into a throwaway project's `.claude/skills/`, so it
+reaches the model through the same path an installed skill does — the
+available-skills list, carrying its real frontmatter description. `claude -p`
+then answers the case prompt and the stream is watched for which skill it
+reaches for. Nothing is duplicated here; the eval always tests what ships.
+
+Registration is deliberate. An earlier version registered each skill as a project
+*command*, which put a caveat under every number it produced: commands are
+addressed to the model as things the user invokes, so "the harness under-reports"
+was always available as the competing explanation for a low score. Installing the
+real skills retires that caveat.
 
 Usage:
     python evals/run_routing.py                 # all cases, 3 runs each
@@ -25,6 +31,7 @@ import json
 import os
 import re
 import select
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,40 +44,43 @@ REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview"]
 
 
-def read_description(skill: str) -> str:
-    """Pull the live frontmatter description so the eval can't drift from what ships."""
-    text = (REPO / "skills" / skill / "SKILL.md").read_text()
-    match = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
-    if not match:
-        raise SystemExit(f"{skill}: no frontmatter found")
-    body = match.group(1)
-    desc = re.search(r"^description:\s*(.+?)(?=\n[a-z-]+:|\Z)", body, re.DOTALL | re.MULTILINE)
-    if not desc:
-        raise SystemExit(f"{skill}: no description in frontmatter")
-    return " ".join(desc.group(1).split())
+def install_skills(root: Path, run_id: str) -> dict[str, str]:
+    """Copy each skill into the throwaway project; return skill -> installed name.
 
-
-def write_commands(root: Path, descriptions: dict[str, str], run_id: str) -> dict[str, str]:
-    """Register each skill as a project command; return skill -> unique command name."""
-    commands = root / ".claude" / "commands"
-    commands.mkdir(parents=True, exist_ok=True)
+    The name carries a per-run suffix so a match in the stream can only have come
+    from this run's copy, never from a skill the host machine happens to have
+    installed. A skill's directory name and its frontmatter `name` must agree, so
+    both are renamed together.
+    """
+    dest_root = root / ".claude" / "skills"
+    dest_root.mkdir(parents=True, exist_ok=True)
     names = {}
-    for skill, desc in descriptions.items():
+    for skill in SKILLS:
         name = f"{skill}-{run_id}"
         names[skill] = name
-        indented = "\n  ".join(desc.split("\n"))
-        (commands / f"{name}.md").write_text(
-            f"---\ndescription: |\n  {indented}\n---\n\n# {skill}\n\nThis skill handles: {desc}\n"
-        )
+        dest = dest_root / name
+        # Install what ships: the packager keeps evals/ out of the .skill file,
+        # so a copy that carried them would put files in front of the model that
+        # no installed user ever has.
+        shutil.copytree(REPO / "skills" / skill, dest,
+                        ignore=shutil.ignore_patterns("evals", "__pycache__", "*.pyc", ".DS_Store"))
+        skill_md = dest / "SKILL.md"
+        text = skill_md.read_text()
+        renamed = re.sub(rf"^name:\s*{re.escape(skill)}\s*$", f"name: {name}", text,
+                         count=1, flags=re.MULTILINE)
+        if renamed == text:
+            raise SystemExit(f"{skill}: frontmatter name not found to rename")
+        skill_md.write_text(renamed)
     return names
 
 
 def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None) -> str:
-    """Run one query; return the skill that fired, 'neither', or 'timeout'.
+    """Run one query; return the skill that fired, 'neither', 'timeout', or 'error'.
 
-    'timeout' is kept distinct from 'neither' on purpose: a run cut short says
-    nothing about routing, and folding the two together would let a slow or
-    rate-limited harness manufacture negatives that look like findings.
+    Two outcomes are kept distinct from 'neither' on purpose. A run cut short
+    ('timeout') and a run the CLI failed ('error', typically a rate limit) say
+    nothing about routing; folding either into 'neither' lets a slow or throttled
+    harness manufacture negatives that look like findings.
 
     Watches partial stream events so the verdict lands as soon as the model
     reaches for a skill, rather than after the skill's work completes.
@@ -88,70 +98,94 @@ def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, mo
                 return skill
         return None
 
+    state = {"pending": None, "accumulated": ""}
+
+    def consume(buffer: str) -> tuple[str | None, str]:
+        """Parse whole lines out of the buffer; return a verdict once one lands."""
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if event.get("type") == "stream_event":
+                se = event.get("event", {})
+                kind = se.get("type", "")
+                if kind == "content_block_start":
+                    block = se.get("content_block", {})
+                    if block.get("type") == "tool_use" and block.get("name") in ("Skill", "Read"):
+                        state["pending"], state["accumulated"] = block.get("name"), ""
+                elif kind == "content_block_delta" and state["pending"]:
+                    delta = se.get("delta", {})
+                    if delta.get("type") == "input_json_delta":
+                        state["accumulated"] += delta.get("partial_json", "")
+                        hit = match(state["accumulated"])
+                        if hit:
+                            return hit, buffer
+                elif kind in ("content_block_stop", "message_stop"):
+                    if state["pending"]:
+                        hit = match(state["accumulated"])
+                        if hit:
+                            return hit, buffer
+                        state["pending"] = None
+                    # Deliberately no early exit here: a model often writes a
+                    # sentence of reasoning before reaching for the skill, so
+                    # the end of a message is not the end of the decision.
+                    # Only `result` (or process exit) settles a negative.
+
+            elif event.get("type") == "assistant":
+                for item in event.get("message", {}).get("content", []):
+                    if item.get("type") != "tool_use":
+                        continue
+                    hit = match(json.dumps(item.get("input", {})))
+                    if hit:
+                        return hit, buffer
+            elif event.get("type") == "result":
+                if event.get("is_error") or event.get("subtype") not in (None, "success"):
+                    return "error", buffer
+                return "neither", buffer
+        return None, buffer
+
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                             cwd=str(root), env=env)
-    buffer, accumulated, pending = "", "", None
+    buffer = ""
     start = time.time()
     try:
         while time.time() - start < timeout:
-            if proc.poll() is not None:
+            exited = proc.poll() is not None
+            if exited:
                 rest = proc.stdout.read()
                 if rest:
                     buffer += rest.decode("utf-8", errors="replace")
-                break
-            ready, _, _ = select.select([proc.stdout], [], [], 1.0)
-            if not ready:
-                continue
-            chunk = os.read(proc.stdout.fileno(), 8192)
-            if not chunk:
-                break
-            buffer += chunk.decode("utf-8", errors="replace")
-
-            while "\n" in buffer:
-                line, buffer = buffer.split("\n", 1)
-                line = line.strip()
-                if not line:
+            else:
+                ready, _, _ = select.select([proc.stdout], [], [], 1.0)
+                if not ready:
                     continue
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+                chunk = os.read(proc.stdout.fileno(), 8192)
+                if not chunk:
+                    exited = True
+                else:
+                    buffer += chunk.decode("utf-8", errors="replace")
 
-                if event.get("type") == "stream_event":
-                    se = event.get("event", {})
-                    kind = se.get("type", "")
-                    if kind == "content_block_start":
-                        block = se.get("content_block", {})
-                        if block.get("type") == "tool_use" and block.get("name") in ("Skill", "Read"):
-                            pending, accumulated = block.get("name"), ""
-                    elif kind == "content_block_delta" and pending:
-                        delta = se.get("delta", {})
-                        if delta.get("type") == "input_json_delta":
-                            accumulated += delta.get("partial_json", "")
-                            hit = match(accumulated)
-                            if hit:
-                                return hit
-                    elif kind in ("content_block_stop", "message_stop"):
-                        if pending:
-                            hit = match(accumulated)
-                            if hit:
-                                return hit
-                            pending = None
-                        # Deliberately no early exit here: a model often writes a
-                        # sentence of reasoning before reaching for the skill, so
-                        # the end of a message is not the end of the decision.
-                        # Only `result` (or process exit) settles a negative.
-
-                elif event.get("type") == "assistant":
-                    for item in event.get("message", {}).get("content", []):
-                        if item.get("type") != "tool_use":
-                            continue
-                        blob = json.dumps(item.get("input", {}))
-                        hit = match(blob)
-                        if hit:
-                            return hit
-                elif event.get("type") == "result":
-                    return "neither"
+            # Parse before honouring the exit. The first version of this loop
+            # broke out the moment the process was gone, discarding whatever was
+            # still sitting unparsed in the pipe — so a run that fired a skill
+            # and finished quickly was recorded as 'neither'. Every negative this
+            # harness reports has to be a negative it actually read.
+            verdict, buffer = consume(buffer)
+            if verdict:
+                return verdict
+            if exited:
+                # Trailing line with no newline.
+                if buffer.strip():
+                    verdict, _ = consume(buffer + "\n")
+                    if verdict:
+                        return verdict
+                return "neither"
         else:
             return "timeout"
     finally:
@@ -162,12 +196,18 @@ def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, mo
 
 
 def verdict(expected: str, fired: list[str]) -> tuple[bool, str]:
-    """An 'either' case passes when exactly one sibling fires, consistently."""
-    timeouts = fired.count("timeout")
-    fired = [f for f in fired if f != "timeout"]
+    """An 'either' case passes when exactly one sibling fires, consistently.
+
+    Timed-out and errored runs are set aside rather than counted as negatives,
+    and reported alongside the verdict so a case decided on one surviving run
+    cannot pass for a clean one.
+    """
+    aborted = {kind: fired.count(kind) for kind in ("timeout", "error") if kind in fired}
+    fired = [f for f in fired if f not in ("timeout", "error")]
     if not fired:
-        return False, f"inconclusive: all {timeouts} run(s) timed out"
-    suffix = f" [{timeouts} timed out]" if timeouts else ""
+        detail = ", ".join(f"{n} {kind}" for kind, n in aborted.items())
+        return False, f"inconclusive: no run reached a verdict ({detail})"
+    suffix = (" [" + ", ".join(f"{n} {kind}" for kind, n in aborted.items()) + "]") if aborted else ""
     unique = set(fired)
     if expected == "either":
         if unique <= {"job-underwriter", "mock-interview"} and unique:
@@ -192,11 +232,10 @@ def main() -> int:
 
     spec = json.loads((REPO / "evals" / "suite-routing.json").read_text())
     cases = [c for c in spec["cases"] if not args.case or c["id"] in args.case]
-    descriptions = {s: read_description(s) for s in SKILLS}
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        names = write_commands(root, descriptions, uuid.uuid4().hex[:8])
+        names = install_skills(root, uuid.uuid4().hex[:8])
 
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
