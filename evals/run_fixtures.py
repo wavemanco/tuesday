@@ -73,6 +73,8 @@ Four rules that are not about being lenient, but about grading the right thing:
 
 ## The response to grade
 
+This is everything the response produced. Where it delivered by writing a file, that file's full contents appear below the chat text under a `----- file the response produced -----` marker, and it counts exactly as if it had been written inline.
+
 {response}
 
 ## The expectations
@@ -138,12 +140,38 @@ def claude(prompt: str, cwd: Path, timeout: int, model: str | None,
     return "\n".join(chunks), fired
 
 
+TEXT_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml", ".csv"}
+MAX_ARTIFACT = 200_000
+
+
+def collect_artifacts(room: Path, skill_dir: Path) -> list[tuple[str, str]]:
+    """Return (name, content) for every text file the run wrote into the room.
+
+    A skill that delivers by writing a file — mock-interview saves its pack as
+    markdown and presents it — leaves only a cover note in the chat stream.
+    Grading that note against expectations about the pack's contents scores the
+    wrong artifact, and scores it badly.
+    """
+    found = []
+    for path in sorted(room.rglob("*")):
+        if not path.is_file() or skill_dir in path.parents or path == skill_dir:
+            continue
+        if path.suffix.lower() not in TEXT_SUFFIXES:
+            continue
+        try:
+            found.append((str(path.relative_to(room)), path.read_text()[:MAX_ARTIFACT]))
+        except (OSError, UnicodeDecodeError):
+            continue
+    return found
+
+
 def execute(skill: str, case: dict, out: Path, timeout: int, model: str | None) -> dict:
-    """Run one fixture in a clean room and save the response."""
+    """Run one fixture in a clean room and save the response plus what it wrote."""
     run_id = uuid.uuid4().hex[:8]
     room = out / "rooms" / f"{skill}-{case['id']}-{run_id}"
     room.mkdir(parents=True, exist_ok=True)
     name = install_one(room, skill, run_id)
+    skill_dir = room / ".claude" / "skills" / name
 
     text, fired = claude(case["prompt"], room, timeout, model)
     nudged = False
@@ -155,13 +183,20 @@ def execute(skill: str, case: dict, out: Path, timeout: int, model: str | None) 
         text, fired = claude(f"Use the {name} skill for this.\n\n{case['prompt']}",
                              room, timeout, model)
 
+    artifacts = collect_artifacts(room, skill_dir)
+    if artifacts:
+        text += "\n\n" + "\n\n".join(
+            f"----- file the response produced: {name_} -----\n{content}"
+            for name_, content in artifacts)
+
     body = out / f"{skill}-{case['id']}.md"
     body.write_text(text)
     meta = {"skill": skill, "id": case["id"], "triggered_unprompted": not nudged,
-            "skill_fired": fired, "chars": len(text), "response_file": body.name}
+            "skill_fired": fired, "chars": len(text), "response_file": body.name,
+            "artifacts": [a[0] for a in artifacts]}
     (out / f"{skill}-{case['id']}.meta.json").write_text(json.dumps(meta, indent=2) + "\n")
-    shutil.rmtree(room, ignore_errors=True)
     print(f"  ran {skill} eval {case['id']}: {len(text)} chars"
+          f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not nudged else ' (needed a nudge to fire)'}", flush=True)
     return meta
 

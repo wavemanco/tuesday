@@ -38,7 +38,11 @@ output rather than the shared vocabulary:
   pasted into the dossier, or read on its own — and an unlabeled inference reads
   exactly like a fact. Label at the point of assertion and accept the repetition;
   the labels are not decoration on the analysis, they are how a reader tells
-  which parts of it can be checked.
+  which parts of it can be checked. They are also not a research-only device:
+  a reading drawn from the JD and the CV alone is `[inferred]`, and a claim
+  about what roles of this kind are normally like is `[generic]`, whether or
+  not any search ran. A run with no research is *more* inference, not less, so
+  a response that labels nothing because it searched nothing has it backwards.
 
 ## The evidence-map row
 
