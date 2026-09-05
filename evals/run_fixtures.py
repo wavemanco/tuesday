@@ -144,8 +144,26 @@ TEXT_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml", ".csv"}
 MAX_ARTIFACT = 200_000
 
 
+def sidecar_dirs(room: Path) -> list[Path]:
+    """Scratchpads a nested session may write to instead of its own directory.
+
+    A `claude -p` subprocess is given its own scratchpad outside its working
+    directory, and a skill told to save a file will reasonably use it. Scanning
+    only the room found nothing and made a skill that had delivered look like a
+    skill that had claimed to — the harness reporting a false negative about a
+    false positive. The room's directory name carries this run's unique id, so
+    the sidecar can be found by that rather than by reconstructing the host's
+    path-mangling scheme.
+    """
+    parent = Path("/tmp/claude-0")
+    if not parent.is_dir():
+        return []
+    return [child for child in parent.iterdir()
+            if child.is_dir() and room.name in child.name]
+
+
 def collect_artifacts(room: Path, skill_dir: Path) -> list[tuple[str, str]]:
-    """Return (name, content) for every text file the run wrote into the room.
+    """Return (name, content) for every text file the run produced.
 
     A skill that delivers by writing a file — mock-interview saves its pack as
     markdown and presents it — leaves only a cover note in the chat stream.
@@ -153,15 +171,16 @@ def collect_artifacts(room: Path, skill_dir: Path) -> list[tuple[str, str]]:
     wrong artifact, and scores it badly.
     """
     found = []
-    for path in sorted(room.rglob("*")):
-        if not path.is_file() or skill_dir in path.parents or path == skill_dir:
-            continue
-        if path.suffix.lower() not in TEXT_SUFFIXES:
-            continue
-        try:
-            found.append((str(path.relative_to(room)), path.read_text()[:MAX_ARTIFACT]))
-        except (OSError, UnicodeDecodeError):
-            continue
+    for base in [room, *sidecar_dirs(room)]:
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or skill_dir == path or skill_dir in path.parents:
+                continue
+            if path.suffix.lower() not in TEXT_SUFFIXES:
+                continue
+            try:
+                found.append((path.name, path.read_text()[:MAX_ARTIFACT]))
+            except (OSError, UnicodeDecodeError):
+                continue
     return found
 
 
