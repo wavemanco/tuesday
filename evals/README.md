@@ -88,8 +88,18 @@ rather than the skills:
   research ran…", in a run with no web access), and once wrote FAIL above a
   sentence reasoning its way to PASS. Those rules are now in the grader prompt.
 
-Both are the kind of defect that only appears outside the room where the eval
-was written, which is the whole argument for running it there.
+A third lesson, this one about the harness rather than the evals: **grade the
+artifact, not the cover note.** mock-interview delivers by saving its pack as a
+file and presenting it, so capturing only the chat stream scored a four-sentence
+summary against expectations about a 27,000-character pack. Worse, the first
+attempt at a fix scanned only the project directory and found nothing — making a
+skill that had delivered look like one that falsely claimed to. The packs were in
+the scratchpad a nested `claude -p` is handed outside its working directory.
+`collect_artifacts` now looks in both, and the same three fixtures went from
+1/9, 5/10 and 4/12 to 8/9, 10/10 and 12/12 on the identical responses.
+
+All three are defects that only appear outside the room where the eval was
+written, which is the whole argument for running it there.
 
 These evals are not run in CI: they need a model, cost real tokens, and take
 minutes. Run them in a session against any change that could plausibly move
