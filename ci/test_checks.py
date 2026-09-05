@@ -11,6 +11,7 @@ fails and names the problem.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -34,6 +35,22 @@ def stage(tmp: Path) -> Path:
     return root
 
 
+def fingerprint(root: Path) -> str:
+    """Hash the staged tree, so a mutation that changes nothing can be caught.
+
+    Both of the wording-pinned mutations this file started with went stale the
+    first time a description was rewritten: they searched for prose that no
+    longer existed, quietly mutated nothing, and the check they were meant to
+    exercise passed for the honest reason. A no-op mutation is the self-test
+    developing the exact disease it exists to detect.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        digest.update(str(path.relative_to(root)).encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
 def run(root: Path, group: str) -> tuple[int, str]:
     proc = subprocess.run(
         [sys.executable, "ci/check_skills.py", "--only", group],
@@ -55,9 +72,11 @@ def break_description_length(root: Path) -> str:
 
 
 def break_description_brackets(root: Path) -> str:
+    """Brackets go in structurally, so rewording a description cannot defuse this."""
     path = root / "skills/mock-interview/SKILL.md"
     text = path.read_text()
-    path.write_text(text.replace("Generate a personalized", "Generate a <b>personalized</b>", 1))
+    path.write_text(re.sub(r"^description: ", "description: <b>Prep</b> ", text,
+                           count=1, flags=re.MULTILINE))
     return "angle brackets"
 
 
@@ -142,11 +161,17 @@ def break_routing_route(root: Path) -> str:
 
 
 def break_trigger_boundary(root: Path) -> str:
+    """Swap in a plausible description that carries no boundary at all.
+
+    Deleting a specific sentence would tie this mutation to today's wording; the
+    whole-line swap keeps it true whatever the description grows into.
+    """
     path = root / "skills/job-underwriter/SKILL.md"
     text = path.read_text()
-    path.write_text(text.replace(
-        "and not for interview rehearsal or prep packs (that is rehearsal, not evaluation).",
-        "and it is candidate-side only.", 1))
+    path.write_text(re.sub(
+        r"^description: .*$",
+        "description: Evaluate a posted role against a CV and decide whether to pursue it.",
+        text, count=1, flags=re.MULTILINE))
     return "reserved boundary"
 
 
@@ -186,7 +211,13 @@ def main() -> int:
             work = tmp / f"case{index}"
             work.mkdir()
             root = stage(work)
+            before = fingerprint(root)
             needle = mutate(root)
+            if fingerprint(root) == before:
+                failed.append(f"{group}/{label}: mutation changed nothing — it has gone stale")
+                print(f"  FAIL {group}: {label} — mutation is a no-op")
+                shutil.rmtree(work)
+                continue
             code, out = run(root, group)
             if code == 0:
                 failed.append(f"{group}/{label}: check PASSED but should have failed")
