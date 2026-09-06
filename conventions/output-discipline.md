@@ -68,7 +68,12 @@ holds two claims of different strength, split it into **two rows**, each with it
 own single value — the split is legitimate and the slash is not.
 
 **Parameter: `enum_fields`** — which of the skill's fields are enums. Their token
-sets are defined wherever that skill defines its vocabulary.
+sets are defined wherever that skill defines its vocabulary — and **every declared
+enum needs a column to live in.** A field declared an enum with nowhere specified
+to appear gets invented at write time, and an invented column arrives with no
+token set: `low-medium` and `[grounded, partial]` are what that looks like. The
+declaration and the output shape have to agree, or the parameter is a promise
+about a cell that does not exist.
 
 ## 3. Square brackets are reserved for provenance labels — **absolute**
 
