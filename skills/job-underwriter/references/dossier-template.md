@@ -90,10 +90,21 @@ the ones a candidate most needs a question for, were the ones that lost it. Only
 
 ## Application plan
 
-- **CV edit E1 (pending your approval):** surface the experimentation pipeline from the tools list into an outcome bullet — reorganizes existing verified material, adds nothing. Draft in envelope.
-- **Work sample:** a one-page, sanitized partner-API case note (R3 → high; also the natural artifact for the R4 bridge).
-- **Interview questions:** RR1 and RR2 verification questions, verbatim.
-- **Research action:** confirm the compensation band with the recruiter before investing in the loop.
+| # | Action | Why | Provenance | Status |
+|---|---|---|---|---|
+| E1 | Surface the experimentation pipeline from the tools list into an outcome bullet | Reorganizes existing verified material, adds nothing; draft in envelope | `[grounded]` CV, tools list | pending your approval |
+| W1 | A one-page sanitized partner-API case note | Raises R3 to high and is the natural artifact for the R4 bridge | `[grounded]` R3, R4 rows | pending your approval |
+| Q1 | Ask RR1 and RR2's verification questions verbatim in the loop | The register doubles as interview preparation | `[grounded]` register | pending your approval |
+| A1 | Confirm the compensation band with the recruiter before investing in the loop | Comp is unstated against a stated floor | `[grounded]` RR2 | pending your approval |
+| A2 | A referral into the team beats a cold application for this kind of role | How screening works at this size of company, not a fact about this employer | `[generic]` role-family pattern | pending your approval |
+
+The plan is a table for the same reason role reality is. Written as prose it
+carries two things at once and loses both: strategy advice is language the
+candidate will act on, so it needs a status, and lines like row A2 are claims
+about how hiring works, so they need a label. As bullets they read as neutral
+counsel and arrive with neither. Every row is proposed — the candidate approves
+actions, not just edits — and a row with no provenance is a row asserting
+something the analysis cannot source.
 
 ## Evidence status
 
