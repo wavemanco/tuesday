@@ -153,9 +153,20 @@ def break_evals_duplicate_ids(root: Path) -> str:
 
 
 def break_routing_route(root: Path) -> str:
+    """Point a case at a route the file does not declare.
+
+    The name is derived rather than hard-coded. This mutation used to name a
+    then-hypothetical skill, and went quiet the day that skill shipped and the
+    route became legitimate — the same staleness the fingerprint guard exists to
+    catch, arriving through the one door it cannot watch, since the mutation did
+    change the file.
+    """
     path = root / "evals/suite-routing.json"
     data = json.loads(path.read_text())
-    data["cases"][0]["expected"] = "resume-tailor"
+    undeclared = "no-such-skill"
+    while undeclared in data["routes"]:
+        undeclared += "-x"
+    data["cases"][0]["expected"] = undeclared
     path.write_text(json.dumps(data, indent=2))
     return "is not a declared route"
 
