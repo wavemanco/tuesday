@@ -34,3 +34,6 @@ jobs:
 
       - name: Checks self-test
         run: python ci/test_checks.py
+
+      - name: Eval harness tests
+        run: python evals/test_harness.py

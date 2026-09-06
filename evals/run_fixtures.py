@@ -120,9 +120,34 @@ def install_one(root: Path, skill: str, run_id: str) -> str:
     return name
 
 
+CLI_FAILURE_MARKERS = (
+    "session limit", "usage limit", "rate limit", "credit balance",
+    "invalid api key", "overloaded", "quota",
+)
+
+
+def cli_failed(text: str, returncode: int) -> bool:
+    """Did the CLI decline to answer rather than answering?
+
+    A refusal from the harness is not a result from the skill. Left undetected,
+    "You've hit your session limit" is saved as a 48-character response and
+    graded as a fixture that produced almost nothing — the third variant in this
+    suite of a non-result being recorded as a result, after the routing runner's
+    errored runs and the truncated grader reply.
+    """
+    if returncode != 0:
+        return True
+    head = text.strip()[:400].lower()
+    return len(text.strip()) < 200 and any(m in head for m in CLI_FAILURE_MARKERS)
+
+
 def claude(prompt: str, cwd: Path, timeout: int, model: str | None,
            stream: bool = True) -> tuple[str, bool]:
-    """Run one `claude -p`; return (assistant text, whether a Skill tool fired)."""
+    """Run one `claude -p`; return (assistant text, whether a Skill tool fired).
+
+    Raises RuntimeError when the CLI declined to answer, so a limit message can
+    never be mistaken for a short response.
+    """
     cmd = ["claude", "-p", "--output-format", "stream-json", "--verbose"] if stream \
         else ["claude", "-p", "--output-format", "text"]
     if model:
@@ -132,6 +157,8 @@ def claude(prompt: str, cwd: Path, timeout: int, model: str | None,
     proc = subprocess.run(cmd, input=prompt, cwd=str(cwd), env=env,
                           capture_output=True, text=True, timeout=timeout)
     if not stream:
+        if cli_failed(proc.stdout, proc.returncode):
+            raise RuntimeError(f"CLI declined: {proc.stdout.strip()[:200] or proc.stderr.strip()[:200]}")
         return proc.stdout, False
 
     chunks, fired = [], False
@@ -147,7 +174,10 @@ def claude(prompt: str, cwd: Path, timeout: int, model: str | None,
                 chunks.append(item["text"])
             elif item.get("type") == "tool_use" and item.get("name") == "Skill":
                 fired = True
-    return "\n".join(chunks), fired
+    text = "\n".join(chunks)
+    if cli_failed(text, proc.returncode):
+        raise RuntimeError(f"CLI declined: {text.strip()[:200] or proc.stderr.strip()[:200]}")
+    return text, fired
 
 
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml", ".csv"}
@@ -203,7 +233,14 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     name = install_one(room, skill, run_id)
     skill_dir = room / ".claude" / "skills" / name
 
-    text, fired = claude(case["prompt"], room, timeout, model)
+    try:
+        text, fired = claude(case["prompt"], room, timeout, model)
+    except RuntimeError as exc:
+        print(f"  SKIPPED {skill} eval {case['id']} (run {run}): {exc}", flush=True)
+        meta = {"skill": skill, "id": case["id"], "run": run, "error": str(exc)}
+        (out / f"{skill}-{case['id']}.run{run}.meta.json").write_text(
+            json.dumps(meta, indent=2) + "\n")
+        return meta
     nudged = False
     if not fired:
         # The skill not firing is the routing eval's finding, not this one's.
@@ -266,13 +303,22 @@ def parse_verdicts(text: str) -> dict:
 def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int,
           model: str | None) -> dict:
     """Score one saved response against its expectations."""
-    body = (out / f"{skill}-{case['id']}.run{run}.md").read_text()
+    body_path = out / f"{skill}-{case['id']}.run{run}.md"
+    if not body_path.exists():
+        return {"skill": skill, "id": case["id"], "run": run, "grader": grader,
+                "error": "no response to grade — the execution was skipped", "verdicts": []}
+    body = body_path.read_text()
     expectations = "\n".join(f"{i}. {e}" for i, e in enumerate(case["expectations"], 1))
     prompt = GRADER_PROMPT.format(prompt=case["prompt"], response=body,
                                   expectations=expectations)
     with_room = out / "grading"
     with_room.mkdir(parents=True, exist_ok=True)
-    text, _ = claude(prompt, with_room, timeout, model, stream=False)
+    try:
+        text, _ = claude(prompt, with_room, timeout, model, stream=False)
+    except RuntimeError as exc:
+        text = ""
+        print(f"  SKIPPED grading {skill} eval {case['id']} (run {run}, grader {grader}): {exc}",
+              flush=True)
 
     result = parse_verdicts(text)
 
