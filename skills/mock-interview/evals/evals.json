@@ -95,6 +95,25 @@
         "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition",
         "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "I've got three rounds scheduled for the same job over the next two weeks and I want to prep for all of them at once. THE ROLE: 'Engineering Manager — Larkfield Systems (industrial IoT, ~600 people). Lead two squads building device-management services; own delivery, hiring and growth for 11 engineers; partner with hardware and product on roadmap.' THE ROUNDS: Tuesday — 45 min with the hiring manager (a Director of Engineering, my would-be boss). The Thursday after — a 60-min panel with two staff engineers and a product manager. The following Monday — 30 min with the VP Engineering, described by the recruiter as 'values and leadership philosophy'. ME (call me Yusuf): 9 years engineering, 3 as a team lead of 6, currently at a payments company. I run our hiring loop for backend roles — about 40 interviews last year. I've never managed managers and never owned a hardware-adjacent roadmap. My team's on-call burden dropped 60% after I pushed a reliability quarter through against roadmap pressure.",
+      "expected_output": "A loop-mode pack: one shared fit snapshot and shared sections, plus three per-round mini-packs with per-round persona weights that genuinely differ — the manager round, the peer panel, and the values round each weighted from their own relationship priors.",
+      "files": [],
+      "expectations": [
+        "The first response delivers a complete pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone",
+        "The pack is structured for a loop rather than repeated three times: a shared fit snapshot and shared sections appear once, with a per-round mini-pack for each of the three rounds",
+        "Persona weights are computed per round and genuinely differ across them — the hiring-manager round, the two-staff-engineer-plus-PM panel, and the VP values round do not carry the same weighting, and the reasoning for each is shown",
+        "The values round is treated as a values-style round: either a values cheat sheet appears mapped to principles research established, or the response states plainly that Larkfield's published values could not be confirmed and labels that bank generic rather than inventing named values",
+        "The peer panel is weighted for peers rather than for a manager — at least one reciprocity or peer-evaluator element appears that the hiring-manager round does not carry",
+        "The 'never managed managers' and 'never owned a hardware-adjacent roadmap' gaps are surfaced as the pack's highest-ROI rehearsal material rather than omitted, and are handled as gaps rather than coached into claims Yusuf did not make",
+        "Every question row carries a provenance label in its own column, and where guidance coaches a claim about Yusuf's experience the cell also carries his own quoted sentence",
+        "No guidance cell coaches language Yusuf's own material does not support: 'ran our hiring loop, about 40 interviews last year' is not promoted into owning hiring strategy, and 'team lead of 6' is not promoted into managing managers",
+        "A prohibited-claims section appears naming what the pack will not coach and why — built from the fit snapshot's gaps, since no dossier is present",
+        "Vocabulary matches the conventions: confidence bands from high/medium/low/none, provenance from [grounded]/[inferred]/[generic], each cell holding exactly one token with no compound or parenthetical value",
+        "The response closes with the upgrade menu and at most three questions counted across the whole message, with no recap or summary beneath them"
+      ]
     }
   ]
 }

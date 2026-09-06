@@ -49,7 +49,8 @@ Read `references/personas.md` and `references/question-rubric.md` before writing
 4. **Question banks** — per persona, under the coverage rules in the rubric. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
 5. **Values / principles cheat sheet** — only when a values-style round is detected; map each published value to a specific candidate story.
 6. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in.
-7. **Delivery coaching** — only when an assessment was provided; see guardrails.
+7. **Prohibited claims** — the claims this pack will not coach, and why. With a dossier, `prohibited_claims` arrives from the underwriter and binds every guidance cell. **Without one, build it locally** from the fit snapshot's gaps: the claims a candidate might reach for under pressure that their material does not support. The temptations are identical either way, and both sibling skills maintain such a list — a pack that carries one only when a dossier happens to be present is protected by luck.
+8. **Delivery coaching** — only when an assessment was provided; see guardrails.
 
 ### Step 4 — Deliver
 
@@ -61,6 +62,22 @@ Two one-line offers ride the delivery, neither of them pushed: the drill (below)
 
 When new inputs arrive, regenerate only the affected sections and say what changed and why. Late structural facts (relationship, round type) justify restructuring — reweight personas, add or replace banks. Enhancers add sections. Recompute, don't patch inconsistently: a pack that says "hiring manager" in one section and "peer" in another is worse than either.
 
+## Output discipline
+
+Bound by `references/output-discipline.md`, the suite's canonical rules on the
+shape of a delivered response, mirrored verbatim into this skill. Its invariants
+are absolute; the parameters it names are declared here.
+
+```text
+question_budget: 3
+enum_fields: confidence, gap_type, provenance, question_type
+closing_order: upgrade menu, drill and dossier offers, questions
+sibling_mentions: 1
+```
+
+The drill and dossier offers sit inside the closing run because they are things
+the candidate acts on, not commentary on the pack — one line each, neither pushed.
+
 ## The n + x rule
 
 The sections this skill's spec defines are *n* — owed to the user, delivered complete and unconditional. Anything a specific run invents beyond spec is *x*: an extra section, a new analysis, a structure no reference file asks for. Never weave x in silently, and never force it: deliver n whole, then offer x as a clearly-labeled proposal — one line on what it would add and why this engagement earns it — and build it only on the user's approval. The offer may ride an already-needed Step 1 message; otherwise it lands with the delivered pack, like the drill offer. x that keeps earning approval belongs in the spec — flag it for codification rather than reinventing it run after run.
@@ -69,7 +86,7 @@ The sections this skill's spec defines are *n* — owed to the user, delivered c
 
 - **Session** (default): one pack for one upcoming conversation.
 - **Loop**: multiple scheduled rounds → shared fit snapshot plus per-round mini-packs with per-round persona weights. Spec in `references/output-template.md`.
-- **Drill**: after any pack, offer one live rehearsal — Claude adopts a persona and runs the question with reactive follow-ups, then scores against the pack's own rubric. Spec in `references/output-template.md`. The pack is preparation; the drill is transfer.
+- **Drill**: after any pack, offer one live rehearsal — Claude adopts a persona and runs the question with reactive follow-ups, then gives feedback against **that question's own guidance cell**: the beats it named, the weakest-assumption move, the hold-then-concede structure. That cell is the rubric, which is why the pack is written before the drill and why a drill on a question whose guidance was generic can only give generic feedback. Spec in `references/output-template.md`. The pack is preparation; the drill is transfer.
 
 ## Input contract and degradation ladder
 

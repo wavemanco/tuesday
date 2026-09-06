@@ -128,7 +128,10 @@ cross-firing run to fix, and a more assertive description has measurable costs.
 ## 6. What writing this spec surfaced
 
 The exercise was worth it for this section alone. Three gaps, none of them
-defects, all of them things a spec makes visible.
+defects, all of them things a spec makes visible. **All three are now closed** —
+the descriptions below are kept as written, with what was done recorded against
+each, because the value is in what writing a spec surfaced rather than in the
+fixes.
 
 **A pack built without a dossier has no prohibited-claims record.** With a dossier,
 `prohibited_claims` arrives from the underwriter and binds every guidance cell.
@@ -136,20 +139,25 @@ Without one, nothing plays that role — yet the same temptations exist, and the
 other two skills both maintain such a list locally. job-underwriter records what it
 refused to write; resume-tailor makes it a delivered section. mock-interview should
 carry its own, built from the fit snapshot's gaps: the claims a candidate might
-reach for under pressure that their material does not support. **Proposed, not
-built** — it is a real addition rather than a documentation fix, and it belongs in
-a change the maintainer approves.
+reach for under pressure that their material does not support. **Now built**: section 13 of the output template, present in every pack rather than
+only when a dossier supplies one, since a pack protected by luck is not protected.
 
-**The drill's scoring rubric is specified where it cannot be found.** Drill mode
-scores a rehearsed answer "against the pack's own rubric", and that rubric lives in
-`references/output-template.md` — reachable, but the skill body describes the drill
-without saying what a score means. Worth a pointer at minimum.
+**The drill scored against a rubric that did not exist.** Sharper than first
+recorded: the skill body promised a score "against the pack's own rubric" and the
+template defined a feedback format with neither rubric nor score. **Now resolved**
+by naming what was already there — the question's own guidance cell is the rubric,
+which is why the pack is written first and why a drill on generic guidance can only
+give generic feedback. There is no numeric score, and the template now says why: a
+number would average away the one beat they missed, which is the entire finding.
 
 **Loop mode is the least exercised path in the suite.** Multiple scheduled rounds
 with a shared fit snapshot and per-round mini-packs is a documented mode with no
 fixture covering it. Five fixtures cover session mode; none covers loop. That is a
 coverage gap rather than a defect, and it is the kind that stays invisible until
-someone uses the feature.
+someone uses the feature. **Now covered** by eval 6: three scheduled rounds for one
+role — hiring manager, peer panel, values round — asserting that shared sections
+appear once and that persona weights genuinely differ per round rather than being
+repeated three times.
 
 ## 7. Evals
 

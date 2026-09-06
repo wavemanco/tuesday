@@ -171,6 +171,29 @@ def break_routing_route(root: Path) -> str:
     return "is not a declared route"
 
 
+def break_undeclared_parameter(root: Path) -> str:
+    """Drop one declared output-discipline parameter from a skill."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    mutated = re.sub(r"^sibling_mentions:.*$", "", text, count=1, flags=re.MULTILINE)
+    if mutated == text:
+        raise SystemExit("break_undeclared_parameter found nothing to remove — it has gone stale")
+    path.write_text(mutated)
+    return "undeclared output-discipline parameter"
+
+
+def break_missing_parameter_section(root: Path) -> str:
+    """Remove a skill's parameter declarations entirely."""
+    path = root / "skills/mock-interview/SKILL.md"
+    text = path.read_text()
+    mutated = re.sub(r"^## Output discipline\s*$.*?(?=^## )", "", text,
+                     count=1, flags=re.MULTILINE | re.DOTALL)
+    if mutated == text:
+        raise SystemExit("break_missing_parameter_section found nothing to remove — it has gone stale")
+    path.write_text(mutated)
+    return "no '## Output discipline' section"
+
+
 def break_trigger_boundary(root: Path) -> str:
     """Swap in a plausible description that carries no boundary at all.
 
@@ -201,6 +224,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("evals", "duplicate eval ids", break_evals_duplicate_ids),
     ("evals", "routing case with an undeclared route", break_routing_route),
     ("triggers", "description lost its reserved boundary", break_trigger_boundary),
+    ("parameters", "a declared parameter dropped", break_undeclared_parameter),
+    ("parameters", "the parameter section removed", break_missing_parameter_section),
 ]
 
 
