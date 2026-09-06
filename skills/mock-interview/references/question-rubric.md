@@ -29,7 +29,7 @@ These exist because packs fail by omission, and the omissions are predictable:
 
 ## Provenance labels
 
-End every question's rationale cell with one label. The three labels — `[grounded]`, `[inferred]`, `[generic]` — are defined in `references/evidence-conventions.md` §4, the suite's canonical vocabulary mirrored into this skill. Read the definitions there rather than from memory; the whole suite speaks one dialect, and a skill that quietly redefines a label breaks every consumer downstream of it.
+Every question row carries one label, in its own Provenance column — not appended to the rationale, where it reads as punctuation and goes missing under exactly the conditions that matter most. The three labels — `[grounded]`, `[inferred]`, `[generic]` — are defined in `references/evidence-conventions.md` §4, the suite's canonical vocabulary mirrored into this skill. Read the definitions there rather than from memory; the whole suite speaks one dialect, and a skill that quietly redefines a label breaks every consumer downstream of it.
 
 Two connections that matter when writing a rationale cell:
 

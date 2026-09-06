@@ -43,11 +43,16 @@ output rather than the shared vocabulary:
   about what roles of this kind are normally like is `[generic]`, whether or
   not any search ran. A run with no research is *more* inference, not less, so
   a response that labels nothing because it searched nothing has it backwards.
-  Check them last, as a scan rather than a writing rule: pass over every
-  sentence that is not quoting the user's own material or the JD, and confirm
-  it carries a label. Labels go missing while writing because the writer knows
-  where each claim came from; only a reader-shaped pass catches the ones that
-  read as plain fact on the page.
+  And a derived claim lives in a row, not in prose. Every structure that carries
+  derived judgment has a provenance column — the role-reality table, the evidence
+  map's `reasoning`, the register's hypothesis — so free prose in the assessment
+  carries only what could be quoted from the JD, the CV, or the user's own words.
+  The moment a sentence adds a reading of its own, it belongs in the row it is a
+  reading of, and a reading with no row to sit in is a reading to cut. This is
+  the fourth attempt at this rule and the first that is not a reminder: three
+  wordings asked the writer to remember a label, and a writer who knows where a
+  claim came from cannot see the sentence that fails to say so. An empty cell is
+  visible; a missing suffix is not.
 
 ## The evidence-map row
 
