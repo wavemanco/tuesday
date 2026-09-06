@@ -67,8 +67,31 @@ only the response and the expectations.
 ```bash
 python evals/run_fixtures.py --out /tmp/clean-room
 python evals/run_fixtures.py --skill job-underwriter --eval 3 --out /tmp/cr
-python evals/run_fixtures.py --out /tmp/cr --skip-execute   # re-grade, no re-run
+python evals/run_fixtures.py --out /tmp/cr --retry-runs 0    # one run, no retries
+python evals/run_fixtures.py --out /tmp/cr --skip-execute    # re-grade, no re-run
 ```
+
+**Runs are adaptive, and a failure is classified rather than counted.** Every
+fixture runs once. A fixture that fails something runs twice more, and each
+failing expectation is reported as `deterministic` (failed every run) or
+`intermittent` (did not). An expectation fails a run if *either* grader fails
+it — the dissenting grader has found every defect worth fixing in this suite so
+far, and requiring both would discard exactly that.
+
+The distinction is the point. One fixture here has scored 12/12, 13/13, 13/13
+and 9/13 on the same skill; a single run cannot tell that from a defect, and
+chasing it as a defect means rewriting a rule that already worked. Running
+*everything* three times was the obvious alternative and is worse: it triples
+the cost of the expensive half — executions generate 20k–36k character packs —
+to learn nothing about fixtures that were already clean, and it raises
+confidence in a wrong expectation exactly as fast as in a right one. Seven
+expectations in this suite turned out to be testing the environment rather than
+the skill; three runs each would have made every one of them look more real.
+
+An intermittent failure is a reliability finding, not a defect to patch. The
+rule fired once and not another time, so rewriting it is as likely to move the
+number by luck as by fixing anything — the useful responses are to make the
+requirement structural, or to record the rate.
 
 The point is authoring context. A fixture graded in the session that wrote the
 skill is graded by a reader who already knows what it meant, supplies the
