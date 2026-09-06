@@ -232,6 +232,37 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     return meta
 
 
+def parse_verdicts(text: str) -> dict:
+    """Recover verdicts from a grader reply, whole or truncated.
+
+    A long grade can be cut off mid-object. Read strictly, that yields zero
+    verdicts, and a summary that counts missing verdicts as failures turns one
+    truncated reply into a fixture where everything failed — the same mistake the
+    routing harness made when it counted an errored run as a negative. So the
+    whole object is tried first, then individual verdict objects are salvaged,
+    and a reply that yields none is marked errored rather than scored.
+    """
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        try:
+            whole = json.loads(match.group(0))
+            if isinstance(whole.get("verdicts"), list):
+                return whole
+        except json.JSONDecodeError:
+            pass
+
+    salvaged = []
+    for obj in re.finditer(r'\{\s*"n"\s*:\s*(\d+).*?"verdict"\s*:\s*"(PASS|FAIL)".*?\}',
+                           text, re.DOTALL):
+        try:
+            salvaged.append(json.loads(obj.group(0)))
+        except json.JSONDecodeError:
+            salvaged.append({"n": int(obj.group(1)), "verdict": obj.group(2), "why": "(salvaged)"})
+    if salvaged:
+        return {"verdicts": salvaged, "truncated": True}
+    return {"error": "grader returned no usable verdicts", "raw": text[:2000], "verdicts": []}
+
+
 def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int,
           model: str | None) -> dict:
     """Score one saved response against its expectations."""
@@ -243,14 +274,7 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
     with_room.mkdir(parents=True, exist_ok=True)
     text, _ = claude(prompt, with_room, timeout, model, stream=False)
 
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not match:
-        result = {"error": "grader returned no JSON", "raw": text[:2000]}
-    else:
-        try:
-            result = json.loads(match.group(0))
-        except json.JSONDecodeError as exc:
-            result = {"error": f"grader JSON did not parse: {exc}", "raw": text[:2000]}
+    result = parse_verdicts(text)
 
     result["skill"], result["id"] = skill, case["id"]
     result["run"], result["grader"] = run, grader
@@ -279,6 +303,8 @@ def failed_in_run(results: list[dict], skill: str, eval_id: int, run: int) -> se
     for r in results:
         if (r.get("skill"), r.get("id"), r.get("run")) != (skill, eval_id, run):
             continue
+        if r.get("error"):
+            continue          # a grader that returned nothing graded nothing
         for v in r.get("verdicts", []):
             if v.get("verdict") == "FAIL":
                 failed.add(v.get("n"))
@@ -371,8 +397,12 @@ def main() -> int:
                 got = next((r for r in results
                             if (r.get("skill"), r.get("id"), r.get("run"), r.get("grader"))
                             == (skill, case["id"], run, g)), {})
+                if got.get("error"):
+                    per_grader.append("errored")
+                    continue
                 passed = sum(1 for v in got.get("verdicts", []) if v.get("verdict") == "PASS")
-                per_grader.append(f"{passed}/{total}")
+                per_grader.append(f"{passed}/{total}"
+                                  + ("*" if got.get("truncated") else ""))
             scores.append(f"run {run}: " + ", ".join(per_grader))
         print(f"  {skill} eval {case['id']}  " + "   ".join(scores))
 

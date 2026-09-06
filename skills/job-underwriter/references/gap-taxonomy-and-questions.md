@@ -106,7 +106,7 @@ priority = requirement_importance
 
 Operational rules:
 
-- **At most three questions per turn** — and fewer when fewer could change anything. Zero is correct when the decision is already stable: a decidable case does not earn an interview.
+- **At most three questions per turn, counted across the whole message** — and fewer when fewer could change anything. Zero is correct when the decision is already stable: a decidable case does not earn an interview. The budget counts every question put to the user, wherever it sits: the `Question:` line inside each recall prompt is one of the three, not a free extra because it arrived inside a template. A gap queue holding two recall prompts plus a closing block of three questions is a five-question turn, and it reads as an interrogation however neatly it is sectioned. Either the recall prompts *are* the questions, or the closing block is — never both.
 - **Prefer questions that could move the decision status.** A question that only polishes an already-`direct` row loses to one that could resolve a must-have.
 - **Never ask for what was already supplied, and never re-ask.** Silence and "skip" are answers: mark the gap unresolved (or `absent`, if the user says so) and proceed.
 - **Research before asking.** Never ask the user what the public web knows.
