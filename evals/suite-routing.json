@@ -1,7 +1,13 @@
 {
   "suite": "tuesday",
   "purpose": "Assert which skill fires on realistic requests, including the ambiguous ones the two skills' descriptions deliberately sit next to. Per-skill evals cannot test this: triggering is decided across the whole available-skills list, so the assertion has no home inside either skill's evals/.",
-  "routes": ["job-underwriter", "mock-interview", "either", "neither"],
+  "routes": [
+    "job-underwriter",
+    "mock-interview",
+    "resume-tailor",
+    "either",
+    "neither"
+  ],
   "cases": [
     {
       "id": 1,
@@ -74,7 +80,7 @@
       "id": 12,
       "expected": "neither",
       "prompt": "my resume is 2.5 pages and i've been told that's too long. can you cut it to one page and make the formatting consistent? not targeting anything specific right now, just want it tidy before i start looking",
-      "why": "Document formatting with no target role and no decision to make. Near-miss on CV vocabulary; belongs to resume-tailor when it exists."
+      "why": "Document formatting with no target role and no decision to make. This is now the suite's sharpest near-miss: resume-tailor exists, the words are its words, and it must still decline — it gates on a target JD and explicitly refuses length and formatting work."
     },
     {
       "id": 13,
@@ -87,6 +93,49 @@
       "expected": "neither",
       "prompt": "help me write a LinkedIn message to a second-degree connection at a company I admire. Not applying to anything yet, just want to start a conversation without sounding like every other cold outreach they get.",
       "why": "Networking outreach with no role under evaluation and no interview scheduled. Deferred outreach skill's territory."
+    },
+    {
+      "id": 15,
+      "expected": "resume-tailor",
+      "prompt": "JD and my CV are both attached. Can you rework the CV so it actually speaks to this role? Right now it reads like it was written for the job I had three years ago, which it was.",
+      "why": "A resume and a JD arriving together with explicit rewriting intent — the reserved trigger."
+    },
+    {
+      "id": 16,
+      "expected": "resume-tailor",
+      "prompt": "quick one — for this posting [pasted], which of my bullets should I lead with? my resume's below. i've got about 20 bullets across 3 roles and i think the order is wrong.",
+      "why": "A small, single-question tailoring ask. Tests that the skill fires on the reduced version rather than only on a full rewrite request."
+    },
+    {
+      "id": 17,
+      "expected": "resume-tailor",
+      "prompt": "I've applied to 40 of these and heard nothing. Can you optimise my resume for this one's ATS? I think it's keyword matching that's killing me. Resume and posting attached.",
+      "why": "The ATS framing. resume-tailor owns it — and owes the candidate a correction about what keyword matching actually does."
+    },
+    {
+      "id": 18,
+      "expected": "resume-tailor",
+      "prompt": "attached: the job ad and my resume. cut whatever isn't relevant to this and move the right things up top. don't invent anything, I have to be able to back it all up in an interview.",
+      "why": "Operations language — cut, reorder — plus the truthfulness constraint that is this skill's whole premise."
+    },
+    {
+      "id": 19,
+      "expected": "neither",
+      "prompt": "can you design me a nicer resume template? something modern — sidebar for skills, a colour accent, maybe icons for contact details. mine looks like it's from 2011.",
+      "why": "Pure visual design. Near-miss on resume vocabulary; resume-tailor explicitly declines typography and layout, and would only ever report that a sidebar breaks parsing."
+    },
+    {
+      "id": 20,
+      "expected": "neither",
+      "prompt": "could you proofread my resume? just looking for typos, grammar slips and inconsistent tense. not changing what it says.",
+      "why": "Proofreading with no target role and explicitly no claims work. Near-miss: it is a resume, and nothing about it is tailoring."
+    },
+    {
+      "id": 21,
+      "expected": "either",
+      "prompt": "Should I apply to this one, and if the answer is yes, fix up my CV for it? JD and CV attached. I've got time for maybe two applications this week so I want to spend it well.",
+      "why": "Spans job-underwriter and resume-tailor. Whichever fires must do its own job fully and name the sibling in one sentence rather than attempting both.",
+      "spanning_rule": "interaction-grammar.md section 6"
     }
   ]
 }

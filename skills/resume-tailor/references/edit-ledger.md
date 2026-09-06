@@ -1,0 +1,90 @@
+# The edit ledger
+
+The ledger is this skill's spine and its entire deliverable until the candidate
+approves something. It is not a rewritten resume with a diff attached — it is a
+list of proposals, each one small enough to accept or reject on its own.
+
+The reason is not politeness. A rewritten document asks the candidate to
+reverse-engineer what changed and to trust that nothing was slipped in; a ledger
+puts every change in front of them with the sentence of their own it came from.
+The candidate cannot defend in an interview what they never noticed had been
+written for them.
+
+## The row
+
+| # | Section | Current line | Proposed line | Operation | Traces to | Provenance | Status |
+|---|---|---|---|---|---|---|---|
+
+Every column earns its place, and three of them exist because the suite has
+watched what happens without them.
+
+- **Operation** names what was done, from a fixed set — `reorder`, `surface`, `cut`, `retitle`, `compress`, `split`, `merge`, `reframe`. Never "improved", "strengthened", or "optimized": those describe an intention, and the candidate cannot check an intention. If no operation in the set describes the change, the change is probably adding something, which is the one thing this skill does not do.
+- **Traces to** holds a quoted sentence from the candidate's own material — the resume, an attachment, an answered recall prompt, or a dossier `evidence_map` row. Quoted, not summarized: a paraphrase in this cell is the drift the cell exists to catch. **A row whose trace cell would be empty is not proposed.** That is the whole rule; everything else in this file is a consequence of it.
+- **Provenance** is `[grounded]`, `[inferred]`, or `[generic]`, in its own column rather than trailing the proposed line. It is a column because four prose rules elsewhere in this suite failed to keep these labels attached, and an empty cell is visible to the writer where a missing suffix is not.
+- **Status** is `pending your approval` on delivery, and becomes `approved` or `rejected` only when the candidate says so. Nothing else may write to it.
+
+## The operations, and what each may not do
+
+| Operation | What it does | The line it may not cross |
+|---|---|---|
+| `reorder` | Moves a line earlier or later | Reordering is not re-weighting: a bullet moved to the top must not gain "primary" or "led" on the way |
+| `surface` | Promotes something buried — in a tools list, a footnote, an unrelated section | What is surfaced is what was there; a tool listed is not a tool owned |
+| `cut` | Removes a line irrelevant to this target | Cutting the context that qualified a claim leaves the claim larger than it was |
+| `retitle` | Renames a role or section to a clearer equivalent | An equivalent, not an upgrade — "Solutions Engineer" may become "Solutions Engineer (client integrations)" and never "Integration Lead" |
+| `compress` | Says the same thing in fewer words | The first casualty of compression is the qualifier, and the qualifier is usually the honest part |
+| `split` | Separates a line doing two jobs into two lines | Each half must still trace; a split is not a licence to develop the weaker half |
+| `merge` | Combines two related lines | Merging two projects into one accomplishment invents a project that never existed |
+| `reframe` | Restates in language the target will recognize | The audit's six axes, in full — and never the JD's own vocabulary for the candidate's history |
+
+## The audit is not optional and not last
+
+Run `references/reframing-audit.md` over every proposed line **before** it enters
+the ledger, not over the finished table. A row that fails the audit does not get
+written and then corrected; it does not get written.
+
+The audit's discipline about the JD's vocabulary deserves repeating here, because
+this skill is where it will be tested hardest: the candidate wrote "client", the
+posting says "integration partner", and the proposed line says "partner". No fact
+changed and the words look like synonyms — which is exactly why it survives
+review, and exactly why it re-labels which side of the transaction they stood on.
+Mirror the JD's language in the coverage map where it helps the reader follow the
+mapping. Never in a line the candidate will say about their own past.
+
+## A worked ledger
+
+Nadia, a solutions engineer of seven years, targeting a platform PM role.
+
+| # | Section | Current line | Proposed line | Operation | Traces to | Provenance | Status |
+|---|---|---|---|---|---|---|---|
+| E1 | Experience | "Led client integrations of our REST APIs" | "Led client integrations of our REST APIs end to end — scoping workshops, requirements documents, integration architecture, UAT, go-live" | `surface` | "Led 30+ client integrations of our REST APIs end to end — scoping workshops, requirements documents, integration architecture, UAT, go-live" | `[grounded]` resume, Experience | pending your approval |
+| E2 | Experience | "Wrote the internal integration playbook" | "Wrote the internal integration playbook the team uses" | `surface` | "Wrote the internal integration playbook the whole team uses" | `[grounded]` resume | pending your approval |
+| E3 | Summary | *(no current line)* | "Seven years turning enterprise API requirements into shipped integrations, working across client engineering, internal engineering and product" | `compress` | "Coordinated our engineers, the client's engineers, and product managers on custom builds" | `[grounded]` resume | pending your approval |
+| E4 | Experience | "Ran quarterly roadmap-input sessions collecting client feedback for product" | *(unchanged — proposed for reorder only)* | `reorder` | same line, moved above the UAT bullet | `[grounded]` resume | pending your approval |
+
+Four things this ledger is doing, and one it is refusing:
+
+- **E1 restores a qualifier rather than removing one.** The resume's own sentence carried "end to end" and the phases; the current line had compressed them away. Surfacing them is the honest direction of travel.
+- **E2 keeps "the team" and does not reach for "org-wide"** — the scope axis, in the smallest possible instance.
+- **E3 is a summary line built entirely from an existing sentence.** It is the row most likely to drift, so its trace cell quotes the sentence in full, and "coordinated" has not become "led" or "owned".
+- **E4 changes nothing but position**, and says so. A reorder row with an empty proposed line is normal and is not a filler row: order is a real edit, and it is the one the primacy effects in `machine-readers.md` actually reward.
+- **What is not here:** no row proposes "product management experience", "roadmap ownership", or "partner platform" — the three things this JD most wants and this resume cannot support. They belong in the coverage map as `not_evidenced` with a recall prompt, and in the prohibited-claims list. A ledger's quality is partly visible in what it declined to write.
+
+## Recording approval
+
+Approval is per row and attaches to specific language, not to the idea behind it.
+
+```text
+Approved: E1, E2, E4
+Rejected: E3 — "I don't want a summary section at all"
+```
+
+A rejected row is recorded in the prohibited-claims list with the reason, so a
+later turn does not re-derive it and re-propose it in different words. Re-proposing
+a rejected line is the failure that costs the candidate's trust in everything else
+in the ledger.
+
+Where the candidate approves a row *with a change*, the changed version is a new
+row: it enters the ledger, goes through the audit, and gets its own status. Their
+edit is not exempt from tracing — it is the most likely place for a claim to enter,
+because it arrives with the authority of having come from them, and it may still
+have come from what they wish were true.
