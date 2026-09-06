@@ -28,6 +28,7 @@ Coherence lives in [`conventions/`](conventions/) — canonical, and mirrored in
 
 - [`evidence-conventions.md`](conventions/evidence-conventions.md) — evidence source types, confidence bands, the gap taxonomy, content provenance labels, and the mapping that connects them. The truthfulness core every skill is bound by.
 - [`interaction-grammar.md`](conventions/interaction-grammar.md) — the standalone invariant, elicitation policy, degradation and upgrade menus, research tiers, privacy and scope, trigger hygiene.
+- [`reframing-audit.md`](conventions/reframing-audit.md) — six axes of drift and five disciplines, covering every word a skill proposes the candidate say, write, or send. Canonical because it is not one skill's property: job-underwriter proposes resume lines and outreach phrasing, resume-tailor's whole output is proposed language, and two copies of it would diverge in exactly the two places it is load-bearing.
 - [`dossier-schema.md`](conventions/dossier-schema.md) — the versioned shared artifact: read-if-present, append-always-offered, never required. One writer per section; handoffs in both directions.
 
 ## Install

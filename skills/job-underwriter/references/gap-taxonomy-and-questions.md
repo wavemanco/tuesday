@@ -26,37 +26,16 @@ Each gap type has a distinct recovery move. Using the wrong one — asking a que
 
 **`presentation` → the repositioning proposal.** Not a question; the evidence already exists. Show the current framing and the proposed truthful reframing side by side, source-cited, and mark it `resume_edits_pending_approval`. The proposal may reorganize, rename, and surface — it may never add a fact the evidence doesn't hold.
 
-Run the reframing audit below on the proposal before showing it.
-
+Run the reframing audit on the proposal before showing it.
 ### The reframing audit
 
-**What it governs: every word this skill proposes the candidate say, write, or send.** Resume bullets and summary lines, yes — but equally the positioning advice ("lead with…", "your first two sentences should be…"), suggested outreach and cover-letter phrasing, and interview framing. Drift migrates to whichever surface the audit isn't watching, and prose advice is the easiest place for it to hide, because it reads as strategy rather than as a claim. It is still a claim: the candidate will say it out loud to someone who can check.
-
-Audit clause by clause against the user's own sentences, on six axes:
-
-| Axis | The drift | Example |
-|---|---|---|
-| **Scope** | Who or how many it touched grows | "the team uses it" → "adopted org-wide" |
-| **Verb** | Participation becomes origination or ownership | "ran quarterly sessions" → "established a quarterly cadence" |
-| **Kind** | The activity becomes a different, higher-status kind of work | "collecting client feedback" → "synthesizing findings into structured feedback" |
-| **Relationship** | Which side of the transaction the candidate stood on changes | worked at the vendor integrating "our APIs" for clients → "you have been the customer of this product" |
-| **Logical form** | A statement's logic weakens or inverts | "two hard constraints" → "if *either* is negotiable"; "all of X" → "some of X"; a non-negotiable → a preference |
-| **Incident** | An event, outcome, or stake the candidate never mentioned is supplied to make the story land | never said any integration failed → "you were in the room when they failed" |
-
-Notes on the harder ones. An invented **incident** is the one that does not feel like inflation while you write it, because it adds no credential and often flatters nobody — it just supplies the drama a bullet seemed to be missing. It is still a fact the candidate will be asked about, and the honest version of it is a question: *did* anything fail, and were you there. **Logical form** is the easiest to write by accident, because the sentence still sounds like the candidate's: turning a conjunctive pair of non-negotiables ("I need X *and* Y") into a disjunctive one ("if *either* moves") reads as flexibility while quietly discarding half of what they told you they would not trade. On text the candidate actually sends, that costs them the outcome they set the constraint to protect. A change in **kind** is not a change in intensity — "collected" and "synthesized" describe different work, so one cannot stand in for the other. A **relationship** inversion is the subtlest of them and the most dangerous, because it usually arrives as a flattering insight ("you *are* the user this team builds for") and collapses on the first follow-up question: a vendor-side implementer and a buyer-side customer have different knowledge, different incentives, and different stories, and an interviewer on either side will know within a sentence which one they are talking to.
-
-Five disciplines make the audit actually catch things:
-
-- **Audit the whole line, every line.** A bullet whose ending was carefully checked while its opening verb drifted is the characteristic failure. So is a table audited scrupulously while the paragraph above it runs free.
-- **Never borrow the JD's vocabulary for the candidate's own history.** She wrote "client"; the posting said "integration partner"; the proposed resume line said "partner". No fact changed and the words look like synonyms, which is exactly why the substitution survives review — but it re-labels which side of the relationship she stood on, in the employer's own preferred terms, and it does it inside a line she will say out loud. Mirror the JD's language in the analysis where it helps the reader follow the mapping; never in a sentence about the candidate's own past.
-- **A number stays attached to the noun it came from.** "Requirements documents across 30+ integrations" counts integrations, not documents; sliding the quantifier to the nearer noun manufactures a larger claim out of the candidate's own sentence, and it survives every check that looks only for invented figures, because the figure was not invented. Re-read the source clause before carrying any number into a proposal.
-- **Ambiguity resolves downward.** When the candidate's own sentence admits two readings — "growth lead, then Head of Growth, at two companies" is one Head-of tenure or two — take the reading that claims less, or ask. Resolving upward and then labelling the result `[grounded]` is how a fabricated credential acquires a citation.
-- **Drift in the flattering direction is the one to hunt, but the rule is direction-agnostic** — untraceable language fails whether it raises or lowers the candidate.
-- **When a clause cannot be traced to the user's own sentence, cut it or ask about it.** An asked question can turn a reframe into confirmed evidence; a guessed one turns it into a claim the interview will test.
-
-A self-certification is part of the audited text, not a substitute for it. Writing "every claim here traces to a sentence you wrote" above a line that does not is worse than writing nothing: it tells the candidate to stop checking. Make the claim only after the clause-by-clause pass, and if a clause cannot be traced, cut the clause rather than soften the certification.
-
-Everything the audit governs is proposed, never applied — and the marker rides on **each** block, not once at the end. A resume-edits table, an outreach draft, an interview-framing script and a paragraph of positioning advice are four proposed artifacts; a single approval line beneath the table covers exactly one of them, and this rule has failed in that shape every time it has been measured. The table is the thing that *looks* like it needs approving, so it is the thing that gets marked while the prose beside it ships as advice. Mark each block where it stands — the edits table `resume_edits_pending_approval`, every other proposed artifact with its own `pending your approval` — because the candidate approves language, not tables.
+Read `references/reframing-audit.md` — the suite's canonical audit, mirrored
+verbatim into this skill — and run it over the proposal before showing it. Six
+axes and five disciplines, covering every word proposed for the candidate to say,
+write, or send: resume bullets, positioning advice, outreach phrasing, interview
+framing. It is canonical rather than local because resume-tailor's whole output is
+proposed language and job-underwriter's is partly so; one copy cannot drift from
+the other if there is only one.
 
 **`discovery` → the recall prompt.** The workhorse. Structure every important discovery prompt like this:
 
