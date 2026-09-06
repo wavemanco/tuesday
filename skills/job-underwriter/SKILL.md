@@ -47,7 +47,7 @@ Three tiers; the trade is the user's to make. Model memory is never a source for
 
 Failed attribution is also a finding about the opportunity, not only a limit on research: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
 
-**Closing order is fixed: the dossier offer, then the upgrade menu, and nothing after it.** The menu is what the user acts on next, so a recap, a question block, or a closing pleasantry beneath it buries the one section written to be read last.
+**Closing order is fixed: the dossier offer, then the upgrade menu, then the questions — and nothing else after either.** The menu and the questions are both calls to action and they are the last two things the reader meets; a recap, a summary, or a closing pleasantry beneath them buries both.
 
 ### Step 3 — Recovery turns
 

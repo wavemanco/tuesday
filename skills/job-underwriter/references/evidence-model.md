@@ -43,6 +43,17 @@ output rather than the shared vocabulary:
   about what roles of this kind are normally like is `[generic]`, whether or
   not any search ran. A run with no research is *more* inference, not less, so
   a response that labels nothing because it searched nothing has it backwards.
+  A label marks where a statement about *the world* came from — the employer,
+  the market, the role, the candidate's experience. The skill's reasoning about
+  its own analysis is not a claim about the world and carries no label: "this is
+  a fit case with a title problem, not a substance problem" is a reading of the
+  map the reader can already see. The distinction is not a loophole, and the way
+  it gets abused is worth naming — "an interviewer will probe this hardest" and
+  "a keyword screen never lets a human read that far" look like commentary and
+  are claims about how hiring works, which is the world. If a sentence would
+  still assert something were the analysis deleted, it is a world-claim and it
+  carries its label.
+
   And a derived claim lives in a row, not in prose. Every structure that carries
   derived judgment has a provenance column — the role-reality table, the evidence
   map's `reasoning`, the register's hypothesis — so free prose in the assessment
@@ -82,7 +93,7 @@ Rules for building rows:
 
 - **Requirements come from the JD or from named inference, never from buzzword drift.** "Mentions Kafka once in a tools list" does not create a streaming-architecture requirement; if you infer a requirement, `requirement_source.type: inferred` and say why.
 - **`fit_status` and `gap_type` are decided per the taxonomy** in `references/gap-taxonomy-and-questions.md`. When fit is `direct` with solid evidence, `gap_type: none`.
-- **A band is one value, never a range.** `high`, `medium`, `low`, `none` — `low–medium` is not a band; neither is `split`, `mixed`, or `varies`, which name what you did with the row rather than what the evidence supports. Hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, split them — "medium (adjacent work) / none (the titled years)" assigns a real band to each, which is a different and legitimate thing.
+- **A band is one value, never a range.** `high`, `medium`, `low`, `none` — The cell contains exactly one of those four words and nothing else — no slash, no hyphenated pair, no parenthetical. `low–medium`, `none/low`, `split`, `mixed` and `varies` have all been written into this cell and none of them is a band: the first two are two answers, the rest name what you did with the row rather than what the evidence supports. Hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, split them — "medium (adjacent work) / none (the titled years)" assigns a real band to each, which is a different and legitimate thing.
 - **A cell restates the source claim; it never widens it.** The map is the spine — the plan, the handoff, and every draft line read from these rows, so a qualifier dropped here ("on custom builds" quietly becoming "across 30+ integrations") propagates into language the candidate says out loud. Carry the user's own qualifiers into the cell, and when a cell needs a broader claim to be true, that is a `next_action`, not a wording choice.
 - **Contradictions lower confidence to `none` and say so in `reasoning`** — a CV claiming 5 years against a portfolio showing 2 is a contradiction to surface, not average.
 - **`next_action` is where recovery starts.** A row with an unresolved gap and no concrete next action is an unfinished row.
