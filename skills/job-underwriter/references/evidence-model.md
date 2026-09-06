@@ -22,8 +22,8 @@ What that file settles, and where:
 | What may be asserted on top of a claim at each band | §5, including the two overrides that beat every label |
 | The never-do list binding every output | §6 |
 
-Two readings this skill adds on top, because they concern its own intake rather
-than the shared vocabulary:
+Three readings this skill adds on top, because they concern its own intake and
+output rather than the shared vocabulary:
 
 - **Prose background is CV-equivalent at intake.** A candidate background typed
   into the conversation is self-report of the same standing as `cv` — leads for
@@ -32,6 +32,38 @@ than the shared vocabulary:
 - **`medium` is the intake ceiling.** Nothing reaches `high` on a first pass from
   unprobed material, however specific it sounds: `high` needs an inspectable
   artifact, and intake prose is not one.
+- **A provenance label attaches to the sentence it licenses, not to the section.**
+  A heading that announces research, or a preamble saying what follows is
+  inferred, leaves every line beneath it bare the moment one is quoted back,
+  pasted into the dossier, or read on its own — and an unlabeled inference reads
+  exactly like a fact. Label at the point of assertion and accept the repetition;
+  the labels are not decoration on the analysis, they are how a reader tells
+  which parts of it can be checked. They are also not a research-only device:
+  a reading drawn from the JD and the CV alone is `[inferred]`, and a claim
+  about what roles of this kind are normally like is `[generic]`, whether or
+  not any search ran. A run with no research is *more* inference, not less, so
+  a response that labels nothing because it searched nothing has it backwards.
+  A label marks where a statement about *the world* came from — the employer,
+  the market, the role, the candidate's experience. The skill's reasoning about
+  its own analysis is not a claim about the world and carries no label: "this is
+  a fit case with a title problem, not a substance problem" is a reading of the
+  map the reader can already see. The distinction is not a loophole, and the way
+  it gets abused is worth naming — "an interviewer will probe this hardest" and
+  "a keyword screen never lets a human read that far" look like commentary and
+  are claims about how hiring works, which is the world. If a sentence would
+  still assert something were the analysis deleted, it is a world-claim and it
+  carries its label.
+
+  And a derived claim lives in a row, not in prose. Every structure that carries
+  derived judgment has a provenance column — the role-reality table, the evidence
+  map's `reasoning`, the register's hypothesis — so free prose in the assessment
+  carries only what could be quoted from the JD, the CV, or the user's own words.
+  The moment a sentence adds a reading of its own, it belongs in the row it is a
+  reading of, and a reading with no row to sit in is a reading to cut. This is
+  the fourth attempt at this rule and the first that is not a reminder: three
+  wordings asked the writer to remember a label, and a writer who knows where a
+  claim came from cannot see the sentence that fails to say so. An empty cell is
+  visible; a missing suffix is not.
 
 ## The evidence-map row
 
@@ -61,7 +93,7 @@ Rules for building rows:
 
 - **Requirements come from the JD or from named inference, never from buzzword drift.** "Mentions Kafka once in a tools list" does not create a streaming-architecture requirement; if you infer a requirement, `requirement_source.type: inferred` and say why.
 - **`fit_status` and `gap_type` are decided per the taxonomy** in `references/gap-taxonomy-and-questions.md`. When fit is `direct` with solid evidence, `gap_type: none`.
-- **A band is one value, never a range.** `high`, `medium`, `low`, `none` — `low–medium` is not a band, and hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, split them — "medium (adjacent work) / none (the titled years)" assigns a real band to each, which is a different and legitimate thing.
+- **Every enum cell holds exactly one token from its set, and nothing else.** `priority`, `fit_status`, `confidence`, `gap_type`, and the register's `class` and `severity` are vocabularies, not prose: no slash, no hyphenated pair, no parenthetical, no second answer. `low–medium`, `none/low`, `split`, `mixed` and `discovery (sales piece)` have each been written into one of these cells, and the list keeps growing because each is a different way of declining to choose — two answers, or a qualifier smuggled into a slot with room for one. The qualifier is not unwelcome; it belongs in `reasoning`, where it can be read and where nothing downstream tries to parse it. Hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, the split is legitimate and the slash is not: it becomes **two rows** — R4a at `medium` for the adjacent work, R4b at `none` for the titled years — each with its own requirement text, band and next action. Written into one cell as "medium (adjacent) / none (titled)" it is still one cell holding two answers, and everything downstream that reads a band off this row now reads a string. Rows are free; the cell is the constraint.
 - **A cell restates the source claim; it never widens it.** The map is the spine — the plan, the handoff, and every draft line read from these rows, so a qualifier dropped here ("on custom builds" quietly becoming "across 30+ integrations") propagates into language the candidate says out loud. Carry the user's own qualifiers into the cell, and when a cell needs a broader claim to be true, that is a `next_action`, not a wording choice.
 - **Contradictions lower confidence to `none` and say so in `reasoning`** — a CV claiming 5 years against a portfolio showing 2 is a contradiction to surface, not average.
 - **`next_action` is where recovery starts.** A row with an unresolved gap and no concrete next action is an unfinished row.

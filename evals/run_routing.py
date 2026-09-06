@@ -41,7 +41,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SKILLS = ["job-underwriter", "mock-interview"]
+SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
 
 
 def install_skills(root: Path, run_id: str,

@@ -59,6 +59,7 @@ job-underwriter/
 ├── SKILL.md                            # the skill itself — instructions Claude follows
 ├── references/
 │   ├── evidence-model.md               # evidence vocabulary, map row shape, confirmation card
+│   ├── reframing-audit.md             # mirror of conventions/ — six drift axes, five disciplines
 │   ├── gap-taxonomy-and-questions.md   # five gap types, recovery patterns, question selection
 │   ├── risk-and-decision.md            # signal classes, red-flag patterns, decision semantics
 │   └── dossier-template.md             # emission rules + full worked tuesday-dossier.md

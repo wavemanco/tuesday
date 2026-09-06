@@ -45,7 +45,10 @@ Each skill's frontmatter description carries an explicit negative boundary so th
 |---|---|---|
 | `mock-interview` | Interview preparation and rehearsal | Not for deciding whether to apply |
 | `job-underwriter` | Evaluate the opportunity, recover evidence, decide | Not for interview rehearsal |
+| `resume-tailor` | Tailoring an existing resume to a named target role | Not for deciding whether to apply, nor for interview rehearsal |
 | (future skills) | — | Every new skill adds its boundary here and in its description |
+
+A third skill makes every boundary a three-way question rather than a two-way one, and the existing rows are deliberately unchanged until routing is measured with all three present: the suite has already found that a more assertive description suppresses its sibling, so adding exclusions on assumption is as likely to cost triggering as to buy precision.
 
 When a request genuinely spans both ("should I apply, and prep me if yes"), the invoked skill does its own job fully and names the sibling in one sentence — it does not attempt the sibling's job.
 

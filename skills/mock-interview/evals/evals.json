@@ -7,6 +7,7 @@
       "expected_output": "A complete markdown prep pack generated without any clarifying questions, with peer-weighted personas, grounded guidance mapped to Priya's stated stories, and every question carrying type tags, rationale, and a provenance label.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "No clarifying question is asked before generating (round type, relationship, JD, and CV context were all supplied)",
         "The output is a markdown pack containing persona-organized question-bank tables with columns covering the question, a type tag, answer guidance, and a rationale",
         "A Peer Evaluator persona appears with elevated likelihood explicitly justified by the stated peer relationship, and its bank includes at least one seam/boundary question and one credit-sharing or reciprocity question",
@@ -15,7 +16,7 @@
         "At least one case or company question is grounded in the supplied research note (Compass launch, profitability push, or the bundling threat) rather than generic strategy",
         "Every question's rationale ends with a provenance label ([grounded], [inferred], or [generic])",
         "The pack ends with an upgrade menu listing concrete missing inputs (e.g., full JD text, full CV document, Dan's full profile) and what each unlocks",
-        "The pack explicitly states that the company's published values and documented interview process could not be established from attributable sources, rather than silently omitting the values section"
+        "Where the company's published values or documented interview process could not be established — whether research came back non-attributable or could not run at all — the pack says so and says which, rather than silently omitting the values section or filling it from memory"
       ]
     },
     {
@@ -24,7 +25,8 @@
       "expected_output": "One compact clarifying exchange (round type + research consent), then a full pack that degrades honestly: no interviewer-read section, round-type persona priors, generic reverse questions, and an upgrade menu.",
       "files": [],
       "expectations": [
-        "Exactly one clarifying message is sent before generating, containing at most three questions, covering round type/relationship to the interviewer and research-depth consent — and generation proceeds even though interviewer identity remains unknown",
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
+        "Any clarifying questions ride with the delivered pack rather than preceding it — at most three, covering round type/relationship to the interviewer and research-depth consent — and the pack is complete despite the interviewer's identity remaining unknown, with that assumption stated",
         "No 'Reading the interviewer' section appears in the pack, and no facts about any specific interviewer are invented",
         "Reverse questions are role-generic (about the team, the sites, success criteria) with no fabricated references to a named interviewer",
         "Each stated JD requirement (multi-site operations, on-time/cost metrics, team of 12, Power BI, Lean/Six Sigma) has at least one JD-tagged question, and the 3-supervisors-to-12 and Power BI gaps each get a Skeptic or Pressure question with bridge guidance",
@@ -39,11 +41,12 @@
       "expected_output": "One bundled clarifying exchange, L1 research actually performed (official values/principles, documented loop structure), then an honest gate-only pack: inferred JD questions, a self-assessment fit worksheet, and heavy provenance labeling.",
       "files": [],
       "expectations": [
-        "At most one clarifying message is sent (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and the pack is generated after that single exchange even if the user supplies nothing further",
-        "Web research is actually performed for Stripe's published operating principles/values and its documented interview process rather than answering from model memory, and the Sources section cites what was found",
-        "JD-derived questions are labeled [inferred] and the pack states they were built from a researched representative JD for the title",
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
+        "At most three clarifying questions appear (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and they accompany a pack that is already complete rather than gating it",
+        "Nothing about Stripe's operating principles or interview process is answered from model memory: either research runs and the Sources section cites what it found, or the response says plainly that research was unavailable and treats those facts as unestablished",
+        "JD-derived questions carry a provenance label and the pack says what they were built from — [inferred] from a researched representative JD where research ran, [generic] from the role-family pattern where it did not — never presented as Stripe-specific without a source",
         "With no CV provided, the fit snapshot appears as a self-assessment worksheet variant with story-selection scaffolds instead of story-mapped guidance",
-        "A values/behavioral bank maps questions to the company's actual published principles found in research, by name",
+        "A values/behavioral bank exists, and either maps its questions to the company's actual published principles by name where research found them, or states that the principles could not be confirmed and labels the bank generic rather than inventing named values",
         "The pack ends with an upgrade menu, and no section fabricates a specific interviewer, team, or unverified company fact",
         "The pack states that the final round is typically multiple sessions, runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu once the schedule is known"
       ]
@@ -54,6 +57,7 @@
       "expected_output": "A full pack that consumes the handoff: story-mapped [grounded] guidance built on the verified evidence (with the medium-confidence caveat coached), strategy-constrained guidance per weak area, the dossier's named objection given the deepest rehearsal and attributed to the dossier, its risks and employer questions carried into the reverse bank, no prohibited claim asserted anywhere, a Sources note naming the dossier, and a one-line pack_feedback offer at the end.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "No clarifying question asks for the JD or the candidate's background — the dossier's role_profile and verified evidence already supply them; at most one clarifying message is sent and it covers only what the dossier does not carry (e.g. research-depth consent or interviewer identity)",
         "Guidance built on the dossier's verified_candidate_evidence is story-mapped to those specific claims (the 30+ integrations, the integration playbook, the quarterly roadmap-input sessions) and labeled [grounded] rather than written as story-selection scaffolds",
         "The roadmap-input-sessions claim, flagged medium confidence in the dossier, is coached with its verification caveat named — the guidance tells the candidate to volunteer the limit of inspectable proof rather than leaving it for a prober to extract",
@@ -72,6 +76,7 @@
       "expected_output": "A pack with a dedicated build section for the pre-declared POV (grounded in the supplied report, theses each with a concession, a differentiation strategy against the report's own consensus, and the operator-benefit close the recruiter named), a prep triage sized to four hours, panel-weighted personas for the two named interviewers, and any beyond-spec addition arriving as a labeled offer.",
       "files": [],
       "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "A dedicated build section exists for the pre-declared POV deliverable — questions alone do not satisfy it, because an announced deliverable is a graded deliverable",
         "The POV section offers 2-3 defensible theses, and each carries an explicit concession rather than being argued as unqualified",
         "The POV section names a differentiation strategy against the supplied market report rather than reciting it, on the reasoning that a document circulated internally is equally available to the panel and to rival candidates — and where the role warrants saying no, an anti-pick appears",

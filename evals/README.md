@@ -57,6 +57,73 @@ runs per case is the minimum that distinguishes "routes here" from "routes here
 sometimes". Cases are scored on consistency — a case that fires the right skill
 on two runs of three is a *fail*, because that is what a user meets.
 
+## Clean-room fixtures
+
+`run_fixtures.py` runs each skill's own `evals/evals.json` fixtures in a project
+that contains only that skill — no repository, no spec, no conversation about
+what the skill was meant to do — and grades the responses with graders that see
+only the response and the expectations.
+
+```bash
+python evals/run_fixtures.py --out /tmp/clean-room
+python evals/run_fixtures.py --skill job-underwriter --eval 3 --out /tmp/cr
+python evals/run_fixtures.py --out /tmp/cr --retry-runs 0    # one run, no retries
+python evals/run_fixtures.py --out /tmp/cr --skip-execute    # re-grade, no re-run
+```
+
+**Runs are adaptive, and a failure is classified rather than counted.** Every
+fixture runs once. A fixture that fails something runs twice more, and each
+failing expectation is reported as `deterministic` (failed every run) or
+`intermittent` (did not). An expectation fails a run if *either* grader fails
+it — the dissenting grader has found every defect worth fixing in this suite so
+far, and requiring both would discard exactly that.
+
+The distinction is the point. One fixture here has scored 12/12, 13/13, 13/13
+and 9/13 on the same skill; a single run cannot tell that from a defect, and
+chasing it as a defect means rewriting a rule that already worked. Running
+*everything* three times was the obvious alternative and is worse: it triples
+the cost of the expensive half — executions generate 20k–36k character packs —
+to learn nothing about fixtures that were already clean, and it raises
+confidence in a wrong expectation exactly as fast as in a right one. Seven
+expectations in this suite turned out to be testing the environment rather than
+the skill; three runs each would have made every one of them look more real.
+
+An intermittent failure is a reliability finding, not a defect to patch. The
+rule fired once and not another time, so rewriting it is as likely to move the
+number by luck as by fixing anything — the useful responses are to make the
+requirement structural, or to record the rate.
+
+The point is authoring context. A fixture graded in the session that wrote the
+skill is graded by a reader who already knows what it meant, supplies the
+charitable reading, and scores the intent rather than the output.
+
+Two things the first clean-room pass taught, both about the *expectations*
+rather than the skills:
+
+- **An expectation that refers to knowledge the grader lacks is unfalsifiable.**
+  One asked whether anything "beyond the spec's owed outputs" arrived as a
+  labeled offer. A grader who cannot see the spec cannot answer that, so it
+  guessed, and failed a section that was owed. Expectations are now written to
+  be self-contained — they name what they mean rather than pointing at a
+  document the grader does not have.
+- **A grader needs to be told what does not count as a failure.** The first
+  grader failed conditional expectations whose condition never occurred ("where
+  research ran…", in a run with no web access), and once wrote FAIL above a
+  sentence reasoning its way to PASS. Those rules are now in the grader prompt.
+
+A third lesson, this one about the harness rather than the evals: **grade the
+artifact, not the cover note.** mock-interview delivers by saving its pack as a
+file and presenting it, so capturing only the chat stream scored a four-sentence
+summary against expectations about a 27,000-character pack. Worse, the first
+attempt at a fix scanned only the project directory and found nothing — making a
+skill that had delivered look like one that falsely claimed to. The packs were in
+the scratchpad a nested `claude -p` is handed outside its working directory.
+`collect_artifacts` now looks in both, and the same three fixtures went from
+1/9, 5/10 and 4/12 to 8/9, 10/10 and 12/12 on the identical responses.
+
+All three are defects that only appear outside the room where the eval was
+written, which is the whole argument for running it there.
+
 These evals are not run in CI: they need a model, cost real tokens, and take
 minutes. Run them in a session against any change that could plausibly move
 triggering — a description edit, a new skill, a boundary reworded.

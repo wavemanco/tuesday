@@ -33,9 +33,22 @@ Fit is strong: five of seven material requirements are `direct`, including both 
 
 ## Role reality
 
-Ferrowave (B2B payments infrastructure, ~220 people, Series B) is hiring a senior PM to own the roadmap for its payments platform — three squads: acceptance, payouts, reconciliation. Stated first-year outcomes (unusually, the JD names them): launch payout scheduling, cut reconciliation exceptions by half. Hybrid London, two office days.
+| Element | What it is | Provenance |
+|---|---|---|
+| Organization | Ferrowave, B2B payments infrastructure, ~220 people, Series B | `[grounded]` JD header |
+| Mandate | Own the roadmap for the payments platform across three squads: acceptance, payouts, reconciliation | `[grounded]` JD |
+| First-year outcomes | Launch payout scheduling; halve reconciliation exceptions | `[grounded]` JD states both |
+| Working pattern | Hybrid London, two office days | `[grounded]` JD |
+| Scope read | A normally-scoped Series B platform seat — three squads and two named outcomes is ordinary for the title, not unusually broad | `[inferred]` from squad count against the stated outcomes |
+| Market calibration | £90–110k for this title at this seniority | `[generic]` role-family sweep, 3 searches, this month |
+| Unknowns | Decision authority versus the three squad leads; compensation band; who owns pricing | — |
+| Contradictions | None between the JD and the careers page | `[grounded]` careers page fetched |
 
-Unknowns: decision authority versus the three squad leads; compensation band; who owns pricing. Contradictions: none detected between JD and careers page.
+The Provenance column is not decoration and it is not optional. It is here because
+three separate prose rules failed to keep these labels attached: written as a
+paragraph, this section reliably lost them, because a sentence that reads as fact
+looks finished. A column is empty until it is filled, and an empty cell is visible
+to the writer as well as the reader.
 
 ## Evidence map
 
@@ -63,20 +76,35 @@ Answer in text, paste a voice transcript, attach a document, drop a link, or say
 
 ## Opportunity risk register
 
-| # | Signal | Class | Severity | Source quote | Status |
-|---|---|---|---|---|---|
-| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | unresolved |
-| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | unresolved |
-| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | noted |
+| # | Signal | Class | Severity | Source quote | Verification question | Status |
+|---|---|---|---|---|---|---|
+| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
+| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | What band is budgeted for this role? | unresolved |
+| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | — | noted |
 
-Verification questions ride in the application plan and the handoff: RR1 — "Which decisions does this role make alone, and which belong to the squad leads?"; RR2 — "What band is budgeted for this role?"
+The verification question is a column for the same reason. Rendered as a prose
+line beneath the table it survived only for the entries that arrived with a
+worked example attached — which meant the entries carrying the actual red flags,
+the ones a candidate most needs a question for, were the ones that lost it. Only
+`positive_signal` rows may leave the cell empty.
 
 ## Application plan
 
-- **CV edit E1 (pending your approval):** surface the experimentation pipeline from the tools list into an outcome bullet — reorganizes existing verified material, adds nothing. Draft in envelope.
-- **Work sample:** a one-page, sanitized partner-API case note (R3 → high; also the natural artifact for the R4 bridge).
-- **Interview questions:** RR1 and RR2 verification questions, verbatim.
-- **Research action:** confirm the compensation band with the recruiter before investing in the loop.
+| # | Action | Why | Provenance | Status |
+|---|---|---|---|---|
+| E1 | Surface the experimentation pipeline from the tools list into an outcome bullet | Reorganizes existing verified material, adds nothing; draft in envelope | `[grounded]` CV, tools list | pending your approval |
+| W1 | A one-page sanitized partner-API case note | Raises R3 to high and is the natural artifact for the R4 bridge | `[grounded]` R3, R4 rows | pending your approval |
+| Q1 | Ask RR1 and RR2's verification questions verbatim in the loop | The register doubles as interview preparation | `[grounded]` register | pending your approval |
+| A1 | Confirm the compensation band with the recruiter before investing in the loop | Comp is unstated against a stated floor | `[grounded]` RR2 | pending your approval |
+| A2 | A referral into the team beats a cold application for this kind of role | How screening works at this size of company, not a fact about this employer | `[generic]` role-family pattern | pending your approval |
+
+The plan is a table for the same reason role reality is. Written as prose it
+carries two things at once and loses both: strategy advice is language the
+candidate will act on, so it needs a status, and lines like row A2 are claims
+about how hiring works, so they need a label. As bullets they read as neutral
+counsel and arrive with neither. Every row is proposed — the candidate approves
+actions, not just edits — and a row with no provenance is a row asserting
+something the analysis cannot source.
 
 ## Evidence status
 
