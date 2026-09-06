@@ -56,7 +56,7 @@ Five disciplines make the audit actually catch things:
 
 A self-certification is part of the audited text, not a substitute for it. Writing "every claim here traces to a sentence you wrote" above a line that does not is worse than writing nothing: it tells the candidate to stop checking. Make the claim only after the clause-by-clause pass, and if a clause cannot be traced, cut the clause rather than soften the certification.
 
-Everything the audit governs is proposed, never applied: mark it `resume_edits_pending_approval` and place the approval statement so it visibly covers the prose advice too, not only the table beneath it.
+Everything the audit governs is proposed, never applied — and the marker rides on **each** block, not once at the end. A resume-edits table, an outreach draft, an interview-framing script and a paragraph of positioning advice are four proposed artifacts; a single approval line beneath the table covers exactly one of them, and this rule has failed in that shape every time it has been measured. The table is the thing that *looks* like it needs approving, so it is the thing that gets marked while the prose beside it ships as advice. Mark each block where it stands — the edits table `resume_edits_pending_approval`, every other proposed artifact with its own `pending your approval` — because the candidate approves language, not tables.
 
 **`discovery` → the recall prompt.** The workhorse. Structure every important discovery prompt like this:
 
