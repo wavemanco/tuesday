@@ -72,6 +72,7 @@ mock-interview/
 ├── SKILL.md                      # the skill itself — instructions Claude follows
 ├── references/
 │   ├── personas.md               # 7 interviewer personas, relationship priors, signal rules
+│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── question-rubric.md        # 5 question types, coverage rules, guidance-writing rules
 │   ├── research-checklist.md     # L0/L1/L2 research tiers, budgets, archetype fallbacks
 │   ├── output-template.md        # pack skeleton, loop mode, drill mode

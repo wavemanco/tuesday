@@ -16,7 +16,8 @@
         "At least one case or company question is grounded in the supplied research note (Compass launch, profitability push, or the bundling threat) rather than generic strategy",
         "Every question's rationale ends with a provenance label ([grounded], [inferred], or [generic])",
         "The pack ends with an upgrade menu listing concrete missing inputs (e.g., full JD text, full CV document, Dan's full profile) and what each unlocks",
-        "Where the company's published values or documented interview process could not be established — whether research came back non-attributable or could not run at all — the pack says so and says which, rather than silently omitting the values section or filling it from memory"
+        "Where the company's published values or documented interview process could not be established — whether research came back non-attributable or could not run at all — the pack says so and says which, rather than silently omitting the values section or filling it from memory",
+        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
       ]
     },
     {
@@ -32,7 +33,8 @@
         "Each stated JD requirement (multi-site operations, on-time/cost metrics, team of 12, Power BI, Lean/Six Sigma) has at least one JD-tagged question, and the 3-supervisors-to-12 and Power BI gaps each get a Skeptic or Pressure question with bridge guidance",
         "The 40% mis-pick claim gets a defend-the-number EXP question whose guidance includes naming the weakest assumption and precise personal attribution",
         "The upgrade menu lists interviewer identity/profile and company research among the unlocks",
-        "The pack explicitly states that the company's published values and interview process could not be established from attributable sources, and names the archetype its loop assumptions fall back to"
+        "The pack explicitly states that the company's published values and interview process could not be established from attributable sources, and names the archetype its loop assumptions fall back to",
+        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
       ]
     },
     {
@@ -48,7 +50,8 @@
         "With no CV provided, the fit snapshot appears as a self-assessment worksheet variant with story-selection scaffolds instead of story-mapped guidance",
         "A values/behavioral bank exists, and either maps its questions to the company's actual published principles by name where research found them, or states that the principles could not be confirmed and labels the bank generic rather than inventing named values",
         "The pack ends with an upgrade menu, and no section fabricates a specific interviewer, team, or unverified company fact",
-        "The pack states that the final round is typically multiple sessions, runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu once the schedule is known"
+        "The pack states that the final round is typically multiple sessions, runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu once the schedule is known",
+        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
       ]
     },
     {
@@ -67,7 +70,8 @@
         "Both opportunity_risks_to_validate items and both questions_for_employer appear in the reverse-question bank (in substance, not necessarily verbatim), each with a 'why it lands' line",
         "The Sources section states that a tuesday-dossier.md was consumed and names which sections it supplied",
         "The pack ends with an upgrade menu and offers, in one line and without pressure, to emit or update the dossier with a pack_feedback section — it does not emit one unprompted and does not make the offer a condition of anything",
-        "The pack does not relitigate the underwriter's conditional_go decision or tell the candidate whether to apply, and nothing in the pack treats the dossier as having been required for the pack to be built"
+        "The pack does not relitigate the underwriter's conditional_go decision or tell the candidate whether to apply, and nothing in the pack treats the dossier as having been required for the pack to be built",
+        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
       ]
     },
     {
@@ -88,7 +92,8 @@
         "The transport-consulting background is used as a genuine adjacency (operator-side domain knowledge) with its limit named, and is never presented as rail sales experience",
         "Every question's rationale ends with a provenance label, and claims about Kelverton that research could not attribute are labeled or dropped rather than asserted",
         "Any section beyond the skill's own spec arrives as a clearly labeled offer with one line on what it would add, rather than being woven into the pack unannounced",
-        "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition"
+        "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition",
+        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
       ]
     }
   ]

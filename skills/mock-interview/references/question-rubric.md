@@ -47,6 +47,7 @@ Why label at all: a candidate who rehearses a fabricated specific repeats it liv
 - **Pressure questions include the hold-then-concede structure.** Hold the position through two follow-ups, concede uncertainty explicitly and specifically, never fold on the core claim just to restore harmony.
 - **The rationale covers both inclusion and categorization.** Why this question is likely for this candidate in this loop, and why it carries these tags. A reader should be able to disagree intelligently with either call.
 - **Truthful attribution throughout.** Guidance rehearses precise honesty — "what was actually you" — never spin. Coaching a candidate to inflate is coaching them to fail a probe that exists specifically to catch inflation.
+- **Run the reframing audit over every guidance cell.** `references/reframing-audit.md`, the suite's canonical audit mirrored verbatim into this skill: six axes, five disciplines, clause by clause against the candidate's own sentences. A guidance cell is not advice about language, it *is* language — the candidate will say these words out loud to someone who was in the room. A story-mapped beat that quietly promotes "contributed to" into "led" hands them a sentence that collapses on the first follow-up, and it is the interviewer, not the pack, who finds out. The audit's own worked examples are drawn from resume lines; nothing about them is weaker here, and the stakes are higher, because a written claim can be walked back and a spoken one is already in the room.
 
 ## Reverse questions
 

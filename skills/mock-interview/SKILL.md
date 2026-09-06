@@ -41,7 +41,7 @@ Company values, loop structure, and current strategy must come from research or 
 
 ### Step 3 — Synthesize
 
-Read `references/personas.md` and `references/question-rubric.md` before writing any question. Build in this order, because each layer feeds the next:
+Read `references/personas.md` and `references/question-rubric.md` before writing any question, and `references/reframing-audit.md` before writing any guidance cell — every one of them is a sentence the candidate will speak aloud. Build in this order, because each layer feeds the next:
 
 1. **Fit snapshot** — JD requirement × candidate evidence × gap-and-bridge language. The gaps found here become the Skeptic and Pressure banks' best material. With a dossier in hand, the underwriter's `evidence_map` supplies these rows already graded — its confidence bands and gap types are the vocabulary this skill uses too, per the mirror in `references/evidence-conventions.md`.
 2. **Interviewer read** — only when real interviewer information exists. Career pattern, self-described style, what will land with them and why.
