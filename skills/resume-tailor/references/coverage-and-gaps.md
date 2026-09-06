@@ -20,7 +20,7 @@ Boilerplate ("self-starter", "fast-paced environment") is not material.
 | # | Requirement | Priority | Status | Where it lands | Provenance |
 |---|---|---|---|---|---|
 
-`status` is one of exactly three values, one token per cell:
+`status` is one of exactly three values, one token per cell — no parenthetical, no slash, no qualifying clause. `surfaced_by_edit (partial — see G2)` and `not_evidenced (adjacent work exists)` are not statuses; they are a status plus the nuance that belongs in the *Where it lands* column, where it can be read without breaking anything that parses the status:
 
 - **`already_evidenced`** — the current resume supports it as written. No row needed; say so.
 - **`surfaced_by_edit`** — the evidence exists but is buried, mis-sectioned, or compressed away. Names the ledger row that fixes it.
@@ -66,9 +66,15 @@ Question:
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
 ```
 
-**`not_evidenced` with nothing to pull → the named absence.** Say it plainly, in
-one sentence, with what closing it would take: a project, a certification, a
-scoped-down target. No cushioning it into vagueness, and no offering of a
+**`not_evidenced` with nothing to pull → the named absence.** Two parts, always,
+and the second is the one that gets dropped. Say the gap plainly in one sentence —
+then say what closing it would take: a specific project, a certification, six
+months on a particular kind of work, a scoped-down target role. "You have never
+touched Kafka, and it is listed as a plus rather than a requirement" is half an
+answer; it tells the candidate where they stand and nothing about what to do,
+which is the half they came for. An absence with no closing path is an
+unfinished row even when the honest closing path is "not worth closing for this
+role" — say that, and say why. No cushioning it into vagueness, and no offering of a
 "technically true" phrasing that gestures at the requirement without meeting it —
 that phrasing is the thing this skill exists not to write.
 

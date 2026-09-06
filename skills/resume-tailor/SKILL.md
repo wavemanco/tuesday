@@ -33,6 +33,10 @@ Read `references/evidence-conventions.md` for the vocabulary, `references/refram
 6. **Prohibited claims** — what this skill refused to write and why.
 7. **Parse-safety check** — per `references/machine-readers.md`.
 
+**When the candidate arrives with a premise, correct it before working to it.** Two arrive constantly. *"It's the keyword matching that's rejecting me"* — say what keyword matching actually does (retrieval and ranking, not automatic rejection), name what does auto-reject (knockout questions on the form, not resume content), and then do the work. *"Hidden text gets you past the AI"* — refuse it per `references/machine-readers.md`. Working silently to a false premise leaves the candidate believing it, and they will carry it to the next twenty applications.
+
+**A correction or a refusal is never a gate.** Say it in a paragraph or two, then deliver the whole ledger in the same message. A response that declines and asks whether to proceed has spent the candidate's turn on a conversation about the work instead of the work.
+
 ### Step 2 — Deliver, then wait
 
 The first response is never questions-only. Deliver the whole ledger from whatever inputs exist, then the coverage map, gap handling, prohibited claims, and the parse-safety check — then the upgrade menu, then at most three questions closing the message. State the assumption anything was built on rather than withholding the work until it is confirmed.
