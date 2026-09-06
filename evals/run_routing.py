@@ -81,6 +81,18 @@ def install_skills(root: Path, run_id: str,
     return names
 
 
+def result_outcome(event: dict) -> str:
+    """Classify a `result` event: a run the CLI failed is not a run that fired nothing.
+
+    Extracted so the decline path has a test. Every bug this harness has had was a
+    non-result recorded as a result, and none of them was caught by anything but a
+    person reading output.
+    """
+    if event.get("is_error") or event.get("subtype") not in (None, "success"):
+        return "error"
+    return "neither"
+
+
 def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None) -> str:
     """Run one query; return the skill that fired, 'neither', 'timeout', or 'error'.
 
@@ -152,9 +164,7 @@ def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, mo
                     if hit:
                         return hit, buffer
             elif event.get("type") == "result":
-                if event.get("is_error") or event.get("subtype") not in (None, "success"):
-                    return "error", buffer
-                return "neither", buffer
+                return result_outcome(event), buffer
         return None, buffer
 
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,

@@ -71,6 +71,38 @@ cell read "same line, moved above the UAT bullet", one screen below the rule
 forbidding exactly that. Check examples against the rule they illustrate, and when
 one has taught a defect, say so in the example rather than silently correcting it.
 
+## Harnesses report three outcomes, not two
+
+An eval harness runs external processes that can decline: time out, hit a rate
+limit, return a truncated reply, exit non-zero. **Every path where that can happen
+needs an explicit third outcome beside success and failure**, and it needs a test.
+
+The rule is written from four bugs, all in this repository's own harnesses, all
+the same mistake wearing different clothes — a non-result recorded as a result:
+
+| What declined | What it was recorded as | What it should have been |
+|---|---|---|
+| The reader, exiting before parsing the pipe's tail | `neither` — the skill did not fire | the fire it had already streamed |
+| A run the CLI failed, usually a rate limit | `neither` | `error` |
+| A grader reply truncated mid-object | twelve expectations failed | the verdicts it did contain, marked truncated |
+| A session usage-limit message | a 48-character response, graded | a skipped execution with a reason |
+
+Each was found by a person reading output that looked wrong, which is the slowest
+detector available and the one that fails silently when the output looks
+*plausible*. The third of them produced a column of `errored` rather than a column
+of low scores, which is the previous fixes working — but nothing stopped the run
+from being started, and nothing would have caught a regression.
+
+`evals/test_harness.py` covers each decline path and runs in CI. It is
+standard-library only and spends no model calls, because every function it tests
+is pure by design: where a decline path is buried inside a subprocess loop, extract
+the classification so it can be tested rather than leaving it untestable and
+therefore untested.
+
+A test that cannot fail is worse than no test, so each of the four bugs above was
+reintroduced against the finished suite and confirmed caught before this was
+written down.
+
 ## Structural rules
 
 - Skills are dependency-free: nothing outside a skill's folder may be required
