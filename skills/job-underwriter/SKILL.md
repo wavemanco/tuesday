@@ -68,6 +68,23 @@ The dossier offer is a standing line in every delivered assessment's upgrade men
 
 A late input — a portfolio link, a prior resume, an answered gap — regenerates only the affected sections, with the changelog line first. A request that spans evaluation and rehearsal ("should I apply, and prep me if yes"): do this skill's whole job, then name mock-interview in one sentence; never attempt its job.
 
+## Output discipline
+
+Bound by `references/output-discipline.md`, the suite's canonical rules on the
+shape of a delivered response, mirrored verbatim into this skill. Its invariants
+are absolute; the parameters it names are declared here.
+
+```text
+question_budget: 3
+enum_fields: priority, fit_status, confidence, gap_type, class, severity
+closing_order: dossier offer, upgrade menu, questions
+sibling_mentions: 1
+```
+
+Three is the budget because this skill's questions are expensive to answer — a
+recall prompt asks someone to reconstruct a piece of their own history — and
+because a decidable case earns none at all.
+
 ## The n + x rule
 
 The sections this skill's spec defines are *n* — owed to the user, delivered complete and unconditional. Anything a specific run invents beyond spec is *x*: an extra section, a new analysis, a structure no reference file asks for. Never weave x in silently, and never force it: deliver n whole, then offer x as a clearly-labeled proposal — one line on what it would add and why this engagement earns it — and build it only on the user's approval. The offer may ride an already-needed message; otherwise it lands with the delivered output, the way the dossier offer does. x that keeps earning approval belongs in the spec — flag it for codification rather than reinventing it run after run. Label the offer in prose: square brackets are reserved for the provenance labels `[grounded]`, `[inferred]`, and `[generic]`, so an `[x]` beside a heading collides with the one notation the reader is relying on to tell evidence from inference.

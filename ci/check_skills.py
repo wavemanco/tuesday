@@ -293,8 +293,45 @@ def check_triggers() -> None:
             ok(group, f"{skill.name} carries its boundary: '{boundary.strip()}'")
 
 
+def check_parameters() -> None:
+    """Every skill declares every parameter the output-discipline convention names.
+
+    The convention carries invariants that are absolute and parameters that are
+    the skill's own call. A skill that simply omits one has not chosen a value, it
+    has failed to notice a decision — so the declaration is a slot, and a missing
+    slot fails the build. This is the same mechanism as the provenance columns:
+    an empty cell is visible where a silent default is not.
+    """
+    group = "parameters"
+    convention = CONVENTIONS / "output-discipline.md"
+    if not convention.exists():
+        fail(group, "conventions/output-discipline.md is missing")
+        return
+    expected = re.findall(r"\*\*Parameter:\s*`([a-z_]+)`\*\*", convention.read_text())
+    if not expected:
+        fail(group, "output-discipline.md names no parameters — the check would pass vacuously")
+        return
+
+    for skill in skills():
+        text = (skill / "SKILL.md").read_text()
+        section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
+                            re.MULTILINE | re.DOTALL)
+        if not section:
+            fail(group, f"{skill.name}: no '## Output discipline' section declaring its parameters")
+            continue
+        body = section.group(1)
+        missing = [name for name in expected
+                   if not re.search(rf"^\s*{re.escape(name)}\s*:", body, re.MULTILINE)]
+        if missing:
+            fail(group, f"{skill.name}: undeclared output-discipline parameter(s): "
+                        f"{', '.join(missing)}")
+        else:
+            ok(group, f"{skill.name} declares all {len(expected)} output-discipline parameters")
+
+
 GROUPS = {
     "frontmatter": check_frontmatter,
+    "parameters": check_parameters,
     "package": check_package,
     "mirrors": check_mirrors,
     "evals": check_evals,

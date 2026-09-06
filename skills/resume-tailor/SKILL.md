@@ -55,6 +55,24 @@ Where the candidate approves a row and asks for a change to it, the changed vers
 
 A portfolio artifact, an answered recall prompt, a dossier arriving mid-conversation: regenerate only the affected rows, lead with a one-line changelog of what moved, and re-run the audit over anything that changed. An answered recall prompt is the most valuable input this skill receives — it converts a `not_evidenced` row into a real one — so process it with the confirmation card in `references/coverage-and-gaps.md` before any row upgrades.
 
+## Output discipline
+
+Bound by `references/output-discipline.md`, the suite's canonical rules on the
+shape of a delivered response, mirrored verbatim into this skill. Its invariants
+are absolute; the parameters it names are declared here.
+
+```text
+question_budget: 3
+enum_fields: operation, coverage_status, provenance, priority, row_status
+closing_order: upgrade menu, questions
+sibling_mentions: 1
+```
+
+`operation` and `row_status` are this skill's own enums and they are the ones most
+likely to acquire a qualifier: a change that feels like two operations is a row
+that should be split, and a status that needs a parenthetical is a status doing a
+neighbouring column's job.
+
 ## The n + x rule
 
 The sections this skill's spec defines are *n* — owed, delivered complete and unconditional. Anything beyond spec is *x*: offered as a clearly-labeled proposal, one line on what it would add and why this engagement earns it, and built only on approval. Label the offer in prose; square brackets are reserved for the provenance labels `[grounded]`, `[inferred]`, and `[generic]`.

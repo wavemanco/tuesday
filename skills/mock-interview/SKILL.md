@@ -61,6 +61,22 @@ Two one-line offers ride the delivery, neither of them pushed: the drill (below)
 
 When new inputs arrive, regenerate only the affected sections and say what changed and why. Late structural facts (relationship, round type) justify restructuring — reweight personas, add or replace banks. Enhancers add sections. Recompute, don't patch inconsistently: a pack that says "hiring manager" in one section and "peer" in another is worse than either.
 
+## Output discipline
+
+Bound by `references/output-discipline.md`, the suite's canonical rules on the
+shape of a delivered response, mirrored verbatim into this skill. Its invariants
+are absolute; the parameters it names are declared here.
+
+```text
+question_budget: 3
+enum_fields: confidence, gap_type, provenance, question_type
+closing_order: upgrade menu, drill and dossier offers, questions
+sibling_mentions: 1
+```
+
+The drill and dossier offers sit inside the closing run because they are things
+the candidate acts on, not commentary on the pack — one line each, neither pushed.
+
 ## The n + x rule
 
 The sections this skill's spec defines are *n* — owed to the user, delivered complete and unconditional. Anything a specific run invents beyond spec is *x*: an extra section, a new analysis, a structure no reference file asks for. Never weave x in silently, and never force it: deliver n whole, then offer x as a clearly-labeled proposal — one line on what it would add and why this engagement earns it — and build it only on the user's approval. The offer may ride an already-needed Step 1 message; otherwise it lands with the delivered pack, like the drill offer. x that keeps earning approval belongs in the spec — flag it for codification rather than reinventing it run after run.
