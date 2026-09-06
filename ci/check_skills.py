@@ -329,8 +329,59 @@ def check_parameters() -> None:
             ok(group, f"{skill.name} declares all {len(expected)} output-discipline parameters")
 
 
+def check_ledger() -> None:
+    """The Tracked-work ledger is the project's memory; it must not contradict itself.
+
+    It did. Five entries had accumulated in it: three exact duplicates, plus a
+    closed item sitting beside its replacement and a superseded one contradicting
+    its successor — the ledger asserting both that mock-interview had no spec and
+    that its spec was written. Index-based edits had been slicing at the wrong
+    boundaries and leaving copies behind, silently, for several sessions.
+
+    A duplicated title is mechanically detectable, which is most of the damage.
+    The rest is a review question, so the failure message says what to look for.
+    """
+    group = "ledger"
+    readme = (REPO / "README.md").read_text()
+    section = re.search(r"^## Tracked work\s*$(.*?)(?=^## |\Z)", readme,
+                        re.MULTILINE | re.DOTALL)
+    if not section:
+        fail(group, "README.md has no '## Tracked work' section")
+        return
+
+    titles = re.findall(r"^- \*\*(.+?)\*\*", section.group(1), re.MULTILINE)
+    if not titles:
+        fail(group, "the Tracked-work ledger has no entries — the check would pass vacuously")
+        return
+
+    seen, duplicated = set(), []
+    for title in titles:
+        if title in seen:
+            duplicated.append(title)
+        seen.add(title)
+    if duplicated:
+        fail(group, "duplicate ledger entr(ies): "
+                    + "; ".join(f"'{t[:60]}'" for t in dict.fromkeys(duplicated)))
+        return
+
+    # A weaker signal for the harder half: two entries opening on the same subject
+    # are usually one item and its stale predecessor.
+    subjects = {}
+    for title in titles:
+        subject = re.split(r"\s+[—-]\s+", title, maxsplit=1)[0].strip().lower()
+        subjects.setdefault(subject, []).append(title)
+    collisions = {s: ts for s, ts in subjects.items() if len(ts) > 1}
+    if collisions:
+        detail = "; ".join(f"'{s}' appears {len(ts)} times" for s, ts in collisions.items())
+        fail(group, f"ledger entries share a subject — check whether one supersedes "
+                    f"the other rather than sitting beside it: {detail}")
+    else:
+        ok(group, f"ledger: {len(titles)} entries, no duplicate or colliding subjects")
+
+
 GROUPS = {
     "frontmatter": check_frontmatter,
+    "ledger": check_ledger,
     "parameters": check_parameters,
     "package": check_package,
     "mirrors": check_mirrors,
