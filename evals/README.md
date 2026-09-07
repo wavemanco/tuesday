@@ -23,18 +23,15 @@ which one it reaches for. Three properties keep it honest:
   produced: commands are addressed to the model as things the user invokes, so
   "the harness under-reports" was always available as the competing explanation
   for a low score. Installing the real skills retires it.
-- **A prompt that claims an attachment gets one.** Cases whose text says a JD
-  or CV is attached carry the document in the case, and the runner writes it
-  into the throwaway project before sending the prompt. Without that the
-  prompt lies: the model looks for the file, does not find it, and asks for
-  it rather than starting work — correct behaviour, scored as a no-fire. The
-  gap was large enough to distort the whole picture. Cases claiming an
-  attachment reached a skill on **22%** of runs against **55%** for
-  self-contained prose, and the two positives that never fired at all were
-  both attachment cases. A diagnostic capture settled it: on the spanning
-  case the model fired job-underwriter, ran `ls`, found nothing, and replied
-  "I don't see any attached files come through" — right skill, right sibling
-  order, scored `neither`.
+- **A prompt that claims an attachment gets one.** Cases whose text says a JD or
+  CV is attached carry the document in the case, and the runner writes it into the
+  throwaway project before sending the prompt. A fixture claiming a file should
+  have one — but be clear about what this bought. It was introduced on the theory
+  that the missing files explained a large gap (attachment-claiming cases reached
+  a skill on 22% of runs against 55% for self-contained prose), and re-running the
+  affected cases afterwards moved the number not at all: 22% before, 22% after,
+  every case identical. The correlation was real and the explanation was wrong.
+  Keep it for honesty of the fixture, not for the score.
 - **A negative has to be a negative the harness actually read.** The first read
   loop broke out the moment the CLI process exited, discarding whatever was
   still sitting unparsed in the pipe — so a run that fired a skill and finished
