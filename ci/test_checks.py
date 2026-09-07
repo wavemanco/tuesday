@@ -23,6 +23,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 COPIED = ["skills", "dist", "conventions", "ci", "evals"]
+# Files, not directories: the ledger lives in README.md and the ledger check reads it.
+COPIED_FILES = ["README.md"]
 
 
 def stage(tmp: Path) -> Path:
@@ -32,6 +34,10 @@ def stage(tmp: Path) -> Path:
         src = REPO / name
         if src.exists():
             shutil.copytree(src, root / name)
+    for name in COPIED_FILES:
+        src = REPO / name
+        if src.exists():
+            shutil.copy2(src, root / name)
     return root
 
 
@@ -194,6 +200,35 @@ def break_missing_parameter_section(root: Path) -> str:
     return "no '## Output discipline' section"
 
 
+def break_ledger_duplicate(root: Path) -> str:
+    """Duplicate a Tracked-work entry, the way index-based edits actually did."""
+    path = root / "README.md"
+    text = path.read_text()
+    # Anchor inside the ledger: the first "- **" in the file belongs to the
+    # conventions list, and duplicating that one proves nothing.
+    section = re.search(r"^## Tracked work\s*$(.*?)(?=^## |\Z)", text,
+                        re.MULTILINE | re.DOTALL)
+    if not section:
+        raise SystemExit("break_ledger_duplicate found no Tracked work section — it has gone stale")
+    entry = re.search(r"^- \*\*.+?\*\*.*$", section.group(1), re.MULTILINE)
+    if not entry:
+        raise SystemExit("break_ledger_duplicate found no ledger entry — it has gone stale")
+    path.write_text(text.replace(entry.group(0), entry.group(0) + "\n" + entry.group(0), 1))
+    return "duplicate ledger entr"
+
+
+def break_ledger_superseded(root: Path) -> str:
+    """Add an entry whose subject collides with one already there."""
+    path = root / "README.md"
+    text = path.read_text()
+    anchor = "\n- **Routing eval coverage"
+    if anchor not in text:
+        raise SystemExit("break_ledger_superseded lost its anchor — it has gone stale")
+    stale = "\n- **Routing eval coverage — not yet built.** Superseded predecessor left in place."
+    path.write_text(text.replace(anchor, stale + anchor, 1))
+    return "share a subject"
+
+
 def break_trigger_boundary(root: Path) -> str:
     """Swap in a plausible description that carries no boundary at all.
 
@@ -224,6 +259,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("evals", "duplicate eval ids", break_evals_duplicate_ids),
     ("evals", "routing case with an undeclared route", break_routing_route),
     ("triggers", "description lost its reserved boundary", break_trigger_boundary),
+    ("ledger", "a duplicated ledger entry", break_ledger_duplicate),
+    ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),
     ("parameters", "the parameter section removed", break_missing_parameter_section),
 ]

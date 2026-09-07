@@ -93,6 +93,19 @@ def result_outcome(event: dict) -> str:
     return "neither"
 
 
+def write_attachments(root: Path, case: dict) -> None:
+    """Materialise the documents a case's prompt claims are attached.
+
+    A prompt saying "JD and CV attached" in a project containing neither is not
+    testing routing. The model looks for the file, does not find it, and asks for
+    it rather than starting work — which is correct behaviour and scores as a
+    no-fire. Measured before this existed: cases claiming an attachment reached a
+    skill on 22% of runs against 55% for self-contained prose.
+    """
+    for name, content in (case.get("attachments") or {}).items():
+        (root / name).write_text(content)
+
+
 def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None) -> str:
     """Run one query; return the skill that fired, 'neither', 'timeout', or 'error'.
 
@@ -261,6 +274,11 @@ def main() -> int:
                 raise SystemExit(f"--skill-md expects one of {SKILLS} as SKILL=PATH, got {item!r}")
             overrides[skill] = Path(path)
         names = install_skills(root, uuid.uuid4().hex[:8], overrides)
+
+        # Attachments are written once into the shared project root; filenames are
+        # distinct across cases so they do not collide.
+        for case in cases:
+            write_attachments(root, case)
 
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
