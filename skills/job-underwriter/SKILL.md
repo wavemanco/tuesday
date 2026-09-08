@@ -78,6 +78,7 @@ are absolute; the parameters it names are declared here.
 question_budget: 3
 enum_fields: priority, fit_status, confidence, gap_type, class, severity
 closing_order: dossier offer, upgrade menu, questions
+qualifier_fields: reasoning, hypothesis
 sibling_mentions: 1
 ```
 

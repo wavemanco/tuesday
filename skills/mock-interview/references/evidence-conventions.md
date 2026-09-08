@@ -3,7 +3,6 @@
      verbatim copy of the canonical file — do not edit it here. Fixes flow
      canonical -> mirror, never the reverse; a mirror that drifts is a defect.
      A byte check strips this header and compares the remainder to canonical. -->
-
 # Evidence conventions
 
 Canonical for every skill in Tuesday, and for any later surface (agent, MCP, UI renderer) that consumes their outputs. Skills carry a mirror of this file in their `references/` with a synced-from header; this copy wins on conflict.
@@ -40,10 +39,11 @@ Confidence grades a **candidate claim**, not a skill's prose:
 
 ## 3. Fit status and the gap taxonomy
 
-Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`, `absent`, `hard_gate_fail`. When fit is not `direct`, classify the gap:
+Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`, `absent`, `hard_gate_fail`. **Every material requirement also carries a gap type** — `none` where nothing needs recovering, one of the five others where something does. Fit status does not decide it: a `direct` row whose evidence the CV buries is a `presentation` gap, so the gap type is a separate call on a separate axis.
 
 | Gap type | Definition | Appropriate next action |
 |---|---|---|
+| `none` | Nothing to recover: the evidence exists and the CV already communicates it in role-relevant terms | None; the row is closed |
 | `presentation` | Verified evidence exists; the CV doesn't communicate it in role-relevant terms | Propose a truthful repositioning, contingent on user approval |
 | `discovery` | Evidence may exist; current inputs are inconclusive | Ask one targeted, example-rich question; suggest exact artifacts |
 | `transferability` | No direct match, but credible adjacent work | Make the transferable case *and its limits*; consider a work sample |
@@ -51,6 +51,8 @@ Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`,
 | `hard_gate` | Eligibility, credential, or constraint not met | Surface prominently; wording cannot solve it and no skill may imply otherwise |
 
 The taxonomy exists because "missing from the CV" is four different situations wearing one costume, and only one of them is a real capability problem.
+
+`none` is a token and not an empty cell. This is the sixth member because the five were written as the answers to "what kind of gap is this?" and the settled row was left with no answer at all — so an enum column arrived with nothing to put in it, and the value got invented at write time. `none` was already being emitted: `evidence-model.md`'s row spec has declared it since job-underwriter v0.1, the worked dossier writes it, and the JSON envelope carries it. What was missing was this line, and a vocabulary that a skill has quietly extended is the drift this file exists to prevent — whichever side turns out to be right.
 
 ## 4. Content provenance labels
 

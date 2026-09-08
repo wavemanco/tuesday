@@ -72,6 +72,7 @@ are absolute; the parameters it names are declared here.
 question_budget: 3
 enum_fields: confidence, gap_type, provenance, question_type
 closing_order: upgrade menu, drill and dossier offers, questions
+qualifier_fields: gap-and-bridge language
 sibling_mentions: 1
 ```
 

@@ -52,17 +52,25 @@ to the writer as well as the reader.
 
 ## Evidence map
 
-| # | Requirement | Priority | Fit | Confidence | Gap | Next action |
-|---|---|---|---|---|---|---|
-| R1 | UK work eligibility without sponsorship | hard_gate | direct | high | none | none |
-| R2 | 5+ yrs PM, 2+ on payments/fintech | must_have | direct | high | none | none |
-| R3 | Shipped APIs consumed by external developers | must_have | direct | medium | none | offer: partner-API case note would raise to high |
-| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent | medium | transferability | see gap queue G1 |
-| R5 | Mentoring or leading PMs | important | unclear | low | discovery | none — skipped by user; carried as minor risk |
-| R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | CV edit E1 pending approval |
-| R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | closure path named; minor risk given preferred priority |
+| # | Requirement | Priority | Fit | Confidence | Gap | Reasoning | Next action |
+|---|---|---|---|---|---|---|---|
+| R1 | UK work eligibility without sponsorship | hard_gate | direct | high | none | Gate confirmed directly by the user; nothing to inspect and nothing contested | none |
+| R2 | 5+ yrs PM, 2+ on payments/fintech | must_have | direct | high | none | Specific, confirmed, and inspectable — CV plus a read artifact agree | none |
+| R3 | Shipped APIs consumed by external developers | must_have | direct | medium | none | Confirmed and specific, but no inspectable artifact yet — `medium`, with the caveat named wherever this claim is used: expect a probe | offer: partner-API case note would raise to high |
+| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent | medium | transferability | Credible adjacency: same audit posture and data-classification instincts as card-scheme compliance. Limit: exercised none of PSD2's consent or TPP-access model — named wherever the bridge is used | see gap queue G1 |
+| R5 | Mentoring or leading PMs | important | unclear | low | discovery | CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk | none — skipped by user; carried as minor risk |
+| R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | The evidence is strong — a linked case study shows the experiment pipeline — and the CV buries it in a tools list. The gap is in communication, not capability: the fix is repositioning, not new claims | CV edit E1 pending approval |
+| R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk rather than a blocker | closure path named; minor risk given preferred priority |
 
-Reading the two flagged rows: R4 — PCI-DSS scoping on a checkout product is genuinely adjacent to card-scheme compliance (same audit posture, same data-classification instincts) but exercised none of PSD2's consent and TPP-access model; the limit is named wherever the bridge is used. R6 — the evidence is strong (a linked case study shows the experiment pipeline); the CV buries it in a tools list. That's a presentation gap: the fix is repositioning, not new claims.
+`Reasoning` is a column and not a paragraph underneath. It renders the row spec's
+`reasoning` field, which the JSON envelope has always carried and this table used
+to drop — and a table that drops the one free-text column leaves every qualifier
+homeless. What happened next is measurable: `none/low` and `medium (adjacent) /
+none (titled)` went into the `Confidence` cell, because a writer who has a nuance
+and no cell for it puts the nuance in the nearest cell that will hold text. R3 and
+R6 are the rows that would have hedged. Note also that R6 is `direct` fit with a
+`presentation` gap: fit status and gap type are separate calls, per
+`references/evidence-conventions.md` §3.
 
 ## Gap recovery queue
 
@@ -76,17 +84,27 @@ Answer in text, paste a voice transcript, attach a document, drop a link, or say
 
 ## Opportunity risk register
 
-| # | Signal | Class | Severity | Source quote | Verification question | Status |
-|---|---|---|---|---|---|---|
-| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
-| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | What band is budgeted for this role? | unresolved |
-| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | — | noted |
+| # | Signal | Class | Severity | Source quote | Hypothesis | Verification question | Status |
+|---|---|---|---|---|---|---|---|
+| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Role may carry outcome accountability while decisions sit with the squad leads | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
+| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | What band is budgeted for this role? | unresolved |
+| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | — | noted |
 
 The verification question is a column for the same reason. Rendered as a prose
 line beneath the table it survived only for the entries that arrived with a
 worked example attached — which meant the entries carrying the actual red flags,
 the ones a candidate most needs a question for, were the ones that lost it. Only
 `positive_signal` rows may leave the cell empty.
+
+`Hypothesis` is a column on the same argument, and it was missing here for the
+same reason `Reasoning` was missing from the evidence map: the JSON envelope has
+always carried it and the rendered table dropped it. `risk-and-decision.md` sends
+a between-two `Severity` call to the hypothesis — "take the lower and put the
+reason in the hypothesis" — which is a rule pointing at a cell that was not on the
+page. `Severity` reads `—` on `unknown` and `positive_signal` rows because the
+field is scoped to risk signals and red flags; `—` is the marker, so that a row
+where severity does not apply does not acquire an invented `n/a`, `none`, or a
+`low` that reads as a measured judgment.
 
 ## Application plan
 

@@ -244,6 +244,36 @@ def break_trigger_boundary(root: Path) -> str:
     return "reserved boundary"
 
 
+def break_qualifier_column_missing(root: Path) -> str:
+    """Delete the column a skill's qualifier_fields points at.
+
+    The bug this reproduces ran for three skill versions: `reasoning` was in the
+    row spec and in the JSON envelope, the compound-cell rule said to put the
+    qualifier there, and the rendered table had no such column. `none/low` went
+    into the Confidence cell beside it.
+    """
+    path = root / "skills/job-underwriter/references/dossier-template.md"
+    text = path.read_text()
+    mutated = text.replace("| Confidence | Gap | Reasoning | Next action |",
+                           "| Confidence | Gap | Next action |", 1)
+    if mutated == text:
+        raise SystemExit("break_qualifier_column_missing found no Reasoning column — it has gone stale")
+    path.write_text(mutated)
+    return "not a column in any references/ table"
+
+
+def break_qualifier_field_renamed(root: Path) -> str:
+    """Declare a qualifier field the skill's tables do not carry."""
+    path = root / "skills/mock-interview/SKILL.md"
+    text = path.read_text()
+    mutated = text.replace("qualifier_fields: gap-and-bridge language",
+                           "qualifier_fields: bridge notes", 1)
+    if mutated == text:
+        raise SystemExit("break_qualifier_field_renamed found nothing to rename — it has gone stale")
+    path.write_text(mutated)
+    return "not a column in any references/ table"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -263,7 +293,10 @@ CASES: list[tuple[str, str, callable]] = [
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),
     ("parameters", "the parameter section removed", break_missing_parameter_section),
+    ("columns", "the column a qualifier_field points at deleted", break_qualifier_column_missing),
+    ("columns", "a qualifier_field naming no column at all", break_qualifier_field_renamed),
 ]
+
 
 
 def main() -> int:

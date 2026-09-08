@@ -65,6 +65,7 @@ are absolute; the parameters it names are declared here.
 question_budget: 3
 enum_fields: operation, coverage_status, provenance, priority, row_status
 closing_order: upgrade menu, questions
+qualifier_fields: none
 sibling_mentions: 1
 ```
 
@@ -72,6 +73,14 @@ sibling_mentions: 1
 likely to acquire a qualifier: a change that feels like two operations is a row
 that should be split, and a status that needs a parenthetical is a status doing a
 neighbouring column's job.
+
+`qualifier_fields: none` is a declared absence, not an oversight: the edit
+ledger's eight columns are all load-bearing — `Traces to` holds a verbatim quote
+and is not free text — so a qualifier that will not fit `Operation` or `Status`
+has nowhere in this skill to go. Sibling skills route theirs to `reasoning` or
+`hypothesis`. This is recorded rather than fixed because adding a ninth column
+changes the ledger's shape and that needs its own measurement; the exposure is
+real and so far unfired.
 
 ## The n + x rule
 

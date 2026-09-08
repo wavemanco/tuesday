@@ -9,7 +9,7 @@ Deliver these sections in this order. The conditionality column is binding — a
 | 1 | Title block | Always | Role, company, interviewer name + relationship if known; one line on what changed if this is a regeneration |
 | 2 | How to use + type key | Always | Personas = how it's asked, types = what's scored; the five type tags with one-line meanings; "guidance is scaffolding, not a script" |
 | 3 | Prep triage | Prep time known | A prioritized schedule sized to the stated time: the few things done well, in order, each tied to a section or question ID — closing with an explicit "everything else is insurance" line. Never pad it to look busy |
-| 4 | Fit snapshot | JD or CV present (either) | Table: JD requirement × candidate's strongest evidence × **confidence** × **provenance** × gap-and-bridge language. Confidence holds exactly one of `high`, `medium`, `low`, `none`; provenance exactly one of `[grounded]`, `[inferred]`, `[generic]` — the columns are named here because a field declared an enum with no column to live in gets invented at write time, and an invented column arrives with no token set: `low-medium` and `[grounded, partial]` are what that looks like. CV absent → self-assessment worksheet variant: requirement × "your evidence here" prompts × what strong evidence looks like. JD absent → built from the researched representative JD, labeled |
+| 4 | Fit snapshot | JD or CV present (either) | The five-column table worked below under **The fit snapshot**. Confidence holds exactly one of `high`, `medium`, `low`, `none`; provenance exactly one of `[grounded]`, `[inferred]`, `[generic]`. CV absent → self-assessment worksheet variant: requirement × "your evidence here" prompts × what strong evidence looks like. JD absent → built from the researched representative JD, labeled |
 | 5 | Graded deliverables | Recruiter/HR pre-declared a deliverable (POV, presentation, take-home) | One build section per declared deliverable: the grounded facts to build on, 2–3 defensible theses each with a mandatory concession, differentiation strategy against the consensus answer (with the anti-pick where the role warrants saying no), and the requested close (e.g., customer benefit) if HR named one. In loop mode these are shared sections, like the values cheat sheet |
 | 6 | Grounding brief | L2 research ran, or an equivalent strategy brief was provided | Learn-the-vocabulary company section: current segmentation language, headline numbers, live leadership and strategy context, recent moves. The candidate should sound current, not archival; flag stale framings in provided documents without coaching the candidate to correct the interviewer |
 | 7 | Reading the interviewer | Real interviewer info exists | Career pattern, self-described style, 2–4 practical implications, the mirror opportunities (shared jumps, shared vocabulary). Public footprint only |
@@ -25,6 +25,41 @@ Deliver these sections in this order. The conditionality column is binding — a
 Formatting: markdown tables; no pipe characters inside cells; question IDs letter-by-persona (A1, A2, B1…) so the drill and the coaching section can reference them; cells crisp — guidance speakable in 90–120 seconds, rationales 2–3 sentences.
 
 File conventions: save as `{company}_{role-slug}_interview_pack.md` to the outputs directory and present it. Offer a Word (.docx) conversion in one line rather than producing one by default — most candidates iterate in markdown and convert once at the end.
+
+## The fit snapshot
+
+The pack's spine, and the section every question bank reads from. Five columns,
+worked here rather than described, because this file spent three versions naming
+these columns in a sentence — including the sentence explaining that an enum with
+no column to live in gets invented at write time. A table described is not a table
+rendered, and what the writer copies is the shape on the page.
+
+| # | JD requirement | Candidate's strongest evidence | Confidence | Provenance | Gap and bridge language |
+|---|---|---|---|---|---|
+| F1 | "own the partner integration roadmap" | Led 30+ client integrations end to end, incl. scoping and go-live | medium | [grounded] | Ran the delivery, not the roadmap. Bridge: "I owned which integrations shipped in what order for my accounts — prioritisation against delivery constraints. What I have not done is set the platform roadmap." Says the limit out loud before the interviewer finds it |
+| F2 | "comfortable reading API docs and discussing schemas" | Postman, SQL, reads OpenAPI specs; wrote the integration playbook | high | [grounded] | No gap. Lead with the playbook — it is the artifact, and artifacts beat adjectives |
+| F3 | "define and track adoption metrics" | Ran quarterly roadmap-input sessions collecting client feedback | low | [inferred] | Feedback collection is not metric ownership; the bridge is thin and should not be stretched. Say what was actually measured, or say it is next |
+| F4 | "3+ years product management experience" | None — never held the title | none | [grounded] | A titled-years gap wording cannot close. Bridge only to the substance: "no PM title; here is the decision-making I did do." Never a claim to the title |
+
+Five rules the columns enforce, in the order they get broken:
+
+- **`Confidence` and `Provenance` hold one token each.** `low-medium` and
+  `[grounded, partial]` are both real failures from real runs, and both are a
+  qualifier squeezed into a cell with room for one answer.
+- **The qualifier goes in `Gap and bridge language`** — this skill's declared
+  `qualifier_fields`, and the only free-text column here. That is why it exists.
+- **`Confidence` grades the candidate's evidence; `Provenance` grades what this
+  skill wrote about it.** F3 is `low` because the evidence is thin, and
+  `[inferred]` because the bridge is this skill's derivation.
+- **A `none` row still gets bridge language.** F4 is the row the candidate is
+  most afraid of and the one they will most need words for.
+- **Bridge language is spoken aloud, so `reframing-audit.md` governs every clause
+  of it** — six axes, and the relationship axis is the one that slips: F1 ran
+  integrations *at the vendor*, and never was the partner.
+
+With a dossier, `evidence_map` supplies these rows already graded: its
+`confidence` and `gap_type` are the same vocabulary, and its `reasoning` is the
+raw material for the bridge rather than a substitute for it.
 
 ## Loop mode
 

@@ -329,6 +329,52 @@ def check_parameters() -> None:
             ok(group, f"{skill.name} declares all {len(expected)} output-discipline parameters")
 
 
+def check_columns() -> None:
+    """A destination a rule names must exist as a column in the shape being written.
+
+    job-underwriter's row spec declared a `reasoning` field from v0.1 and its JSON
+    envelope emitted it; the markdown table the model actually writes had no such
+    column. The compound-cell rule said "put the qualifier in `reasoning`" the
+    whole time — true, documented, and pointing at nothing on the page. What went
+    into the neighbouring `Confidence` cell instead was `none/low`, and that
+    expectation failed 37 runs out of 37. The register repeated it exactly with
+    `hypothesis`.
+
+    So `qualifier_fields` is a declaration and this is its check. `none` is a
+    legitimate value: it says the skill has no free-text column, visibly, which is
+    the point of a slot.
+    """
+    group = "columns"
+    for skill in skills():
+        text = (skill / "SKILL.md").read_text()
+        section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
+                            re.MULTILINE | re.DOTALL)
+        if not section:
+            continue  # check_parameters already fails this
+        declared = re.search(r"^\s*qualifier_fields\s*:(.*)$", section.group(1), re.MULTILINE)
+        if not declared:
+            continue  # likewise
+        fields = [f.strip() for f in declared.group(1).split(",") if f.strip()]
+        if fields == ["none"]:
+            ok(group, f"{skill.name}: qualifier_fields declared as none — no free-text column, on purpose")
+            continue
+
+        # Every header cell of every markdown table in the skill's references.
+        headers: set[str] = set()
+        for ref in sorted((skill / "references").glob("*.md")):
+            for line in ref.read_text().splitlines():
+                if line.startswith("|") and line.count("|") > 2:
+                    for cell in line.strip().strip("|").split("|"):
+                        headers.add(re.sub(r"[^a-z0-9]+", " ", cell.strip().lower()).strip())
+        for field in fields:
+            want = re.sub(r"[^a-z0-9]+", " ", field.lower()).strip()
+            if want in headers:
+                ok(group, f"{skill.name}: '{field}' is a rendered column")
+            else:
+                fail(group, f"{skill.name}: qualifier_fields names '{field}', which is not a column "
+                            f"in any references/ table — a rule pointing at a cell that does not exist")
+
+
 def check_ledger() -> None:
     """The Tracked-work ledger is the project's memory; it must not contradict itself.
 
@@ -381,6 +427,7 @@ def check_ledger() -> None:
 
 GROUPS = {
     "frontmatter": check_frontmatter,
+    "columns": check_columns,
     "ledger": check_ledger,
     "parameters": check_parameters,
     "package": check_package,

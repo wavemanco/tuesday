@@ -3,7 +3,6 @@
      verbatim copy of the canonical file — do not edit it here. Fixes flow
      canonical -> mirror, never the reverse; a mirror that drifts is a defect.
      A byte check strips this header and compares the remainder to canonical. -->
-
 # Output discipline
 
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
@@ -69,7 +68,15 @@ written into such cells across this suite. Each is a different way of declining 
 choose — two answers, or a qualifier smuggled into a slot with room for one.
 
 The qualifier is not unwelcome. It belongs in a neighbouring column where it can
-be read and where nothing downstream tries to parse it. Where a row genuinely
+be read and where nothing downstream tries to parse it — **and that column has to
+exist in the shape the writer is actually filling, not only in the spec.**
+job-underwriter's row spec has declared a `reasoning` field since v0.1 and its
+JSON envelope emits it; the markdown table the model writes omitted the column for
+just as long, and `none/low` went into the `Confidence` cell next to it. A rule
+that says "put the qualifier in X" is inert wherever X is not a cell the writer is
+already filling: they have the nuance, find no home for it, and use the nearest
+cell that will hold text. Before shipping a table, check that every field the
+rules name as a destination has a column in it. Where a row genuinely
 holds two claims of different strength, split it into **two rows**, each with its
 own single value — the split is legitimate and the slash is not.
 
@@ -80,6 +87,14 @@ to appear gets invented at write time, and an invented column arrives with no
 token set: `low-medium` and `[grounded, partial]` are what that looks like. The
 declaration and the output shape have to agree, or the parameter is a promise
 about a cell that does not exist.
+
+**Parameter: `qualifier_fields`** — the free-text columns a qualifier goes to when
+it will not fit an enum cell. Every field named here must exist as a column in the
+skill's worked template, and CI checks that it does: this is the rule above turned
+into a mechanism, because "put it in `reasoning`" was true, documented, and
+pointing at nothing for three skill versions. `none` is a legitimate value and
+means the skill has no such column — visibly, so that the next person to add an
+enum to it can see what they are choosing.
 
 ## 3. Square brackets are reserved for provenance labels — **absolute**
 
