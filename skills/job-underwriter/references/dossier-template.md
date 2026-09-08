@@ -23,7 +23,7 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 
 ## Decision snapshot
 
-**Status: conditional_go.**
+**Worth applying to — with three conditions. Status: `conditional_go`.**
 
 **Fit ledger.** Five of seven material requirements are `direct` (R1–R3, R6, and the eligibility gate), including both payments-domain must-haves; the one adjacent area is regulatory exposure (R4), which has a credible bridge with its limit named.
 

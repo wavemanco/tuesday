@@ -93,7 +93,7 @@ Rules that bind the decision:
 
 The snapshot leads every delivered assessment — concise decision first, inspectable detail after:
 
-1. Status, in one line.
+1. Status, in one line — **and where the user asked a direct question, the line answers it in their words before it names the status.** "No, you are not wasting your time — `conditional_go`" answers what was asked; `conditional_go` alone answers a question nobody put. This is a reading of the map and carries no label, which is exactly why it belongs at the top: an answer the reader has to assemble from the tables is an answer that gets rewritten as a paragraph at the bottom, after the calls to action, where rule 4 says nothing may follow and rule 6 says a world-claim needs a row. One run has already done it.
 2. **Fit ledger**, one or two sentences, reading the evidence map and naming the row IDs it reads.
 3. **Opportunity ledger**, one or two sentences, reading the register and naming the entry IDs it reads.
 4. Hard gates: every `hard_gate_fail`, plainly, or "none found".
