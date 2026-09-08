@@ -5,7 +5,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 ## Emission rules
 
 - **Filename is exactly `tuesday-dossier.md`** — recognizable among a user's uploads months later.
-- **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered *from* the envelope, never written separately — two layers that can drift are two artifacts.
+- **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered *from* the envelope, never written separately — two layers that can drift are two artifacts. One envelope entry may render in two places: a `gap_queue` row renders as a queue row *and* as a closing question, from the same `prompt` object. That is one source with two placements, which is not drift; two hand-written copies would be.
 - **Offered, never forced.** A one-line offer rides every delivered assessment's upgrade menu, first pass included; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
 - **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
@@ -75,13 +75,24 @@ R6 are the rows that would have hedged. Note also that R6 is `direct` fit with a
 
 ## Gap recovery queue
 
-**G1 — Regulatory exposure (R4, must_have).**
-What I currently see: confirmed PCI-DSS scoping ownership on checkout; nothing touching PSD2, open banking, or scheme relationships directly.
-Why this matters: it's the one must-have not at `direct`; a stronger bridge narrows the likeliest interview objection.
-Experience that may count: any integration work against bank APIs or open-banking sandboxes; a chargeback or dispute-flow project; scheme-rules research that shaped a roadmap call.
-Useful evidence: a sanitized scoping doc, an architecture note, a roadmap excerpt.
-Question: have you touched bank-side APIs, disputes, or scheme rules in any project — even peripherally?
-Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+| # | Gap (req) | Type | What I currently see | Why it matters | Experience that may count | Useful evidence | Provenance |
+|---|---|---|---|---|---|---|---|
+| G1 | Regulatory exposure (R4, must_have) | transferability | Confirmed PCI-DSS scoping ownership on checkout; nothing touching PSD2, open banking, or scheme relationships directly | The one must-have not at `direct`; a stronger bridge narrows the objection most likely to be raised | Integration work against bank APIs or open-banking sandboxes; a chargeback or dispute-flow project; scheme-rules research that shaped a roadmap call | A sanitized scoping doc, an architecture note, a roadmap excerpt | `[inferred]` bridge derived from the audit scope she described; `[generic]` that this is the likeliest objection |
+
+**The queue holds no questions, and that is the point.** Every row here has a
+question worth asking, and until now the row carried it — a `Question:` line in a
+prose block sitting fourth of nine sections. Two rules broke on that. The
+questions were not the last thing the reader met, which `closing_order` requires
+and which graders failed in eight runs of fourteen; and there were two question
+sites in one message, which the question-budget rule forbids by name — either the
+embedded prompts are the budget or the closing block is, never both. So the row
+says what the gap is and what would close it, and **the question itself goes in
+the closing block with the others**, tagged with its row id.
+
+The register beneath learned this first and the queue did not, which is the whole
+argument in one page: the verification question is a column there because as a
+prose line it survived only on entries that arrived with a worked example. Same
+failure, same fix, one section apart and four months late.
 
 ## Opportunity risk register
 
@@ -315,6 +326,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
       {
         "requirement_id": "R4",
         "gap_type": "transferability",
+        "provenance": "[inferred] bridge derived from the audit scope she described; [generic] that this is the likeliest interview objection",
         "prompt": {
           "what_i_currently_see": "Confirmed PCI-DSS scoping ownership; nothing touching PSD2, open banking, or scheme relationships directly.",
           "why_this_matters": "The one must-have not at direct; a stronger bridge narrows the likeliest interview objection.",

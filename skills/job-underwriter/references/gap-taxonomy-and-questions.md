@@ -98,54 +98,44 @@ Modes are prose offers in text hosts — "answer in text, paste a voice transcri
 
 ## Worked discovery prompts
 
-Cross-functional delivery:
+A gap produces **two** things in two places, and keeping them apart is the whole
+discipline: a **row** in the gap recovery queue, and a **question** in the closing
+block. Both are rendered from the same envelope entry. They are split because a
+queue that carried its own `Question:` line put questions fourth of nine sections
+— failing `closing_order` in eight graded runs of fourteen — and created a second
+question site in a message whose budget is counted across the whole message.
+
+Worked, for a must-have the CV leaves unresolved:
+
+**The row** — everything the reader needs to understand the gap:
+
+| # | Gap (req) | Type | What I currently see | Why it matters | Experience that may count | Useful evidence | Provenance |
+|---|---|---|---|---|---|---|---|
+| G1 | Cross-functional delivery leadership (R2, must_have) | discovery | The CV establishes product-building work, but not which functions were coordinated, what decision authority was held, or who owned launch | A must-have; resolving it likely moves the decision from `hold_pending_answers` to `conditional_go` | Taking a product, feature, experiment or client project from idea to release; coordinating an engineer, designer, contractor, customer or marketing effort — titles do not matter, the coordination does; setting priorities or resolving a product-versus-technical trade-off others accepted | A launch plan, roadmap, project board export, portfolio write-up, or product brief | `[grounded]` CV silence on coordination scope; `[inferred]` that resolving it moves the status |
+
+**The closing question** — in the closing block, tagged to its row, with response
+modes as prose:
 
 ```text
-Requirement: Lead cross-functional delivery across product, engineering, design, and go-to-market.
-Importance: Must-have.
-
-What I currently see:
-Your CV establishes product-building work, but not which functions you coordinated, your decision authority, or launch ownership.
-
-Why this matters:
-This is a must-have; resolving it likely moves the decision from hold to conditional-go.
-
-Experience that may count:
-- Taking a product, feature, experiment, or client project from idea to release.
-- Coordinating an engineer, designer, contractor, customer, or marketing effort — titles don't matter, the coordination does.
-- Setting priorities or resolving a product-versus-technical trade-off others accepted.
-
-Useful evidence to attach or link:
-A launch plan, roadmap, project board export, portfolio write-up, or product brief.
-
-Question:
-Is there a project where you personally coordinated two or more functions to ship something? What did you own, who was involved, and what happened?
-
+G1 — Is there a project where you personally coordinated two or more functions to
+ship something? What did you own, who was involved, and what happened?
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
 ```
 
-Production AI/LLM experience:
+A second, for a gap where the distinction itself is the finding:
+
+| # | Gap (req) | Type | What I currently see | Why it matters | Experience that may count | Useful evidence | Provenance |
+|---|---|---|---|---|---|---|---|
+| G2 | Production LLM experience (R3, must_have) | discovery | The CV mentions AI-related work but does not establish deployment to real users, evaluation, monitoring, or measurable outcomes | The distance between "prototype" and "production" is what interviews for this role probe, so which one is true decides the positioning | Designing prompts, agent workflows, RAG systems, evals or guardrails others used; managing quality, latency, reliability or cost trade-offs on a live system; running a pilot with real users, measuring outputs, handling failure modes | A repo, README, architecture diagram, eval sheet, demo, or launch note | `[grounded]` CV mentions AI work without deployment detail; `[generic]` that this role family probes the prototype-production line |
 
 ```text
-Requirement: Production experience with LLM applications, including evaluation and monitoring.
-Importance: Must-have.
-
-What I currently see:
-Your CV mentions AI-related work, but does not establish deployment to real users, evaluation, monitoring, or measurable outcomes.
-
-Why this matters:
-The distance between "prototype" and "production" is exactly what interviews for this role will probe; knowing which one is true decides the positioning.
-
-Experience that may count:
-- Designing prompts, agent workflows, RAG systems, evals, or guardrails that others used.
-- Managing quality, latency, reliability, or cost trade-offs on a live system.
-- Running a pilot with real users, measuring outputs, handling failure modes.
-
-Useful evidence to attach or link:
-A repo, README, architecture diagram, eval sheet, demo, or launch note.
-
-Question:
-Which parts of an AI system have you personally owned, did it reach users beyond a private prototype, and how did you know whether it worked?
-
+G2 — Which parts of an AI system have you personally owned, did it reach users
+beyond a private prototype, and how did you know whether it worked?
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
 ```
+
+Note what the `Provenance` cell does in both rows. "Why it matters" is where this
+section's world-claims live — a claim about what interviews probe, or about what
+would move a decision — and they read as findings when they are patterns. Two
+labels in one cell is correct here and is not a compound enum value: the cell is
+free text describing a row with more than one derived claim in it.
