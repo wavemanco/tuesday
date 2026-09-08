@@ -150,8 +150,9 @@ size routinely have thin public footprints" earns a register entry with a
 reading as a finding about this employer.
 
 **Parameter: `provenance_sections`** — the sections whose tables carry a
-Provenance column. Every one named must have that column in the skill's worked
-template, and CI checks it. This exists because the project ledger claimed for
+Provenance column, named exactly as their `## ` heading reads and therefore
+**containing no comma**, since the list separator is one. Every section named
+must have that column in the skill's worked template, and CI checks it. This exists because the project ledger claimed for
 weeks that a third table carried one when it never had, and the claim was believed
 until a grader pointed at exactly that table's cells. A rule that names its own
 coverage can be checked against the shape; a rule that says "label your claims"

@@ -295,8 +295,8 @@ def break_provenance_section_unknown(root: Path) -> str:
     """Declare a provenance section that is not a section at all."""
     path = root / "skills/resume-tailor/SKILL.md"
     text = path.read_text()
-    mutated = text.replace("provenance_sections: The coverage map, A worked ledger",
-                           "provenance_sections: The coverage map, The parse report", 1)
+    mutated = text.replace("provenance_sections: The coverage map, Recovery per gap, A worked ledger",
+                           "provenance_sections: The coverage map, The parse report, A worked ledger", 1)
     if mutated == text:
         raise SystemExit("break_provenance_section_unknown found nothing to rename — it has gone stale")
     path.write_text(mutated)

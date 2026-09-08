@@ -29,7 +29,7 @@ Read `references/evidence-conventions.md` for the vocabulary, `references/refram
 2. **Evidence inventory** — every claim the candidate's own material supports, with the sentence it comes from. This is the pool every proposed line must draw on, and nothing outside it may enter a row.
 3. **Coverage map** — one row per material requirement, marked `already_evidenced`, `surfaced_by_edit`, or `not_evidenced`. Shape in `references/coverage-and-gaps.md`.
 4. **The edit ledger** — one row per proposed change, each tracing to a quoted source sentence. Shape in `references/edit-ledger.md`.
-5. **Gap handling** — for every `not_evidenced` requirement, a recall prompt or a named absence. Never a third option where the line gets written anyway and hedged.
+5. **Gap handling** — for every `not_evidenced` requirement, a recall-prompt row or a named absence. Never a third option where the line gets written anyway and hedged. The rows carry no questions; the closing block asks them.
 6. **Prohibited claims** — what this skill refused to write and why.
 7. **Parse-safety check** — per `references/machine-readers.md`.
 
@@ -41,7 +41,7 @@ Read `references/evidence-conventions.md` for the vocabulary, `references/refram
 
 The first response is never questions-only. Deliver the whole ledger from whatever inputs exist, then the coverage map, gap handling, prohibited claims, and the parse-safety check — then the upgrade menu, then at most three questions closing the message.
 
-**Three questions, counted across the whole message.** The `Question:` line inside each recall prompt is one of the three, not a free extra because it arrived inside a template. Three recall prompts plus a closing block of two is a five-question turn, and it reads as an interrogation however neatly it is sectioned — either the recall prompts are the questions or the closing block is, never both. **And the sibling is named at most once, counted the same way**: a mention in the prose and another inside a closing question is twice, and the second one is the skill lobbying rather than informing. State the assumption anything was built on rather than withholding the work until it is confirmed.
+**Three questions, counted across the whole message — and one place to ask them.** The recall prompt no longer carries its own `Question:` line: its row says what the gap is and what would close it, and the question it implies is asked in the closing block, tagged to its row. Counting was the rule for three versions and it failed in half of all graded runs, because a `Question:` line inside a template does not feel like it counts. Removing the second site is what counting could not do. **And the sibling is named at most once, counted the same way**: a mention in the prose and another inside a closing question is twice, and the second one is the skill lobbying rather than informing. State the assumption anything was built on rather than withholding the work until it is confirmed.
 
 **Nothing is applied.** Every row lands `pending your approval`, and the tailored document is produced only in Step 3.
 
@@ -67,7 +67,7 @@ enum_fields: operation, coverage_status, provenance, priority, row_status
 closing_order: upgrade menu, questions
 qualifier_fields: none
 sibling_mentions: 1
-provenance_sections: The coverage map, A worked ledger
+provenance_sections: The coverage map, Recovery per gap, A worked ledger
 ```
 
 `operation` and `row_status` are this skill's own enums and they are the ones most

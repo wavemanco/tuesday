@@ -35,36 +35,38 @@ Two disciplines:
 - **`already_evidenced` is a claim about the reader, not the writer.** The test is whether someone who has never met the candidate would find the requirement satisfied on one read — not whether the candidate knows it is true.
 - **Never mark a requirement `surfaced_by_edit` on the strength of a plan to write the row.** The row exists first; the map points at it.
 
-## Recovery, per gap
+## Recovery per gap
 
 **`not_evidenced` with something to pull → the recall prompt.** The workhorse.
 People forget what they have done until an example shaped like their own life
 jogs it, so the examples must be specific to this JD and plausibly inside this
 candidate's history.
 
+A recall prompt produces **two** things in two places: a **row** here, and a
+**question** in the closing block. They are split because a prompt that carried
+its own `Question:` line put questions in the middle of the message *and* gave
+the message a second question site — and the budget is counted across the whole
+message, so three recall prompts plus a closing block of three is a six-question
+turn however neatly it is sectioned. Measured, that is this skill's largest
+recurring failure: 50% of graded runs on one fixture and 60% on another, stable
+across three independent run-sets, every one of them counting embedded
+`Question:` lines against the closing block.
+
+| # | Requirement | Priority | What your resume currently shows | Why it matters here | Experience that may count | Useful evidence | Provenance |
+|---|---|---|---|---|---|---|---|
+| C1 | [exact JD requirement or a concise paraphrase] | must-have | [what it does and does not establish, in one or two sentences] | [what it costs on this application specifically] | [JD-specific example]; [JD-specific example]; [JD-specific example] | [a spec, a dashboard, a launch note, a review, a repo] | `[grounded]` what the resume does and does not say; `[generic]` what this costs on applications of this kind |
+
+The question each row implies is asked once, in the closing block, tagged to its
+row and carrying the response modes:
+
 ```text
-Requirement: [exact JD requirement or a concise paraphrase]
-Importance: [must-have / important / preferred]
-
-What your resume currently shows:
-[what it does and does not establish — one or two sentences]
-
-Why this matters here:
-[what it costs on this application specifically]
-
-Experience that may count:
-- [JD-specific example 1]
-- [JD-specific example 2]
-- [JD-specific example 3]
-
-Useful evidence to attach or link:
-[specific artifact types — a spec, a dashboard, a launch note, a review, a repo]
-
-Question:
-[one focused question]
-
+C1 — [one focused question]
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
 ```
+
+`Why it matters here` is where this section's world-claims live — what a
+requirement costs on this application, what a screener does with it — so the row
+carries a Provenance cell and those claims get labeled where they are made.
 
 **`not_evidenced` with nothing to pull → the named absence.** Two parts, always,
 and the second is the one that gets dropped. Say the gap plainly in one sentence —
