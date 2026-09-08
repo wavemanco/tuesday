@@ -16,16 +16,16 @@ A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable 
 
 ## 3. Versioning
 
-- The JSON envelope carries `dossier_version` (this document defines `1.1`; history in §9).
+- The JSON envelope carries `dossier_version` (this document defines `1.2`; history in §9).
 - Additive changes (new optional fields, new sections) bump the minor: `1.1`. Consumers ignore what they don't know.
 - Breaking changes (renamed/removed fields, changed semantics) bump the major and require a migration note appended to this file in the same change.
 - A skill reading a higher major than it knows says so and proceeds standalone rather than guessing.
 
-## 4. Envelope (v1.1)
+## 4. Envelope (v1.2)
 
 ```json
 {
-  "dossier_version": "1.1",
+  "dossier_version": "1.2",
   "generated_by": { "skill": "job-underwriter", "at": "2026-08-15" },
   "role": {
     "title": "string",
@@ -42,7 +42,7 @@ A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable 
 |---|---|---|---|
 | `role_profile` | job-underwriter | mock-interview, resume-tailor* | Title, responsibilities, requirements with priority, inferred outcomes, unknowns |
 | `candidate_constraints` | job-underwriter | all | The candidate's constraints and non-negotiables: `status` (`known` or `unknown`); `items[]` each with the constraint text, `kind` (`hard` or `preference`), evidence `source`, and `satisfied_by_role` (`yes`, `no`, `unknown`) |
-| `evidence_map` | job-underwriter | all | Per material requirement: priority, fit_status, candidate_claim, evidence[] (source_type + reference + quote_or_summary), verified, confidence, gap_type, reasoning, next_action — vocabulary per `evidence-conventions.md` |
+| `evidence_map` | job-underwriter | all | Per material requirement: priority, fit_status, candidate_claim, evidence[] (source_type + reference + quote_or_summary), verified, confidence, gap_type, reasoning, provenance, next_action — vocabulary per `evidence-conventions.md` |
 | `gap_queue` | job-underwriter | — (user-facing) | The 1–3 highest-value unresolved gaps with tailored recall prompts and response modes |
 | `risk_register` | job-underwriter | mock-interview | Signal, severity, source quote, hypothesis, verification question, status |
 | `application_plan` | job-underwriter | resume-tailor* | `resume_edits_pending_approval`, work-sample suggestion, research actions |
@@ -97,3 +97,4 @@ Any review surface — a claude.ai artifact, a Cowork HTML viewer with feedback 
 - **1.0** — initial schema.
 - **1.1** (2026-08-16, additive) — added the `candidate_constraints` section. Surfaced by job-underwriter v0.1's worked dossier: the underwriter's spec carries candidate constraints as a first-class object (non-negotiables drive hard-gate checks and the risk register), and constraints must travel in the dossier or every new session re-elicits them. Consumers on 1.0 ignore the unknown section, per §1.
 - **1.1 erratum** (2026-09-08, no version change) — `gap_type` has six members, not five: `evidence-conventions.md` §3 omitted `none` while `evidence-model.md`'s row spec declared it, the worked dossier wrote it, and every 1.1 envelope has carried it. Nothing on the wire changes, so nothing is bumped; a consumer that implemented five was reading a documented contract narrower than the emitted one. Recorded here rather than silently corrected because the gap between the two is what a version history is for.
+- **1.2** (2026-09-08, additive) — `evidence_map[].provenance` and `risk_register[].provenance`. Both sections carry a free-text field holding derived judgment — `reasoning` and `hypothesis` — and neither had a label beside it, so the largest concentration of world-claims in a dossier travelled unmarked. Found by graders pointing at those exact cells across a run-set, after the same defect had been fixed once in the register and missed in the map. Consumers on 1.1 ignore the unknown fields, per §1.

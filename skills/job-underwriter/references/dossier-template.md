@@ -8,7 +8,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 - **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered *from* the envelope, never written separately — two layers that can drift are two artifacts.
 - **Offered, never forced.** A one-line offer rides every delivered assessment's upgrade menu, first pass included; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
-- **Envelope version is `1.1`** (adds `candidate_constraints`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
+- **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
 - **`handoff_to_mock_interview` follows the canonical schema §6 exactly** — those keys are a contract with another skill, not a suggestion. `uncertain_or_weak_areas` carries only `low`/`none`-confidence requirements; `medium`-confidence claims belong in `verified_candidate_evidence` with their caveat attached. `prohibited_claims` are absolute for every downstream consumer — list every claim this engagement established as un-assertable.
 
 ## Worked example
@@ -54,16 +54,15 @@ to the writer as well as the reader.
 
 ## Evidence map
 
-| # | Requirement | Priority | Fit | Confidence | Gap | Reasoning | Next action |
-|---|---|---|---|---|---|---|---|
-| R1 | UK work eligibility without sponsorship | hard_gate | direct | high | none | Gate confirmed directly by the user; nothing to inspect and nothing contested | none |
-| R2 | 5+ yrs PM, 2+ on payments/fintech | must_have | direct | high | none | Specific, confirmed, and inspectable — CV plus a read artifact agree | none |
-| R3 | Shipped APIs consumed by external developers | must_have | direct | medium | none | Confirmed and specific, but no inspectable artifact yet — `medium`, with the caveat named wherever this claim is used: expect a probe | offer: partner-API case note would raise to high |
-| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent | medium | transferability | Credible adjacency: same audit posture and data-classification instincts as card-scheme compliance. Limit: exercised none of PSD2's consent or TPP-access model — named wherever the bridge is used | see gap queue G1 |
-| R5 | Mentoring or leading PMs | important | unclear | low | discovery | CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk | none — skipped by user; carried as minor risk |
-| R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | The evidence is strong — a linked case study shows the experiment pipeline — and the CV buries it in a tools list. The gap is in communication, not capability: the fix is repositioning, not new claims | CV edit E1 pending approval |
-| R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk rather than a blocker | closure path named; minor risk given preferred priority |
-
+| # | Requirement | Priority | Fit | Confidence | Gap | Reasoning | Provenance | Next action |
+|---|---|---|---|---|---|---|---|---|
+| R1 | UK work eligibility without sponsorship | hard_gate | direct | high | none | Gate confirmed directly by the user; nothing to inspect and nothing contested | `[grounded]` user-confirmed | none |
+| R2 | 5+ yrs PM, 2+ on payments/fintech | must_have | direct | high | none | Specific, confirmed, and inspectable — CV plus a read artifact agree | `[grounded]` CV plus a read artifact | none |
+| R3 | Shipped APIs consumed by external developers | must_have | direct | medium | none | Confirmed and specific, but no inspectable artifact yet — `medium`, with the caveat named wherever this claim is used: expect a probe | `[grounded]` recovery-turn answer | offer: partner-API case note would raise to high |
+| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent | medium | transferability | Credible adjacency: same audit posture and data-classification instincts as card-scheme compliance. Limit: exercised none of PSD2's consent or TPP-access model — named wherever the bridge is used | `[inferred]` adjacency derived from the audit scope she described | see gap queue G1 |
+| R5 | Mentoring or leading PMs | important | unclear | low | discovery | CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk | `[grounded]` CV silence, question skipped | none — skipped by user; carried as minor risk |
+| R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | The evidence is strong — a linked case study shows the experiment pipeline — and the CV buries it in a tools list. The gap is in communication, not capability: the fix is repositioning, not new claims | `[grounded]` linked case study | CV edit E1 pending approval |
+| R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk rather than a blocker | `[grounded]` no evidence found after discovery | closure path named; minor risk given preferred priority |
 `Reasoning` is a column and not a paragraph underneath. It renders the row spec's
 `reasoning` field, which the JSON envelope has always carried and this table used
 to drop — and a table that drops the one free-text column leaves every qualifier
@@ -145,7 +144,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
 
 ```json
 {
-  "dossier_version": "1.1",
+  "dossier_version": "1.2",
   "generated_by": { "skill": "job-underwriter", "at": "2026-08-16" },
   "role": {
     "title": "Senior Product Manager, Payments Platform",
@@ -208,6 +207,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "high",
         "gap_type": "none",
         "reasoning": "Gate confirmed directly by the user; nothing to inspect and nothing contested.",
+        "provenance": "[grounded] user-confirmed at intake",
         "next_action": "none"
       },
       {
@@ -225,6 +225,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "high",
         "gap_type": "none",
         "reasoning": "Specific, confirmed, and inspectable - CV plus a read artifact agree.",
+        "provenance": "[grounded] CV plus a read artifact agree",
         "next_action": "none"
       },
       {
@@ -241,6 +242,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "medium",
         "gap_type": "none",
         "reasoning": "Confirmed and specific, but no inspectable artifact yet - medium, with the caveat named where this claim is used: expect a probe.",
+        "provenance": "[grounded] recovery-turn answer, specific",
         "next_action": "Offer stands: a sanitized case note or doc link raises this to high"
       },
       {
@@ -257,6 +259,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "medium",
         "gap_type": "transferability",
         "reasoning": "Credible adjacency: same audit posture and data-classification instincts. Limit: no exposure to PSD2 consent flows or TPP access - named wherever the bridge is used.",
+        "provenance": "[inferred] adjacency derived from the audit scope she described, not from a PSD2 claim",
         "next_action": "Gap queue G1: probe for any bank-API, disputes, or scheme-rules contact"
       },
       {
@@ -271,6 +274,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "low",
         "gap_type": "discovery",
         "reasoning": "CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk.",
+        "provenance": "[grounded] CV silence; the question was skipped",
         "next_action": "none - user skipped; reopens only if the user volunteers"
       },
       {
@@ -288,6 +292,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "high",
         "gap_type": "presentation",
         "reasoning": "The evidence is strong; the CV buries it in a tools list. The gap is in communication, not capability.",
+        "provenance": "[grounded] linked case study inspected",
         "next_action": "CV edit E1 pending approval"
       },
       {
@@ -302,6 +307,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "none",
         "gap_type": "capability",
         "reasoning": "No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk, not a blocker.",
+        "provenance": "[grounded] no direct or adjacent evidence found after discovery",
         "next_action": "Closure path if desired: the reconciliation squad's domain is learnable on the job; a systems-design write-up would pre-empt the objection"
       }
     ],

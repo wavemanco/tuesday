@@ -366,8 +366,22 @@ def check_columns() -> None:
                 if line.startswith("|") and line.count("|") > 2:
                     for cell in line.strip().strip("|").split("|"):
                         headers.add(re.sub(r"[^a-z0-9]+", " ", cell.strip().lower()).strip())
+        # A free-text column is where world-claims land, so it needs a Provenance
+        # cell in the same table. Learned twice in one session: the register's
+        # Hypothesis column shipped without one and was fixed; the evidence map's
+        # Reasoning column shipped without one in the same commit and was not.
+        header_rows: list[list[str]] = []
+        for ref in sorted((skill / "references").glob("*.md")):
+            for line in ref.read_text().splitlines():
+                if line.startswith("|") and line.count("|") > 2:
+                    header_rows.append([re.sub(r"[^a-z0-9]+", " ", c.strip().lower()).strip()
+                                        for c in line.strip().strip("|").split("|")])
         for field in fields:
             want = re.sub(r"[^a-z0-9]+", " ", field.lower()).strip()
+            carrying = [row for row in header_rows if want in row]
+            if carrying and not any("provenance" in row for row in carrying):
+                fail(group, f"{skill.name}: '{field}' is a free-text column in a table with no "
+                            f"Provenance cell — the qualifier has a home and its label does not")
             if want in headers:
                 ok(group, f"{skill.name}: '{field}' is a rendered column")
             else:

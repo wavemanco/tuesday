@@ -254,8 +254,8 @@ def break_qualifier_column_missing(root: Path) -> str:
     """
     path = root / "skills/job-underwriter/references/dossier-template.md"
     text = path.read_text()
-    mutated = text.replace("| Confidence | Gap | Reasoning | Next action |",
-                           "| Confidence | Gap | Next action |", 1)
+    mutated = text.replace("| Confidence | Gap | Reasoning | Provenance | Next action |",
+                           "| Confidence | Gap | Provenance | Next action |", 1)
     if mutated == text:
         raise SystemExit("break_qualifier_column_missing found no Reasoning column — it has gone stale")
     path.write_text(mutated)
@@ -303,6 +303,24 @@ def break_provenance_section_unknown(root: Path) -> str:
     return "not a '## ' section with a table"
 
 
+def break_qualifier_without_label(root: Path) -> str:
+    """A free-text column left standing with no Provenance cell beside it.
+
+    Made twice in one session. The register's Hypothesis column shipped without a
+    label and was fixed after graders found it; the evidence map's Reasoning
+    column shipped without one in the same commit and was not, and six graders in
+    the next run-set pointed straight at it.
+    """
+    path = root / "skills/job-underwriter/references/dossier-template.md"
+    text = path.read_text()
+    mutated = text.replace("| Gap | Reasoning | Provenance | Next action |",
+                           "| Gap | Reasoning | Next action |", 1)
+    if mutated == text:
+        raise SystemExit("break_qualifier_without_label found no evidence-map header — it has gone stale")
+    path.write_text(mutated)
+    return "no Provenance cell"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -326,6 +344,7 @@ CASES: list[tuple[str, str, callable]] = [
     ("columns", "a qualifier_field naming no column at all", break_qualifier_field_renamed),
     ("columns", "the Provenance column stripped from a declared carrier", break_provenance_column_missing),
     ("columns", "a provenance_section that is not a section", break_provenance_section_unknown),
+    ("columns", "a free-text column with no label beside it", break_qualifier_without_label),
 ]
 
 

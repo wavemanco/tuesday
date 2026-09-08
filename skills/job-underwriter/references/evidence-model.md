@@ -96,6 +96,7 @@ verified: true | false                 # true only when user-confirmed AND speci
 confidence: high | medium | low | none
 gap_type: none | presentation | discovery | transferability | capability | hard_gate
 reasoning: "..."                       # why this status and confidence; name any derivation
+provenance: "[grounded] | [inferred] | [generic], with the basis named"
 next_action: "..."                     # always concrete: the question to ask, the artifact to request, the edit to propose, or "none"
 ```
 
@@ -106,6 +107,18 @@ Rules for building rows:
 - **Every enum cell holds exactly one token from its set, and nothing else.** `priority`, `fit_status`, `confidence`, `gap_type`, and the register's `class` and `severity` are vocabularies, not prose: no slash, no hyphenated pair, no parenthetical, no second answer. `low–medium`, `none/low`, `split`, `mixed` and `discovery (sales piece)` have each been written into one of these cells, and the list keeps growing because each is a different way of declining to choose — two answers, or a qualifier smuggled into a slot with room for one. The qualifier is not unwelcome; it belongs in `reasoning`, where it can be read and where nothing downstream tries to parse it — **and `reasoning` is a rendered column of the evidence map, not a field that only surfaces in the JSON.** The column was missing for longer than anyone noticed, which is why the list of coined values above kept growing: the rule named a destination the writer could not see. If you are about to write a map without that column, add the column first. Hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, the split is legitimate and the slash is not: it becomes **two rows** — R4a at `medium` for the adjacent work, R4b at `none` for the titled years — each with its own requirement text, band and next action. Written into one cell as "medium (adjacent) / none (titled)" it is still one cell holding two answers, and everything downstream that reads a band off this row now reads a string. Rows are free; the cell is the constraint.
 - **A cell restates the source claim; it never widens it.** The map is the spine — the plan, the handoff, and every draft line read from these rows, so a qualifier dropped here ("on custom builds" quietly becoming "across 30+ integrations") propagates into language the candidate says out loud. Carry the user's own qualifiers into the cell, and when a cell needs a broader claim to be true, that is a `next_action`, not a wording choice.
 - **Contradictions lower confidence to `none` and say so in `reasoning`** — a CV claiming 5 years against a portfolio showing 2 is a contradiction to surface, not average.
+- **`reasoning` carries a world-claim, so it carries a `provenance` label.** This
+  column was added to give a hedged confidence value somewhere to go, and it
+  immediately became the largest unlabeled assertion surface in the response —
+  six graders out of ten pointed at it in one run-set: "the Reasoning column
+  asserts numerous facts", "R4b's cell asserts an unlabeled generic-pattern
+  claim". The lesson is the one this file already teaches, learned again at cost:
+  a new free-text column is a new place for world-claims, and it needs its label
+  beside it from the first version rather than the second. Where a cell only
+  reads the row — "confirmed and specific, but no inspectable artifact yet" —
+  `[grounded]` names the evidence it read. Where it reaches past the row —
+  "enterprise SE roles usually touch pre-sales" — the label is `[generic]` and
+  the pull to write `[inferred]` is the thing to resist.
 - **`next_action` is where recovery starts.** A row with an unresolved gap and no concrete next action is an unfinished row.
 
 ## The confirmation card
