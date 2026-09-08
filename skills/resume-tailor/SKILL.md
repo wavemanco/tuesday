@@ -67,6 +67,7 @@ enum_fields: operation, coverage_status, provenance, priority, row_status
 closing_order: upgrade menu, questions
 qualifier_fields: none
 sibling_mentions: 1
+provenance_sections: The coverage map, A worked ledger
 ```
 
 `operation` and `row_status` are this skill's own enums and they are the ones most

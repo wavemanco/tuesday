@@ -79,6 +79,7 @@ question_budget: 3
 enum_fields: priority, fit_status, confidence, gap_type, class, severity
 closing_order: dossier offer, upgrade menu, questions
 qualifier_fields: reasoning, hypothesis
+provenance_sections: Role reality, Opportunity risk register, Application plan
 sibling_mentions: 1
 ```
 

@@ -3,7 +3,7 @@
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
 `references/` with a synced-from header; this copy wins on conflict.
 
-Five rules about the *shape* of a delivered response. Every one was learned from a
+Six rules about the *shape* of a delivered response. Every one was learned from a
 measured defect in a clean-room run, and three of them were fixed twice in
 different skills because nothing carried them across — the question budget in two
 skills weeks apart, the enum cell in three separate files. That is what this file
@@ -122,3 +122,32 @@ is twice, and the second one is lobbying rather than informing — it spends the
 user's attention on a skill they did not ask for.
 
 **Parameter: `sibling_mentions`** — the maximum per message.
+
+## 6. A claim about the world lives in a row, not in prose
+
+**Invariant.** Free prose in a delivered output asserts nothing about the world.
+It may quote a source, and it may read the analysis the reader can already see —
+"five of seven requirements are `direct`" is a reading, and deleting the analysis
+deletes the sentence. Anything that would still assert something with the analysis
+gone is a world-claim: about the employer, the market, the candidate's history, or
+how hiring works. Those live in a row, in a structure with a Provenance cell.
+
+Four prose rules failed at this before it was written as a shape, and they failed
+in a way worth naming: **a writer who knows where a claim came from cannot see the
+sentence that fails to say so.** The label is missing from a sentence that reads
+perfectly. Nothing about proofreading catches it, which is why the fourth rule did
+no better than the first. An empty cell is visible; an absent suffix is not.
+
+The corollary is the useful half. A world-claim with no row to sit in is not a
+claim needing a label — it is a claim needing deletion. "Small companies of this
+size routinely have thin public footprints" earns a register entry with a
+`[generic]` label, or it earns nothing; what it must not do is sit in a paragraph
+reading as a finding about this employer.
+
+**Parameter: `provenance_sections`** — the sections whose tables carry a
+Provenance column. Every one named must have that column in the skill's worked
+template, and CI checks it. This exists because the project ledger claimed for
+weeks that a third table carried one when it never had, and the claim was believed
+until a grader pointed at exactly that table's cells. A rule that names its own
+coverage can be checked against the shape; a rule that says "label your claims"
+cannot.

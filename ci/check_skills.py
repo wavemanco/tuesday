@@ -357,7 +357,7 @@ def check_columns() -> None:
         fields = [f.strip() for f in declared.group(1).split(",") if f.strip()]
         if fields == ["none"]:
             ok(group, f"{skill.name}: qualifier_fields declared as none — no free-text column, on purpose")
-            continue
+            fields = []
 
         # Every header cell of every markdown table in the skill's references.
         headers: set[str] = set()
@@ -373,6 +373,36 @@ def check_columns() -> None:
             else:
                 fail(group, f"{skill.name}: qualifier_fields names '{field}', which is not a column "
                             f"in any references/ table — a rule pointing at a cell that does not exist")
+
+        # Sections declared as carrying provenance must actually have the column.
+        declared_sections = re.search(r"^\s*provenance_sections\s*:(.*)$", section.group(1),
+                                      re.MULTILINE)
+        if not declared_sections:
+            continue
+        wanted = [s.strip() for s in declared_sections.group(1).split(",") if s.strip()]
+        if wanted == ["none"]:
+            ok(group, f"{skill.name}: provenance_sections declared as none")
+            continue
+        found: dict[str, bool] = {}
+        for ref in sorted((skill / "references").glob("*.md")):
+            chunks = re.split(r"^## (.+)$", ref.read_text(), flags=re.MULTILINE)
+            for heading, body in zip(chunks[1::2], chunks[2::2]):
+                if heading.strip() not in wanted:
+                    continue
+                row = re.search(r"^\|(.+)\|\s*$", body, re.MULTILINE)
+                cells = [c.strip().lower() for c in row.group(1).split("|")] if row else []
+                # First table inside the section only — the split stops at the next
+                # heading, so a later section's table cannot answer for this one.
+                found[heading.strip()] = "provenance" in cells
+        for name in wanted:
+            if found.get(name):
+                ok(group, f"{skill.name}: '{name}' carries a Provenance column")
+            elif name in found:
+                fail(group, f"{skill.name}: section '{name}' is declared a provenance carrier "
+                            f"but its table has no Provenance column")
+            else:
+                fail(group, f"{skill.name}: provenance_sections names '{name}', which is not a "
+                            f"'## ' section with a table in references/")
 
 
 def check_ledger() -> None:

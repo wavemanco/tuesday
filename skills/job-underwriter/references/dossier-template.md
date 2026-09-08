@@ -25,7 +25,9 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 
 **Status: conditional_go.**
 
-Fit is strong: five of seven material requirements are `direct`, including both payments-domain must-haves, and the one adjacent area (regulatory exposure) has a credible, limited bridge. The opportunity itself reads sound but under-specified: the role's authority over three squads is asserted, not evidenced, and the compensation band is unstated against a stated non-negotiable of £95k+.
+**Fit ledger.** Five of seven material requirements are `direct` (R1–R3, R6, and the eligibility gate), including both payments-domain must-haves; the one adjacent area is regulatory exposure (R4), which has a credible bridge with its limit named.
+
+**Opportunity ledger.** Sound but under-specified: authority over the three squads is asserted and not evidenced (RR1), and the compensation band is unstated against the candidate's £95k floor (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
 
 - **Hard gates:** none failed. UK work eligibility confirmed.
 - **Severe red flags:** none found.
@@ -84,11 +86,11 @@ Answer in text, paste a voice transcript, attach a document, drop a link, or say
 
 ## Opportunity risk register
 
-| # | Signal | Class | Severity | Source quote | Hypothesis | Verification question | Status |
-|---|---|---|---|---|---|---|---|
-| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Role may carry outcome accountability while decisions sit with the squad leads | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
-| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | What band is budgeted for this role? | unresolved |
-| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | — | noted |
+| # | Signal | Class | Severity | Source quote | Hypothesis | Provenance | Verification question | Status |
+|---|---|---|---|---|---|---|---|---|
+| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Role may carry outcome accountability while decisions sit with the squad leads | `[inferred]` from the JD's squad count against its silence on decision rights | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
+| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | `[inferred]` from the market calibration against the stated floor | What band is budgeted for this role? | unresolved |
+| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | `[grounded]` JD states both outcomes | — | noted |
 
 The verification question is a column for the same reason. Rendered as a prose
 line beneath the table it survived only for the entries that arrived with a
@@ -98,7 +100,13 @@ the ones a candidate most needs a question for, were the ones that lost it. Only
 
 `Hypothesis` is a column on the same argument, and it was missing here for the
 same reason `Reasoning` was missing from the evidence map: the JSON envelope has
-always carried it and the rendered table dropped it. `risk-and-decision.md` sends
+always carried it and the rendered table dropped it. `Provenance` is beside it
+because a hypothesis is a world-claim — about the employer, the market, or how
+hiring works — and the first version of this table shipped the hypothesis column
+without one. Graders found it immediately: the register's hypotheses were the
+unlabeled assertions in the response. The repository ledger had meanwhile claimed
+for weeks that this table already carried a Provenance cell, which is the reason
+nobody looked. `risk-and-decision.md` sends
 a between-two `Severity` call to the hypothesis — "take the lower and put the
 reason in the hypothesis" — which is a rule pointing at a cell that was not on the
 page. `Severity` reads `—` on `unknown` and `positive_signal` rows because the
@@ -322,6 +330,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "severity": null,
         "source_quote": "own the roadmap across acceptance, payouts, and reconciliation",
         "hypothesis": "Role may carry outcome accountability while decisions sit with squad leads.",
+        "provenance": "[inferred] from the JD's squad count against its silence on decision rights",
         "verification_question": "Which decisions does this role make alone, and which belong to the squad leads?",
         "decision_rule": "Proceed if authority is concrete and consistent across at least two interviewers.",
         "status": "unresolved"
@@ -332,6 +341,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "severity": "medium",
         "source_quote": "competitive package",
         "hypothesis": "Band may sit below the candidate's hard floor.",
+        "provenance": "[inferred] from the market calibration against the stated floor",
         "verification_question": "What band is budgeted for this role?",
         "decision_rule": "Confirm the band before investing in the interview loop.",
         "status": "unresolved"
@@ -342,6 +352,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "severity": null,
         "source_quote": "halve reconciliation exceptions in year one",
         "hypothesis": "Role scope is genuinely defined; success is measurable.",
+        "provenance": "[grounded] JD states both outcomes",
         "verification_question": "Who owns the reconciliation-exception metric today?",
         "decision_rule": null,
         "status": "noted"

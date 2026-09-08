@@ -65,6 +65,16 @@ output rather than the shared vocabulary:
   claim came from cannot see the sentence that fails to say so. An empty cell is
   visible; a missing suffix is not.
 
+  It is canonical now — `references/output-discipline.md` rule 6 — and it has two
+  mechanisms behind it rather than a fifth wording. `provenance_sections` declares
+  which sections carry the column and CI checks each one really does. And the
+  decision snapshot, which is where world-claims collected because it was the last
+  free paragraph in the assessment, no longer has one: its rationale is two slots,
+  a fit ledger reading the evidence map and an opportunity ledger reading the
+  register, each naming the row IDs it reads. The test a writer can apply while
+  writing is *which row is this sentence reading?* — and a clause with no answer is
+  a new claim, which belongs in a row or nowhere.
+
 ## The evidence-map row
 
 One row per material requirement. A requirement is material when it plausibly affects the decision or the application strategy: every hard gate and must-have, important requirements, and any preferred requirement the candidate could meaningfully differentiate on. Boilerplate ("self-starter") is not material unless the risk register says otherwise.

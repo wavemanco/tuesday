@@ -274,6 +274,35 @@ def break_qualifier_field_renamed(root: Path) -> str:
     return "not a column in any references/ table"
 
 
+def break_provenance_column_missing(root: Path) -> str:
+    """Strip the Provenance column from a section declared to carry one.
+
+    This is the register, exactly as it stood: the project ledger asserted for
+    weeks that this table had a Provenance cell, it never had, and it took a
+    grader reading generated output to notice.
+    """
+    path = root / "skills/job-underwriter/references/dossier-template.md"
+    text = path.read_text()
+    mutated = text.replace("| Hypothesis | Provenance | Verification question |",
+                           "| Hypothesis | Verification question |", 1)
+    if mutated == text:
+        raise SystemExit("break_provenance_column_missing found no register header — it has gone stale")
+    path.write_text(mutated)
+    return "has no Provenance column"
+
+
+def break_provenance_section_unknown(root: Path) -> str:
+    """Declare a provenance section that is not a section at all."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    mutated = text.replace("provenance_sections: The coverage map, A worked ledger",
+                           "provenance_sections: The coverage map, The parse report", 1)
+    if mutated == text:
+        raise SystemExit("break_provenance_section_unknown found nothing to rename — it has gone stale")
+    path.write_text(mutated)
+    return "not a '## ' section with a table"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -295,6 +324,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("parameters", "the parameter section removed", break_missing_parameter_section),
     ("columns", "the column a qualifier_field points at deleted", break_qualifier_column_missing),
     ("columns", "a qualifier_field naming no column at all", break_qualifier_field_renamed),
+    ("columns", "the Provenance column stripped from a declared carrier", break_provenance_column_missing),
+    ("columns", "a provenance_section that is not a section", break_provenance_section_unknown),
 ]
 
 
