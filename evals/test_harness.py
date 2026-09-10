@@ -152,6 +152,29 @@ def test_missing_response() -> None:
         check_true("and carries an error rather than three failures", bool(got.get("error")))
 
 
+def test_declined_grade_prints_no_score() -> None:
+    """A grade that produced nothing must not print as a score of zero.
+
+    The fifth instance of this bug class, and the first in the reporting rather
+    than the data: a run-set killed by a weekly usage limit printed "SKIPPED
+    grading ..." and then "graded ... 0/12" on the next line for every grader.
+    The data was correct — nothing was recorded as failed — and a person reading
+    the log saw twelve zeros.
+    """
+    print("\nfixtures: a declined grade does not print a score")
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        case = {"id": 1, "prompt": "irrelevant", "expectations": ["a", "b", "c"]}
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            run_fixtures.grade("s", case, out, run=0, grader=1, timeout=1, model=None)
+        printed = buf.getvalue()
+        check("no score is printed", "0/3" in printed, False)
+        check_true("and the reason is", "no verdicts" in printed)
+
+
 # --- The artifact collector, which produced its own false negative once ---
 
 def test_artifact_collection() -> None:
@@ -185,6 +208,7 @@ def test_skill_installation() -> None:
 def main() -> int:
     for test in (test_routing_declines, test_cli_refusal, test_grade_parsing,
                  test_failure_classification, test_missing_response,
+                 test_declined_grade_prints_no_score,
                  test_artifact_collection, test_skill_installation):
         test()
     print()
