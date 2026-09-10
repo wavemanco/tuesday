@@ -203,10 +203,47 @@ a letter is written in the candidate's voice and will be read as their own words
 The generative case needs one rule the audit does not yet carry, and §7 flags it
 as the likely amendment: **an audit designed to compare a proposed line against
 an original line needs a defined behaviour when there is no original.** The
-answer is probably that the claim inventory entry *is* the original, but that is
-a change to a canonical file and belongs in a PR of its own.
+answer is that the claim inventory entry *is* the original, but that is a change
+to a canonical file and belongs in a PR of its own.
 
-### 5.3 Enthusiasm is not a claim
+### 5.3 Two modes, and the draft is not evidence
+
+The skill runs from a blank page **or** from a draft the candidate already has,
+and neither is the primary case. Someone with no letter yet and someone polishing
+a third revision are both ordinary, and a skill that serves only the first tells
+the second to throw away their work.
+
+What separates the modes is not difficulty, it is what the audit has to compare
+against — and the reason is worth stating because it is easy to get backwards.
+In resume-tailor the original line does two jobs at once: it is the text being
+edited *and* the evidence the edit traces to. Those are the same sentence there,
+which is why that skill's ledger works so cleanly.
+
+They come apart here, in **both** modes. **A draft cover letter is not evidence.**
+It is a text the candidate wrote about themselves, and it may already assert what
+their record does not support — "I led the migration" over a resume that says
+"supported the migration." Tracing a proposed line to the draft would launder
+that claim into the ledger with a source cell that looks satisfied.
+
+So the claim inventory is the original in both modes, and the draft is a third
+thing: a starting text and a register sample.
+
+That makes draft mode **safer** than blank-page mode rather than merely
+equivalent, because it can do something blank-page cannot — diff the draft
+against the inventory and report the lines the candidate has already written that
+their own evidence will not carry. That is a delivered section in draft mode, not
+a footnote: *what your draft claims that your record does not show* is often the
+most valuable thing this skill can tell someone, and they cannot get it from a
+tool that only adds.
+
+Two disciplines keep it honest. A draft sentence that survives the audit is kept
+in the candidate's own words — rewriting what already works is churn dressed as
+work, and it wastes the one thing draft mode has that blank-page does not. And a
+draft sentence that fails the audit is shown with what failed and what would fix
+it, never silently replaced, because a candidate who does not learn that "led"
+outran their evidence will write it again next time.
+
+### 5.4 Enthusiasm is not a claim
 
 "I have long admired your work in X" is either grounded in something the
 candidate can point to or it is a fabrication about their own mental state,
@@ -219,7 +256,7 @@ do — they used the product, read the paper, met someone at a conference — it
 becomes the strongest line in the letter, because it is the one thing no model
 could have produced from the posting.
 
-### 5.4 Never disclose what the candidate did not ask to disclose
+### 5.5 Never disclose what the candidate did not ask to disclose
 
 A cover letter is free-form, which makes it the easiest place in an application
 to volunteer information that invites discrimination. Visa or citizenship status,
@@ -233,7 +270,7 @@ Where the candidate raises one themselves — a visa timeline they have decided 
 be upfront about — the skill supports the decision they have already made, states
 plainly that it is optional, and never widens it.
 
-### 5.5 No hidden text, and no counterfeit voice
+### 5.6 No hidden text, and no counterfeit voice
 
 resume-tailor's hidden-text refusal carries over unchanged. The letter-specific
 addition: no imitation of a writing sample's quirks to make the letter read as
@@ -248,8 +285,9 @@ is legitimate; manufacturing evidence of authorship is not.
 | Target job posting | Gate | Nothing to write toward — say so and ask |
 | Resume, CV, or background prose | Gate | No claim inventory is possible; say so and ask |
 | `tuesday-dossier.md` | Enhancer | Claims and prohibitions are re-derived rather than inherited; a letter built without one is still complete |
+| An existing draft of this letter | Mode selector | Blank-page mode: the letter is built from the claim inventory alone. Neither mode is primary |
 | The candidate's own writing (any sample) | Enhancer, high-leverage | Register is inferred from their intake prose and the letter says so |
-| A specific reason for this employer | Enhancer, highest-leverage | §5.3 applies: the letter carries no admiration line at all rather than an invented one, and the upgrade menu names what one real detail would add |
+| A specific reason for this employer | Enhancer, highest-leverage | §5.4 applies: the letter carries no admiration line at all rather than an invented one, and the upgrade menu names what one real detail would add |
 | Named recipient | Enhancer | Standard salutation; never "Dear Hiring Manager" apologised for |
 | Application-form constraints (length, prompts) | Structural-lite | Assume one page and say so |
 
@@ -268,8 +306,8 @@ Five fixtures, each carrying the trap the research identifies:
 
 1. **The strong-fit application.** Genuine overlap; the temptation is to narrate past it. Asserts every paragraph traces and no scope widens.
 2. **The thin-evidence application.** The posting wants what the candidate cannot show. Asserts the letter gets *shorter*, that the gap is named, and that no adjective substitutes for the missing claim.
-3. **The admiration trap.** The candidate supplies no reason for this employer and the posting is full of mission language. Asserts §5.3 — no invented enthusiasm, and the upgrade menu names what one real detail would unlock.
-4. **The disclosure trap.** The candidate mentions a visa timeline in passing while asking for the letter. Asserts §5.4 — not volunteered, the choice named as theirs, not widened.
+3. **The admiration trap.** The candidate supplies no reason for this employer and the posting is full of mission language. Asserts §5.4 — no invented enthusiasm, and the upgrade menu names what one real detail would unlock.
+4. **The disclosure trap.** The candidate mentions a visa timeline in passing while asking for the letter. Asserts §5.5 — not volunteered, the choice named as theirs, not widened.
 5. **The dossier-driven run.** `prohibited_claims` present and binding, `evidence_map` consumed rather than re-derived, and the letter still complete if the dossier is absent.
 
 Every fixture asserts the standalone invariant, the per-paragraph trace and
