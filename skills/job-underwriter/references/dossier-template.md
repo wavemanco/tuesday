@@ -5,10 +5,10 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 ## Emission rules
 
 - **Filename is exactly `tuesday-dossier.md`** — recognizable among a user's uploads months later.
-- **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered *from* the envelope, never written separately — two layers that can drift are two artifacts.
+- **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered *from* the envelope, never written separately — two layers that can drift are two artifacts. One envelope entry may render in two places: a `gap_queue` row renders as a queue row *and* as a closing question, from the same `prompt` object. That is one source with two placements, which is not drift; two hand-written copies would be.
 - **Offered, never forced.** A one-line offer rides every delivered assessment's upgrade menu, first pass included; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
-- **Envelope version is `1.1`** (adds `candidate_constraints`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
+- **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
 - **`handoff_to_mock_interview` follows the canonical schema §6 exactly** — those keys are a contract with another skill, not a suggestion. `uncertain_or_weak_areas` carries only `low`/`none`-confidence requirements; `medium`-confidence claims belong in `verified_candidate_evidence` with their caveat attached. `prohibited_claims` are absolute for every downstream consumer — list every claim this engagement established as un-assertable.
 
 ## Worked example
@@ -23,9 +23,11 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 
 ## Decision snapshot
 
-**Status: conditional_go.**
+**Worth applying to — with three conditions. Status: `conditional_go`.**
 
-Fit is strong: five of seven material requirements are `direct`, including both payments-domain must-haves, and the one adjacent area (regulatory exposure) has a credible, limited bridge. The opportunity itself reads sound but under-specified: the role's authority over three squads is asserted, not evidenced, and the compensation band is unstated against a stated non-negotiable of £95k+.
+**Fit ledger.** Five of seven material requirements are `direct` (R1–R3, R6, and the eligibility gate), including both payments-domain must-haves; the one adjacent area is regulatory exposure (R4), which has a credible bridge with its limit named.
+
+**Opportunity ledger.** Sound but under-specified: authority over the three squads is asserted and not evidenced (RR1), and the compensation band is unstated against the candidate's £95k floor (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
 
 - **Hard gates:** none failed. UK work eligibility confirmed.
 - **Severe red flags:** none found.
@@ -52,41 +54,75 @@ to the writer as well as the reader.
 
 ## Evidence map
 
-| # | Requirement | Priority | Fit | Confidence | Gap | Next action |
-|---|---|---|---|---|---|---|
-| R1 | UK work eligibility without sponsorship | hard_gate | direct | high | none | none |
-| R2 | 5+ yrs PM, 2+ on payments/fintech | must_have | direct | high | none | none |
-| R3 | Shipped APIs consumed by external developers | must_have | direct | medium | none | offer: partner-API case note would raise to high |
-| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent | medium | transferability | see gap queue G1 |
-| R5 | Mentoring or leading PMs | important | unclear | low | discovery | none — skipped by user; carried as minor risk |
-| R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | CV edit E1 pending approval |
-| R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | closure path named; minor risk given preferred priority |
-
-Reading the two flagged rows: R4 — PCI-DSS scoping on a checkout product is genuinely adjacent to card-scheme compliance (same audit posture, same data-classification instincts) but exercised none of PSD2's consent and TPP-access model; the limit is named wherever the bridge is used. R6 — the evidence is strong (a linked case study shows the experiment pipeline); the CV buries it in a tools list. That's a presentation gap: the fix is repositioning, not new claims.
+| # | Requirement | Priority | Fit | Confidence | Gap | Reasoning | Provenance | Next action |
+|---|---|---|---|---|---|---|---|---|
+| R1 | UK work eligibility without sponsorship | hard_gate | direct | high | none | Gate confirmed directly by the user; nothing to inspect and nothing contested | `[grounded]` user-confirmed | none |
+| R2 | 5+ yrs PM, 2+ on payments/fintech | must_have | direct | high | none | Specific, confirmed, and inspectable — CV plus a read artifact agree | `[grounded]` CV plus a read artifact | none |
+| R3 | Shipped APIs consumed by external developers | must_have | direct | medium | none | Confirmed and specific, but no inspectable artifact yet — `medium`, with the caveat named wherever this claim is used: expect a probe | `[grounded]` recovery-turn answer | offer: partner-API case note would raise to high |
+| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent | medium | transferability | Credible adjacency: same audit posture and data-classification instincts as card-scheme compliance. Limit: exercised none of PSD2's consent or TPP-access model — named wherever the bridge is used | `[inferred]` adjacency derived from the audit scope she described | see gap queue G1 |
+| R5 | Mentoring or leading PMs | important | unclear | low | discovery | CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk | `[grounded]` CV silence, question skipped | none — skipped by user; carried as minor risk |
+| R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | The evidence is strong — a linked case study shows the experiment pipeline — and the CV buries it in a tools list. The gap is in communication, not capability: the fix is repositioning, not new claims | `[grounded]` linked case study | CV edit E1 pending approval |
+| R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk rather than a blocker | `[grounded]` no evidence found after discovery | closure path named; minor risk given preferred priority |
+`Reasoning` is a column and not a paragraph underneath. It renders the row spec's
+`reasoning` field, which the JSON envelope has always carried and this table used
+to drop — and a table that drops the one free-text column leaves every qualifier
+homeless. What happened next is measurable: `none/low` and `medium (adjacent) /
+none (titled)` went into the `Confidence` cell, because a writer who has a nuance
+and no cell for it puts the nuance in the nearest cell that will hold text. R3 and
+R6 are the rows that would have hedged. Note also that R6 is `direct` fit with a
+`presentation` gap: fit status and gap type are separate calls, per
+`references/evidence-conventions.md` §3.
 
 ## Gap recovery queue
 
-**G1 — Regulatory exposure (R4, must_have).**
-What I currently see: confirmed PCI-DSS scoping ownership on checkout; nothing touching PSD2, open banking, or scheme relationships directly.
-Why this matters: it's the one must-have not at `direct`; a stronger bridge narrows the likeliest interview objection.
-Experience that may count: any integration work against bank APIs or open-banking sandboxes; a chargeback or dispute-flow project; scheme-rules research that shaped a roadmap call.
-Useful evidence: a sanitized scoping doc, an architecture note, a roadmap excerpt.
-Question: have you touched bank-side APIs, disputes, or scheme rules in any project — even peripherally?
-Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+| # | Gap (req) | Type | What I currently see | Why it matters | Experience that may count | Useful evidence | Provenance |
+|---|---|---|---|---|---|---|---|
+| G1 | Regulatory exposure (R4, must_have) | transferability | Confirmed PCI-DSS scoping ownership on checkout; nothing touching PSD2, open banking, or scheme relationships directly | The one must-have not at `direct`; a stronger bridge narrows the objection most likely to be raised | Integration work against bank APIs or open-banking sandboxes; a chargeback or dispute-flow project; scheme-rules research that shaped a roadmap call | A sanitized scoping doc, an architecture note, a roadmap excerpt | `[inferred]` bridge derived from the audit scope she described; `[generic]` that this is the likeliest objection |
+
+**The queue holds no questions, and that is the point.** Every row here has a
+question worth asking, and until now the row carried it — a `Question:` line in a
+prose block sitting fourth of nine sections. Two rules broke on that. The
+questions were not the last thing the reader met, which `closing_order` requires
+and which graders failed in eight runs of fourteen; and there were two question
+sites in one message, which the question-budget rule forbids by name — either the
+embedded prompts are the budget or the closing block is, never both. So the row
+says what the gap is and what would close it, and **the question itself goes in
+the closing block with the others**, tagged with its row id.
+
+The register beneath learned this first and the queue did not, which is the whole
+argument in one page: the verification question is a column there because as a
+prose line it survived only on entries that arrived with a worked example. Same
+failure, same fix, one section apart and four months late.
 
 ## Opportunity risk register
 
-| # | Signal | Class | Severity | Source quote | Verification question | Status |
-|---|---|---|---|---|---|---|
-| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
-| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | What band is budgeted for this role? | unresolved |
-| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | — | noted |
+| # | Signal | Class | Severity | Source quote | Hypothesis | Provenance | Verification question | Status |
+|---|---|---|---|---|---|---|---|---|
+| RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Role may carry outcome accountability while decisions sit with the squad leads | `[inferred]` from the JD's squad count against its silence on decision rights | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
+| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | `[inferred]` from the market calibration against the stated floor | What band is budgeted for this role? | unresolved |
+| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | `[grounded]` JD states both outcomes | — | noted |
 
 The verification question is a column for the same reason. Rendered as a prose
 line beneath the table it survived only for the entries that arrived with a
 worked example attached — which meant the entries carrying the actual red flags,
 the ones a candidate most needs a question for, were the ones that lost it. Only
 `positive_signal` rows may leave the cell empty.
+
+`Hypothesis` is a column on the same argument, and it was missing here for the
+same reason `Reasoning` was missing from the evidence map: the JSON envelope has
+always carried it and the rendered table dropped it. `Provenance` is beside it
+because a hypothesis is a world-claim — about the employer, the market, or how
+hiring works — and the first version of this table shipped the hypothesis column
+without one. Graders found it immediately: the register's hypotheses were the
+unlabeled assertions in the response. The repository ledger had meanwhile claimed
+for weeks that this table already carried a Provenance cell, which is the reason
+nobody looked. `risk-and-decision.md` sends
+a between-two `Severity` call to the hypothesis — "take the lower and put the
+reason in the hypothesis" — which is a rule pointing at a cell that was not on the
+page. `Severity` reads `—` on `unknown` and `positive_signal` rows because the
+field is scoped to risk signals and red flags; `—` is the marker, so that a row
+where severity does not apply does not acquire an invented `n/a`, `none`, or a
+`low` that reads as a measured judgment.
 
 ## Application plan
 
@@ -119,7 +155,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
 
 ```json
 {
-  "dossier_version": "1.1",
+  "dossier_version": "1.2",
   "generated_by": { "skill": "job-underwriter", "at": "2026-08-16" },
   "role": {
     "title": "Senior Product Manager, Payments Platform",
@@ -182,6 +218,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "high",
         "gap_type": "none",
         "reasoning": "Gate confirmed directly by the user; nothing to inspect and nothing contested.",
+        "provenance": "[grounded] user-confirmed at intake",
         "next_action": "none"
       },
       {
@@ -199,6 +236,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "high",
         "gap_type": "none",
         "reasoning": "Specific, confirmed, and inspectable - CV plus a read artifact agree.",
+        "provenance": "[grounded] CV plus a read artifact agree",
         "next_action": "none"
       },
       {
@@ -215,6 +253,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "medium",
         "gap_type": "none",
         "reasoning": "Confirmed and specific, but no inspectable artifact yet - medium, with the caveat named where this claim is used: expect a probe.",
+        "provenance": "[grounded] recovery-turn answer, specific",
         "next_action": "Offer stands: a sanitized case note or doc link raises this to high"
       },
       {
@@ -231,6 +270,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "medium",
         "gap_type": "transferability",
         "reasoning": "Credible adjacency: same audit posture and data-classification instincts. Limit: no exposure to PSD2 consent flows or TPP access - named wherever the bridge is used.",
+        "provenance": "[inferred] adjacency derived from the audit scope she described, not from a PSD2 claim",
         "next_action": "Gap queue G1: probe for any bank-API, disputes, or scheme-rules contact"
       },
       {
@@ -245,6 +285,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "low",
         "gap_type": "discovery",
         "reasoning": "CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk.",
+        "provenance": "[grounded] CV silence; the question was skipped",
         "next_action": "none - user skipped; reopens only if the user volunteers"
       },
       {
@@ -262,6 +303,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "high",
         "gap_type": "presentation",
         "reasoning": "The evidence is strong; the CV buries it in a tools list. The gap is in communication, not capability.",
+        "provenance": "[grounded] linked case study inspected",
         "next_action": "CV edit E1 pending approval"
       },
       {
@@ -276,6 +318,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "confidence": "none",
         "gap_type": "capability",
         "reasoning": "No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk, not a blocker.",
+        "provenance": "[grounded] no direct or adjacent evidence found after discovery",
         "next_action": "Closure path if desired: the reconciliation squad's domain is learnable on the job; a systems-design write-up would pre-empt the objection"
       }
     ],
@@ -283,6 +326,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
       {
         "requirement_id": "R4",
         "gap_type": "transferability",
+        "provenance": "[inferred] bridge derived from the audit scope she described; [generic] that this is the likeliest interview objection",
         "prompt": {
           "what_i_currently_see": "Confirmed PCI-DSS scoping ownership; nothing touching PSD2, open banking, or scheme relationships directly.",
           "why_this_matters": "The one must-have not at direct; a stronger bridge narrows the likeliest interview objection.",
@@ -304,6 +348,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "severity": null,
         "source_quote": "own the roadmap across acceptance, payouts, and reconciliation",
         "hypothesis": "Role may carry outcome accountability while decisions sit with squad leads.",
+        "provenance": "[inferred] from the JD's squad count against its silence on decision rights",
         "verification_question": "Which decisions does this role make alone, and which belong to the squad leads?",
         "decision_rule": "Proceed if authority is concrete and consistent across at least two interviewers.",
         "status": "unresolved"
@@ -314,6 +359,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "severity": "medium",
         "source_quote": "competitive package",
         "hypothesis": "Band may sit below the candidate's hard floor.",
+        "provenance": "[inferred] from the market calibration against the stated floor",
         "verification_question": "What band is budgeted for this role?",
         "decision_rule": "Confirm the band before investing in the interview loop.",
         "status": "unresolved"
@@ -324,6 +370,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
         "severity": null,
         "source_quote": "halve reconciliation exceptions in year one",
         "hypothesis": "Role scope is genuinely defined; success is measurable.",
+        "provenance": "[grounded] JD states both outcomes",
         "verification_question": "Who owns the reconciliation-exception metric today?",
         "decision_rule": null,
         "status": "noted"

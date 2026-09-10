@@ -244,6 +244,83 @@ def break_trigger_boundary(root: Path) -> str:
     return "reserved boundary"
 
 
+def break_qualifier_column_missing(root: Path) -> str:
+    """Delete the column a skill's qualifier_fields points at.
+
+    The bug this reproduces ran for three skill versions: `reasoning` was in the
+    row spec and in the JSON envelope, the compound-cell rule said to put the
+    qualifier there, and the rendered table had no such column. `none/low` went
+    into the Confidence cell beside it.
+    """
+    path = root / "skills/job-underwriter/references/dossier-template.md"
+    text = path.read_text()
+    mutated = text.replace("| Confidence | Gap | Reasoning | Provenance | Next action |",
+                           "| Confidence | Gap | Provenance | Next action |", 1)
+    if mutated == text:
+        raise SystemExit("break_qualifier_column_missing found no Reasoning column — it has gone stale")
+    path.write_text(mutated)
+    return "not a column in any references/ table"
+
+
+def break_qualifier_field_renamed(root: Path) -> str:
+    """Declare a qualifier field the skill's tables do not carry."""
+    path = root / "skills/mock-interview/SKILL.md"
+    text = path.read_text()
+    mutated = text.replace("qualifier_fields: gap-and-bridge language",
+                           "qualifier_fields: bridge notes", 1)
+    if mutated == text:
+        raise SystemExit("break_qualifier_field_renamed found nothing to rename — it has gone stale")
+    path.write_text(mutated)
+    return "not a column in any references/ table"
+
+
+def break_provenance_column_missing(root: Path) -> str:
+    """Strip the Provenance column from a section declared to carry one.
+
+    This is the register, exactly as it stood: the project ledger asserted for
+    weeks that this table had a Provenance cell, it never had, and it took a
+    grader reading generated output to notice.
+    """
+    path = root / "skills/job-underwriter/references/dossier-template.md"
+    text = path.read_text()
+    mutated = text.replace("| Hypothesis | Provenance | Verification question |",
+                           "| Hypothesis | Verification question |", 1)
+    if mutated == text:
+        raise SystemExit("break_provenance_column_missing found no register header — it has gone stale")
+    path.write_text(mutated)
+    return "has no Provenance column"
+
+
+def break_provenance_section_unknown(root: Path) -> str:
+    """Declare a provenance section that is not a section at all."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    mutated = text.replace("provenance_sections: The coverage map, Recovery per gap, A worked ledger",
+                           "provenance_sections: The coverage map, The parse report, A worked ledger", 1)
+    if mutated == text:
+        raise SystemExit("break_provenance_section_unknown found nothing to rename — it has gone stale")
+    path.write_text(mutated)
+    return "not a '## ' section with a table"
+
+
+def break_qualifier_without_label(root: Path) -> str:
+    """A free-text column left standing with no Provenance cell beside it.
+
+    Made twice in one session. The register's Hypothesis column shipped without a
+    label and was fixed after graders found it; the evidence map's Reasoning
+    column shipped without one in the same commit and was not, and six graders in
+    the next run-set pointed straight at it.
+    """
+    path = root / "skills/job-underwriter/references/dossier-template.md"
+    text = path.read_text()
+    mutated = text.replace("| Gap | Reasoning | Provenance | Next action |",
+                           "| Gap | Reasoning | Next action |", 1)
+    if mutated == text:
+        raise SystemExit("break_qualifier_without_label found no evidence-map header — it has gone stale")
+    path.write_text(mutated)
+    return "no Provenance cell"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -263,7 +340,13 @@ CASES: list[tuple[str, str, callable]] = [
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),
     ("parameters", "the parameter section removed", break_missing_parameter_section),
+    ("columns", "the column a qualifier_field points at deleted", break_qualifier_column_missing),
+    ("columns", "a qualifier_field naming no column at all", break_qualifier_field_renamed),
+    ("columns", "the Provenance column stripped from a declared carrier", break_provenance_column_missing),
+    ("columns", "a provenance_section that is not a section", break_provenance_section_unknown),
+    ("columns", "a free-text column with no label beside it", break_qualifier_without_label),
 ]
+
 
 
 def main() -> int:

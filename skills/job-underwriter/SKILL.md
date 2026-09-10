@@ -29,7 +29,7 @@ Read `references/evidence-conventions.md` for the vocabulary and `references/evi
 4. **Opportunity ledger** — unknowns, risk signals, red flags, and positive signals, per `references/risk-and-decision.md`. Assess the role on its own merits regardless of how well the candidate fits it.
 5. **Provisional decision** — `go`, `conditional_go`, `hold_pending_answers`, or `no_go`, with the rationale showing both ledgers.
 
-The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the upgrade menu, then at most three orientation questions closing the message, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. Research consent (Step 2) rides with the questions; it never drives.
+The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the upgrade menu, then at most three orientation questions closing the message, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. **The gap recovery queue holds no questions** — its rows say what each gap is and what would close it, and the question each row implies is asked in the closing block, tagged with its row id. A `Question:` line inside the queue puts questions fourth of nine sections and gives the message two question sites, and both of those are rules this skill already carries. Research consent (Step 2) rides with the questions; it never drives.
 
 Two lines are standing parts of every delivered assessment, first pass included: the upgrade menu (each missing input and what it concretely unlocks), and inside it the one-line dossier offer (Step 4). And label what you wrote: any statement derived from research or inference carries its provenance — `[grounded]`, `[inferred]`, or `[generic]` — where it appears, so the reader can always see how far the evidence goes.
 
@@ -78,6 +78,8 @@ are absolute; the parameters it names are declared here.
 question_budget: 3
 enum_fields: priority, fit_status, confidence, gap_type, class, severity
 closing_order: dossier offer, upgrade menu, questions
+qualifier_fields: reasoning, hypothesis
+provenance_sections: Role reality, Evidence map, Gap recovery queue, Opportunity risk register, Application plan
 sibling_mentions: 1
 ```
 

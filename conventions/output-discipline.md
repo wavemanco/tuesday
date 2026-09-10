@@ -3,7 +3,7 @@
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
 `references/` with a synced-from header; this copy wins on conflict.
 
-Five rules about the *shape* of a delivered response. Every one was learned from a
+Six rules about the *shape* of a delivered response. Every one was learned from a
 measured defect in a clean-room run, and three of them were fixed twice in
 different skills because nothing carried them across — the question budget in two
 skills weeks apart, the enum cell in three separate files. That is what this file
@@ -63,7 +63,15 @@ written into such cells across this suite. Each is a different way of declining 
 choose — two answers, or a qualifier smuggled into a slot with room for one.
 
 The qualifier is not unwelcome. It belongs in a neighbouring column where it can
-be read and where nothing downstream tries to parse it. Where a row genuinely
+be read and where nothing downstream tries to parse it — **and that column has to
+exist in the shape the writer is actually filling, not only in the spec.**
+job-underwriter's row spec has declared a `reasoning` field since v0.1 and its
+JSON envelope emits it; the markdown table the model writes omitted the column for
+just as long, and `none/low` went into the `Confidence` cell next to it. A rule
+that says "put the qualifier in X" is inert wherever X is not a cell the writer is
+already filling: they have the nuance, find no home for it, and use the nearest
+cell that will hold text. Before shipping a table, check that every field the
+rules name as a destination has a column in it. Where a row genuinely
 holds two claims of different strength, split it into **two rows**, each with its
 own single value — the split is legitimate and the slash is not.
 
@@ -74,6 +82,14 @@ to appear gets invented at write time, and an invented column arrives with no
 token set: `low-medium` and `[grounded, partial]` are what that looks like. The
 declaration and the output shape have to agree, or the parameter is a promise
 about a cell that does not exist.
+
+**Parameter: `qualifier_fields`** — the free-text columns a qualifier goes to when
+it will not fit an enum cell. Every field named here must exist as a column in the
+skill's worked template, and CI checks that it does: this is the rule above turned
+into a mechanism, because "put it in `reasoning`" was true, documented, and
+pointing at nothing for three skill versions. `none` is a legitimate value and
+means the skill has no such column — visibly, so that the next person to add an
+enum to it can see what they are choosing.
 
 ## 3. Square brackets are reserved for provenance labels — **absolute**
 
@@ -106,3 +122,33 @@ is twice, and the second one is lobbying rather than informing — it spends the
 user's attention on a skill they did not ask for.
 
 **Parameter: `sibling_mentions`** — the maximum per message.
+
+## 6. A claim about the world lives in a row, not in prose
+
+**Invariant.** Free prose in a delivered output asserts nothing about the world.
+It may quote a source, and it may read the analysis the reader can already see —
+"five of seven requirements are `direct`" is a reading, and deleting the analysis
+deletes the sentence. Anything that would still assert something with the analysis
+gone is a world-claim: about the employer, the market, the candidate's history, or
+how hiring works. Those live in a row, in a structure with a Provenance cell.
+
+Four prose rules failed at this before it was written as a shape, and they failed
+in a way worth naming: **a writer who knows where a claim came from cannot see the
+sentence that fails to say so.** The label is missing from a sentence that reads
+perfectly. Nothing about proofreading catches it, which is why the fourth rule did
+no better than the first. An empty cell is visible; an absent suffix is not.
+
+The corollary is the useful half. A world-claim with no row to sit in is not a
+claim needing a label — it is a claim needing deletion. "Small companies of this
+size routinely have thin public footprints" earns a register entry with a
+`[generic]` label, or it earns nothing; what it must not do is sit in a paragraph
+reading as a finding about this employer.
+
+**Parameter: `provenance_sections`** — the sections whose tables carry a
+Provenance column, named exactly as their `## ` heading reads and therefore
+**containing no comma**, since the list separator is one. Every section named
+must have that column in the skill's worked template, and CI checks it. This exists because the project ledger claimed for
+weeks that a third table carried one when it never had, and the claim was believed
+until a grader pointed at exactly that table's cells. A rule that names its own
+coverage can be checked against the shape; a rule that says "label your claims"
+cannot.

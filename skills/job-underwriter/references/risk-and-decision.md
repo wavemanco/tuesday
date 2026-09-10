@@ -40,6 +40,7 @@ class: risk_signal
 severity: medium          # high when combined with other flags: comp withheld, off-domain contact, urgency pressure
 source_quote: "<the posting's own identifying language>"
 hypothesis: "The entity may be too new or small to have a footprint, the posting may be stale or aggregated, or it may not represent a real hiring employer."
+provenance: "[generic] pattern for companies of this size, not a claim about this one"
 verification_question: "Can you point me at the role on your own careers site, and who would I be interviewing with?"
 decision_rule: "Verify the employer exists and the posting is live before investing application effort."
 status: unresolved
@@ -57,12 +58,15 @@ class: unknown | risk_signal | red_flag | positive_signal
 severity: low | medium | high            # for risk signals and red flags
 source_quote: "Own revenue growth across ..."
 hypothesis: "Candidate may be accountable without decision rights or resources."
+provenance: "[inferred] from the JD's scope language against its silence on authority"
 verification_question: "Which revenue levers does this role directly control, and what people, budget, and authority are committed?"
 decision_rule: "Proceed only if authority and resources are concrete and consistent across interviewers."
 status: unresolved | reduced | confirmed
 ```
 
 Severity is one value too — `low`, `medium`, or `high`. The same rule as the confidence bands applies and for the same reason: `severity: high` is what the decision snapshot must surface as a severe red flag, so a hybrid leaves the snapshot unable to decide whether the entry belongs there. When an entry sits between two, take the lower and put the reason in the hypothesis — over-stating severity manufactures the alarm this file warns against.
+
+Every register entry also carries a `provenance` label on its `hypothesis`, for the reason the whole taxonomy exists: a hypothesis is a claim about the world — this employer, this market, how hiring works — and it is the claim in the register most likely to be quoted back without its basis. `[generic]` is the honest label for most of them, and writing `[generic]` where the pull is to write `[inferred]` is the discipline: "small companies often have thin footprints" is a pattern, not a finding about this company.
 
 Every register entry carries a `verification_question` the candidate can ask a live interviewer verbatim — the register doubles as interview preparation, and unresolved entries feed `opportunity_risks_to_validate` in the mock-interview handoff. **Every** entry, not the standing ones that arrive with a worked example attached: the characteristic failure is a register rendered as a compact table whose columns stop at severity and source quote, so the entries carrying the actual red flags — the ones the candidate most needs a question for — are the only ones that lose it. An entry without a question the candidate could ask out loud is unfinished, and a table that cannot fit the column is the wrong shape for the register. The question is addressed to the employer, not to the candidate: "can you point me at the live posting" asks the candidate to go looking, which is a next action, not a verification question. `severity: high` entries are the "severe red flags" the decision snapshot must carry.
 
@@ -89,11 +93,25 @@ Rules that bind the decision:
 
 The snapshot leads every delivered assessment — concise decision first, inspectable detail after:
 
-1. Status, in one line.
-2. Rationale: both ledgers, two or three sentences.
-3. Hard gates: every `hard_gate_fail`, plainly, or "none found".
-4. Severe red flags: every `severity: high` register entry, or "none found".
-5. What would change this: for `conditional_go` the conditions; for `hold_pending_answers` the awaited answers; for `no_go` the facts that would have to be different.
+1. Status, in one line — **and where the user asked a direct question, the line answers it in their words before it names the status.** "No, you are not wasting your time — `conditional_go`" answers what was asked; `conditional_go` alone answers a question nobody put. This is a reading of the map and carries no label, which is exactly why it belongs at the top: an answer the reader has to assemble from the tables is an answer that gets rewritten as a paragraph at the bottom, after the calls to action, where rule 4 says nothing may follow and rule 6 says a world-claim needs a row. One run has already done it.
+2. **Fit ledger**, one or two sentences, reading the evidence map and naming the row IDs it reads.
+3. **Opportunity ledger**, one or two sentences, reading the register and naming the entry IDs it reads.
+4. Hard gates: every `hard_gate_fail`, plainly, or "none found".
+5. Severe red flags: every `severity: high` register entry, or "none found".
+6. What would change this: for `conditional_go` the conditions; for `hold_pending_answers` the awaited answers; for `no_go` the facts that would have to be different.
+
+**Two slots, not one paragraph, and each one reads a named table.** The rule that
+both ledgers appear was already here and was already true, and the snapshot was
+still the place world-claims collected: "arguably stronger than a typical
+career-track PM candidate", "reads like a genuine, thoughtfully-scoped single-PM
+mandate", "small Series B companies routinely have thin public footprints" —
+every one of those graded as an unlabeled assertion about the world, and every one
+was written into a slot that said "two or three sentences" and named no referent.
+A slot bound to a table has a test the writer can apply while writing: **which row
+is this sentence reading?** A clause with no answer is not a rationale, it is a
+new claim, and a new claim belongs in a row where it gets a Provenance cell — or
+nowhere. The snapshot asserts nothing the tables beneath it do not already carry;
+it is the reading, and the reading is the one thing here that needs no label.
 
 **Every number the response states about itself is checked against itself.** Not only tallies of the map — "five of nine requirements at `direct`" against a table showing six — but any count the prose makes about its own contents: "three things to firm up" above a list of two, a research budget that disagrees with the searches listed, "two open questions" in a summary and three in the queue. A reader who counts differently stops trusting the analysis rather than the sentence, and they are right to, because the tally was the cheapest thing in the document to get right. Recount from what is actually there on every regeneration, or name the items instead of counting them — nothing is lost by saying which.
 

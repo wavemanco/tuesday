@@ -71,6 +71,29 @@ cell read "same line, moved above the UAT bullet", one screen below the rule
 forbidding exactly that. Check examples against the rule they illustrate, and when
 one has taught a defect, say so in the example rather than silently correcting it.
 
+**Three runs cannot tell you anything, and this repository has been fooled by
+three.** The deterministic/intermittent split is only as good as the run count
+behind it. One expectation read 0/6, 2/6 then 3/6 across three three-run sets and
+looked like a clean upward trend; the next set, at five runs, read 0/10. The
+trend was noise, and it had already been written up as a first. A 50% failure and
+a fixed one are indistinguishable at n=3 — both produce runs that pass. Use
+`--runs 5` at minimum before calling anything closed, and prefer comparing two
+sets that differ by exactly one change over comparing a set to its predecessor
+three commits back.
+
+**Labeling one free-text surface moves the claims to the next one.** The single
+most useful thing five run-sets produced was not a fix, it was a migration path.
+Unlabeled world-claims started in free prose, and each time a surface was given a
+Provenance cell they reappeared in the next surface that lacked one: the risk
+register's hypotheses, then the evidence map's reasoning cells, then the two
+ledger slots that had replaced the decision snapshot's paragraph. Nothing is
+regressing when this happens — the claims have to go somewhere, and they go
+wherever free text is accepted without a label. Two consequences worth carrying:
+a new free-text column ships with its Provenance cell in the *same* commit, never
+the next one (CI enforces this, because the mistake was made twice in one
+session); and a fix to this class is not verified by the failure count dropping,
+it is verified by the graders naming a surface that no longer exists.
+
 ## Harnesses report three outcomes, not two
 
 An eval harness runs external processes that can decline: time out, hit a rate

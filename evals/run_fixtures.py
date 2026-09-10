@@ -305,8 +305,13 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
     """Score one saved response against its expectations."""
     body_path = out / f"{skill}-{case['id']}.run{run}.md"
     if not body_path.exists():
+        # Silent here would drop the run out of the log entirely, leaving a reader
+        # to infer from a gap in the grader numbering that anything happened.
+        reason = "no response to grade — the execution was skipped"
+        print(f"  no verdicts for {skill} eval {case['id']} (run {run}, grader {grader}): {reason}",
+              flush=True)
         return {"skill": skill, "id": case["id"], "run": run, "grader": grader,
-                "error": "no response to grade — the execution was skipped", "verdicts": []}
+                "error": reason, "verdicts": []}
     body = body_path.read_text()
     expectations = "\n".join(f"{i}. {e}" for i, e in enumerate(case["expectations"], 1))
     prompt = GRADER_PROMPT.format(prompt=case["prompt"], response=body,
@@ -327,6 +332,13 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
     (out / f"{skill}-{case['id']}.run{run}.grade-{grader}.json").write_text(
         json.dumps(result, indent=2) + "\n")
     verdicts = result.get("verdicts", [])
+    # A grade that produced nothing is not a grade of zero. The SKIPPED line above
+    # already said what happened; printing "0/12" beside it is the same mistake
+    # this harness has now made five times, in the reporting rather than the data.
+    if result.get("error") or not verdicts:
+        print(f"  no verdicts for {skill} eval {case['id']} (run {run}, grader {grader}): "
+              f"{result.get('error', 'grader returned nothing usable')}", flush=True)
+        return result
     passed = sum(1 for v in verdicts if v.get("verdict") == "PASS")
     print(f"  graded {skill} eval {case['id']} (run {run}, grader {grader}): "
           f"{passed}/{len(case['expectations'])}", flush=True)

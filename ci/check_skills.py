@@ -329,6 +329,96 @@ def check_parameters() -> None:
             ok(group, f"{skill.name} declares all {len(expected)} output-discipline parameters")
 
 
+def check_columns() -> None:
+    """A destination a rule names must exist as a column in the shape being written.
+
+    job-underwriter's row spec declared a `reasoning` field from v0.1 and its JSON
+    envelope emitted it; the markdown table the model actually writes had no such
+    column. The compound-cell rule said "put the qualifier in `reasoning`" the
+    whole time — true, documented, and pointing at nothing on the page. What went
+    into the neighbouring `Confidence` cell instead was `none/low`, and that
+    expectation failed 37 runs out of 37. The register repeated it exactly with
+    `hypothesis`.
+
+    So `qualifier_fields` is a declaration and this is its check. `none` is a
+    legitimate value: it says the skill has no free-text column, visibly, which is
+    the point of a slot.
+    """
+    group = "columns"
+    for skill in skills():
+        text = (skill / "SKILL.md").read_text()
+        section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
+                            re.MULTILINE | re.DOTALL)
+        if not section:
+            continue  # check_parameters already fails this
+        declared = re.search(r"^\s*qualifier_fields\s*:(.*)$", section.group(1), re.MULTILINE)
+        if not declared:
+            continue  # likewise
+        fields = [f.strip() for f in declared.group(1).split(",") if f.strip()]
+        if fields == ["none"]:
+            ok(group, f"{skill.name}: qualifier_fields declared as none — no free-text column, on purpose")
+            fields = []
+
+        # Every header cell of every markdown table in the skill's references.
+        headers: set[str] = set()
+        for ref in sorted((skill / "references").glob("*.md")):
+            for line in ref.read_text().splitlines():
+                if line.startswith("|") and line.count("|") > 2:
+                    for cell in line.strip().strip("|").split("|"):
+                        headers.add(re.sub(r"[^a-z0-9]+", " ", cell.strip().lower()).strip())
+        # A free-text column is where world-claims land, so it needs a Provenance
+        # cell in the same table. Learned twice in one session: the register's
+        # Hypothesis column shipped without one and was fixed; the evidence map's
+        # Reasoning column shipped without one in the same commit and was not.
+        header_rows: list[list[str]] = []
+        for ref in sorted((skill / "references").glob("*.md")):
+            for line in ref.read_text().splitlines():
+                if line.startswith("|") and line.count("|") > 2:
+                    header_rows.append([re.sub(r"[^a-z0-9]+", " ", c.strip().lower()).strip()
+                                        for c in line.strip().strip("|").split("|")])
+        for field in fields:
+            want = re.sub(r"[^a-z0-9]+", " ", field.lower()).strip()
+            carrying = [row for row in header_rows if want in row]
+            if carrying and not any("provenance" in row for row in carrying):
+                fail(group, f"{skill.name}: '{field}' is a free-text column in a table with no "
+                            f"Provenance cell — the qualifier has a home and its label does not")
+            if want in headers:
+                ok(group, f"{skill.name}: '{field}' is a rendered column")
+            else:
+                fail(group, f"{skill.name}: qualifier_fields names '{field}', which is not a column "
+                            f"in any references/ table — a rule pointing at a cell that does not exist")
+
+        # Sections declared as carrying provenance must actually have the column.
+        declared_sections = re.search(r"^\s*provenance_sections\s*:(.*)$", section.group(1),
+                                      re.MULTILINE)
+        if not declared_sections:
+            continue
+        wanted = [s.strip() for s in declared_sections.group(1).split(",") if s.strip()]
+        if wanted == ["none"]:
+            ok(group, f"{skill.name}: provenance_sections declared as none")
+            continue
+        found: dict[str, bool] = {}
+        for ref in sorted((skill / "references").glob("*.md")):
+            chunks = re.split(r"^## (.+)$", ref.read_text(), flags=re.MULTILINE)
+            for heading, body in zip(chunks[1::2], chunks[2::2]):
+                if heading.strip() not in wanted:
+                    continue
+                row = re.search(r"^\|(.+)\|\s*$", body, re.MULTILINE)
+                cells = [c.strip().lower() for c in row.group(1).split("|")] if row else []
+                # First table inside the section only — the split stops at the next
+                # heading, so a later section's table cannot answer for this one.
+                found[heading.strip()] = "provenance" in cells
+        for name in wanted:
+            if found.get(name):
+                ok(group, f"{skill.name}: '{name}' carries a Provenance column")
+            elif name in found:
+                fail(group, f"{skill.name}: section '{name}' is declared a provenance carrier "
+                            f"but its table has no Provenance column")
+            else:
+                fail(group, f"{skill.name}: provenance_sections names '{name}', which is not a "
+                            f"'## ' section with a table in references/")
+
+
 def check_ledger() -> None:
     """The Tracked-work ledger is the project's memory; it must not contradict itself.
 
@@ -381,6 +471,7 @@ def check_ledger() -> None:
 
 GROUPS = {
     "frontmatter": check_frontmatter,
+    "columns": check_columns,
     "ledger": check_ledger,
     "parameters": check_parameters,
     "package": check_package,
