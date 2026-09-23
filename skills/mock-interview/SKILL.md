@@ -122,5 +122,7 @@ Degrade by dropping or genericizing sections and labeling provenance — never b
 - `references/question-rubric.md` — the five question types, coverage rules, guidance-writing rules. Read before writing any question.
 - `references/research-checklist.md` — tier definitions, search targets, budgets, freshness rules, company-archetype fallbacks. Read before any research.
 - `references/output-template.md` — pack skeleton, conditionality table, loop-mode and drill-mode specs, file conventions. Read before delivering.
+- `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers and the depth rule that bounds them, privacy scope, and the n + x rule. Canonical wins on conflict.
+- `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill reads versus owns.
 - `references/dossier-handoff.md` — reading `handoff_to_mock_interview` (the five consumption rules) and writing `pack_feedback`. Read when a dossier is present, and before offering to emit one.
 - `references/evidence-conventions.md` — the suite's canonical vocabulary, mirrored: source types, confidence bands, the gap taxonomy, provenance labels, and the truthfulness core. This is where the labels used throughout the pack are defined; the mirror is a verbatim copy and canonical wins on conflict.

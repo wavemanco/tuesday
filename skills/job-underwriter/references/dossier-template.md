@@ -152,12 +152,12 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
 | 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
 | 3. Hiring manager's public footprint | n/a | No name was given, so there was nothing to look up. The upgrade menu names what a name would unlock |
 
-One row per declared L1 target — the three in `SKILL.md` Step 2, in its order —
-ran or skipped, and for a skip the output it could not have moved. `n/a` is a
-target whose input never arrived and is not the same as `no`, a target that could
-have run and was judged unable to move anything; collapsing them hides the second,
-which is the case the rule exists for. L2 targets are accounted here too when L2
-ran, and are absent when it did not, because an unoffered tier has no skips. `interaction-grammar.md` §4 sends the skip here because a
+The target accounting specified in `SKILL.md` Step 2, rendered here: one row per
+declared L1 target, in that file's order. The dossier carries it because it
+renders the same analysis the delivered assessment does — **the spec lives in
+Step 2 and not in this file**, because this file is read only when a dossier is
+being emitted, and the accounting is owed by every assessment whether one is
+emitted or not. `interaction-grammar.md` §4 sends the skip here because a
 wasted search and a correctly-skipped one produce identical prose, and an
 unfilled row is the only version of that rule anyone can check.
 

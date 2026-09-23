@@ -255,6 +255,24 @@ def check_mirrors() -> None:
         else:
             ok(group, f"{skill.name}: every canonical file its references name is present")
 
+    # The other direction. The check above catches a reference naming a file the
+    # skill lacks; this catches a file the skill carries that nothing names. Two
+    # canonical mirrors were added to all three skills and listed in none of
+    # their SKILL.md reference sections — present, byte-perfect, and unreachable,
+    # which is how a rule written in them binds nobody.
+    for skill in skills():
+        body = (skill / "SKILL.md").read_text()
+        for ref in sorted((skill / "references").glob("*.md")):
+            # SKILL.md specifically, not "anywhere in the folder". A mention
+            # buried in a sibling is reachable only by someone already reading
+            # that sibling; the reference list is the index, and a file missing
+            # from it is one a run is never told to open.
+            if ref.name in body:
+                ok(group, f"{skill.name}: {ref.name} is named in SKILL.md")
+            else:
+                fail(group, f"{skill.name}: references/{ref.name} is carried but not named in "
+                            f"SKILL.md — a file no run is told to open binds nothing")
+
     if found == 0:
         print("  --   mirrors: no synced mirrors present yet")
 

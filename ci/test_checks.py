@@ -371,6 +371,27 @@ def break_skill_local_reference(root: Path) -> str:
     return "point at a canonical file this skill does not carry"
 
 
+def break_unreferenced_file(root: Path) -> str:
+    """Carry a reference file that nothing names.
+
+    Two canonical mirrors were added to all three skills and listed in none of
+    their SKILL.md reference sections — present, byte-perfect, and unreachable.
+    The forward check (a pointer to a missing file) could not see it; this is the
+    same defect in the other direction.
+    """
+    import re
+    path = root / "skills/job-underwriter/SKILL.md"
+    text = path.read_text()
+    mutated = re.sub(r"^- `references/interaction-grammar\.md`.*\n", "", text, count=1, flags=re.M)
+    if mutated == text:
+        raise SystemExit("break_unreferenced_file found no listing to remove — it has gone stale")
+    mutated = mutated.replace("`references/interaction-grammar.md`", "the interaction grammar")
+    if "interaction-grammar.md" in mutated:
+        raise SystemExit("break_unreferenced_file left a mention behind — it has gone stale")
+    path.write_text(mutated)
+    return "not named in SKILL.md"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -398,6 +419,7 @@ CASES: list[tuple[str, str, callable]] = [
     ("mirrors", "a canonical file that declares mirroring, unmirrored", break_unmirrored_canonical),
     ("mirrors", "a reference pointing at a file the skill lacks", break_dangling_reference),
     ("mirrors", "canonical text naming a skill-local file", break_skill_local_reference),
+    ("mirrors", "a reference file nothing names", break_unreferenced_file),
 ]
 
 

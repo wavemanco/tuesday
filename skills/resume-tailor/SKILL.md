@@ -126,3 +126,5 @@ the tiers already binding rather than discover them afterwards.
 - `references/edit-ledger.md` — the row shape, the named operations, the worked ledger, and how approval is recorded.
 - `references/coverage-and-gaps.md` — the coverage map, recall prompts for `not_evidenced` requirements, the confirmation card, and the prohibited-claims list.
 - `references/machine-readers.md` — what actually screens a resume, the parse-safety check, truthful keyword placement, and the hidden-text refusal.
+- `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers (which this skill does not exercise — see Research above), privacy scope, and the n + x rule. Canonical wins on conflict.
+- `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill reads.

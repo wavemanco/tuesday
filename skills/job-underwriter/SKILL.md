@@ -45,6 +45,18 @@ Three tiers; the trade is the user's to make. Model memory is never a source for
 
 **Budget accounting is stated once and stays true.** Where the run reports what it spent against the tier's budget, that count matches the searches actually listed. A tally that disagrees with its own list makes the whole research section unfalsifiable — the reader cannot tell which of the two is the mistake.
 
+**Every declared target is accounted for, in evidence status.** One row per L1
+target above, in the order listed — `yes`, `no`, or `n/a` — and for a skip, the
+output it could not have moved. `n/a` is a target whose input never arrived (no
+hiring manager was named); `no` is a target that could have run and was judged
+unable to move anything, and collapsing the two hides the second, which is the
+case the rule exists for. L2 targets join the table when L2 ran and are absent
+when it did not, since an unoffered tier has no skips; at L0 the table is one
+line saying no tier ran. A wasted search and a correctly-skipped one produce
+identical prose, so an unfilled row is the only form of this rule a reader or a
+grader can check. Worked table in `references/dossier-template.md` — the dossier
+carries the same table because it renders the same analysis.
+
 Failed attribution is also a finding about the opportunity, not only a limit on research: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
 
 **Closing order is fixed: the dossier offer, then the upgrade menu, then the questions — and nothing between or after them.** Both are calls to action and both need to be the last thing the reader meets. The pull is to write one more sentence tying it together — "so: are you wasting your time? No, but…" — and that sentence is a second decision snapshot at the bottom of a document that opened with one. Two summaries of the same analysis can only agree by luck, and the reader will trust whichever they read last. The snapshot at the top is the summary; the assessment ends without restating itself.
@@ -123,3 +135,5 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 - `references/gap-taxonomy-and-questions.md` — fit statuses, the five gap types, per-gap recall-prompt patterns, the question-selection heuristic, response-mode phrasing, worked discovery prompts. Read before writing any question.
 - `references/risk-and-decision.md` — signal classes, detectable red-flag patterns, the risk-register record, severity, decision semantics for the four statuses. Read before the risk register or any decision.
 - `references/dossier-template.md` — emission rules and the full worked `tuesday-dossier.md` example, envelope included. Read before emitting a dossier.
+- `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers and the depth rule that bounds them, privacy scope, and the n + x rule. Canonical wins on conflict.
+- `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill owns versus reads.
