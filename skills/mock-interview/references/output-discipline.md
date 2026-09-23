@@ -158,17 +158,15 @@ until a grader pointed at exactly that table's cells. A rule that names its own
 coverage can be checked against the shape; a rule that says "label your claims"
 cannot.
 
-**Parameter: `entity_rows`** — the subset of `provenance_sections` whose *every*
-row is about the candidate or the employer rather than about the role family.
-`evidence-conventions.md` §5 forbids `[generic]` from supporting an
-entity-specific claim, and in these tables every row is one, so CI can check the
-worked template directly: a `[generic]` cell there is a conclusion about a
-specific person resting on a pattern.
+A parameter was drafted here and withdrawn: `entity_rows`, naming tables whose
+every row was about the candidate or the employer, so that CI could reject a
+`[generic]` cell in them. It shipped for exactly one commit and was wrong.
+`evidence-model.md` requires `[generic]` in an evidence-map row's Provenance cell
+whenever its Reasoning reaches past the row — "enterprise SE roles usually touch
+pre-sales" — and names the pull to write `[inferred]` instead as the thing to
+resist. The check would have rejected that row, and three worked examples besides.
 
-It is a separate parameter rather than an inference from `provenance_sections`
-because most sections are mixed, and the mixed case is legitimate. A role-reality
-table carries a market-calibration row that is `[generic]` and correct — it
-describes a band for the title and says so. An application plan carries
-`[generic]` strategy patterns. Checking those would fail four true rows across
-this suite and teach authors to strip honest labels, which is the opposite of the
-point. Name only the tables where every row has a named subject.
+**A check that rejects correct work is worse than no check.** The honest position
+is the one in `evidence-conventions.md` §5: that rule is gradeable rather than
+mechanical, and it says so, instead of shipping a mechanism that encodes a wrong
+version of it. A suite with this many real checks can afford to name the gap.

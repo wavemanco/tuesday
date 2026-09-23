@@ -436,47 +436,6 @@ def check_columns() -> None:
                 fail(group, f"{skill.name}: provenance_sections names '{name}', which is not a "
                             f"'## ' section with a table in references/")
 
-        # entity_rows: tables where every row's subject is the candidate or the
-        # employer. evidence-conventions §5 forbids [generic] from supporting an
-        # entity-specific claim, and here every row is one — so the worked
-        # template is checkable directly. Deliberately NOT applied to every
-        # provenance_section: a role-reality market band and an application-plan
-        # strategy note are [generic] and correct, and failing those would teach
-        # authors to strip honest labels.
-        declared_entity = re.search(r"^\s*entity_rows\s*:(.*)$", section.group(1), re.MULTILINE)
-        if not declared_entity:
-            continue
-        entity = [s.strip() for s in declared_entity.group(1).split(",") if s.strip()]
-        if entity == ["none"]:
-            ok(group, f"{skill.name}: entity_rows declared as none")
-            continue
-        for name in entity:
-            if name not in wanted:
-                fail(group, f"{skill.name}: entity_rows names '{name}', which is not among its "
-                            f"provenance_sections — an entity table without a Provenance column "
-                            f"cannot be checked for [generic]")
-                continue
-            seen_table, offenders = False, []
-            for ref in sorted((skill / "references").glob("*.md")):
-                chunks = re.split(r"^## (.+)$", ref.read_text(), flags=re.MULTILINE)
-                for heading, body in zip(chunks[1::2], chunks[2::2]):
-                    if heading.strip() != name:
-                        continue
-                    for line in body.splitlines():
-                        if not line.startswith("|") or set(line) <= set("|- "):
-                            continue
-                        seen_table = True
-                        if "[generic]" in line:
-                            offenders.append(line.strip().strip("|").split("|")[0].strip())
-            if not seen_table:
-                fail(group, f"{skill.name}: entity_rows names '{name}', which has no table rows")
-            elif offenders:
-                fail(group, f"{skill.name}: '{name}' row(s) {', '.join(offenders)} carry [generic], "
-                            f"but every row here is an entity claim — a conclusion about a specific "
-                            f"person resting on a role-family pattern")
-            else:
-                ok(group, f"{skill.name}: '{name}' carries no [generic] entity claim")
-
 
 def check_ledger() -> None:
     """The Tracked-work ledger is the project's memory; it must not contradict itself.

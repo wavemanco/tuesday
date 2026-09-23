@@ -74,7 +74,6 @@ enum_fields: confidence, gap_type, provenance, question_type
 closing_order: upgrade menu, drill and dossier offers, questions
 qualifier_fields: gap-and-bridge language
 provenance_sections: The fit snapshot
-entity_rows: The fit snapshot
 sibling_mentions: 1
 ```
 

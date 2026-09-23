@@ -337,23 +337,6 @@ def break_unmirrored_canonical(root: Path) -> str:
     return "declares that skills mirror it"
 
 
-def break_generic_entity_claim(root: Path) -> str:
-    """Put a [generic] label on an evidence-map row.
-
-    Every row of an evidence map is a claim about this candidate against this
-    requirement. [generic] means a role-family pattern carrying no
-    entity-specific claim, so a [generic] cell here is a conclusion about a
-    specific person resting on material that by definition contains none.
-    """
-    path = root / "skills/job-underwriter/references/dossier-template.md"
-    text = path.read_text()
-    mutated = text.replace("| `[grounded]` user-confirmed |",
-                           "| `[generic]` typical for the role family |", 1)
-    if mutated == text:
-        raise SystemExit("break_generic_entity_claim found no R1 provenance cell — it has gone stale")
-    path.write_text(mutated)
-    return "carry [generic]"
-
 
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
@@ -380,7 +363,6 @@ CASES: list[tuple[str, str, callable]] = [
     ("columns", "a provenance_section that is not a section", break_provenance_section_unknown),
     ("columns", "a free-text column with no label beside it", break_qualifier_without_label),
     ("mirrors", "a canonical file that declares mirroring, unmirrored", break_unmirrored_canonical),
-    ("columns", "a [generic] label supporting an entity claim", break_generic_entity_claim),
 ]
 
 

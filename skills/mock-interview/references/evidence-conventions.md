@@ -42,9 +42,11 @@ rather than assumed.** The `high` band turns on "an inspectable artifact", and o
 does not look the same in two fields: a repository in engineering, a portfolio in
 design, a deal sheet in sales, a P&L in management, a publication list in
 research, a licence number in a regulated trade, a case outcome in law. A skill
-that asks a designer for a repository is asking for the wrong proof, and it will
-record `medium` where `high` was available — not because the evidence was weak
-but because nobody named the artifact that would have shown it.
+that asks a designer for a repository is asking for the wrong proof. `medium` is
+the correct band while nothing has been inspected, and stays correct; what breaks
+is the upgrade menu, which asks for "supporting material" when it could have
+named the one artifact this field actually keeps. The band is not the error. The
+vague request that leaves it there is.
 
 The split is the same one `output-discipline.md` draws. The **invariant** is that
 a band is set by what can be inspected and never by how impressive the claim
@@ -96,15 +98,21 @@ The two axes measure different things: confidence grades the candidate's evidenc
 | `low` | Never assert as the candidate's claim. May appear only as a discovery lead, a question, or a clarify-strategy coaching note | `[inferred]`, derivation named |
 | `none` | May not appear as candidate capability at all — only as a named gap or hard-gate surfacing | — |
 
-Two overrides that beat every label:
+Three overrides that beat every label:
 
 - **`prohibited_claims` are absolute.** If the dossier lists a claim as prohibited, no skill output may assert it, soften it, or coach an answer that implies it — whatever any label says.
 - **Hard-gate failures stay visible.** No aggregate framing, positive tone, or fit elsewhere may bury a `hard_gate` finding.
-- **`[generic]` may not support an entity-specific assertion.** This one is a restatement of §4 rather than a new constraint: `[generic]` is *defined* as a role-family pattern carrying no entity-specific claim, so it cannot be the evidence for one. A pattern may describe, illustrate, calibrate, or furnish rehearsal material. It may not be the support for a statement about **this** candidate or **this** employer.
+- **`[generic]` may not support an entity-specific assertion.** A restatement of §4 rather than a new constraint: `[generic]` is *defined* as a role-family pattern carrying no entity-specific claim, so it cannot be the evidence for one.
 
-  The distinction that keeps this from eating the degradation ladder: a `[generic]` question bank asserts that roles of this kind get asked things of this kind, which is true, honestly labeled, and exactly what the label means. A `must_have` evidence-map row at `[generic]` asserts that *this person* does or does not meet *this requirement* on the basis of a pattern — an entity-specific claim resting on material that by definition contains none. The first is the suite working as designed. The second is a conclusion with nothing under it.
+  **The test is per clause, not per row.** A cell may hold both, and often should: "`[grounded]` what the resume does and does not say; `[generic]` what this costs on applications of this kind" is two claims wearing two labels, and it is correct. What the rule forbids is a single clause that names *this* candidate or *this* employer and rests on a pattern for its support.
 
-  So the rule has a cell rather than a judgment: **a row whose subject is the candidate or the employer may not carry `[generic]` as its provenance.** In job-underwriter that is every evidence-map row and every register entry a decision status reads; in resume-tailor, a proposed line's trace. Where one has only `[generic]` under it, either a `[grounded]` source is found, or the claim is withdrawn and the gap named — and naming the gap is the honest output, not the failure.
+  Three legitimate uses this rule does not touch, named because an earlier draft of it forbade all three:
+
+  - **A register entry whose hypothesis is itself a pattern.** The standing failed-attribution entry ships as `[generic] pattern for companies of this size, not a claim about this one`, and it caps the decision at `conditional_go`. It is read by a decision and it is honest — the label and the sentence agree that no entity claim is being made.
+  - **A reasoning cell that reaches past its row.** `evidence-model.md` requires `[generic]` exactly there — "enterprise SE roles usually touch pre-sales" — and names the pull to write `[inferred]` instead as the thing to resist.
+  - **An honestly degraded section.** A pack whose research could not run labels its banks `[generic]` and says so. The ladder depends on it, and a smaller honest pack beats a full-looking fabricated one.
+
+  **There is no CI check for this, and the absence is deliberate.** Every mechanical version drafted — no `[generic]` in a row about the candidate, none in the evidence map, none in a table a decision reads — rejects at least one of the three uses above. A check that would reject correct work is worse than no check, and a suite with this many real mechanisms can afford to say where one does not exist. The rule is gradeable instead: an eval can ask whether a named claim about this person or this company rests on nothing but a pattern.
 
 Why the third override exists, and why it is newer than the other two:
 
@@ -130,7 +138,7 @@ shift toward harder-to-fake history favours established candidates over newcomer
 A suite that leans on verifiable proof is, without intending it, hardest on
 career-changers and early-career people — who are a large share of who needs it.
 The answer is not to relax the rule, which would only sell them a signal that has
-already deflated. It is that `not_evidenced` and `capability` must stay
+already deflated. It is that `discovery` and `capability` gaps must stay
 first-class, actionable outputs with real closure paths, rather than polite
 endings.
 

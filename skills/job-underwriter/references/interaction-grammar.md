@@ -3,7 +3,6 @@
      verbatim copy of the canonical file — do not edit it here. Fixes flow
      canonical -> mirror, never the reverse; a mirror that drifts is a defect.
      A byte check strips this header and compares the remainder to canonical. -->
-
 # Interaction grammar
 
 How every skill in Tuesday behaves with the user. A person moving between skills should feel the same hands. Canonical here; skills mirror in `references/` with a synced-from header.
@@ -35,28 +34,39 @@ Corollary: skills compose in any order, or not at all. The dossier contract (see
 - **L2** — deep research: offered exactly once, cost stated, run only on consent; the offer rides an already-needed message or lands in the upgrade menu.
 - **Not-attributable rule:** results that can't be attributed to the specific entity (name collisions, no web presence) are treated as not-established — said plainly, archetype fallback named, missing facts listed in the upgrade menu.
 
-**Depth is bounded by what the answer can change.** A search that cannot move a
-row, a band, a gap type or a recommendation does not run, whatever budget is
-left. This is what the tiers were always implementing, and it is stated because
-the tiers describe *how much* and not *what for*: L1's cap is a ceiling, not a
-target, and a skill that spends it on questions whose answers change nothing has
-followed the letter and missed the point. Name the cell a search could change
-before running it; if there is no such cell, skip it and say what was skipped.
+**Depth is bounded by what the answer can change.** A search that cannot change
+something the skill will actually emit — a row, a band, a gap type, a question
+bank, a persona weight, a guidance cell, a recommendation — does not run,
+whatever budget is left. This is what the tiers were always implementing, and it
+is stated because the tiers describe *how much* and not *what for*: L1's cap is a
+ceiling, not a target, and a skill that spends it on questions whose answers
+change nothing has followed the letter and missed the point. Name the output a
+search could change before running it; if there is none, skip it and say what was
+skipped. The list above is deliberately every skill's units and not one skill's —
+a rule written in the underwriter's vocabulary would have zeroed the interview
+pack's entire research budget, which an earlier draft of this paragraph did.
 
-**Research the artifact vocabulary, not the employer's preferences.** What counts
-as inspectable proof in a domain — a repository, a portfolio, a deal sheet, a
-P&L, a publication list, a licence number, a case outcome — is a bounded question
-with a checkable answer, and `evidence-conventions.md` §2 needs it to set
-confidence bands correctly and to make the upgrade menu specific. What employers
-"value", "look for" or "want to see" is unbounded, moves faster than any research
-pass, and is precisely where a model's confident fabrication lands; **it is not a
-research target at any tier, L2 included.**
+**Research what is published; never research what is presumed.** The line is not
+between facts about a role and facts about people. §5 already permits an
+interviewer's public professional footprint, and a company's published values
+page is a first-priority target precisely because a candidate may be quizzed on
+the names — both are published, attributable, and checkable, and a skill that
+stopped fetching them would fill the gap from memory, which is the one failure
+the tiers exist to prevent.
 
-The difference is worth stating because the two questions sound alike: the first
-asks what a thing is *called* in this field, the second asks what someone
-*thinks*. The first has a right answer that a reader can verify. The second
-produces a sentence that sounds like a finding, cites nothing, and is `[generic]`
-at best — which `evidence-conventions.md` §5 now forbids from carrying weight.
+What is out of bounds at every tier, L2 included, is the **presumed**: what a
+hiring manager "is really looking for", what an employer "values in a candidate"
+absent a published statement, what will "impress" this panel. These have no
+source to attribute, move faster than any research pass, and are where a model's
+confident fabrication lands. The test is simply whether a reader could be shown
+where it came from.
+
+**What counts as inspectable proof in a domain is published in exactly this
+sense** — a repository, a portfolio, a deal sheet, a P&L, a publication list, a
+licence number, a case outcome. `evidence-conventions.md` §2 needs it to set
+bands correctly and to make the upgrade menu name a specific artifact rather than
+"supporting material". It is bounded because it asks what a thing is *called* in
+a field, not what anyone thinks of it.
 
 ## 5. Privacy and scope
 
