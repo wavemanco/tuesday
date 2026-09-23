@@ -29,6 +29,29 @@ Corollary: skills compose in any order, or not at all. The dossier contract (see
 - **L2** — deep research: offered exactly once, cost stated, run only on consent; the offer rides an already-needed message or lands in the upgrade menu.
 - **Not-attributable rule:** results that can't be attributed to the specific entity (name collisions, no web presence) are treated as not-established — said plainly, archetype fallback named, missing facts listed in the upgrade menu.
 
+**Depth is bounded by what the answer can change.** A search that cannot move a
+row, a band, a gap type or a recommendation does not run, whatever budget is
+left. This is what the tiers were always implementing, and it is stated because
+the tiers describe *how much* and not *what for*: L1's cap is a ceiling, not a
+target, and a skill that spends it on questions whose answers change nothing has
+followed the letter and missed the point. Name the cell a search could change
+before running it; if there is no such cell, skip it and say what was skipped.
+
+**Research the artifact vocabulary, not the employer's preferences.** What counts
+as inspectable proof in a domain — a repository, a portfolio, a deal sheet, a
+P&L, a publication list, a licence number, a case outcome — is a bounded question
+with a checkable answer, and `evidence-conventions.md` §2 needs it to set
+confidence bands correctly and to make the upgrade menu specific. What employers
+"value", "look for" or "want to see" is unbounded, moves faster than any research
+pass, and is precisely where a model's confident fabrication lands; **it is not a
+research target at any tier, L2 included.**
+
+The difference is worth stating because the two questions sound alike: the first
+asks what a thing is *called* in this field, the second asks what someone
+*thinks*. The first has a right answer that a reader can verify. The second
+produces a sentence that sounds like a finding, cites nothing, and is `[generic]`
+at best — which `evidence-conventions.md` §5 now forbids from carrying weight.
+
 ## 5. Privacy and scope
 
 - Candidate-side only. Employer-side screening use is declined, with an offer to help design structured interviewing directly instead.

@@ -32,6 +32,27 @@ Confidence grades a **candidate claim**, not a skill's prose:
 | `low` | Vague claim, indirect context, partial evidence, or an unconfirmed `memory_lead` |
 | `none` | No supporting evidence, or direct contradiction |
 
+**What counts as an inspectable artifact is domain-specific, and it is researched
+rather than assumed.** The `high` band turns on "an inspectable artifact", and one
+does not look the same in two fields: a repository in engineering, a portfolio in
+design, a deal sheet in sales, a P&L in management, a publication list in
+research, a licence number in a regulated trade, a case outcome in law. A skill
+that asks a designer for a repository is asking for the wrong proof, and it will
+record `medium` where `high` was available — not because the evidence was weak
+but because nobody named the artifact that would have shown it.
+
+The split is the same one `output-discipline.md` draws. The **invariant** is that
+a band is set by what can be inspected and never by how impressive the claim
+sounds, and that wherever a band could be raised, the upgrade menu names the
+specific artifact that would raise it. What **varies** is the artifact vocabulary
+for this role's domain, and that is a research question — bounded, with a
+checkable answer — governed by `interaction-grammar.md` §4.
+
+This one does not become a declared parameter. The output-discipline parameters
+are a skill's standing design decisions and CI checks them; this one is different
+in kind, because it changes with the role in front of the skill rather than with
+the skill. A static declaration would be wrong on the second engagement.
+
 ## 3. Fit status and the gap taxonomy
 
 Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`, `absent`, `hard_gate_fail`. **Every material requirement also carries a gap type** — `none` where nothing needs recovering, one of the five others where something does. Fit status does not decide it: a `direct` row whose evidence the CV buries is a `presentation` gap, so the gap type is a separate call on a separate axis.
@@ -74,6 +95,39 @@ Two overrides that beat every label:
 
 - **`prohibited_claims` are absolute.** If the dossier lists a claim as prohibited, no skill output may assert it, soften it, or coach an answer that implies it — whatever any label says.
 - **Hard-gate failures stay visible.** No aggregate framing, positive tone, or fit elsewhere may bury a `hard_gate` finding.
+- **`[generic]` may not support an entity-specific assertion.** This one is a restatement of §4 rather than a new constraint: `[generic]` is *defined* as a role-family pattern carrying no entity-specific claim, so it cannot be the evidence for one. A pattern may describe, illustrate, calibrate, or furnish rehearsal material. It may not be the support for a statement about **this** candidate or **this** employer.
+
+  The distinction that keeps this from eating the degradation ladder: a `[generic]` question bank asserts that roles of this kind get asked things of this kind, which is true, honestly labeled, and exactly what the label means. A `must_have` evidence-map row at `[generic]` asserts that *this person* does or does not meet *this requirement* on the basis of a pattern — an entity-specific claim resting on material that by definition contains none. The first is the suite working as designed. The second is a conclusion with nothing under it.
+
+  So the rule has a cell rather than a judgment: **a row whose subject is the candidate or the employer may not carry `[generic]` as its provenance.** In job-underwriter that is every evidence-map row and every register entry a decision status reads; in resume-tailor, a proposed line's trace. Where one has only `[generic]` under it, either a `[grounded]` source is found, or the claim is withdrawn and the gap named — and naming the gap is the honest output, not the failure.
+
+Why the third override exists, and why it is newer than the other two:
+
+Cui, Dias & Ye (2025) measured what happens to a signal once generative AI makes
+it cheap to produce. On a large freelancing platform, the correlation between how
+closely a cover letter matched its job post and whether it drew a callback **fell
+51%**, and for offers **79%**, while the weight employers put on records that
+cannot be written on demand rose. The generalisation is not about cover letters:
+**whatever becomes cheap to generate stops carrying information, and what remains
+is what can be checked.**
+
+`[generic]` is this suite's own name for the cheap-to-generate part. An output
+whose load-bearing claims rest on it is built from exactly the material that
+deflates. Keeping `[generic]` non-load-bearing is therefore not a purity rule —
+it is the part of the work that stays worth something.
+
+Two honesty notes, because this override rests on external evidence rather than
+on a defect this repository measured. The study is one platform, remote freelance
+work, where a platform-native review score exists and dominates default ranking;
+generalising it to hiring at large is an **inference**, and it is recorded as one.
+And the authors flag a consequence this suite inherits by adopting the rule: a
+shift toward harder-to-fake history favours established candidates over newcomers.
+A suite that leans on verifiable proof is, without intending it, hardest on
+career-changers and early-career people — who are a large share of who needs it.
+The answer is not to relax the rule, which would only sell them a signal that has
+already deflated. It is that `not_evidenced` and `capability` must stay
+first-class, actionable outputs with real closure paths, rather than polite
+endings.
 
 ## 6. Truthfulness core
 

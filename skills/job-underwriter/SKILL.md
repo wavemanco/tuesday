@@ -80,6 +80,7 @@ enum_fields: priority, fit_status, confidence, gap_type, class, severity
 closing_order: dossier offer, upgrade menu, questions
 qualifier_fields: reasoning, hypothesis
 provenance_sections: Role reality, Evidence map, Gap recovery queue, Opportunity risk register, Application plan
+entity_rows: Evidence map
 sibling_mentions: 1
 ```
 
