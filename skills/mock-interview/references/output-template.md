@@ -19,7 +19,7 @@ Deliver these sections in this order. The conditionality column is binding — a
 | 11 | Reverse questions | Always | ≥5, each with "why it lands"; ≥1 tied to the interviewer's path when a profile exists; 1 reciprocity question when peer |
 | 12 | Delivery coaching | Assessment provided | Table: assessed trait (the report's own framing) × where it helps in this loop × watch-out → counter-move, keyed to question IDs. Restate the ground rules: never mention the assessment in the interview; tuning, not content |
 | 13 | Prohibited claims | Always | What this pack will not coach, and why. From a dossier's `prohibited_claims` and `evidence_state.rejected_inferences` where one is present; **built locally from the fit snapshot's gaps otherwise** — the claims a candidate reaches for under pressure that their material does not support. Present in every pack, not only when something was refused: otherwise the candidate cannot tell a pack that found nothing to inflate from one that inflated nothing |
-| 14 | Sources | Always | Provided documents; web sources with URLs; the research tier used. When a dossier was consumed, say so and name which sections it supplied |
+| 14 | Sources | Always | Provided documents; web sources with URLs; the research tier used. When a dossier was consumed, say so and name which sections it supplied. Plus the **target accounting** worked below — one row per L1 target in `references/research-checklist.md`, ran or skipped, and for a skip the pack section it could not have moved |
 | 15 | Upgrade menu | Always | Each missing input → what adding it unlocks, concretely ("interviewer's profile → personalized persona weights + a tailored reverse question"; "JD text → six `[inferred]` rows become `[grounded]`"). With no dossier present, one line on what one would add — never phrased as a prerequisite |
 
 Formatting: markdown tables; no pipe characters inside cells; question IDs letter-by-persona (A1, A2, B1…) so the drill and the coaching section can reference them; cells crisp — guidance speakable in 90–120 seconds, rationales 2–3 sentences.
@@ -60,6 +60,24 @@ Five rules the columns enforce, in the order they get broken:
 With a dossier, `evidence_map` supplies these rows already graded: its
 `confidence` and `gap_type` are the same vocabulary, and its `reasoning` is the
 raw material for the bridge rather than a substitute for it.
+
+## Target accounting in Sources
+
+One row per declared L1 target. It is a table because `interaction-grammar.md` §4
+sends a skipped search here, and a search that ran wastefully leaves a pack
+identical to one that skipped correctly — prose cannot tell them apart, and an
+unfilled row can.
+
+| L1 target | Ran | What it moved, or could not have |
+|---|---|---|
+| 1. `{company} values` | yes | Values cheat sheet, section 10 — four principles by name |
+| 2. `{company} interview process {role family}` | yes | Loop structure; persona weights follow the named rounds |
+| 3. `{company} strategy` / recent news | no | Would have moved the CO bank and the grounding brief. Skipped: the recruiter supplied a strategy brief, so the pass could not have changed either |
+| 4. `{interviewer name} {company}` | n/a | No name was given; the interviewer read is absent and the upgrade menu says what a name would unlock |
+
+`n/a` is for a target whose input never arrived, and is different from `no`,
+which is a target that could have run and was judged unable to move anything.
+Collapsing the two hides the second, which is the one the rule is about.
 
 ## Loop mode
 

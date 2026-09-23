@@ -1,6 +1,6 @@
 # Dossier schema
 
-The dossier is Tuesday's shared artifact: one file the user carries between skills, sessions, and — later — the agent. It makes the skills order-independent without coupling them.
+The dossier is Tuesday's shared artifact: one file the user carries between skills, sessions, and — later — the agent. It makes the skills order-independent without coupling them. Skills carry a mirror of this file in their `references/` with a synced-from header; this copy wins on conflict.
 
 ## 1. Behavior contract
 

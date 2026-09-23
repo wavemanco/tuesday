@@ -124,18 +124,30 @@ whose load-bearing claims rest on it is built from exactly the material that
 deflates. Keeping `[generic]` non-load-bearing is therefore not a purity rule —
 it is the part of the work that stays worth something.
 
-Two honesty notes, because this override rests on external evidence rather than
-on a defect this repository measured. The study is one platform, remote freelance
-work, where a platform-native review score exists and dominates default ranking;
-generalising it to hiring at large is an **inference**, and it is recorded as one.
-And the authors flag a consequence this suite inherits by adopting the rule: a
-shift toward harder-to-fake history favours established candidates over newcomers.
-A suite that leans on verifiable proof is, without intending it, hardest on
-career-changers and early-career people — who are a large share of who needs it.
-The answer is not to relax the rule, which would only sell them a signal that has
-already deflated. It is that `discovery` and `capability` gaps must stay
-first-class, actionable outputs with real closure paths, rather than polite
-endings.
+Three honesty notes, because this override rests on external evidence rather
+than on a defect this repository measured.
+
+The study is one platform — remote freelance work, where the platform's own
+review score summarises past work and sets the default ranking of applications.
+Generalising from it to hiring at large is an **inference**, and so is the wider
+reading above that any cheap signal deflates. Both are recorded as inferences.
+
+The consequence the authors flag is **hedged in the original and stays hedged
+here**: the shift toward harder-to-fake history, they write, "may favour
+established workers at the expense of newcomers trying to enter the market."
+Workers on one platform, and *may*. An earlier draft of this paragraph wrote
+"favours established candidates", which dropped the hedge and widened the
+population inside an attributed sentence — two of the reframing audit's six axes,
+committed in the file that defines them.
+
+Whether that consequence reaches this suite's users is **unknown**, and an
+earlier draft asserted it did, claiming such candidates are "a large share of who
+needs it." There is no usage data behind that; `docs/cover-letter-spec-v0.md` §7
+says so in terms. The rule is adopted anyway, because relaxing it would only sell
+those candidates a signal that has already deflated — but the reason to keep
+`discovery` and `capability` gaps as first-class outputs with real closure paths
+is that they are the honest output when evidence is thin, not that we know who is
+reading.
 
 ## 6. Truthfulness core
 

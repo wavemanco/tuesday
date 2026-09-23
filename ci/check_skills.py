@@ -225,6 +225,26 @@ def check_mirrors() -> None:
         else:
             ok(group, f"{rel} is mirrored by every skill, as it declares")
 
+    # A reference pointing at a canonical file the skill does not carry is a
+    # pointer into nothing: skills are dependency-free, so a mirror that says
+    # "see `x.md`" when x.md is not in this folder names a file the reader
+    # cannot open. Mirroring interaction-grammar.md introduced six of these in
+    # one commit, each to dossier-schema.md, in the change that fixed the same
+    # defect one level up.
+    for skill in skills():
+        present = {f.name for f in (skill / "references").glob("*.md")}
+        dangling = set()
+        for ref in sorted((skill / "references").glob("*.md")):
+            for match in re.finditer(r"`([a-z0-9-]+\.md)`", ref.read_text()):
+                name = match.group(1)
+                if name not in present and (CONVENTIONS / name).exists():
+                    dangling.add(f"{ref.name} -> {name}")
+        if dangling:
+            fail(group, f"{skill.name}: reference(s) point at a canonical file this skill does "
+                        f"not carry: {', '.join(sorted(dangling))}")
+        else:
+            ok(group, f"{skill.name}: every canonical file its references name is present")
+
     if found == 0:
         print("  --   mirrors: no synced mirrors present yet")
 

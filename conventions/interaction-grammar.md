@@ -36,8 +36,18 @@ whatever budget is left. This is what the tiers were always implementing, and it
 is stated because the tiers describe *how much* and not *what for*: L1's cap is a
 ceiling, not a target, and a skill that spends it on questions whose answers
 change nothing has followed the letter and missed the point. Name the output a
-search could change before running it; if there is none, skip it and say what was
-skipped. The list above is deliberately every skill's units and not one skill's —
+search could change before running it; if there is none, skip it — **and account
+for the skip where the output already reports its research**: one line per
+declared target, ran or skipped, and for a skip the output it could not have
+moved.
+
+The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
+gives: compliance here depends on noticing an absence, and a search that ran
+wastefully and a search correctly skipped leave a response that looks identical.
+Neither a reader nor a grader can tell them apart from prose. A line per declared
+target is visibly empty when a target goes unaccounted for, which is the only
+form of this rule that can be checked at all — it cannot be checked by CI, which
+sees static files and never a run. The list above is deliberately every skill's units and not one skill's —
 a rule written in the underwriter's vocabulary would have zeroed the interview
 pack's entire research budget, which an earlier draft of this paragraph did.
 

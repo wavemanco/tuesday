@@ -146,6 +146,17 @@ something the analysis cannot source.
 
 Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior-context mention of a fraud-rules experiment — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "leads PMs", initially inferred from "led cross-functional squad" — corrected by user: no direct reports; recorded so it is never re-derived.
 
+| L1 target | Ran | What it moved, or could not have |
+|---|---|---|
+| 1. Official site and careers page | yes | Role reality: organization, working pattern, contradictions row |
+| 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
+| 3. Recent-news pass | no | Would have moved the register. Skipped: the posting is two weeks old and the careers page confirmed it live, so nothing here could have changed a row |
+
+One row per declared L1 target, ran or skipped, and for a skip the output it
+could not have moved. `interaction-grammar.md` §4 sends the skip here because a
+wasted search and a correctly-skipped one produce identical prose, and an
+unfilled row is the only version of that rule anyone can check.
+
 ## Upgrade menu
 
 - Partner-API case note or any inspectable artifact → R3 to `high`, work sample half-done.

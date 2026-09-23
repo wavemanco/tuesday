@@ -98,6 +98,18 @@ The sections this skill's spec defines are *n* — owed, delivered complete and 
 | The resume as a file rather than pasted text | Enhancer | The parse-safety check runs on what can be seen and says which checks it could not perform |
 | Candidate constraints and non-negotiables | Structural-lite | Only material where a proposed line would misrepresent availability, location, or authorization |
 
+## Research
+
+**This skill runs no research tier.** It works from the posting and the
+candidate's own material, and `references/interaction-grammar.md` §4 — tiers,
+budgets, the depth rule and its target accounting — is mirrored here because
+canonical files are mirrored whole, not because any of it fires. Declared
+targets: none, so the accounting has nothing to account for.
+
+Stated rather than left silent: a rule that cannot fire is invisible from
+inside, and the next person to add a research step to this skill needs to find
+the tiers already binding rather than discover them afterwards.
+
 ## Guardrails
 
 - **Truthfulness core** (binding, from the suite's evidence conventions): never add an unverified claim to a resume; never convert a `memory_lead` into asserted experience; never inflate a prototype into production, participation into leadership, or adjacent work into direct experience; never invent metrics, team sizes, dates, credentials, or titles. Run the reframing audit in `references/reframing-audit.md` over every row before showing it — six axes, five disciplines. A row that cannot be traced to a quoted source sentence is not proposed.

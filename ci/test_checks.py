@@ -338,6 +338,21 @@ def break_unmirrored_canonical(root: Path) -> str:
 
 
 
+def break_dangling_reference(root: Path) -> str:
+    """Delete a mirror that another mirror points at.
+
+    Mirroring interaction-grammar.md introduced six of these in one commit, all
+    to dossier-schema.md — in the change that fixed the identical defect one
+    level up. Skills are dependency-free, so "see `x.md`" naming a file the
+    folder does not carry is a pointer the reader cannot follow.
+    """
+    path = root / "skills/mock-interview/references/dossier-schema.md"
+    if not path.exists():
+        raise SystemExit("break_dangling_reference found no dossier-schema mirror — it has gone stale")
+    path.unlink()
+    return "point at a canonical file this skill does not carry"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -363,6 +378,7 @@ CASES: list[tuple[str, str, callable]] = [
     ("columns", "a provenance_section that is not a section", break_provenance_section_unknown),
     ("columns", "a free-text column with no label beside it", break_qualifier_without_label),
     ("mirrors", "a canonical file that declares mirroring, unmirrored", break_unmirrored_canonical),
+    ("mirrors", "a reference pointing at a file the skill lacks", break_dangling_reference),
 ]
 
 
