@@ -150,10 +150,14 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
 |---|---|---|
 | 1. Official site and careers page | yes | Role reality: organization, working pattern, contradictions row |
 | 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
-| 3. Recent-news pass | no | Would have moved the register. Skipped: the posting is two weeks old and the careers page confirmed it live, so nothing here could have changed a row |
+| 3. Hiring manager's public footprint | n/a | No name was given, so there was nothing to look up. The upgrade menu names what a name would unlock |
 
-One row per declared L1 target, ran or skipped, and for a skip the output it
-could not have moved. `interaction-grammar.md` §4 sends the skip here because a
+One row per declared L1 target — the three in `SKILL.md` Step 2, in its order —
+ran or skipped, and for a skip the output it could not have moved. `n/a` is a
+target whose input never arrived and is not the same as `no`, a target that could
+have run and was judged unable to move anything; collapsing them hides the second,
+which is the case the rule exists for. L2 targets are accounted here too when L2
+ran, and are absent when it did not, because an unoffered tier has no skips. `interaction-grammar.md` §4 sends the skip here because a
 wasted search and a correctly-skipped one produce identical prose, and an
 unfilled row is the only version of that rule anyone can check.
 
