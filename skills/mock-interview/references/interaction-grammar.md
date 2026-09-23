@@ -71,6 +71,15 @@ source to attribute, move faster than any research pass, and are where a model's
 confident fabrication lands. The test is simply whether a reader could be shown
 where it came from.
 
+**This governs what a search may go looking for, not what a skill may reason
+from.** A reading stated in the output — that a posting's silence on
+compensation is itself worth a question, that a titled-years requirement is
+likely screened literally — is reasoning over material already in hand, and it
+carries a provenance label like any other derived claim. What is banned is
+sending a search after someone's preferences and returning with a
+sourced-looking answer. Reasoning from what you have and researching what nobody
+published are different acts; only the second is out of bounds.
+
 **What counts as inspectable proof in a domain is published in exactly this
 sense** — a repository, a portfolio, a deal sheet, a P&L, a publication list, a
 licence number, a case outcome. `evidence-conventions.md` §2 needs it to set

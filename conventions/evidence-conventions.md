@@ -70,7 +70,7 @@ Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`,
 
 The taxonomy exists because "missing from the CV" is four different situations wearing one costume, and only one of them is a real capability problem.
 
-`none` is a token and not an empty cell. This is the sixth member because the five were written as the answers to "what kind of gap is this?" and the settled row was left with no answer at all — so an enum column arrived with nothing to put in it, and the value got invented at write time. `none` was already being emitted: `evidence-model.md`'s row spec has declared it since job-underwriter v0.1, the worked dossier writes it, and the JSON envelope carries it. What was missing was this line, and a vocabulary that a skill has quietly extended is the drift this file exists to prevent — whichever side turns out to be right.
+`none` is a token and not an empty cell. This is the sixth member because the five were written as the answers to "what kind of gap is this?" and the settled row was left with no answer at all — so an enum column arrived with nothing to put in it, and the value got invented at write time. `none` was already being emitted: the underwriter's own row spec has declared it since v0.1, the worked dossier writes it, and the JSON envelope carries it. What was missing was this line, and a vocabulary that a skill has quietly extended is the drift this file exists to prevent — whichever side turns out to be right.
 
 ## 4. Content provenance labels
 
@@ -104,7 +104,7 @@ Three overrides that beat every label:
   Three legitimate uses this rule does not touch, named because an earlier draft of it forbade all three:
 
   - **A register entry whose hypothesis is itself a pattern.** The standing failed-attribution entry ships as `[generic] pattern for companies of this size, not a claim about this one`, and it caps the decision at `conditional_go`. It is read by a decision and it is honest — the label and the sentence agree that no entity claim is being made.
-  - **A reasoning cell that reaches past its row.** `evidence-model.md` requires `[generic]` exactly there — "enterprise SE roles usually touch pre-sales" — and names the pull to write `[inferred]` instead as the thing to resist.
+  - **A reasoning cell that reaches past its row.** The skill that owns an evidence map requires `[generic]` exactly there — "enterprise SE roles usually touch pre-sales" — and names the pull to write `[inferred]` instead as the thing to resist.
   - **An honestly degraded section.** A pack whose research could not run labels its banks `[generic]` and says so. The ladder depends on it, and a smaller honest pack beats a full-looking fabricated one.
 
   **There is no CI check for this, and the absence is deliberate.** Every mechanical version drafted — no `[generic]` in a row about the candidate, none in the evidence map, none in a table a decision reads — rejects at least one of the three uses above. A check that would reject correct work is worse than no check, and a suite with this many real mechanisms can afford to say where one does not exist. The rule is gradeable instead: an eval can ask whether a named claim about this person or this company rests on nothing but a pattern.
@@ -114,10 +114,15 @@ Why the third override exists, and why it is newer than the other two:
 Cui, Dias & Ye (2025) measured what happens to a signal once generative AI makes
 it cheap to produce. On a large freelancing platform, the correlation between how
 closely a cover letter matched its job post and whether it drew a callback **fell
-51%**, and for offers **79%**, while the weight employers put on records that
-cannot be written on demand rose. The generalisation is not about cover letters:
+51%**, and for offers **79%**, while the correlation between callbacks and
+workers' review scores — the platform's record of past work — **rose 5%**. The generalisation is not about cover letters:
 **whatever becomes cheap to generate stops carrying information, and what remains
 is what can be checked.**
+
+The three figures are not the same size and the asymmetry is the point: a 51%
+and a 79% collapse against a 5% rise is a signal losing its value much faster
+than any single replacement gains it. What employers shifted *toward* is a
+smaller and more diffuse effect than what they shifted *away from*.
 
 `[generic]` is this suite's own name for the cheap-to-generate part. An output
 whose load-bearing claims rest on it is built from exactly the material that

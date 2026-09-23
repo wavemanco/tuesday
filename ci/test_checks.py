@@ -353,6 +353,24 @@ def break_dangling_reference(root: Path) -> str:
     return "point at a canonical file this skill does not carry"
 
 
+def break_skill_local_reference(root: Path) -> str:
+    """Name a skill-local file from canonical text mirrored everywhere.
+
+    The narrower gate could not see this: `evidence-model.md` belongs to
+    job-underwriter alone, so canonical text naming it put a pointer into
+    nothing inside mock-interview's and resume-tailor's mirrors. Committed three
+    times in the change that fixed the same class one level up.
+    """
+    path = root / "skills/mock-interview/references/evidence-conventions.md"
+    text = path.read_text()
+    mutated = text.replace("The skill that owns an evidence map requires",
+                           "`evidence-model.md` requires", 1)
+    if mutated == text:
+        raise SystemExit("break_skill_local_reference found no reworded pointer — it has gone stale")
+    path.write_text(mutated)
+    return "point at a canonical file this skill does not carry"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -379,6 +397,7 @@ CASES: list[tuple[str, str, callable]] = [
     ("columns", "a free-text column with no label beside it", break_qualifier_without_label),
     ("mirrors", "a canonical file that declares mirroring, unmirrored", break_unmirrored_canonical),
     ("mirrors", "a reference pointing at a file the skill lacks", break_dangling_reference),
+    ("mirrors", "canonical text naming a skill-local file", break_skill_local_reference),
 ]
 
 

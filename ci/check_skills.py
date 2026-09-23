@@ -231,14 +231,24 @@ def check_mirrors() -> None:
     # cannot open. Mirroring interaction-grammar.md introduced six of these in
     # one commit, each to dossier-schema.md, in the change that fixed the same
     # defect one level up.
+    # Every filename the repo carries as a canonical or reference document. The
+    # gate is membership in this set rather than in conventions/ alone: canonical
+    # text naming a skill-local file (`evidence-model.md`, which only the
+    # underwriter has) put a dangling pointer in two other skills' mirrors, and a
+    # conventions-only gate could not see it. Names outside the set are ignored —
+    # `tuesday-dossier.md` is an emitted artifact, not a file to open.
+    known_refs = {p.name for p in CONVENTIONS.glob("*.md")}
+    for s in skills():
+        known_refs |= {p.name for p in (s / "references").glob("*.md")}
     for skill in skills():
         present = {f.name for f in (skill / "references").glob("*.md")}
         dangling = set()
         for ref in sorted((skill / "references").glob("*.md")):
             for match in re.finditer(r"`([a-z0-9-]+\.md)`", ref.read_text()):
                 name = match.group(1)
-                if name not in present and (CONVENTIONS / name).exists():
-                    dangling.add(f"{ref.name} -> {name}")
+                if name in present or name not in known_refs:
+                    continue  # present here, or not a reference file at all
+                dangling.add(f"{ref.name} -> {name}")
         if dangling:
             fail(group, f"{skill.name}: reference(s) point at a canonical file this skill does "
                         f"not carry: {', '.join(sorted(dangling))}")
