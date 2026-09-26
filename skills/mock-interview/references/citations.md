@@ -21,7 +21,7 @@ The record of what that cost, in the order it was found:
   - A spec line saying employers are advised not to ask about citizenship was "corrected" with evidence about *work authorization* — a different question the source keeps separate — and recorded here as a case of the source contradicting the spec. It did not; and a third review found US federal guidance saying almost what the spec line had said (C32). The line was right and uncited, and the correction was the error.
   - A figure of 52% was recorded as an error because a secondary source rounded it to "over half"; the primary source says 52%.
   - A 41% share of *people* who say they have used hidden text was set against a 1% share of *résumés* found to contain it, and called a gap between saying and doing. People and documents are different units, and the two figures do not conflict.
-  - A 51% fall and a 5% rise were set against each other as "the finding" — written two commits before this file existed, and carried into it. They are relative changes on different bases and measures, and the authors call the rise substantial.
+  - A 51% fall and a 5% rise were set against each other as "the finding" — written three commits before this file existed (63c0070), and carried into it. They are relative changes on different bases and measures, and the authors call the rise substantial.
 
 - This file then said it held every claim the suite makes about the outside world, and all three `SKILL.md` files repeated it. A third review found seven claims in shipped reference files with no entry, and two were wrong as well as uncited once the sources were read: a self-preference effect had been described as a share of comparisons, and the 23 of 25 interviewed recruiters whose systems do not auto-reject had become "the overwhelming majority of applications". Entries C23–C30 were added for the shipped files and C31 for the cover-letter spec.
 - The correction of the self-preference figure was itself wrong twice, and a fourth review found both: it quoted the definition of a different metric from the one behind the 67–82% range, and it called the paper's 23–60% shortlisting figure a relative change when it is a gap in percentage points. The same review found the tested comparison was between two versions of a résumé's summary section, not two résumés.
@@ -36,6 +36,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Record what weakens it** — a vendor surveying behaviour its product addresses, a single platform standing in for a labour market, a result significant at 10% and not 5%, a lower bound, a different unit from the figure it will be read beside.
 - **Figures with different units, bases or constructs are not compared as if they shared one.** Say what each counts.
 - **Scope, stated honestly:** every figure, research finding, survey result and statement of law in the conventions, the skills' shipped files and the specs has an entry here, as of the sweep recorded above. Practitioner heuristics — interviewer personas, company archetypes, question stems — are the skills' own priors, presented as priors, and are not cited. The ledger records this repository's history and cites where it states an outside finding. A claim without an entry reads as an inference or is removed. CI catches a quotation that strays from its entry and a paraphrase in quotation marks; a paraphrase without them it cannot see, so this scope is kept by review as well as by CI.
+- **Every quotation in an entry is the source's words.** Verbatim holds what prose may quote; a Weakens field may quote the source too, and the verifier reads every quotation in the entry. This suite's own earlier wording, recorded as history, is set in italics, not quotation marks.
 - **Re-verify rather than re-remember.** `ci/verify_citations.py` refetches every source and reports each entry as verified, not found, malformed, or unreachable. It needs the network, so it runs by hand rather than in CI, and unreachable is reported as unchecked, never as a pass.
 
 ---
@@ -215,7 +216,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Claim:** Language models choosing between two versions of a résumé's summary section — one human-written, one they generated — picked their own far more often, with content quality controlled; the authors give 67–82% for their larger models, as a gap between two selection probabilities.
 - **Verbatim:** "The bias against human-written resumes is particularly substantial, with self-preference bias ranging from 67% to 82% across major commercial and open-source models." and "Larger models—such as GPT-4o, GPT-4-turbo, DeepSeek-V3, Qwen-2.5-72B, and LLaMA-3.3-70B—exhibit the strongest LLM-vs-Human self-preference, with magnitudes ranging from 67% to 82%." and "In contrast, smaller models display weaker biases" and "To evaluate equal opportunity, we assess whether self-preference persists when resumes are of equivalent quality" and "Prefers Self - Prefers Human" and "the evaluator LLM is prompted to compare two executive summaries and select the stronger one based on the overall presentation of skills and experience, following a standardized, job-agnostic evaluation instruction"
 - **Source:** Xu, J., Li, G. & Jiang, J. Y. (2025; v4 revised 2026-06-06), *AI Self-preferencing in Algorithmic Hiring: Empirical Evidence and Insights* — https://arxiv.org/pdf/2509.00462v4
-- **Weakens it:** Evaluators saw only the executive summary — the one section the model rewrote — under a job-agnostic instruction, not a whole résumé against a job. The figure is a gap in percentage points (prefers-self minus prefers-human, from the paper's equal-opportunity metric; its unconditional metric ranges 26–98%), not a share of comparisons and not a ratio. GPT-4o-mini, not in the authors' "larger" list, sits inside the range at 67.9%. The models tested will age. A preprint. This suite first called the range a share of comparisons, then glossed it as "how much more often" and quoted the other metric's definition; both were wrong.
+- **Weakens it:** Evaluators saw only the executive summary — the one section the model rewrote — under a job-agnostic instruction, not a whole résumé against a job. The figure is a gap in percentage points (prefers-self minus prefers-human, from the paper's equal-opportunity metric; its unconditional metric ranges 26–98%), not a share of comparisons and not a ratio. GPT-4o-mini, not in the authors' "larger" list, sits inside the range at 67.9%. The models tested will age. A preprint. This suite first called the range a share of comparisons, then glossed it as *how much more often* and quoted the other metric's definition; both were wrong.
 - **Retrieved:** 2026-09-26
 
 ## C24
@@ -223,7 +224,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Claim:** In simulated hiring pipelines, the same authors estimate that candidates using the evaluator's own model are more likely to be shortlisted.
 - **Verbatim:** "These simulations show that candidates using the same LLM as the evaluator are 23% to 60% more likely to be shortlisted than equally qualified applicants submitting human-written resumes"
 - **Source:** Xu, Li & Jiang (2025), as C23.
-- **Weakens it:** Simulated pipelines, not observed hiring: pools of five candidates, each present in both a human-written and an evaluator-written version, competing for four slots. The figure is a gap in percentage points between the two versions' shares of the shortlist ("AI% − Human%" in the paper's figures), which the authors word as "more likely"; it is not a relative change. This entry first said the opposite.
+- **Weakens it:** Simulated pipelines, not observed hiring: pools of five candidates, each present in both a human-written and an evaluator-written version, competing for four slots. The figure is a gap in percentage points between the two versions' shares of the shortlist (AI% minus Human% in the paper's figures), which the authors word as "more likely"; it is not a relative change. This entry first said the opposite.
 - **Retrieved:** 2026-09-26
 
 ## C25
@@ -247,7 +248,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Claim:** The same source says teams use match scores to order review, and that a low score lowers a résumé rather than rejecting it.
 - **Verbatim:** "Many teams use match scores/filters to prioritize who gets reviewed first." and "Low score ≠ auto-reject, but in high-volume roles, it can push you to the bottom of the pile." and "56% either ignore the feature or don’t have it available."
 - **Source:** as C25.
-- **Weakens it:** As C25. The same page's coded figures are less than "many": 44% of the 25 said their system has an AI or fit score, and the rest ignore it or lack it. It speaks of match scores, not keywords; that keywords drive them is an inference. In a high-volume role the bottom of the pile may never be read, so "not rejected" is not "seen".
+- **Weakens it:** As C25. The same page's coded figures are less than "many": 44% of the 25 said their system has an AI or fit score, and the rest ignore it or lack it. It speaks of match scores, not keywords; that keywords drive them is an inference. In a high-volume role the bottom of the pile may never be read, so *not rejected* is not *seen*.
 - **Retrieved:** 2026-09-26
 
 ## C28
@@ -263,7 +264,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Claim:** US EEOC guidance: pre-employment questions relating to race, color, sex, national origin, religion or age are not clearly forbidden by law, but may be evidence of intent to discriminate unless justified by a business purpose, and should generally be avoided.
 - **Verbatim:** "Although state and federal equal opportunity laws do not clearly forbid employers from making pre-employment inquiries that relate to, or disproportionately screen out members based on race, color, sex, national origin, religion, or age, such inquiries may be used as evidence of an employer's intent to discriminate unless the questions asked can be justified by some business purpose." and "which may indicate the applicant's race, sex, national origin, disability status, age, religion, color or ancestry if answered, should generally be avoided."
 - **Source:** U.S. Equal Employment Opportunity Commission, *Prohibited Employment Policies/Practices* — https://www.eeoc.gov/prohibited-employment-policiespractices
-- **Weakens it:** US federal guidance, which says state laws also do not clearly forbid these inquiries; the law firm behind C14 notes that some jurisdictions' laws go further. Covers the traits it names, not health or citizenship (C30, C32, C33). Guidance, not statute. Not legal advice.
+- **Weakens it:** US federal guidance, which says state laws also do not clearly forbid these inquiries; the law firm behind C14 notes that some jurisdictions' laws go further. Covers the traits it names, disability status among them; medical questions and citizenship are C30, C32 and C33. Guidance, not statute. Not legal advice.
 - **Retrieved:** 2026-09-26
 
 ## C30
@@ -279,7 +280,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Claim:** Within a worker, more time spent editing the tool's draft went with higher offer and callback rates, at high significance.
 - **Verbatim:** "controlling for worker fixed effects" and "The coefficient on editing time is positive and highly significant: spending more minutes tailoring a cover letter after using the tool increases the probability of winning." and "For callbacks (Column 2), the coefficient on editing time is likewise positive and highly significant."
 - **Source:** Cui, Dias & Ye (2025), as C1.
-- **Weakens it:** An association; this suite follows the authors' refusal of the causal reading (C10) despite "increases" here. Small in absolute terms: a standard deviation of editing (3.5 minutes) goes with about 0.31 percentage points on a 0.6% win rate and 0.64 points on a 6.8% callback rate. Only AI-assisted bids with under 60 minutes of editing, measured as the minutes between opening the tool and submitting.
+- **Weakens it:** An association; this suite follows the authors' refusal of the causal reading (C10) despite "increases" here. Small in percentage points and not small against the base: a standard deviation of editing (3.5 minutes) goes with about 0.31 percentage points on a 0.6% win rate — about half the base, as the authors put it — and 0.64 points, about 9%, on a 6.8% callback rate. Only AI-assisted bids with under 60 minutes of editing, measured as the minutes between opening the tool and submitting.
 - **Retrieved:** 2026-09-26
 
 ## C32
@@ -301,9 +302,9 @@ These are why the rules below are strict about units, bases and primary sources,
 ## C34
 
 - **Claim:** US EEOC guidance: questions about marital status and children may violate Title VII if used to deny or limit employment.
-- **Verbatim:** "Questions about marital status and number and ages of children are frequently used to discriminate against women and may violate Title VII if used to deny or limit employment opportunities."
+- **Verbatim:** "Questions about marital status and number and ages of children are frequently used to discriminate against women and may violate Title VII if used to deny or limit employment opportunities." and "It is clearly discriminatory to ask such questions only of women and not men (or vice-versa)."
 - **Source:** U.S. Equal Employment Opportunity Commission, *Pre-Employment Inquiries and Marital Status or Number of Children* — https://www.eeoc.gov/pre-employment-inquiries-and-marital-status-or-number-children
-- **Weakens it:** "May violate … if used to": the question is evidence, not itself a violation. US federal guidance. Not legal advice.
+- **Weakens it:** "May violate … if used to": asked of both sexes, the question is evidence of intent rather than itself a violation; the same page calls asking it of one sex only "clearly discriminatory". US federal guidance. Not legal advice.
 - **Retrieved:** 2026-09-26
 
 ## C35

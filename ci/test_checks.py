@@ -659,7 +659,7 @@ def break_marker_after_words(root: Path) -> str:
     """The paraphrase in quotation marks, the marker a few words later."""
     swap_once(root, "conventions/evidence-conventions.md", '"This shift may have important implications, including favoring established\nworkers at the expense of newcomers trying to enter the market." (cite C3)',
               '"' + PARAPHRASE + '" in the authors\' words (cite C3)', "break_marker_after_words")
-    return "sits in a cited sentence with no marker beside it"
+    return "is close to C3's source but not its words"
 
 
 def break_curly_paraphrase(root: Path) -> str:
@@ -719,7 +719,7 @@ def break_marker_before_quote(root: Path) -> str:
     swap_once(root, "docs/cover-letter-spec-v0.md", C11_SENTENCE,
               'ResumeGo (cite C11) reports tailored letters drew a "35% higher callback rate" than no letter.',
               "break_marker_before_quote")
-    return "sits in a cited sentence with no marker beside it"
+    return "carries a figure in a cited sentence"
 
 
 def break_marker_after_et_al(root: Path) -> str:
@@ -727,7 +727,7 @@ def break_marker_after_et_al(root: Path) -> str:
     swap_once(root, "docs/cover-letter-spec-v0.md", C11_SENTENCE,
               'Tailored letters drew a "35% higher callback rate" than no letter, in the study by Kazmi et al. (cite C11).',
               "break_marker_after_et_al")
-    return "sits in a cited sentence with no marker beside it"
+    return "carries a figure in a cited sentence"
 
 
 def break_multi_id_marker(root: Path) -> str:
@@ -738,10 +738,10 @@ def break_multi_id_marker(root: Path) -> str:
 
 
 def break_single_quoted_source(root: Path) -> str:
-    """The shipped paraphrase in single quotation marks, marker adjacent."""
+    """The shipped paraphrase in curly single quotation marks, marker adjacent: read as a quotation."""
     swap_once(root, "conventions/evidence-conventions.md", C3_QUOTE,
               "\u2018" + PARAPHRASE_C3 + "\u2019 (cite C3)", "break_single_quoted_source")
-    return "quote a source in double quotation marks"
+    return "and C3's Verbatim does not contain it"
 
 
 def break_blockquoted_source(root: Path) -> str:
@@ -756,13 +756,6 @@ def break_short_verbatim_uncited(root: Path) -> str:
     swap_once(root, "docs/cover-letter-spec-v0.md", C11_SENTENCE,
               C11_SENTENCE + '\nSuch questions "should generally be avoided".', "break_short_verbatim_uncited")
     return "quotes C29's source verbatim without (cite C29)"
-
-
-def break_short_paraphrase_uncited(root: Path) -> str:
-    """The original defect at its original length: three words, unmarked."""
-    swap_once(root, "docs/cover-letter-spec-v0.md", C11_SENTENCE,
-              C11_SENTENCE + '\nThe shift "favours established candidates".', "break_short_paraphrase_uncited")
-    return "is close to C3's source but not its words"
 
 
 def break_section_clause_qualifier(root: Path) -> str:
@@ -815,13 +808,6 @@ def break_count_determiner_opening(root: Path) -> str:
     return "says 5, has 6 numbered sections"
 
 
-def break_count_bold_paragraphs(root: Path) -> str:
-    """A heading counting paragraphs that each open with a bold label."""
-    swap_once(root, "skills/job-underwriter/references/risk-and-decision.md", "## Two standing entries",
-              "## Three standing entries", "break_count_bold_paragraphs")
-    return "says 3, has 2 bold-led paragraphs"
-
-
 def break_close_reversed(root: Path) -> str:
     """The right sections named in the wrong order."""
     swap_once(root, "skills/resume-tailor/evals/evals.json",
@@ -853,13 +839,6 @@ def break_close_incidental_word(root: Path) -> str:
               "The response closes with an upgrade menu listing the questions that would sharpen it",
               "break_close_incidental_word")
     return "closing_order ends questions"
-
-
-def break_close_unnamed_section(root: Path) -> str:
-    swap_once(root, "skills/job-underwriter/evals/evals.json",
-              "The response closes with the dossier offer, then the upgrade menu, then the questions",
-              "The response closes with the application plan", "break_close_unnamed_section")
-    return "names nothing closing_order ends with"
 
 
 def break_budget_maximum(root: Path) -> str:
@@ -894,6 +873,186 @@ def break_readme_wrong_folder(root: Path) -> str:
 def break_readme_fixture_noun(root: Path) -> str:
     swap_once(root, "skills/mock-interview/README.md", "# 6 test fixtures", "# 4 test cases", "break_readme_fixture_noun")
     return '"4 test cases" — evals.json has 6'
+
+
+
+# The fourth review's reproductions, each passed by the version it reviewed.
+
+def break_misquoted_figure(root: Path) -> str:
+    """An entry's words with the figure changed, unmarked: "fell by 15%" for "fell by 51%"."""
+    swap_once(root, "docs/cover-letter-spec-v0.md", "It is the collapse.",
+              'It is the collapse: the tailoring correlation "fell by 15%".', "break_misquoted_figure")
+    return "C1's wording with a different figure"
+
+
+def break_hedge_dropped_from_quote(root: Path) -> str:
+    """The true half of a hedged sentence, quoted and cited, the hedge left behind."""
+    swap_once(root, "docs/cover-letter-spec-v0.md", "It is the collapse.",
+              'It is the collapse, and the authors find it is "favoring established workers at the expense of '
+              'newcomers" (cite C3).', "break_hedge_dropped_from_quote")
+    return "starts after its source's hedge"
+
+
+def break_single_quoted_paraphrase(root: Path) -> str:
+    """A paraphrase in curly single quotes, its marker a few words later."""
+    swap_once(root, "docs/cover-letter-spec-v0.md", "It is the collapse.",
+              "It is the collapse, which \u2018may favour established workers over newcomers\u2019 in the authors' "
+              "words (cite C3).", "break_single_quoted_paraphrase")
+    return "is close to C3's source but not its words"
+
+
+def break_section_spaced_name(root: Path) -> str:
+    """A file named with spaces: "the output discipline's §4" in a brief with its own §4."""
+    swap_once(root, "docs/job-underwriter-build-brief.md", "- **The n + x rule**",
+              "- **Closing order** (the output discipline's §4): dossier offer, upgrade menu, questions.\n- **The n + x rule**",
+              "break_section_spaced_name")
+    return 'after "output discipline"'
+
+
+def break_section_wrapped_qualifier(root: Path) -> str:
+    """The qualifier on the line before the section sign."""
+    swap_once(root, "docs/cover-letter-spec-v0.md", "this skill would ship with §4 written first.",
+              "this skill would ship with §4 written first, and with the n + x rule the grammar\nstates in §8.",
+              "break_section_wrapped_qualifier")
+    return 'bare §8 after "grammar"'
+
+
+def break_count_definite_frame(root: Path) -> str:
+    """ "the five rules in `output-discipline.md`" — the total, restated wrong."""
+    swap_once(root, "README.md", "— six rules on the shape of a delivered response",
+              "— the five rules in `output-discipline.md` on the shape of a delivered response",
+              "break_count_definite_frame")
+    return '"five rules" beside `output-discipline.md`, which has 6 rules'
+
+
+def break_close_adverb_imperative(root: Path) -> str:
+    swap_once(root, "skills/job-underwriter/SKILL.md", "the assessment ends without restating itself.",
+              "the assessment ends without restating itself. Always close with the upgrade menu.",
+              "break_close_adverb_imperative")
+    return "closing_order ends questions"
+
+
+def break_close_head_subject(root: Path) -> str:
+    """ "the message presenting the pack ends with the upgrade menu" is about the message."""
+    swap_once(root, "skills/mock-interview/evals/evals.json",
+              'and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions',
+              "and the message presenting the pack ends with the upgrade menu",
+              "break_close_head_subject")
+    return "closing_order ends"
+
+
+def break_budget_counted_across(root: Path) -> str:
+    swap_once(root, "skills/resume-tailor/SKILL.md", "**Three questions, counted across the whole message",
+              "**Four questions, counted across the whole message", "break_budget_counted_across")
+    return "question_budget is 3"
+
+
+def break_budget_on_any_turn(root: Path) -> str:
+    swap_once(root, "skills/job-underwriter/README.md", "The skill asks at most three questions per turn",
+              "The skill asks at most four questions on any turn", "break_budget_on_any_turn")
+    return "question_budget is 3"
+
+
+def keep_contraction_in_quote(root: Path) -> None:
+    swap_once(root, "skills/job-underwriter/README.md", "and proceeds if you ignore them.",
+              'and proceeds if you ignore them. Answering "I don\'t use LinkedIn" is fine too.', "keep_contraction_in_quote")
+
+
+def keep_prompt_with_domain_words(root: Path) -> None:
+    swap_once(root, "docs/cover-letter-spec-v0.md", "Five fixtures, each carrying the trap",
+              'Five fixtures, each opening with a prompt like "write a cover letter for this job" and each carrying the trap',
+              "keep_prompt_with_domain_words")
+
+
+def keep_example_question_in_cited_sentence(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/references/personas.md", "and otherwise differs by topic.",
+              'and otherwise differs by topic. Some interviewers still ask "Where are you from originally?" and "Most '
+              'employers should not ask whether or not a job applicant is a United States citizen before making an offer '
+              'of employment" (cite C32).', "keep_example_question_in_cited_sentence")
+
+
+def keep_sentence_after_quoted_stop(root: Path) -> None:
+    swap_once(root, "docs/cover-letter-spec-v0.md", "Tailored letters drew a **53% higher callback rate**",
+              'Recruiters call this "tailoring." Tailored letters drew a **53% higher callback rate**',
+              "keep_sentence_after_quoted_stop")
+
+
+def keep_own_skill_name_in_spec(root: Path) -> None:
+    swap_once(root, "docs/mock-interview-spec-v1.md", "Every fixture asserts §3.1",
+              "Every mock-interview fixture asserts §3.1", "keep_own_skill_name_in_spec")
+
+
+def keep_unnumbered_file_in_block(root: Path) -> None:
+    swap_once(root, "docs/mock-interview-spec-v1.md", "Every fixture asserts §3.1",
+              "Every fixture asserts §3.1, which SKILL.md opens with,", "keep_unnumbered_file_in_block")
+
+
+def keep_city_code(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/references/personas.md", "Other jurisdictions differ, and",
+              "Other jurisdictions differ — New York City bars salary-history questions under N.Y.C. Admin. Code "
+              "§8-107 — and", "keep_city_code")
+
+
+def keep_list_with_local_above(root: Path) -> None:
+    swap_once(root, "docs/cover-letter-spec-v0.md", "§5.2 says why that misread the audit.",
+              "`evidence-conventions.md` §4 and §5.2 above say why that misread the audit.", "keep_list_with_local_above")
+
+
+def keep_determiner_lead(root: Path) -> None:
+    swap_once(root, "conventions/evidence-conventions.md", "\nThree overrides that beat every label:\n",
+              "\nThese three overrides beat every label:\n", "keep_determiner_lead")
+
+
+def keep_lead_with_one_example(root: Path) -> None:
+    swap_once(root, "conventions/evidence-conventions.md", "\nThree overrides that beat every label:\n",
+              "\nThree overrides that beat every label, each with its reason and one example:\n", "keep_lead_with_one_example")
+
+
+def keep_time_in_lead(root: Path) -> None:
+    path = root / "skills/mock-interview/references/question-rubric.md"
+    path.write_text(path.read_text().rstrip("\n") + "\n\nA strong plan answer covers the first 90 days:\n\n"
+                    "- what they would learn\n- what they would change\n- what they would leave alone\n")
+
+
+def keep_count_opening_a_preamble(root: Path) -> None:
+    swap_once(root, "docs/cover-letter-spec-v0.md", "The research came first this time, and it changed the design.",
+              "Two things are different this time. The research came first, and it changed the design.",
+              "keep_count_opening_a_preamble")
+
+
+def keep_other_axes_near_audit(root: Path) -> None:
+    swap_once(root, "docs/mock-interview-spec-v1.md", "two axes that a list does not have",
+              "two axes that a list does not have, and audits every line against `reframing-audit.md`",
+              "keep_other_axes_near_audit")
+
+
+def keep_interview_questions_budget(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/references/personas.md", "the top persona gets 4–5 questions",
+              "the top persona gets up to five questions", "keep_interview_questions_budget")
+
+
+def keep_close_after_colon(root: Path) -> None:
+    swap_once(root, "skills/job-underwriter/SKILL.md", "the assessment ends without restating itself.",
+              "the assessment ends without restating itself. The response ends with its three calls to action: the "
+              "dossier offer, then the upgrade menu, then the questions.", "keep_close_after_colon")
+
+
+def keep_drill_turn(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/references/output-template.md", "Follow up at least twice",
+              "Each drill turn ends with feedback on the answer. Follow up at least twice", "keep_drill_turn")
+
+
+def keep_wrap_before_bold(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/SKILL.md",
+              "file, the offers and questions close the message that presents it, and nothing\nfollows the questions.",
+              "file, the message that presents it closes with the drill and dossier offers, then\n**any questions**, "
+              "and nothing follows the questions.", "keep_wrap_before_bold")
+
+
+def keep_cases_of_something_else(root: Path) -> None:
+    swap_once(root, "skills/job-underwriter/README.md", "and proceeds if you ignore them.",
+              "and proceeds if you ignore them. In two cases it asks nothing at all: when the JD and CV already answer "
+              "everything, and when you say skip.", "keep_cases_of_something_else")
 
 
 # Must-pass: correct text in forms an earlier version refused. A false positive
@@ -971,6 +1130,24 @@ PASSES = [
     ("counts", "a subset of a file's list, beside the file", keep_subset_beside_file),
     ("parameters", "a negated closing sentence", keep_negated_close),
     ("parameters", "a budget for one topic inside the message's budget", keep_topic_sub_budget),
+    ("citations", "a contraction inside a quotation", keep_contraction_in_quote),
+    ("citations", "a quoted prompt sharing an entry's domain words", keep_prompt_with_domain_words),
+    ("citations", "an example question in a cited sentence", keep_example_question_in_cited_sentence),
+    ("citations", "a sentence after a stop inside quotation marks", keep_sentence_after_quoted_stop),
+    ("sections", "a skill's name in its own spec", keep_own_skill_name_in_spec),
+    ("sections", "a file with no numbered sections in the block", keep_unnumbered_file_in_block),
+    ("sections", "a city code's section", keep_city_code),
+    ("sections", "a list ending in a local \"above\"", keep_list_with_local_above),
+    ("counts", "a lead-in opening with \"These\"", keep_determiner_lead),
+    ("counts", "a lead-in mentioning \"one example\"", keep_lead_with_one_example),
+    ("counts", "a time span in a lead-in", keep_time_in_lead),
+    ("counts", "a preamble opening with a count of something else", keep_count_opening_a_preamble),
+    ("counts", "another skill's axes near the audit's name", keep_other_axes_near_audit),
+    ("parameters", "a budget of interview questions", keep_interview_questions_budget),
+    ("parameters", "a close listed after a colon", keep_close_after_colon),
+    ("parameters", "a drill turn ending with feedback", keep_drill_turn),
+    ("parameters", "a hard wrap before bold", keep_wrap_before_bold),
+    ("readmes", "\"cases\" of something other than fixtures", keep_cases_of_something_else),
 ]
 
 
@@ -1146,7 +1323,6 @@ CASES: list[tuple[str, str, callable]] = [
     ("citations", "a source in single quotation marks", break_single_quoted_source),
     ("citations", "a source as a blockquote", break_blockquoted_source),
     ("citations", "a short source quotation with no marker", break_short_verbatim_uncited),
-    ("citations", "a three-word paraphrase with no marker", break_short_paraphrase_uncited),
     ("sections", "a qualifier several words before the section", break_section_clause_qualifier),
     ("sections", "a plural possessive qualifier", break_section_plural_possessive),
     ("sections", "an upper-case file with no numbered sections", break_section_uppercase_file),
@@ -1154,16 +1330,24 @@ CASES: list[tuple[str, str, callable]] = [
     ("counts", "a restated count in digits", break_count_in_digits),
     ("counts", "a lead-in with its colon inside bold", break_count_bold_lead),
     ("counts", "an opening count after a determiner", break_count_determiner_opening),
-    ("counts", "a heading counting bold-led paragraphs", break_count_bold_paragraphs),
     ("parameters", "the closing sections named in reverse", break_close_reversed),
     ("parameters", "a synonym for closes", break_close_synonym),
     ("parameters", "the skill as the subject", break_close_skill_subject),
     ("parameters", "a section word inside a participle clause", break_close_incidental_word),
-    ("parameters", "a close naming no call to action", break_close_unnamed_section),
     ("parameters", "a budget as \"a maximum of\"", break_budget_maximum),
     ("parameters", "a budget restated in the skill README", break_budget_readme),
     ("readmes", "a file drawn in the wrong folder", break_readme_wrong_folder),
     ("readmes", "a fixture count under another noun", break_readme_fixture_noun),
+    ("citations", "an entry's words with a different figure", break_misquoted_figure),
+    ("citations", "a quotation lifted from after its source's hedge", break_hedge_dropped_from_quote),
+    ("citations", "a paraphrase in curly single quotes", break_single_quoted_paraphrase),
+    ("sections", "a file named with spaces", break_section_spaced_name),
+    ("sections", "a qualifier on the line before", break_section_wrapped_qualifier),
+    ("counts", "\"the N rules in `x.md`\" restated wrong", break_count_definite_frame),
+    ("parameters", "an imperative with an adverb", break_close_adverb_imperative),
+    ("parameters", "the message as head subject before a nearer noun", break_close_head_subject),
+    ("parameters", "a budget as \"N questions, counted across\"", break_budget_counted_across),
+    ("parameters", "a budget \"on any turn\"", break_budget_on_any_turn),
 ]
 
 

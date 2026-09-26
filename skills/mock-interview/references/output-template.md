@@ -89,7 +89,7 @@ of is the failure this table exists to make visible.
 
 Use when the user faces multiple scheduled rounds. Ask which rounds are on the calendar (this piggybacks on the Step 1 message — it does not add a second elicitation round). Structure: one shared fit snapshot + sources block, then a mini-pack per round with that round's persona weights, its own bank (8–12 questions), and its own reverse questions. The values cheat sheet lives with whichever round research says is values-focused. The upgrade menu is shared and sits at the end.
 
-A known multi-session round with an *unknown* schedule — "the final round" at companies whose finals are several back-to-back sessions — is not loop mode. Run session mode with blended persona weights, say in the title block — labelled `[generic]`, as a pattern for finals of this kind and not this company's confirmed format — that such finals are often several sessions, and offer per-session mini-packs in the upgrade menu once the user has the schedule. Loop mode needs a schedule to key on; guessing one fabricates structure.
+A known multi-session round with an *unknown* schedule — "the final round" at companies whose finals are several back-to-back sessions — is not loop mode. Run session mode with blended persona weights, and offer per-session mini-packs in the upgrade menu for when the user has the schedule. Do not assert how this company's final is structured unless research or the user established it; the upgrade-menu line can be conditional — "if your final is several sessions, send the schedule" — which needs no claim at all. Loop mode needs a schedule to key on; guessing one fabricates structure.
 
 ## Drill mode
 

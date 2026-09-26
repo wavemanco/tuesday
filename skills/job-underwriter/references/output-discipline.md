@@ -137,7 +137,8 @@ deletes the sentence. Anything that would still assert something with the analys
 gone is a world-claim: about the employer, the market, the candidate's history, or
 how hiring works. Those live in a row, in a structure with a Provenance cell.
 
-Four prose rules failed at this before it was written as a shape, and they failed
+Four prose rules failed at this — three before the first table column, a fourth in the section still written as
+prose — before it was written as a shape, and they failed
 in a way worth naming: **a writer who knows where a claim came from cannot see the
 sentence that fails to say so.** The label is missing from a sentence that reads
 perfectly. Nothing about proofreading catches it, which is why the fourth rule did

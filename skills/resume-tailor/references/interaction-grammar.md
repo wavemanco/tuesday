@@ -29,7 +29,7 @@ Corollary: skills compose in any order, or not at all. The dossier contract (see
 
 ## 4. Research tiers
 
-- **L0** — provided documents only. Everything else labeled `[generic]`.
+- **L0** — provided documents only: chosen by the user, or forced because the host offers no search. Everything else labeled `[generic]`.
 - **L1** — default: a small budgeted set of targeted searches (each skill defines its targets and caps). Official sources first; freshness rules per fact class; model memory is never a source for values, processes, or current facts.
 - **L2** — deep research: offered exactly once, cost stated, run only on consent; the offer rides an already-needed message or lands in the upgrade menu.
 - **Not-attributable rule:** results that can't be attributed to the specific entity (name collisions, no web presence) are treated as not-established — said plainly, archetype fallback named, missing facts listed in the upgrade menu.
@@ -44,7 +44,9 @@ change nothing has followed the letter and missed the point. Name the output a
 search could change before running it; if there is none, skip it — **and account
 for the skip where the output already reports its research**: one line per
 declared target, ran or skipped, and for a skip the output it could not have
-moved.
+moved. When no tier runs at all — declined, or no search available in this host
+— the accounting is one line saying so and why, not a row per target: a search
+that could not run is not a skip.
 
 The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
 gives: compliance here depends on noticing an absence, and a search that ran

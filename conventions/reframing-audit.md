@@ -15,8 +15,9 @@ they are load-bearing.
 
 **What it governs: every word a skill proposes the candidate say, write, or send.** Resume bullets and summary lines, yes — but equally the positioning advice ("lead with…", "your first two sentences should be…"), suggested outreach and cover-letter phrasing, and interview framing. Drift migrates to whichever surface the audit isn't watching, and prose advice is the easiest place for it to hide, because it reads as strategy rather than as a claim. It is still a claim: the candidate will say it out loud to someone who can check.
 
-The baseline is what the user has said or written about themselves — their
-current resume line included — and never an earlier draft a skill proposed. A
+The baseline is what the user has offered as evidence about themselves — their
+current resume line included. A draft of the text being written is a starting
+point, not a baseline, and a line a skill proposed is never one. A
 line with no predecessor, such as a summary written from nothing or a
 cover-letter paragraph, is audited the same way: every clause of it traces to one
 of the user's sentences, quoted, and a clause that traces to none is cut or asked
@@ -48,8 +49,8 @@ about it.** That is not a sixth discipline; it is what the five are for. It was
 counted as one from the start — the list said three, then four, then five with
 it inside — and when a sixth discipline was added the lead-in stayed at five.
 The restatements written after that already read the list as five disciplines
-plus this rule, so moving it out made this file say what the twelve other places
-repeating "five disciplines" already said. An asked question can turn a
+plus this rule, so moving it out made this file say what the other places repeating
+"five disciplines" already said. An asked question can turn a
 reframe into confirmed evidence; a guessed one turns it into a claim the
 interview will test.
 

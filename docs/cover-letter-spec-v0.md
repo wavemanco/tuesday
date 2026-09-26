@@ -73,8 +73,8 @@ market." (cite C3)
 ### 2.2 The finding about editing
 
 The paper's fifth question is whether people revise the drafts and whether it
-matters. Most do not: "over 75% were finalized within one minute of clicking the
-tool" (cite C9), and below-median writers show a pronounced concentration of
+matters. Most appear not to: "over 75% were finalized within one minute of clicking
+the tool" (cite C9), and below-median writers show a pronounced concentration of
 editing times **between 0 and 1 minute**, accepting the output nearly as-is,
 while above-median writers spread effort over longer durations (cite C9). Time spent
 editing goes with better outcomes *within* a worker, "controlling for worker fixed
@@ -87,8 +87,8 @@ relationship: the decision to spend more time editing a cover letter is unlikely
 to be random … and may correlate with unobserved bid characteristics that
 employers find appealing." (cite C10) Their introduction words the same result
 causally — "human revision enhances the effectiveness of AI-generated cover
-letters" (cite C10) — and this spec follows the discussion. The effects are also
-small in absolute terms (cite C31). A candidate who edits for ten minutes may
+letters" (cite C10) — and this spec follows the discussion. The effects are small in
+percentage points and large against a small base (cite C31). A candidate who edits for ten minutes may
 simply be a candidate who cared, and caring is not something the editing caused.
 
 It is still the most design-relevant correlation available, for a reason that
@@ -213,8 +213,8 @@ No sentence enters the letter that does not rest on a claim in the inventory.
 disciplines — and the relationship axis matters more here than anywhere, because
 a letter is written in the candidate's voice and will be read as their own words.
 
-The generative case needs no new rule. The audit's baseline is the candidate's
-own sentences, not an earlier version of the line, so a paragraph with no
+The generative case needs no new rule. The audit's baseline is what the candidate
+has offered as evidence about themselves, so a paragraph with no
 predecessor is audited against the claim-inventory entries it rests on — each of
 which quotes the candidate. resume-tailor already does this for a summary row
 whose current line is empty. An earlier draft of this spec called the missing

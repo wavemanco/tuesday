@@ -85,7 +85,7 @@ priority = requirement_importance
 
 Operational rules:
 
-- **At most three questions per turn, counted across the whole message** — and fewer when fewer could change anything. Zero is correct when the decision is already stable: a decidable case does not earn an interview. The budget counts every question put to the user, wherever it sits. Recall-prompt rows in the gap queue carry no questions: the question each row implies is asked once, in the closing block, tagged to its row, and those make up the three. A queue that also carried its own questions would make a five-question turn out of two rows and a closing block of three, and it would put questions mid-message, which `closing_order` forbids.
+- **At most three questions per turn, counted across the whole message** — and fewer when fewer could change anything. Zero is correct when the decision is already stable: a decidable case does not earn an interview. The budget counts every question put to the user, wherever it sits. Recall-prompt rows in the gap queue carry no questions: the question each row implies is asked once, in the closing block, tagged to its row, and those make up the three. A queue that also carried its own questions would make a five-question turn out of two rows and a closing block of three, and it would put questions mid-message, which this skill's `closing_order` rules out.
 - **Prefer questions that could move the decision status.** A question that only polishes an already-`direct` row loses to one that could resolve a must-have.
 - **Never ask for what was already supplied, and never re-ask.** Silence and "skip" are answers: mark the gap unresolved (or `absent`, if the user says so) and proceed.
 - **Research before asking.** Never ask the user what the public web knows.

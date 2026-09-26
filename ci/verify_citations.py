@@ -12,7 +12,8 @@ CI runs without it. This does, by hand:
 Three outcomes per entry, for the reason this repository's harnesses all learned
 the hard way: a page that could not be fetched is not a quotation that failed.
 
-    verified     every quoted span in the Verbatim field appears in the source
+    verified     every quoted span in the entry — Verbatim, and any the Weakens or
+                 Source fields quote — appears in the source
     NOT FOUND    the source was read and a quoted span is not in it     (exit 1)
     MALFORMED    the entry has no quotation, or no URL it can resolve   (exit 1)
     unreachable  the source could not be read here — network, paywall, or a PDF
@@ -99,6 +100,10 @@ def main() -> int:
             source_field = all_entries[ref.group(1)].get("Source", "")
             url_match = re.search(r"https?://\S+", source_field)
         spans = quoted_spans(fields.get("Verbatim", ""))
+        # A Weakens field quotes the source too — "± 6 at 90% confidence", "may
+        # have prompted" — and those words are claims about the source like any
+        # other. This suite's own past wording is in italics, not quotes.
+        extra = quoted_spans(fields.get("Weakens it", "")) + quoted_spans(fields.get("Source", ""))
         if not url_match or not spans:
             print(f"  MALFORMED    {cid}: {'no quoted span' if not spans else 'no URL, and no resolvable as-Cn'}")
             counts["MALFORMED"] += 1
@@ -111,7 +116,7 @@ def main() -> int:
             print(f"  unreachable  {cid}: {note}")
             counts["unreachable"] += 1
             continue
-        failures = [why for ok, why in (quote_in_source(s, source) for s in spans) if not ok]
+        failures = [why for ok, why in (quote_in_source(s, source) for s in spans + extra) if not ok]
         if failures:
             counts["NOT FOUND"] += 1
             print(f"  NOT FOUND    {cid}: {failures[0]}")

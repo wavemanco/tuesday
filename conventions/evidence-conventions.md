@@ -132,7 +132,7 @@ substantial (cite C22). The shift is theirs to state; the size comparison was
 this suite's, and it was wrong.
 
 The reading this suite takes from it is an **inference**, not a result — one
-platform, one tool, two skill categories, remote short-term work. Stated as an inference: *whatever
+platform, one tool, two skill categories, mostly remote short-term work. Stated as an inference: *whatever
 becomes cheap to generate stops carrying information, and what can be checked
 keeps carrying it.*
 `[generic]` is this suite's own name for the cheap-to-generate part, and an
