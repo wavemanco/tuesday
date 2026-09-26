@@ -42,11 +42,12 @@ is stated because the tiers describe *how much* and not *what for*: L1's cap is 
 ceiling, not a target, and a skill that spends it on questions whose answers
 change nothing has followed the letter and missed the point. Name the output a
 search could change before running it; if there is none, skip it — **and account
-for the skip where the output already reports its research**: one line per
-declared target, ran or skipped, and for a skip the output it could not have
-moved. When no tier runs at all — declined, or no search available in this host
-— the accounting is one line saying so and why, not a row per target: a search
-that could not run is not a skip.
+for the skip where the output already reports its research**: one row per
+declared target, marked `yes`; `skipped`, with the output it could not have
+moved; `n/a`, when the target's input never arrived; or `unavailable`, when it
+could not run — no search in this host, or the tier declined — with what it
+would have moved, which the upgrade menu then offers. A skip is a judgement and
+an unavailable search is a circumstance, and the table exists to keep them apart.
 
 The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
 gives: compliance here depends on noticing an absence, and a search that ran

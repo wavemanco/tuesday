@@ -46,14 +46,15 @@ Three tiers; the trade is the user's to make. Model memory is never a source for
 **Budget accounting is stated once and stays true.** Where the run reports what it spent against the tier's budget, that count matches the searches actually listed. A tally that disagrees with its own list makes the whole research section unfalsifiable — the reader cannot tell which of the two is the mistake.
 
 **Every declared target is accounted for, in evidence status.** One row per L1
-target above, in the order listed — `yes`, `no`, or `n/a` — and for a skip, the
-output it could not have moved. `n/a` is a target whose input never arrived (no
-hiring manager was named); `no` is a target that could have run and was judged
-unable to move anything, and collapsing the two hides the second, which is the
-case the rule exists for. L2 targets join the table when L2 ran and are absent
-when it did not, since an unoffered tier has no skips; at L0 the table is one
-line saying no tier ran and why — declined, or no search available here — which
-is different from a `no`, a search that could have run. A wasted search and a correctly-skipped one produce
+target above, in the order listed, marked `yes`, `skipped`, `n/a` or
+`unavailable`. `skipped` is a target that could have run and was judged unable to
+move anything, and its row names the output it could not have moved. `n/a` is a
+target whose input never arrived (no hiring manager was named). `unavailable` is
+a target that could not run — this host offers no search, or the user declined
+the tier — and its row names what it would have moved. Folding a skip into either
+of the others hides it, and the skip is the case the rule exists for. L2 targets
+join the table when L2 ran and are absent when it did not, since an unoffered
+tier has no skips. A wasted search and a correctly-skipped one produce
 identical prose, so an unfilled row is the only form of this rule a reader or a
 grader can check. Worked table in `references/dossier-template.md` — the dossier
 carries the same table because it renders the same analysis.

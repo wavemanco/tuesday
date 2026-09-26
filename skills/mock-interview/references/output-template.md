@@ -72,18 +72,17 @@ unfilled row can.
 |---|---|---|
 | 1. `{company} values` | yes | Values cheat sheet, section 10 — four principles by name |
 | 2. `{company} interview process {role family}` | yes | Loop structure; persona weights follow the named rounds |
-| 3. `{company} strategy` / recent news | no | Could not have moved the CO bank: the recruiter's strategy brief already supplies current priorities |
+| 3. `{company} strategy` / recent news | skipped | Could not have moved the CO bank: the recruiter's strategy brief already supplies current priorities |
 | 4. `{interviewer name} {company}` | n/a | No name was given; the interviewer read is absent and the upgrade menu says what a name would unlock |
 
-`n/a` is for a target whose input never arrived, and is different from `no`,
-which is a target that could have run and was judged unable to move anything.
-Collapsing the two hides the second, which is the one the rule is about.
-
-When no research runs at all — declined, or no search available in this host —
-the table is one line saying no tier ran and why, as in job-underwriter, and the
-upgrade menu says what research would have added. A `yes` names research the
-Sources section lists; an accounting reporting a search the pack shows no trace
-of is the failure this table exists to make visible.
+`n/a` is for a target whose input never arrived. `unavailable` is for one that
+could not run — no search in this host, or research declined — and its row says
+what it would have moved, which the upgrade menu then offers. Both differ from
+`skipped`, a target that could have run and was judged unable to move anything;
+folding a skip into either hides it, and the skip is the one the rule is about.
+A `yes` names research the Sources section lists; an accounting reporting a
+search the pack shows no trace of is the failure this table exists to make
+visible.
 
 ## Loop mode
 
