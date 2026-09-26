@@ -5,16 +5,17 @@ turning a document into text, and once — increasingly — by a language model
 summarizing that text and handing a recruiter a fit score with a rationale. The
 two fail differently and only one of them is about words.
 
-This file exists because the folklore around this is dense, mostly wrong, and
-expensive to believe. What follows is what the evidence supports.
+This file exists because the folklore around this is dense, often wrong, and
+expensive to believe. What follows is what the cited evidence supports, which is
+often one small study, and each says so.
 
 ## What actually screens a resume
 
-- **Content-based auto-rejection is largely myth.** A small minority of recruiters enable it; the overwhelming majority of applications are ranked and surfaced for human review. The image of software silently binning a resume for missing a keyword quota does not match how these pipelines are configured.
-- **What does auto-reject is knockout questions** — work authorization, a required licence, a hard minimum on years — answered in the application form, not the resume. Nothing this skill writes changes them. Where a knockout looks likely to fail, that is job-underwriter's hard gate, and the candidate should know before they invest in tailoring.
-- **Keywords matter for retrieval and ranking, not gating.** Recruiters search the pile; an LLM layer ranks what surfaces. So the position is neither "stuff them" nor "ignore them": place truthful keywords where the evidence already supports them, so the candidate is *findable*, and never invent one.
+- **Content-based auto-rejection is rarer than the folklore says.** A résumé-builder vendor interviewed 25 US recruiters and reports "AI/content auto-rejection configured: 8% of recruiters" (cite C25) — two people, counted as recruiters rather than applications. The image of software silently binning every resume for missing a keyword quota does not match what those recruiters describe, though a sample that small cannot say how rare it is.
+- **What can reject without a person is knockout questions** — "yes/no eligibility checks (work authorization, required license, location)", which a team can "flip a setting to route them straight to reject" (cite C26). They are answered in the application form, not the resume, and nothing this skill writes changes them. Where a knockout looks likely to fail, that is job-underwriter's hard gate, and the candidate should know before they invest in tailoring.
+- **Keywords matter for ranking, not gating.** In the same interviews, "Many teams use match scores/filters to prioritize who gets reviewed first", and "Low score ≠ auto-reject, but in high-volume roles, it can push you to the bottom of the pile" (cite C27). So the position is neither "stuff them" nor "ignore them": place truthful keywords where the evidence already supports them, so the candidate is *findable*, and never invent one.
 - **Parsing failure is real, mechanical, and silent.** It is the failure mode worth actual attention, because it destroys the evidence before any reader sees it.
-- **The LLM layer weights position.** Primacy and recency effects are well documented: what sits first and last carries more. That makes ordering a genuine lever — and ordering is `reorder`, which the ledger already permits and which adds nothing to a claim.
+- **Position is a lever that adds nothing to a claim.** Language models answering questions over long inputs have been measured doing best when "relevant information occurs at the beginning or end of the input context" (cite C28). A resume is short and screening is not that task, so whether it carries over is an inference; a reader who stops early has in any case read what came first. Ordering is `reorder`, which the ledger already permits.
 
 One thing worth saying plainly to a candidate who asks why this skill will not
 optimize harder: what helps an LLM summarize someone correctly — explicit scope,
@@ -48,24 +49,25 @@ thing this whole suite exists to avoid.
 Instructions aimed at an automated screener — white text on white, near-zero font
 size, text in document metadata, an invisible block of keywords — are refused.
 
-This is not a fringe request, and it is a rare practice — both are true, and the
-gap between them is the useful part. A vendor survey reports "41% of US job
-seekers say they've tried it" (cite C15); the same vendor, measuring the 300
-million résumés it processes, found hidden white text in 1% (cite C17), and an
-independent academic measurement agrees (cite C18). One staffing firm reports
-about 10% of the résumés it scans with AI (cite C16). Many more people say they
-have done it than are measured doing it.
+This is not a fringe request. In a hiring-software vendor's survey of 1,200 US
+job seekers, "41% admit to using prompt injections, hidden text designed to
+bypass AI filters" (cite C17), and of the rest, "52% say they are considering it"
+(cite C17). How often it turns up in résumés is a separate question with less
+settled answers: one platform disclosed white text in 1% of the résumés it
+processed over half a year (cite C19); an academic–industry study found prompt
+injections in about 1% and calls that a lower bound (cite C20); a staffing firm
+reports hidden text in about 10% of those it scans with AI (cite C18).
 
-So a candidate asking for this is not being exotic; they have probably been told
-it works. The gap between what people report and what shows up in résumés is
-worth telling them, and worth not over-reading: it fits people abandoning the
-trick, and it fits people over-reporting it in a survey, and nothing here says
-which.
+Those figures count different things — people who say they have ever used it,
+and résumés found to contain it, measured different ways — so they are not a
+gap between saying and doing, and they are not ranked here by reliability. What
+they support is only this: a candidate asking for hidden text is not being
+exotic, and has probably been told it works.
 
 Refuse it, and give the reason rather than a bare decline:
 
 - **It is deception aimed at a machine acting for the employer**, which is deception of the employer. The distinction candidates draw here — "I'm not lying to a person" — does not survive being said out loud in an interview.
-- **It is increasingly detected, and specifically looked for.** Detection is now a product category. The trend line runs against the technique.
+- **It is looked for.** One hiring platform reports how often it finds white text (cite C19), and a staffing firm reports what its AI scanning turns up (cite C18); neither could give a rate without searching. Whether detection is growing is something these sources do not measure, so it is not claimed here.
 - **The downside is not a rejected application.** It is a candidate who cannot be considered anywhere in that organisation again, over a line they did not write themselves and could not defend.
 - **It contradicts the premise of everything else here.** This skill's entire product is that the candidate can defend every line. A line hidden from them is the exact opposite, and shipping one would make the rest of the ledger meaningless.
 
@@ -81,10 +83,18 @@ cannot see. Where it cannot be inspected, say that this check could not run.
 
 ## One dynamic, disclosed rather than exploited
 
-LLM screeners rate resumes written by their own model family more favourably —
-self-preference in the region of two-thirds to four-fifths of comparisons, worth a
-materially higher chance of being shortlisted, independent of the candidate's
-actual qualifications.
+In one controlled experiment, language models choosing between two resumes
+preferred the one they had generated over a human-written one: "The bias against
+human-written resumes is particularly substantial, with self-preference bias
+ranging from 67% to 82% across major commercial and open-source models" (cite
+C23). That range is the larger models', and "The difference between these
+probabilities provides a direct measure of self-preference bias" (cite C23) — how
+much more often a model picks its own resume, not the share of comparisons it
+decides. In simulated pipelines the same authors estimate that "candidates using
+the same LLM as the evaluator are 23% to 60% more likely to be shortlisted than
+equally qualified applicants submitting human-written resumes" (cite C24). This
+file once described that range as a share of comparisons, and the model's own
+output as its "model family"; both were wrong.
 
 This skill does not optimize for that, and could not do so honestly: the lever is
 "sound more like a machine wrote you", which is the opposite of keeping the
@@ -94,5 +104,5 @@ that have nothing to do with this finding.
 
 It is written down because a candidate who learns of it elsewhere deserves to know
 the choice was deliberate rather than an oversight, and because the finding may
-not survive the next generation of screening models. It is a fact about today's
-tools, not a principle.
+not survive the next generation of screening models. It is a finding about the
+models tested, not a principle.

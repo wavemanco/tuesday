@@ -59,10 +59,15 @@ job-underwriter/
 ├── SKILL.md                            # the skill itself — instructions Claude follows
 ├── references/
 │   ├── evidence-model.md               # evidence vocabulary, map row shape, confirmation card
-│   ├── reframing-audit.md             # mirror of conventions/ — six drift axes, five disciplines
 │   ├── gap-taxonomy-and-questions.md   # five gap types, recovery patterns, question selection
 │   ├── risk-and-decision.md            # signal classes, red-flag patterns, decision semantics
-│   └── dossier-template.md             # emission rules + full worked tuesday-dossier.md
+│   ├── dossier-template.md             # emission rules + full worked tuesday-dossier.md
+│   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
+│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
+│   ├── interaction-grammar.md          # mirror of conventions/ — standalone invariant, research tiers
+│   ├── output-discipline.md            # mirror of conventions/ — six rules on a response's shape
+│   ├── dossier-schema.md               # mirror of conventions/ — the shared dossier's schema
+│   └── citations.md                    # mirror of conventions/ — sources behind the outside claims, verbatim
 └── evals/
     └── evals.json                      # 3 test fixtures with verifiable expectations
 ```

@@ -2,13 +2,13 @@
 
 **Status: specification only.** No skill files exist. This document was written
 before any, deliberately, because the one time this repository drafted a spec
-from assumption and researched afterwards — resume-tailor's §8 — the first draft
-asserted things about screening that turned out to be folklore and missed a
-refusal the skill needed.
+from assumption and researched afterwards — `resume-tailor-spec-v0.md` §8 — the
+first draft asserted things about screening that turned out to be folklore and
+missed a refusal the skill needed.
 
-The research came first this time, and it changed the design. Section 2 is the
-evidence; section 3 is the thesis that falls out of it. Reading section 3 without
-section 2 will make the design look like a preference. It is not.
+The research came first this time, and it changed the design. §2 is the evidence;
+§3 is the thesis that falls out of it. Reading §3 without §2 will make the
+design look like a preference. It is not.
 
 ## 1. What it is for
 
@@ -56,10 +56,11 @@ imprecise to conclude anything.
 
 The structural finding is not the lift. It is the collapse. Tailoring — measured
 as TF-IDF keyword overlap between the letter and the job post — used to predict
-callbacks, and after a tool made that overlap cheap for everyone, it predicted
-half as much and offers four-fifths less. **Employers did not stop screening;
-they moved to signals that are harder to fake**, in this case the platform's
-record of the worker's past jobs.
+callbacks, and after a tool made that overlap cheap for everyone, its
+correlation with callbacks fell by about half and with offers by about
+four-fifths (cite C1). The authors say where employers went: "In response,
+employers shifted toward alternative signals, including workers’ prior work
+histories." (cite C21)
 
 The authors also find AI **substitutes for** writing skill rather than
 complementing it: workers who already wrote well gained half as much as the
@@ -74,13 +75,14 @@ The paper's fifth question is whether people revise the drafts and whether it
 matters. Most do not: below-median writers show a pronounced concentration of
 editing times **between 0 and 1 minute**, accepting the output nearly as-is,
 while above-median writers spread effort over longer durations (cite C9). Time spent
-editing is positively and highly significantly associated with both callbacks and
-offers, including *within* a worker.
+editing goes with better outcomes *within* a worker — "controlling for worker fixed
+effects", "The coefficient on editing time is positive and highly significant" for
+offers, and "likewise" for callbacks (cite C31).
 
 **The authors explicitly decline the causal reading**, and so does this spec:
 "these results should not be interpreted as evidence of a causal relationship:
 the decision to spend more time editing a cover letter is unlikely to be random
-and may correlate with unobserved bid characteristics that employers find
+… and may correlate with unobserved bid characteristics that employers find
 appealing." (cite C10) A candidate who edits for ten minutes may simply be a candidate who
 cared, and caring is not something the editing caused.
 
@@ -92,9 +94,10 @@ candidate.
 ### 2.3 The pre-AI benchmark, and why it is weaker
 
 ResumeGo ran a field experiment from 15 July 2019 to 10 January 2020, submitting
-7,287 fictitious applications across ZipRecruiter, Glassdoor and Indeed in three
-arms — no letter, generic letter, tailored letter (cite C12). Tailored letters
-drew a **53% higher callback rate** than no letter (cite C11).
+7,287 fictitious applications to openings on job boards such as ZipRecruiter,
+Glassdoor and Indeed (cite C12), in three groups — no letter, a generic letter, a
+tailored letter (cite C13). Tailored letters drew a **53% higher callback rate**
+than no letter (cite C11).
 
 Two limits, both material. It predates generative AI entirely, and §2.1 is
 precisely a finding that the value of tailoring changed afterwards. And it is a
@@ -104,24 +107,25 @@ peer reviewed. Useful as a pre-AI anchor; not a basis for a claim about now.
 
 ### 2.4 The survey layer, which is the weakest tier
 
-Widely-cited 2026 figures — roughly 52% of recruiters not reading cover letters
-against far fewer HR managers skipping them, 77% of recruiters preferring
-candidates who sent one, 72% still expecting one where the ad says optional —
-come almost entirely from resume-tool and AI-writing-tool content marketing.
-These vendors sell the product the statistic recommends.
+The widely cited figures on how many recruiters read cover letters, prefer them,
+or expect them come almost entirely from resume-tool and AI-writing-tool content
+marketing — the two listed under Sources — and those vendors sell the product the
+statistic recommends. None has an entry in `citations.md`, so none is quoted
+here, and nothing in this spec relies on one. An earlier draft quoted three of
+them as figures.
 
-Treat this tier as `[generic]` at best. The one durable and non-contested
-observation in it: **the population that reads cover letters is not the
-population that screens them first.** A first-pass recruiter frequently skips;
-the person deciding on the interview reads more often. That has a design
-consequence in §4 that does not depend on any of the percentages being right.
+Treat this tier as `[generic]` at best. The reading this spec takes from it is an
+inference, not a finding: **the person who screens a letter first may not be the
+person who decides on the interview**, and the second may read more closely. Row
+7 of §4 rests on it, and is justified on grounds that hold either way.
 
 ## 3. The design thesis
 
 **Do not optimise the letter for alignment with the job post.**
 
 That is the thing generative AI made free, and §2.1 measures what happened to its
-predictive power when it became free: down 51% for callbacks, 79% for offers.
+predictive power when it became free: down 51% for callbacks, 79% for offers
+(cite C1).
 Writing a skill that maximises keyword overlap with the posting would be building,
 carefully and with good guardrails, the exact artifact the market has already
 learned to discount.
@@ -179,10 +183,12 @@ questions-only — the suite's standalone invariant binds here as everywhere.
 Two things ride the delivery and are never pushed: emitting or updating
 `tuesday-dossier.md`, and naming the sibling skill where a request spans one.
 
-**§4's row 7 exists because of §2.4.** The first-pass screener may not read the
-letter at all; the person deciding on the interview more often does, and that
-person will be in the room later. A letter optimised to survive a skim is
-optimised for the reader least likely to read it.
+**§4's row 7 comes from §2.4, and does not depend on it.** If the inference there
+holds, the first-pass screener may not read the letter at all, while the person
+deciding on the interview reads it and will be in the room later — so a letter
+optimised to survive a skim is optimised for the reader least likely to read it.
+If it does not hold, naming where the letter is weak is still what makes it
+defensible rather than merely deliverable, which is row 7's own reason.
 
 ## 5. The rules that bind it
 
@@ -201,11 +207,13 @@ No sentence enters the letter that does not rest on a claim in the inventory.
 disciplines — and the relationship axis matters more here than anywhere, because
 a letter is written in the candidate's voice and will be read as their own words.
 
-The generative case needs one rule the audit does not yet carry, and §7 flags it
-as the likely amendment: **an audit designed to compare a proposed line against
-an original line needs a defined behaviour when there is no original.** The
-answer is that the claim inventory entry *is* the original, but that is a change
-to a canonical file and belongs in a PR of its own.
+The generative case needs no new rule. The audit's baseline is the candidate's
+own sentences, not an earlier version of the line, so a paragraph with no
+predecessor is audited against the claim-inventory entries it rests on — each of
+which quotes the candidate. resume-tailor already does this for a summary row
+whose current line is empty. An earlier draft of this spec called the missing
+original an unhandled case and a blocker for implementation; it had misread the
+audit, which `reframing-audit.md` now says in a sentence.
 
 ### 5.3 Two modes, and the draft is not evidence
 
@@ -216,9 +224,10 @@ the second to throw away their work.
 
 What separates the modes is not difficulty, it is what the audit has to compare
 against — and the reason is worth stating because it is easy to get backwards.
-In resume-tailor the original line does two jobs at once: it is the text being
-edited *and* the evidence the edit traces to. Those are the same sentence there,
-which is why that skill's ledger works so cleanly.
+In resume-tailor the current line usually does two jobs at once: it is the text
+being edited *and* the evidence the edit traces to — though not always, since a
+summary row with no current line traces to a sentence the candidate wrote
+elsewhere. That overlap is why that skill's ledger works so cleanly.
 
 They come apart here, in **both** modes. **A draft cover letter is not evidence.**
 It is a text the candidate wrote about themselves, and it may already assert what
@@ -265,23 +274,31 @@ health, caring responsibilities, age markers, pregnancy, religion, and salary
 expectations are never introduced by this skill.
 
 **This is a design choice about who controls disclosure, not a legal
-requirement** — and an earlier draft of this section stated the law wrongly,
-from a search tool's summary rather than the source it then cited. In the United
-States, employers may ask two questions outright: "Are you legally authorized to
-work in the United States?" (cite C13) and "Will you now or in the future require
-sponsorship for employment visa status (e.g., H-1B visa status)?" (cite C13). A
-candidate can answer those whenever they are asked. What federal law prohibits is
-discrimination: "Discrimination based on citizenship status is expressly
-prohibited by the Immigration and Nationality Act's anti-discrimination
-provision, 8 U.S.C. § 1324b." (cite C14)
+requirement, and this section is not legal advice.** It has been wrong twice, in
+opposite directions. The first draft said US guidance advises employers not to
+ask about citizenship at application stage, which no source here says in those
+words. The correction then answered it with evidence about *work authorization* —
+a different question the same source keeps separate — and called the first draft
+backwards. Both are corrected below from the source, as reported by one law firm
+in 2022, for US federal law only.
 
-So the reasoning is not that the employer was forbidden to ask. It is that a
-letter volunteering more than those two questions reach — a nationality, a visa
-type, a timeline — hands the reader detail the letter did not need, on a subject
-where the law exists because such detail gets misused. That is an inference from
-C14, not a finding. And all of it is US federal law; the rule itself holds
-everywhere, because it rests on the candidate's control of their own disclosure,
-not on any one jurisdiction.
+Employers may ask about work authorization and sponsorship: "Are you legally
+authorized to work in the United States?" (cite C14) and "Will you now or in the
+future require sponsorship for employment visa status (e.g., H-1B visa status)?"
+(cite C14). Those concern authorization, not citizenship. On citizenship the
+source reports that "Discrimination based on citizenship status is expressly
+prohibited by the Immigration and Nationality Act's anti-discrimination
+provision, 8 U.S.C. § 1324b." (cite C15) — and that the protection has limits: "According to DOJ guidance, while nonimmigrant visa holders and recipients of Deferred Action for Childhood Arrivals (DACA) are protected from national origin discrimination, they are not considered to be among the classes protected from citizenship status (alienage) discrimination." (cite C16)
+
+So the rule does not rest on the employer being forbidden to ask, and it does
+not rest on the law protecting the candidate — for the candidates most likely to
+mention a visa, the citizenship-status protection does not apply at all (cite
+C16). It
+rests on the candidate controlling their own disclosure. A candidate can answer
+the two authorization questions whenever they are asked; a letter volunteering a
+nationality, a visa type or a timeline hands over more than those questions reach,
+unprompted. The rule holds in every jurisdiction for that reason, and the US
+detail above is context, not its justification.
 
 Where the candidate raises one themselves — a visa timeline they have decided to
 be upfront about — the skill supports the decision they have already made, states
@@ -312,7 +329,7 @@ is legitimate; manufacturing evidence of authorship is not.
 
 Recorded rather than guessed, because guessing is what §2 exists to prevent.
 
-- **The reframing audit has no no-original case** (§5.2). Canonical amendment, its own PR, and it blocks a faithful implementation rather than merely improving one.
+- **The no-original case is not open.** An earlier draft listed it here as a blocker needing a canonical amendment; §5.2 says why that misread the audit.
 - **A fourth skill re-opens routing for all four.** This is measured, not theoretical: adding resume-tailor moved mock-interview from 2/12 to 7/12 on its own reserved phrasings with no change to its description. A cover-letter skill ships with its own positives, its own near-miss negatives — a thank-you note, a LinkedIn summary, a personal statement — and a re-run of the whole set. Budget for the other three's numbers moving.
 - **Overlap with resume-tailor is real and unresolved.** Both take a posting plus a resume and produce approval-gated prose from a claim inventory. Whether this is a fourth skill or a mode of resume-tailor is a genuine design question, and the honest answer is that the suite has no usage data to decide it. The case for separation is that the generative problem is different in kind; the case against is two skills with one intake and a shared shape competing for the same request.
 - **`n + x` requires a spec, and this is it.** Unlike mock-interview, this skill would ship with §4 written first.

@@ -20,7 +20,9 @@ Boilerplate ("self-starter", "fast-paced environment") is not material.
 | # | Requirement | Priority | Status | Where it lands | Provenance |
 |---|---|---|---|---|---|
 
-`status` is one of exactly three values, one token per cell — no parenthetical, no slash, no qualifying clause. `surfaced_by_edit (partial — see G2)` and `not_evidenced (adjacent work exists)` are not statuses; they are a status plus the nuance that belongs in the *Where it lands* column, where it can be read without breaking anything that parses the status:
+`status` is one of exactly three values, one token per cell — no parenthetical, no slash, no qualifying clause. `surfaced_by_edit (partial — see G2)` and `not_evidenced (adjacent work exists)` are not statuses; they are a status plus the nuance that belongs in the *Where it lands* column, where it can be read without breaking anything that parses the status.
+
+The three values:
 
 - **`already_evidenced`** — the current resume supports it as written. No row needed; say so.
 - **`surfaced_by_edit`** — the evidence exists but is buried, mis-sectioned, or compressed away. Names the ledger row that fixes it.

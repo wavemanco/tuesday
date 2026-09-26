@@ -72,14 +72,18 @@ mock-interview/
 ├── SKILL.md                      # the skill itself — instructions Claude follows
 ├── references/
 │   ├── personas.md               # 7 interviewer personas, relationship priors, signal rules
-│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── question-rubric.md        # 5 question types, coverage rules, guidance-writing rules
 │   ├── research-checklist.md     # L0/L1/L2 research tiers, budgets, archetype fallbacks
 │   ├── output-template.md        # pack skeleton, loop mode, drill mode
 │   ├── dossier-handoff.md        # reading handoff_to_mock_interview, writing pack_feedback
-│   └── evidence-conventions.md   # mirror of the suite's canonical vocabulary (synced-from header)
+│   ├── evidence-conventions.md   # mirror of conventions/ — source types, bands, labels
+│   ├── reframing-audit.md        # mirror of conventions/ — six drift axes, five disciplines
+│   ├── interaction-grammar.md    # mirror of conventions/ — standalone invariant, research tiers
+│   ├── output-discipline.md      # mirror of conventions/ — six rules on a response's shape
+│   ├── dossier-schema.md         # mirror of conventions/ — the shared dossier's schema
+│   └── citations.md              # mirror of conventions/ — sources behind the outside claims, verbatim
 ├── evals/
-│   └── evals.json                # 4 test fixtures with verifiable expectations
+│   └── evals.json                # 6 test fixtures with verifiable expectations
 └── docs/
     └── workflow.html             # interactive install + first-use walkthrough (this repo only)
 ```

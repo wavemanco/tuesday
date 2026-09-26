@@ -15,6 +15,12 @@ they are load-bearing.
 
 **What it governs: every word a skill proposes the candidate say, write, or send.** Resume bullets and summary lines, yes — but equally the positioning advice ("lead with…", "your first two sentences should be…"), suggested outreach and cover-letter phrasing, and interview framing. Drift migrates to whichever surface the audit isn't watching, and prose advice is the easiest place for it to hide, because it reads as strategy rather than as a claim. It is still a claim: the candidate will say it out loud to someone who can check.
 
+The baseline is what the user has said or written about themselves, never an
+earlier version of the line being proposed. A line with no predecessor — a summary
+written from nothing, a cover-letter paragraph — is audited the same way, against
+the sentences it rests on: resume-tailor's worked ledger already carries a summary
+row whose current line is empty and whose trace quotes the candidate.
+
 Audit clause by clause against the user's own sentences, on six axes:
 
 | Axis | The drift | Example |
@@ -37,10 +43,10 @@ Five disciplines make the audit actually catch things:
 - **Drift in the flattering direction is the one to hunt, but the rule is direction-agnostic** — untraceable language fails whether it raises or lowers the candidate.
 
 **And when a clause cannot be traced to the user's own sentence, cut it or ask
-about it.** That is not a sixth discipline; it is what the five are for, and it
-sat inside their list for long enough that the list said six while its lead-in
-said five and every file describing the audit said "five disciplines" — a count
-stated in thirteen places and wrong at the source. An asked question can turn a
+about it.** That is not a sixth discipline; it is what the five are for. It sat
+inside their list long enough that the list held six items under a lead-in that
+said five. The count was the right half — in the lead-in and in the twelve other
+files that repeat it — and the list was wrong. An asked question can turn a
 reframe into confirmed evidence; a guessed one turns it into a claim the
 interview will test.
 

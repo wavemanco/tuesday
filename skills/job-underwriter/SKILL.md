@@ -31,7 +31,7 @@ Read `references/evidence-conventions.md` for the vocabulary and `references/evi
 
 The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the upgrade menu, then at most three orientation questions closing the message, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. **The gap recovery queue holds no questions** — its rows say what each gap is and what would close it, and the question each row implies is asked in the closing block, tagged with its row id. A `Question:` line inside the queue puts questions fourth of nine sections and gives the message two question sites, and both of those are rules this skill already carries. Research consent (Step 2) rides with the questions; it never drives.
 
-Two lines are standing parts of every delivered assessment, first pass included: the upgrade menu (each missing input and what it concretely unlocks), and inside it the one-line dossier offer (Step 4). And label what you wrote: any statement derived from research or inference carries its provenance — `[grounded]`, `[inferred]`, or `[generic]` — where it appears, so the reader can always see how far the evidence goes.
+Two lines are standing parts of every delivered assessment, first pass included: the one-line dossier offer (Step 4) and, after it, the upgrade menu (each missing input and what it concretely unlocks). And label what you wrote: any statement derived from research or inference carries its provenance — `[grounded]`, `[inferred]`, or `[generic]` — where it appears, so the reader can always see how far the evidence goes.
 
 ### Step 2 — Research at the consented tier
 
@@ -74,7 +74,7 @@ Rules that keep the loop honest — the mechanics and prompt patterns are in `re
 
 ### Step 4 — The dossier offer
 
-The dossier offer is a standing line in every delivered assessment's upgrade menu — one sentence, no pressure — and at the natural end of the engagement, or whenever the user asks, the offer is made directly. Emitting it produces `tuesday-dossier.md`: the concise human-readable report on top, one fenced JSON envelope at the bottom, exactly per `references/dossier-template.md`. The report is rendered *from* the envelope, never written separately. Include `handoff_to_mock_interview` so interview prep can start from verified evidence rather than from scratch. Offered always, forced never — the user decides whether to carry it.
+The dossier offer is a standing line in every delivered assessment, immediately before the upgrade menu — one sentence, no pressure — and at the natural end of the engagement, or whenever the user asks, the offer is made directly. Emitting it produces `tuesday-dossier.md`: the concise human-readable report on top, one fenced JSON envelope at the bottom, exactly per `references/dossier-template.md`. The report is rendered *from* the envelope, never written separately. Include `handoff_to_mock_interview` so interview prep can start from verified evidence rather than from scratch. Offered always, forced never — the user decides whether to carry it.
 
 ### Step 5 — Late inputs and spanning requests
 
@@ -137,4 +137,4 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 - `references/dossier-template.md` — emission rules and the full worked `tuesday-dossier.md` example, envelope included. Read before emitting a dossier.
 - `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers and the depth rule that bounds them, privacy scope, and the n + x rule. Canonical wins on conflict.
 - `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill owns versus reads.
-- `references/citations.md` — the suite's recorded sources, mirrored verbatim: every outside claim a convention or reference relies on, quoted exactly beside its source, with what weakens it. A `(cite C1)` elsewhere points here; quote nothing from a source that its entry does not hold.
+- `references/citations.md` — the suite's recorded sources, mirrored verbatim: every figure, research finding, survey result and statement of law the conventions and references make, quoted exactly beside its source, with what weakens it. A `(cite C1)` elsewhere points here; quote nothing from a source that its entry does not hold.

@@ -3,17 +3,17 @@
 Per-skill evals live in `skills/<name>/evals/` and test one skill's behaviour.
 What they cannot test is **routing**: which skill fires at all. That decision is
 made across the whole available-skills list, so an assertion about it has no
-honest home inside either skill — hence this directory.
+honest home inside any one skill — hence this directory.
 
 ## Routing
 
 `suite-routing.json` holds realistic requests and the route each should take:
 a named skill, `either` (a genuinely spanning request), or `neither` (a
-near-miss that must not pull either skill). The near-misses matter most — they
+near-miss that must pull no skill at all). The near-misses matter most — they
 share the domain's whole vocabulary and are where over-triggering shows up.
 
-`run_routing.py` puts both skills in front of the model at once and records
-which one it reaches for. Three properties keep it honest:
+`run_routing.py` puts every skill in front of the model at once and records
+which one it reaches for. Four properties keep it honest:
 
 - **It installs the real skills**, copying each one into a throwaway project's
   `.claude/skills/`, so they reach the model the way installed skills do and

@@ -122,14 +122,21 @@ so its evidence is cited, not paraphrased — see `citations.md`.
 On one freelancing platform, once an AI tool made cover-letter tailoring cheap,
 "The correlation between cover-letter tailoring and receiving a callback fell by
 51% after the launch of the AI tool, and the correlation with receiving an offer
-fell by 79%." (cite C1) Over the same period the correlation between callbacks
-and workers' review scores "rose by 5%" (cite C2). The asymmetry is the finding:
-a signal losing most of its value, against a replacement gaining a little.
+fell by 79%." (cite C1) The authors describe where employers went instead:
+"Instead, employers shifted toward other signals less susceptible to AI
+influence, such as workers’ past work experience." (cite C21)
+
+An earlier version of this paragraph set the 51% fall against a 5% rise in
+another correlation and called the gap between them the finding. Those are
+relative changes on bases about four times apart, not one scale, and the authors
+themselves describe the rise in an alternative signal's predictive power as
+substantial (cite C22). The shift is theirs to state; the size comparison was
+this suite's, and it was wrong.
 
 The reading this suite takes from it is an **inference**, not a result — one
-platform, one tool, remote short-term work, a proprietary score that also sets
-default ranking. Stated as an inference: *whatever becomes cheap to generate
-stops carrying information, and what can be checked keeps carrying it.*
+platform, one tool, remote short-term work. Stated as an inference: *whatever
+becomes cheap to generate stops carrying information, and what can be checked
+keeps carrying it.*
 `[generic]` is this suite's own name for the cheap-to-generate part, and an
 output whose load-bearing claims rest on it is built from exactly what deflates.
 Keeping `[generic]` off entity-specific claims is therefore not a purity rule; it

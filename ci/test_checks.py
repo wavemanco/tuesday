@@ -413,12 +413,17 @@ def break_paraphrase_as_quote(root: Path) -> str:
 
 
 def break_uncited_source_quote(root: Path) -> str:
-    """Quote a source verbatim and drop its marker."""
+    """Quote a source verbatim and drop its markers.
+
+    Both markers go: a marker covers every quotation earlier in its sentence, so
+    dropping only the first leaves the second citing both, correctly.
+    """
     path = root / "skills/resume-tailor/references/machine-readers.md"
     text = path.read_text()
-    mutated = text.replace(' (cite C15)', '', 1)
+    mutated = text.replace('bypass AI filters" (cite C17), and of the rest, "52% say they are considering it"\n(cite C17).',
+                           'bypass AI filters", and of the rest, "52% say they are considering it".', 1)
     if mutated == text:
-        raise SystemExit("break_uncited_source_quote found no C15 marker — it has gone stale")
+        raise SystemExit("break_uncited_source_quote found no C17 quotation — it has gone stale")
     path.write_text(mutated)
     return "verbatim without (cite"
 
@@ -456,7 +461,7 @@ def break_stale_count(root: Path) -> str:
     if mutated == text:
         raise SystemExit("break_stale_count found no overrides lead-in — it has gone stale")
     path.write_text(mutated)
-    return "says 2, its list has 3"
+    return "says 2, has 3 items"
 
 
 def break_list_outgrows_count(root: Path) -> str:
@@ -470,7 +475,7 @@ def break_list_outgrows_count(root: Path) -> str:
     end = text.index("\n", i)
     mutated = text[:end + 1] + "- **Cut or ask.** A clause that cannot be traced is cut or asked about.\n" + text[end + 1:]
     path.write_text(mutated)
-    return "says 5, its list has 6"
+    return "says 5, has 6 items"
 
 
 def break_dangling_section(root: Path) -> str:
@@ -485,7 +490,7 @@ def break_dangling_section(root: Path) -> str:
 
 
 def break_ambiguous_section(root: Path) -> str:
-    """A bare §N meaning another file — the thirteen the check was built from."""
+    """A bare §N meaning another file, where this file has no such section."""
     path = root / "skills/mock-interview/references/question-rubric.md"
     text = path.read_text()
     mutated = text.replace("Confidence (`evidence-conventions.md` §2)", "Confidence (§2 of the mirror)", 1)
@@ -493,6 +498,313 @@ def break_ambiguous_section(root: Path) -> str:
         raise SystemExit("break_ambiguous_section found no qualified §2 — it has gone stale")
     path.write_text(mutated)
     return "bare §2"
+
+
+
+def swap_once(root: Path, rel: str, old: str, new: str, name: str) -> None:
+    path = root / rel
+    text = path.read_text()
+    if text.count(old) != 1:
+        raise SystemExit(f"{name} expected one {old!r} in {rel} — it has gone stale")
+    path.write_text(text.replace(old, new))
+
+
+# The next four each passed the first sections check. The citing file has a
+# section with that number, so a bare §N resolved — to the wrong file.
+
+def break_qualified_by_word(root: Path) -> str:
+    """ "(grammar §8)" in the build brief, which has an §8 of its own."""
+    swap_once(root, "docs/job-underwriter-build-brief.md", "(`interaction-grammar.md` §8)",
+              "(grammar §8)", "break_qualified_by_word")
+    return 'bare §8 after "grammar"'
+
+
+def break_qualified_by_possessive(root: Path) -> str:
+    """ "resume-tailor's §8" in the cover-letter spec, which has an §8 of its own."""
+    swap_once(root, "docs/cover-letter-spec-v0.md", "`resume-tailor-spec-v0.md` §8",
+              "resume-tailor's §8", "break_qualified_by_possessive")
+    return 'bare §8 after "resume-tailor"'
+
+
+def break_block_names_file(root: Path) -> str:
+    """A bare §2 in a list item that names `evidence-conventions.md` two words earlier."""
+    swap_once(root, "docs/job-underwriter-build-brief.md", "confidence bands (`evidence-conventions.md` §2)",
+              "confidence bands (§2)", "break_block_names_file")
+    return "bare §2 in a block naming `evidence-conventions.md`"
+
+
+def break_label_names_section(root: Path) -> str:
+    """ "**Truthfulness core** (§6)" — another file's §6 title, not this file's."""
+    swap_once(root, "docs/job-underwriter-build-brief.md", "**Truthfulness core** (`evidence-conventions.md` §6)",
+              "**Truthfulness core** (§6)", "break_label_names_section")
+    return 'bare §6 labelled "truthfulness core"'
+
+
+
+def break_qualified_after(root: Path) -> str:
+    """ "§8 in the resume-tailor spec" — the qualifier after the number, not before."""
+    swap_once(root, "docs/cover-letter-spec-v0.md", "`resume-tailor-spec-v0.md` §8",
+              "§8 in the resume-tailor spec", "break_qualified_after")
+    return 'bare §8 after "resume-tailor"'
+
+
+def break_block_names_base(root: Path) -> str:
+    """A block naming interaction-grammar without its `.md`."""
+    swap_once(root, "docs/job-underwriter-build-brief.md", "(`interaction-grammar.md` §5)",
+              "(§5, interaction-grammar)", "break_block_names_base")
+    return "bare §5 in a block naming `interaction-grammar.md`"
+
+
+
+# Each of the next eight passed the first counts check, which read one shape:
+# count word first, colon on the same line, bullets below.
+
+def break_table_count(root: Path) -> str:
+    """ "six axes" over a six-row table, made five."""
+    swap_once(root, "conventions/reframing-audit.md", "on six axes:", "on five axes:", "break_table_count")
+    return "says 5, has 6 table rows"
+
+
+def break_heading_count(root: Path) -> str:
+    """A heading counting the bullets beneath it."""
+    swap_once(root, "skills/resume-tailor/references/dossier-consumption.md", "## Five rules for consumption",
+              "## Four rules for consumption", "break_heading_count")
+    return "says 4, has 5 items"
+
+
+def break_wrapped_count(root: Path) -> str:
+    """A lead-in hard-wrapped before its colon."""
+    swap_once(root, "skills/job-underwriter/references/evidence-model.md", "Three readings this skill adds on top",
+              "Two readings this skill adds on top", "break_wrapped_count")
+    return "says 2, has 3 items"
+
+
+def break_sections_count(root: Path) -> str:
+    """ "Six rules" ahead of six numbered sections."""
+    swap_once(root, "conventions/output-discipline.md", "Six rules about the *shape*",
+              "Five rules about the *shape*", "break_sections_count")
+    return "says 5, has 6 numbered sections"
+
+
+def break_mid_sentence_count(root: Path) -> str:
+    """The count moved off the front of the lead-in, and made wrong."""
+    swap_once(root, "conventions/reframing-audit.md", "Five disciplines make the audit actually catch things:",
+              "The audit has four disciplines that make it catch things:", "break_mid_sentence_count")
+    return "says 4, has 5 items"
+
+
+def break_subsection_count(root: Path) -> str:
+    """A heading counting its own subheadings."""
+    swap_once(root, "skills/mock-interview/references/personas.md", "## The seven personas",
+              "## The six personas", "break_subsection_count")
+    return "says 6, has 7 subsections"
+
+
+def break_indented_count(root: Path) -> str:
+    """A counted list nested inside another list's item."""
+    swap_once(root, "conventions/evidence-conventions.md", "Three legitimate uses this rule does not touch",
+              "Two legitimate uses this rule does not touch", "break_indented_count")
+    return "says 2, has 3 items"
+
+
+def break_restated_count(root: Path) -> str:
+    """README restating output-discipline.md's count — the drift that actually happened."""
+    swap_once(root, "README.md", "— six rules on the shape of a delivered response",
+              "— five rules on the shape of a delivered response", "break_restated_count")
+    return '"five rules" beside `output-discipline.md`, which has 6 rules'
+
+
+
+def break_readme_tree_omits(root: Path) -> str:
+    """A skill README's folder tree missing a file the folder has — all three were."""
+    path = root / "skills/job-underwriter/README.md"
+    lines = path.read_text().split("\n")
+    kept = [line for line in lines if "── citations.md" not in line]
+    if len(kept) == len(lines):
+        raise SystemExit("break_readme_tree_omits found no citations.md in the tree — it has gone stale")
+    path.write_text("\n".join(kept))
+    return "tree omits references/citations.md"
+
+
+def break_readme_tree_phantom(root: Path) -> str:
+    """A tree naming a file the folder does not have."""
+    swap_once(root, "skills/job-underwriter/README.md", "│   ├── evidence-model.md ",
+              "│   ├── worked-examples.md\n│   ├── evidence-model.md ", "break_readme_tree_phantom")
+    return "names worked-examples.md, which does not exist"
+
+
+def break_readme_fixture_count(root: Path) -> str:
+    """mock-interview's README described four fixtures while evals.json held six."""
+    swap_once(root, "skills/mock-interview/README.md", "# 6 test fixtures", "# 4 test fixtures",
+              "break_readme_fixture_count")
+    return '"4 test fixtures" — evals.json has 6'
+
+
+def break_fenced_restatement(root: Path) -> str:
+    """A count in a folder tree's comment, beside the file it comes from."""
+    swap_once(root, "skills/job-underwriter/README.md", "six drift axes, five disciplines",
+              "five drift axes, five disciplines", "break_fenced_restatement")
+    return '"five drift axes" beside `reframing-audit.md`, which has 6 axes'
+
+
+
+# The next three each passed the first citations check, which compared a
+# quotation with its entry only when straight quotation marks were followed
+# directly by the marker. They are the panel's reproductions of the original
+# defect arriving by the other doors.
+PARAPHRASE = "This shift may favour established workers at the expense of newcomers trying\nto enter the market."
+
+
+def break_marker_after_words(root: Path) -> str:
+    """The paraphrase in quotation marks, the marker a few words later."""
+    swap_once(root, "conventions/evidence-conventions.md", '"This shift may have important implications, including favoring established\nworkers at the expense of newcomers trying to enter the market." (cite C3)',
+              '"' + PARAPHRASE + '" in the authors\' words (cite C3)', "break_marker_after_words")
+    return "and C3's Verbatim does not contain it"
+
+
+def break_curly_paraphrase(root: Path) -> str:
+    """The paraphrase in curly quotation marks, marker adjacent."""
+    swap_once(root, "conventions/evidence-conventions.md", '"This shift may have important implications, including favoring established\nworkers at the expense of newcomers trying to enter the market." (cite C3)',
+              "\u201c" + PARAPHRASE + "\u201d (cite C3)", "break_curly_paraphrase")
+    return "and C3's Verbatim does not contain it"
+
+
+def break_unmarked_paraphrase(root: Path) -> str:
+    """The paraphrase in quotation marks with no marker at all — the defect as it shipped."""
+    swap_once(root, "conventions/evidence-conventions.md", '"This shift may have important implications, including favoring established\nworkers at the expense of newcomers trying to enter the market." (cite C3)',
+              '"' + PARAPHRASE + '"', "break_unmarked_paraphrase")
+    return "is close to C3's source but not its words"
+
+
+
+def break_close_contradicts_order(root: Path) -> str:
+    """The expectation PR #9 shipped: the response "closes with an upgrade menu",
+    in a skill whose closing_order puts the questions last."""
+    swap_once(root, "skills/resume-tailor/evals/evals.json",
+              "The response ends with the upgrade menu and the questions as its last two sections in that order, "
+              "asks at most three questions across the whole message",
+              "The response closes with an upgrade menu and asks at most three questions across the whole message",
+              "break_close_contradicts_order")
+    return "closing_order ends questions"
+
+
+def break_close_far_from_subject(root: Path) -> str:
+    """job-underwriter's original wording, which a fixed window after the subject missed:
+    sixty characters and a filename's full stop between "The response" and "closes"."""
+    swap_once(root, "skills/job-underwriter/evals/evals.json",
+              "and its upgrade menu names what each missing input would unlock. The response closes with the "
+              "dossier offer, then the upgrade menu, then the questions",
+              "and closes with an upgrade menu naming what each missing input would unlock",
+              "break_close_far_from_subject")
+    return '"closes with an upgrade menu naming what each missing input'
+
+
+def break_budget_restated(root: Path) -> str:
+    """A reference restating the question budget as a different number."""
+    swap_once(root, "skills/job-underwriter/references/gap-taxonomy-and-questions.md",
+              "**At most three questions per turn", "**At most four questions per turn", "break_budget_restated")
+    return "question_budget is 3"
+
+
+def break_elision_drops_hedge(root: Path) -> str:
+    """Re-admit the original defect through an ellipsis.
+
+    "may … favoring established workers" skips "have important implications,
+    including" — which turns the authors' hedge into the paraphrase that shipped.
+    The first matcher let any gap through, so the check built to stop this
+    paraphrase would have certified it.
+    """
+    path = root / "conventions/evidence-conventions.md"
+    text = path.read_text()
+    old = '"This shift may have important implications, including favoring established\nworkers at the expense of newcomers trying to enter the market." (cite C3)'
+    mutated = text.replace(old, '"This shift may … favoring established workers at the expense of newcomers\ntrying to enter the market." (cite C3)', 1)
+    if mutated == text:
+        raise SystemExit("break_elision_drops_hedge found no C3 quotation — it has gone stale")
+    path.write_text(mutated)
+    return "Verbatim does not contain it"
+
+
+def break_truncated_number(root: Path) -> str:
+    """Drop the leading digits of a figure: 3.56 becomes 56.
+
+    Raw substring matching accepted "56 percentage points" as a quotation of
+    "3.56 percentage points".
+    """
+    path = root / "docs/cover-letter-spec-v0.md"
+    text = path.read_text()
+    mutated = text.replace('+3.56 pp, a 51% lift on a 7.02% baseline | (cite C4)',
+                           '+3.56 pp | (cite C4)', 1)
+    mutated = mutated.replace("## 2.2 ", '"56 percentage points" (cite C4)\n\n## 2.2 ', 1) if "## 2.2 " in mutated else mutated
+    if mutated == text or '"56 percentage points" (cite C4)' not in mutated:
+        # Fall back to appending a quotation where it will be read.
+        mutated = text + '\n\nThe lift was "56 percentage points" (cite C4).\n'
+    path.write_text(mutated)
+    return "Verbatim does not contain it"
+
+
+def break_changed_small_number(root: Path) -> str:
+    """Change one small number inside a quotation: 0 and 1 minute to 0 and 9.
+
+    The first normaliser deleted every one-to-three-digit number sitting between
+    two words as a presumed footnote, so "7 years" and "9 years" were the same
+    quotation. Numbers are now matched whole.
+    """
+    path = root / "docs/cover-letter-spec-v0.md"
+    path.write_text(path.read_text() + '\n\nMost edited for "between 0 and 9 minute" (cite C9).\n')
+    return "Verbatim does not contain it"
+
+
+def break_empty_quotation(root: Path) -> str:
+    """A quotation that is only an ellipsis quotes nothing, and used to match."""
+    path = root / "docs/cover-letter-spec-v0.md"
+    path.write_text(path.read_text() + '\n\nAs the authors put it, "…" (cite C1).\n')
+    return "Verbatim does not contain it"
+
+
+def break_short_numeric_uncited(root: Path) -> str:
+    """A short quotation carrying a figure, with its marker detached.
+
+    The uncited-quote check skipped anything under six words, and a three-word
+    span with a number in it is exactly the kind worth catching.
+    """
+    path = root / "skills/resume-tailor/references/machine-readers.md"
+    text = path.read_text()
+    mutated = text.replace('"52% say they are considering it"\n(cite C17)', '"52% say they are considering it"', 1)
+    if mutated == text:
+        raise SystemExit("break_short_numeric_uncited found no 52% quotation — it has gone stale")
+    path.write_text(mutated)
+    return "verbatim without (cite"
+
+
+def break_example_counted_as_use(root: Path) -> str:
+    """Leave an entry cited only by a syntax example in backticks.
+
+    CONTRIBUTING shows `(cite C1)` as an example; counting it as a use made an
+    entry look relied on by prose that was only describing the marker.
+    """
+    path = root / "conventions/citations.md"
+    path.write_text(path.read_text() + """
+## C99
+
+- **Claim:** Cited only inside a code span.
+- **Verbatim:** "a sentence nothing actually cites"
+- **Source:** nowhere — https://example.invalid/
+- **Retrieved:** 2026-09-26
+""")
+    contributing = root / "CONTRIBUTING.md"
+    contributing.write_text(contributing.read_text() + "\n\nThe marker looks like `(cite C99)`.\n")
+    return "cited nowhere"
+
+
+def break_wrong_bare_figure(root: Path) -> str:
+    """Quote a bare figure that is wrong: C2 says 5%, prose says "9%".
+
+    A two-character quotation never reached the matcher, because the pattern
+    finding cited quotations required at least three characters.
+    """
+    path = root / "conventions/evidence-conventions.md"
+    path.write_text(path.read_text() + '\n\nReview scores rose by "9%" (cite C2).\n')
+    return "Verbatim does not contain it"
 
 
 CASES: list[tuple[str, str, callable]] = [
@@ -514,6 +826,9 @@ CASES: list[tuple[str, str, callable]] = [
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),
     ("parameters", "the parameter section removed", break_missing_parameter_section),
+    ("parameters", "an expectation closing on a section closing_order does not end with", break_close_contradicts_order),
+    ("parameters", "the same, with the subject far from its verb", break_close_far_from_subject),
+    ("parameters", "a reference restating the question budget differently", break_budget_restated),
     ("columns", "the column a qualifier_field points at deleted", break_qualifier_column_missing),
     ("columns", "a qualifier_field naming no column at all", break_qualifier_field_renamed),
     ("columns", "the Provenance column stripped from a declared carrier", break_provenance_column_missing),
@@ -529,8 +844,36 @@ CASES: list[tuple[str, str, callable]] = [
     ("citations", "an entry no claim rests on", break_unused_citation),
     ("counts", "a count left behind by its list", break_stale_count),
     ("counts", "a list that outgrew its count", break_list_outgrows_count),
+    ("counts", "a count over a table", break_table_count),
+    ("counts", "a count in a heading", break_heading_count),
+    ("counts", "a count in a lead-in wrapped before its colon", break_wrapped_count),
+    ("counts", "a count ahead of numbered sections", break_sections_count),
+    ("counts", "a count moved mid-sentence", break_mid_sentence_count),
+    ("counts", "a heading counting its subheadings", break_subsection_count),
+    ("counts", "a count over a nested list", break_indented_count),
+    ("counts", "a count restated beside the file that holds the list", break_restated_count),
+    ("counts", "a count in a code-fenced tree, beside its file", break_fenced_restatement),
+    ("readmes", "a README tree missing a file the folder has", break_readme_tree_omits),
+    ("readmes", "a README tree naming a file that does not exist", break_readme_tree_phantom),
+    ("readmes", "a README fixture count that disagrees with evals.json", break_readme_fixture_count),
     ("sections", "a reference to a section that does not exist", break_dangling_section),
     ("sections", "a bare section number meaning another file", break_ambiguous_section),
+    ("sections", "a bare section qualified by a word, not a file name", break_qualified_by_word),
+    ("sections", "a bare section qualified by a possessive", break_qualified_by_possessive),
+    ("sections", "a bare section in a block naming another file", break_block_names_file),
+    ("sections", "a bare section labelled with another file's heading", break_label_names_section),
+    ("sections", "a bare section qualified after the number", break_qualified_after),
+    ("sections", "a bare section in a block naming a file without .md", break_block_names_base),
+    ("citations", "an elision that skips a hedge", break_elision_drops_hedge),
+    ("citations", "a figure with its leading digits dropped", break_truncated_number),
+    ("citations", "a small number changed inside a quotation", break_changed_small_number),
+    ("citations", "a quotation that is only an ellipsis", break_empty_quotation),
+    ("citations", "a wrong bare figure in a short quotation", break_wrong_bare_figure),
+    ("citations", "a short quotation with a figure and no marker", break_short_numeric_uncited),
+    ("citations", "an entry cited only by a syntax example", break_example_counted_as_use),
+    ("citations", "a paraphrase quoted, its marker a few words later", break_marker_after_words),
+    ("citations", "a paraphrase in curly quotation marks, cited", break_curly_paraphrase),
+    ("citations", "a paraphrase in quotation marks with no marker", break_unmarked_paraphrase),
 ]
 
 
@@ -543,7 +886,7 @@ def main() -> int:
         clean.mkdir()
         root = stage(clean)
         # The whole gate, not one group. This baseline used to run "frontmatter"
-        # alone and then print "clean repo passes" — a claim about eleven groups
+        # alone and then print "clean repo passes" — a claim about every group
         # made after checking one. With a group already failing on the clean repo,
         # a mutation of that group is not attributable to the mutation at all.
         code, out = run(root, None)

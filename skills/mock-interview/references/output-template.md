@@ -79,6 +79,12 @@ unfilled row can.
 which is a target that could have run and was judged unable to move anything.
 Collapsing the two hides the second, which is the one the rule is about.
 
+When no research runs at all — declined, or no search available in this host —
+the table is one line saying no tier ran and why, as in job-underwriter, and the
+upgrade menu says what research would have added. A `yes` names research the
+Sources section lists; an accounting reporting a search the pack shows no trace
+of is the failure this table exists to make visible.
+
 ## Loop mode
 
 Use when the user faces multiple scheduled rounds. Ask which rounds are on the calendar (this piggybacks on the Step 1 message — it does not add a second elicitation round). Structure: one shared fit snapshot + sources block, then a mini-pack per round with that round's persona weights, its own bank (8–12 questions), and its own reverse questions. The values cheat sheet lives with whichever round research says is values-focused. The upgrade menu is shared and sits at the end.

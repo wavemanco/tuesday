@@ -79,6 +79,10 @@ sibling_mentions: 1
 
 The drill and dossier offers sit inside the closing run because they are things
 the candidate acts on, not commentary on the pack — one line each, neither pushed.
+`closing_order` governs the delivery as a whole: the pack, whose last section is
+the upgrade menu, then the offers, then any questions. When the pack is saved as a
+file, the offers and questions close the message that presents it, and nothing
+follows the questions.
 
 ## The n + x rule
 
@@ -124,6 +128,6 @@ Degrade by dropping or genericizing sections and labeling provenance — never b
 - `references/output-template.md` — pack skeleton, conditionality table, loop-mode and drill-mode specs, file conventions. Read before delivering.
 - `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers and the depth rule that bounds them, privacy scope, and the n + x rule. Canonical wins on conflict.
 - `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill reads versus owns.
-- `references/citations.md` — the suite's recorded sources, mirrored verbatim: every outside claim a convention or reference relies on, quoted exactly beside its source, with what weakens it. A `(cite C1)` elsewhere points here; quote nothing from a source that its entry does not hold.
+- `references/citations.md` — the suite's recorded sources, mirrored verbatim: every figure, research finding, survey result and statement of law the conventions and references make, quoted exactly beside its source, with what weakens it. A `(cite C1)` elsewhere points here; quote nothing from a source that its entry does not hold.
 - `references/dossier-handoff.md` — reading `handoff_to_mock_interview` (the five consumption rules) and writing `pack_feedback`. Read when a dossier is present, and before offering to emit one.
 - `references/evidence-conventions.md` — the suite's canonical vocabulary, mirrored: source types, confidence bands, the gap taxonomy, provenance labels, and the truthfulness core. This is where the labels used throughout the pack are defined; the mirror is a verbatim copy and canonical wins on conflict.

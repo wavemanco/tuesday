@@ -58,7 +58,7 @@ A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable 
 ```yaml
 handoff_to_mock_interview:
   high_priority_requirements: []        # the requirements interviews will actually test
-  verified_candidate_evidence: []       # high/medium-confidence claims, per evidence-conventions §5
+  verified_candidate_evidence: []       # high/medium-confidence claims, per `evidence-conventions.md` §5
   uncertain_or_weak_areas:
     - requirement: string
       gap_type: discovery | transferability | capability
@@ -67,7 +67,7 @@ handoff_to_mock_interview:
   likely_interviewer_objections: []     # nominates the pack's highest-ROI rehearsal
   opportunity_risks_to_validate: []     # unresolved risk-register items worth asking about live
   questions_for_employer: []            # seeds reverse questions
-  prohibited_claims: []                 # absolute — see evidence-conventions §5 overrides
+  prohibited_claims: []                 # absolute — see `evidence-conventions.md` §5 overrides
 ```
 
 Consumption rules for mock-interview (bound in its v2 patch): verified evidence upgrades story-mapping to evidence-level `[grounded]`; `allowed_interview_strategy` constrains what guidance may coach; `likely_interviewer_objections` names the highest-ROI rehearsal instead of inferring it; risks and employer questions seed the reverse-question bank; `prohibited_claims` are hard guardrails on every guidance cell.

@@ -141,31 +141,54 @@ what weakens it. Prose cites it as `(cite C1)` and may quote only what the entry
 holds. The paraphrase problem is a comparison problem: a restatement in one file
 and its source in another are never read side by side, which is this document's
 own test for when a sentence must become a slot. `check_skills.py --only
-citations` verifies every marker resolves, every entry is used, and every quoted
-span sits inside its entry. `ci/verify_citations.py` refetches the sources and
-checks each entry against them; it needs the network, so it runs by hand, and it
-reports *unreachable* as unchecked rather than as a pass.
+citations` verifies every marker resolves and every entry is used. A marker
+covers every quotation earlier in its sentence, not only the one beside it, and
+each must sit inside that marker's entry; curly quotation marks count. A
+quotation with no marker is compared with every entry: found verbatim, it is a
+source quoted without its citation; close to an entry but not inside it, it is a
+paraphrase wearing quotation marks, which is how the original defect shipped.
+`ci/verify_citations.py` refetches the sources and checks each entry against
+them; it needs the network, so it runs by hand, and it reports *unreachable* as
+unchecked rather than as a pass.
 
-What it cannot see is a claim about the world made **without** a marker and
-without quotation marks — a paraphrase. That still needs a reviewer. The check
-does catch a source quoted verbatim with no marker, because the entry's text is
-there to match.
+What it cannot see is a paraphrase with no quotation marks, or a quotation of a
+source that has no entry — there is nothing to compare either with. Those still
+need a reviewer.
 
 **A reference into another file names that file; a bare §N means this one.**
-`--only sections` resolves every reference. Thirteen bare references in this
-repository each meant some other file, recoverable only from context — a parenthetical naming "the mirror" by section number, a table column
-headed "Section of the mirror" — and a check cannot resolve context. (It cannot
-tell a quoted example from a reference either, which is why this paragraph
-describes that parenthetical rather than reproducing it.)
+Write it `name.md` §N — one spelling, so the check can resolve it. `--only
+sections` resolves every reference. Thirteen bare references each meant some
+other file — a parenthetical naming "the mirror" by section number, a table
+column headed "Section of the mirror" — and the first version of the check only
+asked whether this file had a section with that number. Fifteen more passed it
+that way — the build brief sent readers to the grammar's eighth section by
+number alone, and had an eighth section of its own. A bare §N is now refused
+when a word beside it names another file or document, when its paragraph or list
+item names another file, or when its label is another file's heading for that
+number. What the check cannot read is a meaning carried by an earlier paragraph,
+and it cannot tell a quoted example from a reference, which is why this paragraph
+describes that parenthetical rather than reproducing it. A local reference in a
+block that names another file is written "this file's §N".
 
-**A count that introduces a list agrees with the list.** `--only counts` sums
-every count word in the lead-in, so "four things it does, and one it refuses" is
-five. It checks only a count and its list in the **same file**. A count restated
-elsewhere — "six axes, five disciplines" in a `SKILL.md` — is not checked, because
-"axes" means persona and question-type axes in mock-interview and a check would
-misfire. Those restatements are currently true. Prefer not to add more: a fact
-stated in thirteen places goes stale in twelve, which is what happened to "five
-disciplines".
+**A count agrees with what it counts.** `--only counts` reads a count wherever
+it introduces a list, a table, a heading's subsections, or a file's numbered
+sections, and a lead-in hard-wrapped before its colon is read whole. It sums
+every counted noun in the lead-in, so "four things it does, and one it refuses"
+is five. The first version read one shape — count word first, colon on the same
+line, bullets below — and passed eight others in this repository without a word.
+
+A count restated in another file is checked when the file holding the list is
+named in the same sentence or the one either side: "six axes" beside
+`reframing-audit.md` is compared with that file's table. This is how README.md was found still describing
+output-discipline.md by its old rule count after a sixth rule was added. It
+cannot tell a quoted mistake from a claim, so a paragraph about one describes it
+rather than repeating it. A restatement that names no file is not
+checked, because "axes" means persona and question-type axes in mock-interview
+and a check keyed on the word alone would misfire. Prefer not to add
+restatements, and when you do, name the file. When the reframing audit's list
+and its count disagreed, settling which was wrong meant reading all thirteen
+places that state the count. The list was wrong; the twelve restatements had been
+right throughout, and nothing but reading could have said so.
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A
