@@ -74,4 +74,4 @@ resume-tailor/
     └── evals.json                      # five fixtures with verifiable expectations
 ```
 
-`references/evidence-conventions.md` and `references/reframing-audit.md` are verbatim mirrors of the suite's canonical files, carried so the skill installs standalone. Canonical wins on conflict; a mirror that drifts is a defect and CI fails the build on it.
+The files marked as mirrors above are verbatim copies of the suite's canonical files, carried so the skill installs standalone. Canonical wins on conflict; a mirror that drifts is a defect and CI fails the build on it.

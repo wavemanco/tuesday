@@ -398,15 +398,28 @@ def check_parameters() -> None:
 
 
 BUDGET_PHRASE = re.compile(
-    r"\b(?:at most|no more than|up to)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
-    r"(?:[a-z-]+\s+)?questions?\b", re.IGNORECASE)
+    r"\b(?:at most|no more than|up to|a maximum of|never (?:ask )?more than)\s+"
+    r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[a-z-]+\s+){0,2}?questions?\b"
+    r"|\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[a-z-]+\s+){0,2}?questions?"
+    r"\s*(?:at most|max(?:imum)?|or fewer)\b", re.IGNORECASE)
+# A budget about one topic is not the message's budget: "at most one question
+# about the interviewer".
+SUB_BUDGET = re.compile(r"\s+(?:about|on|regarding|concerning|for each)\b", re.IGNORECASE)
 # The subjects whose close closing_order governs. A pack, a rationale cell or a
 # story also "ends with" things, and those are other parameters' business: "The
 # pack ends with an upgrade menu" is mock-interview's skeleton, not its message.
-CLOSE_VERB = re.compile(r"\b(?:closes|ends|close|end|closing)\s+with\s+(?P<obj>[^.;:—\n]+)", re.IGNORECASE)
-RESPONSE_SUBJECTS = {"response", "message", "reply", "assessment", "turn"}
+CLOSE_VERB = re.compile(
+    r"\b(?:closes|ends|close|end|closing|ending|concludes|conclude|finishes|finish|wraps up|wrap up)"
+    r"\s+(?:with|on)\s+(?P<obj>[^.;:\n]+)", re.IGNORECASE)
+RESPONSE_SUBJECTS = {"response", "message", "reply", "assessment", "turn", "skill", "output"}
 OTHER_SUBJECTS = {"pack", "rationale", "cell", "story", "row", "section", "table", "file", "letter",
                   "bullet", "line", "label", "column", "guidance", "answer", "question", "ledger"}
+# Where an object stops naming sections: "an upgrade menu naming what each input
+# unlocks" names one section, and "and asks at most three questions" is a new clause.
+OBJECT_END = re.compile(
+    r"\s+(?:naming|listing|showing|saying|that|which|who|with|without|so|because|counted|"
+    r"and\s+(?:then\s+)?(?:asks|offers|names|gives|says|puts|keeps|carries|lists|includes|is|are|has))\b"
+    r"|\s+—(?!\s*(?:and|then)\b)", re.IGNORECASE)
 
 
 def close_subject(text: str, at: int) -> str | None:
@@ -415,13 +428,18 @@ def close_subject(text: str, at: int) -> str | None:
     A fixed window missed "The response offers a tuesday-dossier.md rather than
     emitting or forcing one, and closes with an upgrade menu": sixty characters
     and a filename's full stop between subject and verb. The scan runs back to the
-    sentence break instead, and a full stop inside a filename is not one.
+    sentence break instead, and a full stop inside a filename is not one. An
+    imperative at the start of a sentence — "End with the upgrade menu" — is an
+    instruction about the response.
     """
     start = max([m.end() for m in re.finditer(r"[.!?](?=\s+[A-Z*\"`])", text[:at])] + [0])
-    for word in reversed(re.findall(r"[A-Za-z]+", text[start:at])):
+    words = re.findall(r"[A-Za-z]+", text[start:at])
+    for word in reversed(words):
         word = word.lower()
         if word in RESPONSE_SUBJECTS or word in OTHER_SUBJECTS:
             return word
+    if not words:
+        return "response"
     return None
 
 
@@ -439,14 +457,17 @@ def check_parameter_agreement(group: str, skill: Path, values: dict[str, str]) -
     two evals in job-underwriter required the response to close "with an upgrade
     menu" while closing_order put the questions last, and an expectation written
     for resume-tailor contradicted its own declaration for two releases. Two
-    restatements are checkable without reading intent. A question budget stated
-    as "at most N questions" must be question_budget. A sentence saying the
-    response or message closes or ends with some sections must name a tail of
-    closing_order — the last item, or the last several in order — so "closes
-    with an upgrade menu" fails where questions come last. Subjects other than
-    the response are not read: a pack, a cell or a story ends with other things.
+    restatements are checkable without reading intent. A question budget must be
+    question_budget. A sentence saying the response or message closes or ends with
+    some sections must name a tail of closing_order, in closing_order's order — so
+    "closes with an upgrade menu" fails where questions come last, and so does
+    naming the right sections backwards. Negated sentences ("does not end with")
+    are not read, and subjects other than the response are not either: a pack, a
+    cell or a story ends with other things.
     """
     surfaces: list[tuple[str, str]] = [("SKILL.md", (skill / "SKILL.md").read_text())]
+    if (skill / "README.md").exists():
+        surfaces.append(("README.md", (skill / "README.md").read_text()))
     for ref in sorted((skill / "references").glob("*.md")):
         text = ref.read_text()
         if not SYNCED_HEADER.match(text):
@@ -460,10 +481,14 @@ def check_parameter_agreement(group: str, skill: Path, values: dict[str, str]) -
 
     budget = values.get("question_budget", "")
     order = closing_items(values.get("closing_order", ""))
+    declared = [part.strip() for part in values.get("closing_order", "").split(",")]
     checked = 0
-    for where, text in surfaces:
+    for where, raw in surfaces:
+        text = re.sub(r"(?<!\n)\n(?![\n|#>*-])", " ", raw)     # a hard wrap is not a break
         for match in BUDGET_PHRASE.finditer(text):
-            word = match.group(1).lower()
+            if SUB_BUDGET.match(text, match.end()):
+                continue
+            word = (match.group(1) or match.group(2)).lower()
             stated = int(word) if word.isdigit() else COUNT_WORDS[word]
             checked += 1
             if budget.isdigit() and stated != int(budget):
@@ -471,18 +496,28 @@ def check_parameter_agreement(group: str, skill: Path, values: dict[str, str]) -
         for match in CLOSE_VERB.finditer(text):
             if close_subject(text, match.start()) not in RESPONSE_SUBJECTS:
                 continue
-            # The object ends where a new clause does: "closes with an upgrade menu
-            # and asks at most three questions" names one section, not two.
-            obj = re.split(r"\s+and\s+(?:then\s+)?(?:asks|offers|names|gives|says|puts|keeps|"
-                           r"carries|lists|includes|is|are|has)\b", match.group("obj"))[0].lower()
-            words = {w.rstrip("s") for w in re.findall(r"[a-z]+", obj)}
-            named = [i for i, item in enumerate(order) if item & words]
-            if not named or not order:
+            if re.search(r"\b(?:not|never|no longer)\s+(?:\w+\s+)?$|n't\s+$", text[max(0, match.start() - 30):match.start()]):
+                continue
+            full = match.group("obj")
+            quoted_question = re.match(r"[\s*_]*[\"“][^\"”]*\?[\"”]", full)
+            obj = "question" if quoted_question else OBJECT_END.split(full, maxsplit=1)[0].lower()
+            positions = []
+            for i, item in enumerate(order):
+                spots = [m.start() for m in re.finditer(r"[a-z]+|\?", obj)
+                         if (m.group(0).rstrip("s") in item) or (m.group(0) == "?" and "question" in item)]
+                if spots:
+                    positions.append((min(spots), i))
+            if not order:
                 continue
             checked += 1
+            if not positions:
+                fail(group, f"{skill.name} {where}: \"{' '.join(match.group(0).split())[:90]}\" — names "
+                            f"nothing closing_order ends with ({', then '.join(declared)})")
+                continue
+            named = [i for _, i in sorted(positions)]
             tail = list(range(len(order) - len(named), len(order)))
             if named != tail:
-                close = ", then ".join(values["closing_order"].split(", ")[-len(named):])
+                close = ", then ".join(declared[-len(named):])
                 fail(group, f"{skill.name} {where}: \"{' '.join(match.group(0).split())[:90]}\" — "
                             f"closing_order ends {close}")
     if checked:
@@ -589,31 +624,65 @@ CITE = re.compile(r"\(cite\s+(C\d+)\)")
 # Any length: a floor of three characters kept "9%" and "…" from ever reaching the
 # matcher, so a wrong bare figure beside a marker passed unexamined.
 QUOTATION = re.compile(r'"([^"\n]+(?:\n[^"\n]+)*)"')
-SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-Z(*`\[])|\n[ \t]*\n|\n(?=[ \t]*(?:[-*] |\d+\. |\||#))")
-# A quotation this close to an entry, and not inside it, is a paraphrase wearing
-# quotation marks. The original defect scores 0.94 against its source; nothing
-# legitimate in the repository scored above 0.6 when this was set.
+# Any "(cite …)" at all. Only the exact form `(cite Cn)` is a marker; anything
+# else — "(cite C1, C2)", "(cite: C3)" — is refused rather than silently ignored,
+# because an unparsed marker binds nothing and resolves nothing.
+ANY_MARKER = re.compile(r"\(cite\b[^)\n]*\)", re.IGNORECASE)
+MARKER_GROUP = re.compile(r"[.,;:?!]?\s*((?:\(cite\s+C\d+\)\s*)+)")
+# A sentence break, except after an abbreviation and never before a marker:
+# "write Cui et al. (cite C3)" and "the U.S. Equal Employment Opportunity
+# Commission" are one sentence each.
+SENTENCE_BREAK = re.compile(
+    r"(?<!\bet al)(?<!\be\.g)(?<!\bi\.e)(?<!\bU\.S)(?<!\bvs)(?<!\bInc)(?<!\bNo)(?<!\bSt)"
+    r"[.!?](?=\s+(?!\(cite)[A-Z(*`\[\"])|\n[ \t]*\n|\n(?=[ \t]*(?:[-*>] |\d+\. |\||#))")
+SINGLE_QUOTED_THEN_MARKER = re.compile(r"(?:‘[^’]{3,}?’|(?<![\w])'[^'\n]{3,}'(?![\w]))[.,;:]?\s*\(cite\s+C\d+\)")
+BLOCKQUOTE_MARKER = re.compile(r"^[ \t]*>.*\(cite\s+C\d+\)", re.MULTILINE)
 NEAR_QUOTE = 0.7
+STOPWORDS = frozenset("""a an the of to in on for and or but is are was were be been by with as at from
+that this these those it its their they them we our you your he she his her not no may might can could
+would should will than then so such into over under about per via""".split())
 
 
-def cited_quotations(text: str) -> list[tuple[str, str, int]]:
-    """(quotation, cid, offset) for every quotation in the same sentence as a marker, before it.
+def bound_quotations(text: str) -> list[tuple[int, int, str, list[str]]]:
+    """(start, end, quotation, cids) for every quotation, with the markers directly after it.
 
-    The first version matched a quotation only when `(cite Cn)` followed it
-    directly, so `"…," in the authors' words (cite C3)` was never compared with C3
-    at all. A marker now covers every quotation between it and the start of its
-    sentence, or the previous marker, whichever is later. Sentence breaks inside a
-    quotation do not count, since a quoted sentence ends in a full stop.
+    A marker binds the quotation it follows and nothing else. The version before
+    this one read a marker as covering every quotation earlier in its sentence,
+    which needed a sentence splitter, and every abbreviation ("et al.", "U.S.")
+    and every marker placed before its quotation became a way through or a false
+    alarm. One placement, checked exactly, has neither. Stacked markers bind as a
+    group: the quotation must sit inside one of them.
     """
-    quotes = [(m.start(), m.end(), m.group(1)) for m in QUOTATION.finditer(text)]
-    breaks = [m.start() for m in SENTENCE_BREAK.finditer(text)
-              if not any(a < m.start() < b for a, b, _ in quotes)]
-    found, last_marker = [], 0
-    for marker in CITE.finditer(text):
-        start = max([b for b in breaks if b < marker.start()] + [last_marker])
-        found += [(q, marker.group(1), a) for a, b, q in quotes if a >= start and b <= marker.start()]
-        last_marker = marker.end()
+    found = []
+    for match in QUOTATION.finditer(text):
+        group = MARKER_GROUP.match(text, match.end())
+        cids = CITE.findall(group.group(1)) if group else []
+        found.append((match.start(), match.end(), match.group(1), cids))
     return found
+
+
+def cited_sentences(text: str, quotes: list[tuple[int, int, str, list[str]]]) -> list[tuple[int, int]]:
+    """The spans of sentences that carry a marker. A full stop inside a quotation is not a break."""
+    breaks = [m.start() for m in SENTENCE_BREAK.finditer(text)
+              if not any(a < m.start() < b for a, b, _, _ in quotes)]
+    cuts = [0] + breaks + [len(text)]
+    return [(a, b) for a, b in zip(cuts, cuts[1:]) if CITE.search(text, a, b)]
+
+
+def content_stems(tokens: list[str]) -> list[str]:
+    """Content words, crudely stemmed, US and UK spellings merged: favours ~ favoring."""
+    out = []
+    for token in tokens:
+        word = token.lower()
+        if word in STOPWORDS or not re.search(r"[a-z]", word):
+            continue
+        word = word.replace("our", "or")
+        for suffix in ("ing", "ed", "es", "s"):
+            if len(word) > 4 and word.endswith(suffix):
+                word = word[:-len(suffix)]
+                break
+        out.append(word)
+    return out
 
 
 def common_run(a: list[str], b: list[str]) -> int:
@@ -625,6 +694,31 @@ def common_run(a: list[str], b: list[str]) -> int:
             cur.append(prev[j] + 1 if x == y else max(prev[j + 1], cur[j]))
         prev = cur
     return prev[-1]
+
+
+def longest_shared_run(a: list[str], b: list[str]) -> int:
+    best = 0
+    for i in range(len(a)):
+        for j in range(len(b)):
+            k = 0
+            while i + k < len(a) and j + k < len(b) and a[i + k] == b[j + k]:
+                k += 1
+            best = max(best, k)
+    return best
+
+
+def reads_as_paraphrase(quotation: str, verbatim: str) -> bool:
+    """A quotation that shares a source's content words, in its order, without being inside it.
+
+    Three consecutive content words in common is enough; so are all but one of a
+    short quotation's, which is the size of the original defect — "favours
+    established candidates", from a sentence about established workers.
+    """
+    q, s = content_stems(quote_tokens(quotation)), content_stems(quote_tokens(verbatim))
+    if len(q) < 2:
+        return False
+    run = longest_shared_run(q, s)
+    return run >= 3 or (run >= 2 and run >= len(q) - 1) or (len(q) >= 4 and common_run(q, s) >= NEAR_QUOTE * len(q))
 
 
 def citation_entries() -> dict[str, dict[str, str]]:
@@ -757,7 +851,10 @@ def check_citations() -> None:
     in a cell. The conventions imposing that rule paraphrased a paper from memory,
     and a quotation later certified "verbatim" was a compression copied from a spec
     whose own quotation was already wrong. citations.md holds each source sentence
-    once; this checks that nothing elsewhere quotes more than an entry holds.
+    once; this checks that nothing elsewhere quotes more than an entry holds, in
+    the one form CONTRIBUTING.md sets out — double quotation marks, the marker
+    directly after the quotation, one entry per marker — and refuses the forms
+    around it that a reader would take for a citation and a check could not bind.
     What it cannot check is an entry against its source — that needs the network,
     and is ci/verify_citations.py.
     """
@@ -785,40 +882,51 @@ def check_citations() -> None:
         # Inline code is syntax, not a claim: CONTRIBUTING shows `(cite C1)` as an
         # example, and counting it as a use made C1 look relied on by prose that
         # was only describing the marker. Curly double quotes are quotation marks
-        # like any other; reading only straight ones let a paraphrase through by
-        # typography.
+        # like any other.
         text = re.sub(r"`[^`\n]*`", "", path.read_text()).replace("\u201c", '"').replace("\u201d", '"')
         rel = path.relative_to(REPO)
+        for marker in ANY_MARKER.finditer(text):
+            if not CITE.fullmatch(marker.group(0)):
+                fail(group, f"{rel}: malformed marker {marker.group(0)!r} — one entry per marker, written (cite C1)")
         for cid in CITE.findall(text):
             used.add(cid)
             if cid not in entries:
                 fail(group, f"{rel}: (cite {cid}) names no entry in citations.md")
-        cited = cited_quotations(text)
-        for span, cid, _ in cited:
-            if cid in entries and not any(quote_in(span, s) for s in source_text[cid]):
-                fail(group, f"{rel}: quotes \"{' '.join(span.split())[:70]}\" as {cid}, "
-                            f"and {cid}'s Verbatim does not contain it. A quotation in the same "
-                            f"sentence as (cite {cid}) is read as {cid}'s")
+        for match in SINGLE_QUOTED_THEN_MARKER.finditer(text):
+            fail(group, f"{rel}: {' '.join(match.group(0).split())[:70]!r} — quote a source in double "
+                        f"quotation marks, which is what the check reads")
+        for match in BLOCKQUOTE_MARKER.finditer(text):
+            fail(group, f"{rel}: a blockquote carrying a marker — quote a source inline in double "
+                        f"quotation marks, with the marker directly after it")
+        quotes = bound_quotations(text)
+        for start, end, span, cids in quotes:
+            if cids and not any(quote_in(span, s) for cid in cids if cid in entries for s in source_text[cid]):
+                fail(group, f"{rel}: quotes \"{' '.join(span.split())[:70]}\" as {' or '.join(cids)}, "
+                            f"and {cids[0]}'s Verbatim does not contain it")
+        for a, b in cited_sentences(text, quotes):
+            for start, end, span, cids in quotes:
+                if a <= start < b and not cids:
+                    fail(group, f"{rel}: \"{' '.join(span.split())[:60]}\" sits in a cited sentence with no "
+                                f"marker beside it — put (cite Cn) directly after it, or take it out of "
+                                f"quotation marks")
         # A quotation with no marker is checked two ways. Verbatim somewhere in an
         # entry, it is a source quoted without its citation. Close to an entry but
         # not inside it, it is the paraphrase problem itself — the original defect
         # was a paraphrase in quotation marks, and nothing compared it with the
-        # sentence it claimed to be. Short quotations are skipped unless they
-        # carry a number, because a three-word span carrying a figure is exactly
-        # the kind worth catching.
-        cited_offsets = {offset for _, _, offset in cited}
-        for match in QUOTATION.finditer(text):
-            span = match.group(1)
+        # sentence it claimed to be. Blockquotes are quotations too.
+        unmarked = [span for _, _, span, cids in quotes if not cids]
+        unmarked += [" ".join(line.lstrip()[1:].strip() for line in block.split("\n"))
+                     for block in re.findall(r"(?:^[ \t]*>[^\n]*\n?)+", text, re.MULTILINE)]
+        for span in unmarked:
             words = quote_tokens(span)
-            if match.start() in cited_offsets or (len(words) < 6 and not any(ch.isdigit() for ch in span)):
+            if len(words) < 3 and not any(ch.isdigit() for ch in span):
                 continue
             for cid, spans in source_text.items():
                 if any(quote_in(span, s) for s in spans):
                     fail(group, f"{rel}: quotes {cid}'s source verbatim without (cite {cid}): "
                                 f"\"{' '.join(span.split())[:60]}\"")
                     break
-                if len(words) >= 6 and any(common_run(words, quote_tokens(s)) >= NEAR_QUOTE * len(words)
-                                           for s in spans):
+                if any(reads_as_paraphrase(span, s) for s in spans):
                     fail(group, f"{rel}: \"{' '.join(span.split())[:60]}\" is close to {cid}'s source "
                                 f"but not its words — quote {cid} exactly and cite it, or paraphrase "
                                 f"without quotation marks")
@@ -832,14 +940,15 @@ def check_citations() -> None:
         ok(group, f"all {len(entries)} citations are cited, and every marker resolves")
 
 
-SECTION_REF = re.compile(r"`?(?:[a-z0-9-]+/)*([a-z0-9-]+\.md)`?\s*§(\d+(?:\.\d+)?)")
+SECTION_REF = re.compile(r"`?(?:[A-Za-z0-9-]+/)*([A-Za-z0-9-]+\.md)`?(?:'s)?\s*§(\d+(?:\.\d+)?)"
+                         r"((?:\s*(?:,|and|or)\s*§\s*\d+(?:\.\d+)?|\s*(?:–|-|to)\s*§?\s*\d+(?:\.\d+)?)*)")
 BARE_SECTION = re.compile(r"§(\d+(?:\.\d+)?)")
-FILE_NAME = re.compile(r"(?:[a-z0-9-]+/)*([a-z0-9-]+\.md)\b")
+FILE_NAME = re.compile(r"(?:[A-Za-z0-9-]+/)*([A-Za-z0-9-]+\.md)\b")
 HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)?)[.\s]\s*(.*)$", re.MULTILINE)
 # "this file's §3", "§3 above": the author saying in words that a bare
 # reference is local, for the rare block that also names another file.
 SELF_REF = re.compile(r"\bthis (?:file|spec|brief|document|schema)(?:'s)?\s*$")
-SELF_AFTER = re.compile(r"^(?:'s)?\s+(?:above|below)\b")
+SELF_AFTER = re.compile(r"^(?:'s)?\s+(?:above|below|here)\b|^\s+(?:of|in)\s+this\s+(?:file|spec|brief|document|schema)\b")
 # Nouns that name a document without naming its file. "§2 of the mirror" and
 # "schema §6" read as references to somewhere else and resolved against the
 # citing file, which had a §2 and a §6 of its own.
@@ -878,18 +987,21 @@ def check_sections() -> None:
 
     The first version enforced only the second half's arithmetic — a bare §N had
     to exist here — so "(grammar §8)" in a file with its own §8 passed, and so did
-    fifteen other references into other files. A bare §N is therefore also
+    fourteen other references into other files. A bare §N is therefore also
     refused when the words around it point elsewhere:
 
-      - a qualifier: a word naming another file or a document ("grammar §8",
-        "resume-tailor's §8", "§2 of the mirror", "§8 in the resume-tailor spec");
+      - a qualifier: a file name, a skill name or a document noun within the five
+        words before it in its clause ("grammar §8", "as the grammar says in
+        §8", "resume-tailor's §8", "the conventions' §8"), or after "of"/"in"
+        ("§2 of the mirror") — unless the label is this file's own heading;
       - its block — paragraph, list item or table row — names another file, with
         or without the `.md`;
       - its label is another file's heading for that number and not this one's
         ("**Truthfulness core** (§6)" in a file whose §6 is about evals).
 
     A bare §N the author means locally, in a block that names another file, is
-    written "this file's §N" or "§N above". What no rule here reads is intent
+    written "this file's §N", "§N of this spec", or "§N above". A statute's §
+    ("8 U.S.C. §1324b") is not a section. What no rule here reads is intent
     carried by an earlier paragraph; the fifteen were found by reading all fifty
     bare references, and the self-test holds one of each kind above.
 
@@ -904,12 +1016,17 @@ def check_sections() -> None:
     for skill in skills():
         for ref in (skill / "references").glob("*.md"):
             targets.setdefault(ref.name, ref)
+    # Files a reference can name but that have no numbered sections to point at.
+    for path in [REPO / "README.md", REPO / "CONTRIBUTING.md"] + [s / "SKILL.md" for s in skills()]:
+        targets.setdefault(path.name, path)
     titles = {name: section_titles(path) for name, path in targets.items()}
+    # A qualifier is a whole file name or a skill name, not a fragment of one:
+    # "evidence" and "ledger" are ordinary words, and read as file names they
+    # refused "the evidence (§2)" in a file whose §2 is "The evidence".
     stems: dict[str, set[str]] = {}
     for name in targets:
-        base = name[:-3]
-        for word in {base, *(part for part in base.split("-") if len(part) > 3)}:
-            stems.setdefault(word, set()).add(name)
+        if name not in ("README.md", "CONTRIBUTING.md", "SKILL.md"):   # "skill" is a word
+            stems.setdefault(name[:-3].lower(), set()).add(name)
     for skill in skills():
         stems.setdefault(skill.name, set()).add(skill.name)
 
@@ -920,13 +1037,16 @@ def check_sections() -> None:
         spans = []
         for match in SECTION_REF.finditer(text):
             spans.append(match.span())
-            checked += 1
-            name, number = match.group(1), match.group(2)
+            name = match.group(1)
+            # "`x.md` §4 and §5", "§4–6": the file carries across the list.
+            numbers = [match.group(2)] + re.findall(r"\d+(?:\.\d+)?", match.group(3))
             target = targets.get(name)
-            if target is None:
-                fail(group, f"{rel}: §{number} of `{name}` — no such file")
-            elif number not in titles[name]:
-                fail(group, f"{rel}: `{name}` §{number} — that file has no section {number}")
+            for number in numbers:
+                checked += 1
+                if target is None:
+                    fail(group, f"{rel}: §{number} of `{name}` — no such file")
+                elif number not in titles[name]:
+                    fail(group, f"{rel}: `{name}` §{number} — that file has no section {number}")
         own = section_titles(path)
         for start, end in text_blocks(text):
             block = text[start:end]
@@ -938,8 +1058,11 @@ def check_sections() -> None:
                 at = start + match.start()
                 if any(a <= at < b for a, b in spans):
                     continue
-                checked += 1
                 number = match.group(1)
+                # A statute, not a section: "8 U.S.C. §1324b".
+                if len(number.split(".")[0]) >= 3 or re.search(r"U\.S\.C\.\s*$|C\.F\.R\.\s*$", text[max(0, at - 12):at]):
+                    continue
+                checked += 1
                 line = text[:at].count("\n") + 1
                 where = f"{rel}:{line}: bare §{number}"
                 if number not in own:
@@ -950,9 +1073,16 @@ def check_sections() -> None:
                 after = text[at + len(match.group(0)):at + len(match.group(0)) + 40]
                 if SELF_REF.search(before) or SELF_AFTER.match(after):
                     continue
-                qualifier = re.search(r"([A-Za-z][\w-]*)(?:'s)?\**\s*[(,]?\s*$", before)
+                label = content_words(re.sub(r"[*_`]", "", before).rsplit("\n", 1)[-1])[-2:]
+                if label and set(label) <= set(content_words(own[number])):
+                    continue                        # labelled with this file's own heading
+                # The qualifier may be anywhere in the clause: "(as the grammar says
+                # in §8)" means the grammar as plainly as "(grammar §8)" does.
+                clause = re.split(r"[,;:(|—\n]|[.!?]\s", before)[-1]
                 of_the = re.match(r"\s+(?:of|in)\s+(?:the\s+)?`?([A-Za-z][\w-]*)", after)
-                words = [w.group(1).lower() for w in (qualifier, of_the) if w]
+                words = [re.sub(r"'s?$", "", w).lower() for w in re.findall(r"[A-Za-z][\w'-]*", clause)][-5:]
+                if of_the:
+                    words.append(of_the.group(1).lower())
                 named = [w for w in words if w in DOC_NOUNS or (w in stems and path.name not in stems[w])]
                 if named:
                     fail(group, f"{where} after \"{named[0]}\" — a reference into another file is "
@@ -962,8 +1092,7 @@ def check_sections() -> None:
                     fail(group, f"{where} in a block naming `{others[0]}` — write `{others[0]}` "
                                 f"§{number} if that is meant, or \"this file's §{number}\"")
                     continue
-                label = content_words(re.sub(r"[*_`]", "", before).rsplit("\n", 1)[-1])[-2:]
-                if label and not set(label) <= set(content_words(own[number])):
+                if label:
                     elsewhere = sorted(name for name, heads in titles.items()
                                        if name != path.name and number in heads
                                        and set(label) <= set(content_words(heads[number])))
@@ -978,17 +1107,21 @@ def check_sections() -> None:
 
 
 COUNT_WORDS = {w: i for i, w in enumerate(
-    "zero one two three four five six seven eight nine ten".split())}
+    "zero one two three four five six seven eight nine ten eleven twelve".split())}
 # A count is a number word with a noun after it, so "forbade all three" and
 # "exactly one of" are not counts. The noun may carry one modifier ("five
 # question types"); the lazy group tries the bare noun first, so "Four things
 # this ledger" counts things rather than "this".
+# Digits count too: "# 7 interviewer personas" in a README tree is a restatement
+# like any other. One or two digits only, and never after §, $ or £.
 COUNT_PHRASE = re.compile(
-    r"\b(two|three|four|five|six|seven|eight|nine|ten)\s+(?:[*_`]*([a-z][a-z-]*)[*_`]*\s+)??"
-    r"[*_`]*([a-z]+s|people|criteria)\b", re.IGNORECASE)
+    r"(?<![§$£\w.–-])\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})\s+"
+    r"(?:[*_`]*([a-z][a-z-]*)[*_`]*\s+)??[*_`]*([a-z]+s|people|criteria)\b", re.IGNORECASE)
 NOT_NOUNS = frozenset("this is was has does his its us as plus less across thus always unless "
                       "whereas perhaps yes".split())
-AND_ONE = re.compile(r"\b(?:and|plus) one\b", re.IGNORECASE)
+AND_ONE = re.compile(r"\b(?:and|plus) one\b(?!\s+of\b)", re.IGNORECASE)
+PARTITIVE = re.compile(r"(?:\bof the|\ball|\bthe other|\bthese|\bthose)\s+$", re.IGNORECASE)
+COORDINATED = re.compile(r"\b(?:and|plus)\s+$", re.IGNORECASE)
 ITEM = re.compile(r"^([ \t]*)(?:- |\* |\d+\. )")
 TABLE_ROW = re.compile(r"^[ \t]*\|")
 TABLE_RULE = re.compile(r"^[ \t]*\|[\s:|-]+\|\s*$")
@@ -1000,14 +1133,27 @@ def count_phrases(text: str) -> list[tuple[int, str, re.Match]]:
     found = []
     for match in COUNT_PHRASE.finditer(text):
         noun = match.group(3).lower()
+        word = match.group(1).lower()
         if noun not in NOT_NOUNS:
-            found.append((COUNT_WORDS[match.group(1).lower()], noun, match))
+            found.append((int(word) if word.isdigit() else COUNT_WORDS[word], noun, match))
     return found
 
 
 def stated_count(lead: str) -> int:
-    """Every count in a lead-in, summed: "Four things …, and one it is refusing" is five."""
-    return sum(n for n, _, _ in count_phrases(lead)) + len(AND_ONE.findall(lead))
+    """The count a lead-in states: its first count, plus any coordinated with it.
+
+    "Four things …, and one it is refusing" is five. "Four bugs, found in two
+    harnesses" is four — summing every count in the sentence made a lead-in wrong
+    for mentioning a second quantity, and "of the six axes, these two" is two.
+    """
+    phrases = [(n, m) for n, _, m in count_phrases(lead) if not PARTITIVE.search(lead[:m.start()])]
+    if not phrases:
+        return len(AND_ONE.findall(lead))
+    total = phrases[0][0]
+    for n, m in phrases[1:]:
+        if COORDINATED.search(lead[:m.start()]):
+            total += n
+    return total + len(AND_ONE.findall(lead))
 
 
 def unfenced(lines: list[str]) -> list[str]:
@@ -1108,7 +1254,8 @@ def restatement_blocks(text: str) -> list[tuple[int, int]]:
         else:
             masked.append(line)
         offset += len(line) + 1
-    return text_blocks("\n".join(masked)) + fenced_spans
+    masked_text = "\n".join(masked)
+    return [(a, b) for a, b in text_blocks(masked_text) if masked_text[a:b].strip()] + fenced_spans
 
 
 def restatement_windows(text: str) -> list[tuple[int, int, str]]:
@@ -1136,11 +1283,16 @@ def restatement_windows(text: str) -> list[tuple[int, int, str]]:
 def counted_lists(path: Path) -> list[tuple[int, int, int, str, str]]:
     """Every count in a file paired with what it counts: (line, stated, actual, what, lead).
 
-    The shapes are the ones this repository uses: a paragraph ending in a colon
-    above a list or a table; a heading above a list or table, above its own
-    subheadings, or above one short introductory paragraph and then a list; and a
-    paragraph opening with a count ahead of numbered `## 1.` sections, the way
-    output-discipline.md introduces its rules.
+    This is the one place the shapes are listed. A count in words or digits in:
+      - a paragraph ending in a colon (emphasis around it ignored), above a list
+        — nested lists count at their own indent — or a table;
+      - a heading above a list or a table, above its own subheadings, above one
+        introductory paragraph and then a list, or above paragraphs that each
+        open with a bold label;
+      - a paragraph opening with a count, after emphasis or "These", ahead of
+        numbered `## 1.` sections, the way output-discipline.md introduces its
+        rules.
+    In a paragraph lead-in only the sentence carrying the colon is read.
     """
     lines = unfenced(path.read_text().split("\n"))
     found = []
@@ -1148,11 +1300,11 @@ def counted_lists(path: Path) -> list[tuple[int, int, int, str, str]]:
     for index, (start, end, text, is_heading) in enumerate(blocks):
         if is_heading:
             lead = text
-        elif text.rstrip().endswith(":"):
+        elif re.sub(r"[*_`\s]+$", "", text).endswith(":"):
             # Only the sentence carrying the colon. An earlier sentence's count
             # is usually about something else — "The two axes measure different
             # things: … They meet whenever …:" sits above a four-row table.
-            lead = re.split(r"(?<=[.!?])\s+(?=[A-Z*`])", text)[-1]
+            lead = re.split(r"(?<=[.!?])[*_]*\s+(?=[A-Z*`])", text)[-1]
         else:
             continue
         if not count_phrases(lead) and not AND_ONE.search(lead):
@@ -1171,6 +1323,16 @@ def counted_lists(path: Path) -> list[tuple[int, int, int, str, str]]:
                 actual, what = subs, "subsections"
             elif index + 1 < len(blocks) and not blocks[index + 1][3]:
                 actual, what = items_at(lines, blocks[index + 1][1] + 1)
+                if not what:
+                    # "## Two standing entries" over paragraphs that each open
+                    # with a bold label: the entries are the bold paragraphs.
+                    bold = 0
+                    for later in blocks[index + 1:]:
+                        if later[3]:
+                            break
+                        bold += bool(re.match(r"\*\*[^*]+\*\*", later[2]))
+                    if bold >= 2:
+                        actual, what = bold, "bold-led paragraphs"
         if what:
             found.append((start + 1, stated_count(lead), actual, what, lead))
     text = "\n".join(lines)
@@ -1181,7 +1343,8 @@ def counted_lists(path: Path) -> list[tuple[int, int, int, str, str]]:
         for start, end, para, is_heading in blocks:
             if start < before and not is_heading:
                 opening = count_phrases(para)
-                if opening and opening[0][2].start() == 0:
+                if opening and re.fullmatch(r"\s*(?:[*_]+\s*)?(?:(?:These|The|Its|Our)\s+)?(?:[*_]+\s*)?",
+                                            para[:opening[0][2].start()]):
                     found.append((start + 1, opening[0][0], len(numbered), "numbered sections",
                                   opening[0][2].group(0)))
     return found
@@ -1191,16 +1354,14 @@ def check_counts() -> None:
     """A count agrees with what it counts, in its own file and wherever it is restated.
 
     "Two overrides that beat every label:" sat above three bullets, and "Five
-    disciplines make the audit actually catch things:" above six items, one of
-    which was not a discipline. There the count was right and the list wrong, and
-    a dozen other files repeated the count, so settling which side was wrong
-    meant reading every one of them.
+    disciplines make the audit actually catch things:" above six, after a sixth
+    was added and the lead-in was not updated — with "five disciplines" restated
+    in a dozen places, so settling which side to change meant reading every one.
 
     The first version recognised one shape: the count word first on the line, the
     colon on the same line, a bulleted list below. The repository writes counts
-    in five other shapes and the check passed them all without a word — a table
-    of six axes, a heading over five bullets, a lead-in wrapped before its colon,
-    "Six rules" over six numbered sections, and a count moved mid-sentence. And
+    in the other shapes counted_lists names, and the check passed them all
+    without a word. And
     README.md, restating output-discipline.md as "five rules" after a sixth was
     added, was exactly the cross-file drift it declared out of scope.
 
@@ -1238,6 +1399,12 @@ def check_counts() -> None:
             named = {m.group(1) for m in FILE_NAME.finditer(context)} & set(by_noun)
             named.discard(path.name)
             for count, noun, match in count_phrases(block):
+                # "Two rules in `x.md` decide …" and "two rules changed" are
+                # about a subset, not a restatement of the file's total.
+                tail = block[match.end():match.end() + 60]
+                if re.match(r"\s+(?:in|from|within)\s+(?:the\s+|this\s+|that\s+)?`?[\w/-]+\.md", tail) \
+                        or re.match(r"\s+(?:changed|were|was|moved|added|removed|decide|decided|govern)\b", tail):
+                    continue
                 for name in sorted(named):
                     held = by_noun[name].get(noun)
                     if not held:
@@ -1253,9 +1420,26 @@ def check_counts() -> None:
         ok(group, f"all {checked} counts agree with what they count")
 
 
-TREE_ENTRY = re.compile(r"[├└]── ([\w.-]+\.\w+)")
-FIXTURE_COUNT = re.compile(r"\b(\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(?:test\s+)?fixtures\b",
-                           re.IGNORECASE)
+TREE_LINE = re.compile(r"^((?:│   |    )*)[├└]── ([\w.-]+/?)", re.MULTILINE)
+FIXTURE_COUNT = re.compile(r"\b(\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(?:test\s+|eval\s+|evaluation\s+)?"
+                           r"(?:fixtures|cases|evals)\b", re.IGNORECASE)
+
+
+def tree_paths(text: str) -> set[str]:
+    """The file paths a README's folder tree draws, rebuilt from its indentation.
+
+    Reading only the names let a file drawn in the wrong folder satisfy both
+    halves of the check at once.
+    """
+    paths, stack = set(), []
+    for indent, name in TREE_LINE.findall(text):
+        depth = len(indent) // 4
+        stack = stack[:depth]
+        if name.endswith("/"):
+            stack.append(name[:-1])
+        else:
+            paths.add("/".join(stack + [name]))
+    return paths
 
 
 def check_readmes() -> None:
@@ -1276,16 +1460,18 @@ def check_readmes() -> None:
             fail(group, f"{skill.name}: no README.md")
             continue
         text = readme.read_text()
-        listed = set(TREE_ENTRY.findall(text))
+        listed = {path.split("/", 1)[1] if path.startswith(skill.name + "/") else path
+                  for path in tree_paths(text)}
         if not listed:
             fail(group, f"{skill.name}: README.md draws no folder tree")
             continue
-        present = {f.name for f in skill.rglob("*") if f.is_file() and "__pycache__" not in f.parts}
+        present = {str(f.relative_to(skill)) for f in skill.rglob("*")
+                   if f.is_file() and "__pycache__" not in f.parts}
         for sub in ("references", "evals"):
             for f in sorted((skill / sub).glob("*")):
                 if f.is_file():
                     checked += 1
-                    if f.name not in listed:
+                    if f"{sub}/{f.name}" not in listed:
                         fail(group, f"{skill.name}: README.md's tree omits {sub}/{f.name}")
         for name in sorted(listed - present):
             fail(group, f"{skill.name}: README.md's tree names {name}, which does not exist")

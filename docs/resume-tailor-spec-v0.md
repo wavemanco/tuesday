@@ -163,10 +163,10 @@ skill certainly needs. Sources are listed at the end of this section.
 ### 8.1 What actually screens a resume
 
 - **Content-based auto-rejection is rarer than the folklore says.** In a résumé-builder vendor's interviews with 25 US recruiters, "AI/content auto-rejection configured: 8% of recruiters" (cite C25) — two people. This spec first wrote that around 8% of recruiters enable it and the rest rank for human review, reading a sample of 25 as a population.
-- **What can reject without a person is knockout questions** — "yes/no eligibility checks (work authorization, required license, location)" (cite C26). Those are answered in the application form, not the resume, and they are already job-underwriter's hard gates. Nothing resume-tailor writes changes them.
-- **Keywords matter for ranking**, not gating: "Many teams use match scores/filters to prioritize who gets reviewed first" (cite C27). So the honest position is neither "stuff them" nor "ignore them" — it is *place truthful keywords where the evidence already supports them, so the candidate is findable*, and never invent one.
+- **What most often rejects without a person is knockout questions** — "yes/no eligibility checks (work authorization, required license, location)" (cite C26), and in the same interviews "When automated filters are used, they’re almost always knockout questions" (cite C26). Those are answered in the application form, not the resume, and they are already job-underwriter's hard gates. Nothing resume-tailor writes changes them.
+- **Keywords may matter for ranking**: where match scores exist, "Many teams use match scores/filters to prioritize who gets reviewed first" (cite C27), though in that sample "56% either ignore the feature or don’t have it available" (cite C27), and that keywords drive the scores is an inference. So the honest position is neither "stuff them" nor "ignore them" — it is *place truthful keywords where the evidence already supports them, so the candidate is findable*, and never invent one.
 - **Parsing failure is mechanical and silent.** The failure modes the parse-safety check looks for are two-column layouts serializing out of order, tables and text boxes scrambling, icons arriving as stray characters, headers and footers discarded as page furniture, and unconventional section headings ("My Journey") defeating section detection. How often each occurs in real pipelines is not established here.
-- **An LLM layer may read what the parser produced**, write a fit summary, and hand the recruiter a score with a rationale. How well such scores agree with human judgement is not established here; this spec first said "only weakly", with nothing under it. Models answering questions over long inputs have been measured doing best with what sits at the start or end (cite C28); carrying that to a short resume is an inference.
+- **An LLM layer may read what the parser produced**, write a fit summary, and hand the recruiter a score with a rationale. How well such scores agree with human judgement is not established here; this spec first said "only weakly", with nothing under it. Models answering questions over long inputs have been measured often doing best with what sits at the start or end (cite C28); carrying that to a short resume is an inference.
 
 ### 8.2 What this changes in the spec
 
@@ -214,8 +214,11 @@ secondary source's rounding over the primary's figure. The primary's words are
 The skill refuses to write one, and says why rather than just declining: it is
 deception aimed at a machine on the employer's behalf, it is looked for — a
 platform and a staffing firm both report finding it (cite C19) (cite C18) — and
-discovery is not a rejected application but a
-candidate who cannot be hired anywhere in that organisation again. A skill whose
+being found can cost more than one application, which is the skill's judgement
+of a risk the candidate cannot control rather than a measured outcome; the one
+reported case is a recruiter who turned a candidate down (cite C35). This spec
+first said discovery bars the candidate from the whole organisation, with nothing
+under it. A skill whose
 entire premise is that the candidate must be able to defend every line cannot ship
 a line that is hidden from them.
 
@@ -226,13 +229,17 @@ is a service to them. It needs file inspection, so it is roadmapped (§8.4) rath
 than promised.
 
 **One dynamic the candidate should be told about, not exploited.** In one
-controlled experiment, language models choosing between résumés preferred ones they
-had generated over human-written ones of equal quality, with "self-preference bias
+controlled experiment, language models choosing between two versions of a
+résumé's summary section — one human-written, one they generated — picked their
+own far more often with content quality controlled, with "self-preference bias
 ranging from 67% to 82% across major commercial and open-source models" (cite C23)
-— a difference between the probabilities of picking each, for the larger models.
-In simulation, "candidates using the same LLM as the evaluator are 23% to 60% more
-likely to be shortlisted" (cite C24). This spec first called that range a rate of
-comparisons and the model's own output its "model family". This skill does not optimize for that
+— for the larger models, and as a gap in percentage points between two selection
+probabilities. In simulation, "candidates using the same LLM as the evaluator are
+23% to 60% more likely to be shortlisted" (cite C24), again a percentage-point gap
+between shares of the shortlist. This spec first called the range a rate of
+comparisons and the model's own output its "model family"; the correction that
+followed then misread both units, and a review against the paper found it. This
+skill does not optimize for that
 and could not do so honestly. It is worth naming in the spec because it is the
 strongest available argument for keeping the candidate's own phrasing wherever it
 already works — which the traceability rule enforces anyway — and because a user

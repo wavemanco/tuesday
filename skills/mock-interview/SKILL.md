@@ -35,7 +35,7 @@ If the user declines or doesn't answer, proceed down the degradation ladder. Nev
 
 ### Step 2 — Research at the consented tier
 
-Read `references/research-checklist.md`. Three tiers: **L0** (provided docs only), **L1** (default: 3–6 targeted searches — official values, documented loop structure, one recent-strategy sweep, interviewer public footprint if named), **L2** (deep research: strategy brief, interviewer talks and writing, role-family loop reports — offered once, with the time cost stated, and run only on consent).
+Read `references/research-checklist.md`. Three tiers: **L0** (provided docs only), **L1** (default: at most 6 searches and 2 page fetches, spent only where a result could change the pack — official values, documented loop structure, one recent-strategy sweep, interviewer public footprint if named), **L2** (deep research: strategy brief, interviewer talks and writing, role-family loop reports — offered once, with the time cost stated, and run only on consent).
 
 Company values, loop structure, and current strategy must come from research or provided docs, not from model memory — these are exactly the facts that drift.
 
@@ -70,12 +70,17 @@ are absolute; the parameters it names are declared here.
 
 ```text
 question_budget: 3
-enum_fields: confidence, gap_type, provenance, question_type
+enum_fields: confidence, gap_type, question_type
 closing_order: upgrade menu, drill and dossier offers, questions
 qualifier_fields: gap-and-bridge language
 provenance_sections: The fit snapshot
 sibling_mentions: 1
 ```
+
+`provenance` is not declared an enum: a Provenance cell leads with exactly one
+label, and in the question banks the candidate's own quoted sentence follows it
+wherever guidance coaches a claim about their experience. In the fit snapshot the
+label stands alone.
 
 The drill and dossier offers sit inside the closing run because they are things
 the candidate acts on, not commentary on the pack — one line each, neither pushed.

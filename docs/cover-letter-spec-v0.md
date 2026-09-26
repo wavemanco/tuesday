@@ -27,14 +27,14 @@ riskiest in the suite rather than the easiest.
 ### 2.1 The finding that should drive the design
 
 The strongest available evidence is Cui, Dias & Ye (2025), *Signaling in the Age
-of AI: Evidence from Cover Letters* — Yale Department of Economics, supported by
-the Cowles Foundation. It is a difference-in-differences study of Freelancer.com's
-introduction of an "AI Bid Writer" on 19 April 2023, with application-level data
-on both access to the tool and actual usage. That observability is the point: the
-authors note that outside lab settings, researchers struggle to identify
-AI-assisted applications for the same reason employers do, and that detection
-tools are error-prone. This study does not have to detect anything — the platform
-knows.
+of AI: Evidence from Cover Letters* — Yale Department of Economics, funded by the
+Cowles Foundation (cite C36). It studies a tool launched on one platform — "On
+April 19, 2023, Freelancer.com launched the AI Bid Writer." (cite C36) — with
+application-level data on both access to the tool and actual usage, and "a
+difference-in-differences design comparing workers with and without access"
+(cite C36). That observability is the point. The authors, citing other work, note that
+"Current detection tools are error-prone and unreliable" (cite C36); this study
+does not have to detect anything, because the platform knows.
 
 What it found:
 
@@ -46,13 +46,13 @@ What it found:
 | Usage raised callback probability | +3.56 pp, a 51% lift on a 7.02% baseline | (cite C4) |
 | **Correlation between tailoring and callback, after the tool** | **fell 51%** | (cite C1) |
 | **Correlation between tailoring and offer, after the tool** | **fell 79%** | (cite C1) |
-| Correlation between callbacks and worker review scores (past work history) | rose 5% | (cite C2) |
+| Correlation between callbacks and worker review scores (past work history) — interviews only; no corresponding rise for hiring | rose 5% | (cite C2) (cite C22) |
 | Uptake | 62% of eligible workers used it at least once; 17% of all cover letters | (cite C8) |
 
 Two caveats the authors state and this spec keeps: the callback effects are
 significant at the 10% level but **not at 5%**, and the effect on callbacks
-**tapered off after two months** (cite C5). The estimates on actual awards are too
-imprecise to conclude anything.
+**tapered off after two months** (cite C5). On awards, "the estimates on actual
+awards are too imprecise to draw definitive conclusions" (cite C5).
 
 The structural finding is not the lift. It is the collapse. Tailoring — measured
 as TF-IDF keyword overlap between the letter and the job post — used to predict
@@ -60,7 +60,8 @@ callbacks, and after a tool made that overlap cheap for everyone, its
 correlation with callbacks fell by about half and with offers by about
 four-fifths (cite C1). The authors say where employers went: "In response,
 employers shifted toward alternative signals, including workers’ prior work
-histories." (cite C21)
+histories." (cite C21) That shift is in whom employers interviewed; for hiring
+itself the authors find "no corresponding increase" (cite C22).
 
 The authors also find AI **substitutes for** writing skill rather than
 complementing it: workers who already wrote well gained half as much as the
@@ -72,19 +73,23 @@ market." (cite C3)
 ### 2.2 The finding about editing
 
 The paper's fifth question is whether people revise the drafts and whether it
-matters. Most do not: below-median writers show a pronounced concentration of
+matters. Most do not: "over 75% were finalized within one minute of clicking the
+tool" (cite C9), and below-median writers show a pronounced concentration of
 editing times **between 0 and 1 minute**, accepting the output nearly as-is,
 while above-median writers spread effort over longer durations (cite C9). Time spent
-editing goes with better outcomes *within* a worker — "controlling for worker fixed
-effects", "The coefficient on editing time is positive and highly significant" for
-offers, and "likewise" for callbacks (cite C31).
+editing goes with better outcomes *within* a worker, "controlling for worker fixed
+effects" (cite C31): for offers "The coefficient on editing time is positive and
+highly significant" (cite C31), and for callbacks "likewise" (cite C31).
 
-**The authors explicitly decline the causal reading**, and so does this spec:
-"these results should not be interpreted as evidence of a causal relationship:
-the decision to spend more time editing a cover letter is unlikely to be random
-… and may correlate with unobserved bid characteristics that employers find
-appealing." (cite C10) A candidate who edits for ten minutes may simply be a candidate who
-cared, and caring is not something the editing caused.
+**In their discussion the authors decline the causal reading**, and so does this
+spec: "these results should not be interpreted as evidence of a causal
+relationship: the decision to spend more time editing a cover letter is unlikely
+to be random … and may correlate with unobserved bid characteristics that
+employers find appealing." (cite C10) Their introduction words the same result
+causally — "human revision enhances the effectiveness of AI-generated cover
+letters" (cite C10) — and this spec follows the discussion. The effects are also
+small in absolute terms (cite C31). A candidate who edits for ten minutes may
+simply be a candidate who cared, and caring is not something the editing caused.
 
 It is still the most design-relevant correlation available, for a reason that
 does not depend on causality: **a tool that hands over a finished letter produces
@@ -133,8 +138,9 @@ learned to discount.
 **Optimise instead for what no model could produce from the posting alone** —
 the specific, verifiable, candidate-owned content: what they did, at what scope,
 with what outcome, and how they know. Employers moved toward harder-to-fake
-signals; the only such signal a letter can carry is a fact about the candidate
-that is true and checkable.
+signals in choosing whom to interview (cite C21), though not measurably in whom
+they hired (cite C22); the only such signal a letter can carry is a fact about the
+candidate that is true and checkable.
 
 This is the same rare alignment resume-tailor's spec noted, and it is stronger
 here: **the honest move and the effective move are the same move.** The suite's
@@ -274,13 +280,16 @@ health, caring responsibilities, age markers, pregnancy, religion, and salary
 expectations are never introduced by this skill.
 
 **This is a design choice about who controls disclosure, not a legal
-requirement, and this section is not legal advice.** It has been wrong twice, in
-opposite directions. The first draft said US guidance advises employers not to
-ask about citizenship at application stage, which no source here says in those
-words. The correction then answered it with evidence about *work authorization* —
-a different question the same source keeps separate — and called the first draft
-backwards. Both are corrected below from the source, as reported by one law firm
-in 2022, for US federal law only.
+requirement, and this section is not legal advice.** Its account of the law has
+gone wrong twice, and neither time where the first draft did. The first draft said
+US guidance advises employers not to ask about citizenship at application stage,
+and cited nothing. The first correction answered it with evidence about *work
+authorization* — a different question the source keeps separate — and called the
+draft backwards. The second then called the draft unsupported by any source here.
+Federal guidance says almost what the draft said: "Most employers should not ask
+whether or not a job applicant is a United States citizen before making an offer
+of employment." (cite C32) The draft was right and uncited; the corrections were
+the errors. The rest is from one law firm's 2022 report, US federal law only.
 
 Employers may ask about work authorization and sponsorship: "Are you legally
 authorized to work in the United States?" (cite C14) and "Will you now or in the
@@ -290,11 +299,11 @@ source reports that "Discrimination based on citizenship status is expressly
 prohibited by the Immigration and Nationality Act's anti-discrimination
 provision, 8 U.S.C. § 1324b." (cite C15) — and that the protection has limits: "According to DOJ guidance, while nonimmigrant visa holders and recipients of Deferred Action for Childhood Arrivals (DACA) are protected from national origin discrimination, they are not considered to be among the classes protected from citizenship status (alienage) discrimination." (cite C16)
 
-So the rule does not rest on the employer being forbidden to ask, and it does
-not rest on the law protecting the candidate — for the candidates most likely to
-mention a visa, the citizenship-status protection does not apply at all (cite
-C16). It
-rests on the candidate controlling their own disclosure. A candidate can answer
+So the rule does not rest on what the employer may ask, and it does not rest on
+the law protecting the candidate — for nonimmigrant visa holders and DACA
+recipients, citizenship-status protection does not apply, per DOJ guidance as
+reported in 2022 (cite C16), and the area is still moving. It rests on the
+candidate controlling their own disclosure. A candidate can answer
 the two authorization questions whenever they are asked; a letter volunteering a
 nationality, a visa type or a timeline hands over more than those questions reach,
 unprompted. The rule holds in every jurisdiction for that reason, and the US

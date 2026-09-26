@@ -124,17 +124,20 @@ On one freelancing platform, once an AI tool made cover-letter tailoring cheap,
 51% after the launch of the AI tool, and the correlation with receiving an offer
 fell by 79%." (cite C1) The authors describe where employers went instead:
 "Instead, employers shifted toward other signals less susceptible to AI
-influence, such as workers’ past work experience." (cite C21)
+influence, such as workers’ past work experience." (cite C21) The shift they
+measure is in who gets interviewed; for hiring itself they report "no
+corresponding increase in the predictive power of rank percentile for ultimate
+hiring decisions" (cite C22).
 
 An earlier version of this paragraph set the 51% fall against a 5% rise in
 another correlation and called the gap between them the finding. Those are
-relative changes on bases about four times apart, not one scale, and the authors
+relative changes on different bases, not one scale, and the authors
 themselves describe the rise in an alternative signal's predictive power as
 substantial (cite C22). The shift is theirs to state; the size comparison was
 this suite's, and it was wrong.
 
 The reading this suite takes from it is an **inference**, not a result — one
-platform, one tool, remote short-term work. Stated as an inference: *whatever
+platform, one tool, two skill categories, remote short-term work. Stated as an inference: *whatever
 becomes cheap to generate stops carrying information, and what can be checked
 keeps carrying it.*
 `[generic]` is this suite's own name for the cheap-to-generate part, and an

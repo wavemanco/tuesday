@@ -57,6 +57,8 @@ At the end, the skill offers (never forces) a `tuesday-dossier.md` — a human-r
 ```
 job-underwriter/
 ├── SKILL.md                            # the skill itself — instructions Claude follows
+├── README.md
+├── LICENSE
 ├── references/
 │   ├── evidence-model.md               # evidence vocabulary, map row shape, confirmation card
 │   ├── gap-taxonomy-and-questions.md   # five gap types, recovery patterns, question selection

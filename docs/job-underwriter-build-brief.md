@@ -65,7 +65,7 @@ The worked dossier in `references/dossier-template.md` is schema v1.0's first re
 2. All three fixtures run in-session with results honestly graded against expectations — including failures, reported as findings, not silently fixed into the fixtures.
 3. `grep -ril` across the new skill for real-person data returns nothing; all fixture people and companies fictional or public-generic.
 4. Repo updates in the same PR: README ecosystem table row for job-underwriter moves from **Next** to shipped-status wording; README Tracked-work ledger updated (this build closes its own line and does not silently close others); trigger-hygiene expectations verified against the actual frontmatter description.
-5. PR description states: what conformed to spec, what the four adjustments changed in practice, any n+x candidates observed during fixture runs (proposed, not applied), and any schema amendments made under §7.
+5. PR description states: what conformed to spec, what the four adjustments changed in practice, any n+x candidates observed during fixture runs (proposed, not applied), and any schema amendments made under this brief's §7.
 
 ## 9. Host notes (Claude Code)
 

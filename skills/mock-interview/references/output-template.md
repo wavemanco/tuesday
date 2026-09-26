@@ -72,7 +72,7 @@ unfilled row can.
 |---|---|---|
 | 1. `{company} values` | yes | Values cheat sheet, section 10 — four principles by name |
 | 2. `{company} interview process {role family}` | yes | Loop structure; persona weights follow the named rounds |
-| 3. `{company} strategy` / recent news | no | Would have moved the CO bank and the grounding brief. Skipped: the recruiter supplied a strategy brief, so the pass could not have changed either |
+| 3. `{company} strategy` / recent news | no | Could not have moved the CO bank: the recruiter's strategy brief already supplies current priorities |
 | 4. `{interviewer name} {company}` | n/a | No name was given; the interviewer read is absent and the upgrade menu says what a name would unlock |
 
 `n/a` is for a target whose input never arrived, and is different from `no`,
@@ -89,7 +89,7 @@ of is the failure this table exists to make visible.
 
 Use when the user faces multiple scheduled rounds. Ask which rounds are on the calendar (this piggybacks on the Step 1 message — it does not add a second elicitation round). Structure: one shared fit snapshot + sources block, then a mini-pack per round with that round's persona weights, its own bank (8–12 questions), and its own reverse questions. The values cheat sheet lives with whichever round research says is values-focused. The upgrade menu is shared and sits at the end.
 
-A known multi-session round with an *unknown* schedule — "the final round" at companies whose finals are several back-to-back sessions — is not loop mode. Run session mode with blended persona weights, say in the title block that the final is typically multiple sessions, and offer per-session mini-packs in the upgrade menu once the user has the schedule. Loop mode needs a schedule to key on; guessing one fabricates structure.
+A known multi-session round with an *unknown* schedule — "the final round" at companies whose finals are several back-to-back sessions — is not loop mode. Run session mode with blended persona weights, say in the title block — labelled `[generic]`, as a pattern for finals of this kind and not this company's confirmed format — that such finals are often several sessions, and offer per-session mini-packs in the upgrade menu once the user has the schedule. Loop mode needs a schedule to key on; guessing one fabricates structure.
 
 ## Drill mode
 

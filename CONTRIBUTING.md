@@ -137,58 +137,83 @@ now applies to the documents that state it.
 
 **A claim about the outside world is cited, and its quotation is verbatim.**
 `conventions/citations.md` holds each source sentence once, beside its source and
-what weakens it. Prose cites it as `(cite C1)` and may quote only what the entry
-holds. The paraphrase problem is a comparison problem: a restatement in one file
-and its source in another are never read side by side, which is this document's
-own test for when a sentence must become a slot. `check_skills.py --only
-citations` verifies every marker resolves and every entry is used. A marker
-covers every quotation earlier in its sentence, not only the one beside it, and
-each must sit inside that marker's entry; curly quotation marks count. A
-quotation with no marker is compared with every entry: found verbatim, it is a
-source quoted without its citation; close to an entry but not inside it, it is a
-paraphrase wearing quotation marks, which is how the original defect shipped.
-`ci/verify_citations.py` refetches the sources and checks each entry against
-them; it needs the network, so it runs by hand, and it reports *unreachable* as
-unchecked rather than as a pass.
+what weakens it. The paraphrase problem is a comparison problem: a restatement in
+one file and its source in another are never read side by side, which is this
+document's own test for when a sentence must become a slot. So a quotation of a
+source is written one way, and `check_skills.py --only citations` holds it to
+that way:
 
-What it cannot see is a paraphrase with no quotation marks, or a quotation of a
-source that has no entry — there is nothing to compare either with. Those still
-need a reviewer.
+- in double quotation marks, straight or curly, and never as a blockquote;
+- with its marker directly after it — `"…" (cite C1)` — and one entry per marker,
+  stacked where a quotation draws on two;
+- and nothing it quotes that its entry does not hold.
+
+A quotation in a sentence that carries a marker, but with no marker of its own,
+fails; so does a malformed marker. An unmarked quotation elsewhere is compared
+with every entry: verbatim, it is a source quoted without its citation; sharing a
+run of an entry's content words without being inside it, it is a paraphrase in
+quotation marks, which is how the original defect shipped. Every marker must
+resolve and every entry must be used. `ci/verify_citations.py` refetches the
+sources and checks each entry against them; it needs the network, so it runs by
+hand, and it reports *unreachable* as unchecked rather than as a pass.
+
+What it cannot see: a paraphrase with no quotation marks; a quotation of a source
+that has no entry; an unmarked quotation under three words with no figure in it.
+`citations.md` itself is not read, because it records past paraphrases on
+purpose. Anywhere else, a past paraphrase is described rather than quoted — the
+check cannot tell a quoted mistake from a claim.
 
 **A reference into another file names that file; a bare §N means this one.**
-Write it `name.md` §N — one spelling, so the check can resolve it. `--only
-sections` resolves every reference. Thirteen bare references each meant some
-other file — a parenthetical naming "the mirror" by section number, a table
-column headed "Section of the mirror" — and the first version of the check only
-asked whether this file had a section with that number. Fifteen more passed it
-that way — the build brief sent readers to the grammar's eighth section by
-number alone, and had an eighth section of its own. A bare §N is now refused
-when a word beside it names another file or document, when its paragraph or list
+Write it `name.md` §N — one spelling, so the check can resolve it; a list of
+section numbers after one file name is read against that file. `--only sections` resolves every
+reference. Thirteen bare references each meant some other file — a parenthetical
+naming "the mirror" by section number, a table column headed "Section of the
+mirror" — and the first version of the check only asked whether this file had a
+section with that number. Fifteen more passed it that way — the build brief sent
+readers to the grammar's eighth section by number alone, and had an eighth
+section of its own. A bare §N is now refused when its clause names another file,
+a skill or a document ("the grammar", "the schema"), when its paragraph or list
 item names another file, or when its label is another file's heading for that
-number. What the check cannot read is a meaning carried by an earlier paragraph,
-and it cannot tell a quoted example from a reference, which is why this paragraph
-describes that parenthetical rather than reproducing it. A local reference in a
-block that names another file is written "this file's §N".
+number — unless its label is this file's own heading for it. A local reference
+that would otherwise read as another file's is written "this file's §N" or "§N of
+this spec". What the check cannot read is a meaning carried by an earlier
+paragraph, and it cannot tell a quoted example from a reference, which is why this
+paragraph describes that parenthetical rather than reproducing it.
 
-**A count agrees with what it counts.** `--only counts` reads a count wherever
-it introduces a list, a table, a heading's subsections, or a file's numbered
-sections, and a lead-in hard-wrapped before its colon is read whole. It sums
-every counted noun in the lead-in, so "four things it does, and one it refuses"
-is five. The first version read one shape — count word first, colon on the same
-line, bullets below — and passed eight others in this repository without a word.
+**A count agrees with what it counts.** `--only counts` reads a count, in words or
+digits, in the shapes `counted_lists` in `ci/check_skills.py` names, and a lead-in
+hard-wrapped before its colon is read whole. It adds counts only where they are
+coordinated, so "four things it does, and one it refuses" is five and "four
+bugs, found in two harnesses" is four. The first version read one shape and
+passed the others without a word.
 
 A count restated in another file is checked when the file holding the list is
 named in the same sentence or the one either side: "six axes" beside
-`reframing-audit.md` is compared with that file's table. This is how README.md was found still describing
-output-discipline.md by its old rule count after a sixth rule was added. It
-cannot tell a quoted mistake from a claim, so a paragraph about one describes it
-rather than repeating it. A restatement that names no file is not
+`reframing-audit.md` is compared with that file's table, and a statement about a
+subset — N of them in the file, N that changed — is not read as a restatement.
+This is how README.md was found still describing output-discipline.md by its old
+rule count after a sixth rule was added. A restatement that names no file is not
 checked, because "axes" means persona and question-type axes in mock-interview
 and a check keyed on the word alone would misfire. Prefer not to add
 restatements, and when you do, name the file. When the reframing audit's list
-and its count disagreed, settling which was wrong meant reading all thirteen
-places that state the count. The list was wrong; the twelve restatements had been
-right throughout, and nothing but reading could have said so.
+outgrew its count, settling which to change meant reading all thirteen places
+that state it, and the history of each — nothing but reading could have said
+that the restatements had already moved to the new reading and the lead-in had
+not.
+
+**A skill's README draws its folder as it is.** `--only readmes` rebuilds each
+README's folder tree from its indentation and compares the paths with the files
+under `references/` and `evals/`, and checks a stated fixture count against
+`evals.json`. All three trees had fallen behind the mirrors.
+
+**A restated parameter agrees with its declaration.** `--only parameters` reads a
+skill's `SKILL.md`, README, own references and eval expectations for two
+restatements: a question budget, which must be `question_budget`, and a sentence
+saying the response or message closes or ends with some sections, which must name
+the tail of `closing_order` in its order. It skips negated sentences, budgets for
+one topic, and subjects other than the response — a pack or a cell ends with
+other things. Three eval expectations had contradicted their skill's declaration
+unnoticed.
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A
@@ -196,9 +221,14 @@ ledger entry restating a rule becomes a second copy of it, and this ledger once
 asserted a rule and its retraction four bullets apart because the rule changed
 and the copy did not.
 
-**The self-test's baseline is the whole gate.** `ci/test_checks.py` used to run
-one group on the clean repo and then print "clean repo passes". A mutation of a
-group already failing proves nothing about the mutation.
+**The self-test runs in both directions.** Its baseline is the whole gate:
+`ci/test_checks.py` used to run one group on the clean repo and then print "clean
+repo passes", and a mutation of a group already failing proves nothing about the
+mutation. Each mutation is a defect a check must refuse. Each must-pass case is
+correct text in a form an earlier version refused — a label that is this file's
+own heading, a statute's §, stacked markers, a negated sentence — because a check
+that refuses correct work teaches authors to distort prose or switch it off, and
+that fails the self-test the same way an evasion does.
 
 ## Structural rules
 

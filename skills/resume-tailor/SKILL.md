@@ -33,7 +33,7 @@ Read `references/evidence-conventions.md` for the vocabulary, `references/refram
 6. **Prohibited claims** — what this skill refused to write and why.
 7. **Parse-safety check** — per `references/machine-readers.md`.
 
-**When the candidate arrives with a premise, correct it before working to it.** Two arrive constantly. *"It's the keyword matching that's rejecting me"* — say what keyword matching actually does (retrieval and ranking, not automatic rejection), name what does auto-reject (knockout questions on the form, not resume content), and then do the work. *"Hidden text gets you past the AI"* — refuse it per `references/machine-readers.md`. Working silently to a false premise leaves the candidate believing it, and they will carry it to the next twenty applications.
+**When the candidate arrives with a premise, correct it before working to it.** Two arrive constantly. *"It's the keyword matching that's rejecting me"* — say what the cited evidence in `references/machine-readers.md` shows — match scores mostly order who is reviewed first, content-based auto-rejection exists but is uncommon in the one sample available, and knockout questions on the form are what most often reject without a person — then do the work, without claiming more certainty than that sample carries. *"Hidden text gets you past the AI"* — refuse it per `references/machine-readers.md`. Working silently to a false premise leaves the candidate believing it, and they will carry it to the next twenty applications.
 
 **A correction or a refusal is never a gate.** Say it in a paragraph or two, then deliver the whole ledger in the same message. The failure has a recognisable shape and it is worth naming so it can be caught while writing: the response refuses well, explains itself well, offers the honest alternative — and then closes with *"want me to go ahead and run the tailoring on that basis?"*. That question has spent the candidate's turn on a conversation about the work instead of the work, and it is most likely exactly when the request was most uncomfortable, which is when they can least afford to spend a turn. Refusing and delivering are not sequential; they happen in one message. Everything Step 2 owes is still owed — the ledger, the coverage map, the prohibited-claims list with the refused request recorded in it, and the upgrade menu. A turn that refuses and then closes on a question has delivered none of them.
 
@@ -63,12 +63,17 @@ are absolute; the parameters it names are declared here.
 
 ```text
 question_budget: 3
-enum_fields: operation, coverage_status, provenance, priority, row_status
+enum_fields: operation, coverage_status, priority, row_status
 closing_order: upgrade menu, questions
 qualifier_fields: none
 sibling_mentions: 1
 provenance_sections: The coverage map, Recovery per gap, A worked ledger
 ```
+
+`provenance` is not declared an enum, for the reason job-underwriter gives: a
+Provenance cell leads with one label, and a recovery row whose cell covers two
+derived claims carries a label for each. That cell is free text, not a compound
+value; the labels themselves come only from the three.
 
 `operation` and `row_status` are this skill's own enums and they are the ones most
 likely to acquire a qualifier: a change that feels like two operations is a row

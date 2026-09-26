@@ -50,10 +50,10 @@
         "With no CV provided, the fit snapshot appears as a self-assessment worksheet variant with story-selection scaffolds instead of story-mapped guidance",
         "A values/behavioral bank exists, and either maps its questions to the company's actual published principles by name where research found them, or states that the principles could not be confirmed and labels the bank generic rather than inventing named values",
         "The pack ends with an upgrade menu, and no section fabricates a specific interviewer, team, or unverified company fact",
-        "The pack states that the final round is typically multiple sessions, runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu once the schedule is known",
+        "The pack says that finals like this are often several sessions — as a pattern, labelled [generic] or otherwise marked as not Stripe's confirmed format — runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu once the schedule is known",
         "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it",
         "The Sources section carries the target accounting: one row per L1 target — values, interview process, strategy or recent news, and the interviewer — marked yes, no or n/a, with a `no` naming what the search could not have moved; or, if no research ran, one line saying so and why. A target marked yes corresponds to a source listed in Sources: the accounting never reports research the pack shows no trace of",
-        "No clause asserting something about Stripe specifically — its principles by name, its loop, its strategy, its interviewers — rests on a [generic] label: a [generic] bank or cell states a role-family pattern, and any clause in it naming this company carries its own [grounded] or [inferred] source"
+        "No row labelled [generic] contains a clause asserting something about Stripe specifically — its principles by name, its loop, its strategy, its interviewers; such a clause is either absent or sits in a row labelled [grounded] or [inferred] with its source named"
       ]
     },
     {
@@ -97,7 +97,7 @@
         "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition",
         "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it",
         "The Sources section carries the target accounting: one row per L1 target — values, interview process, strategy or recent news, and the interviewer — marked yes, no or n/a, with a `no` naming what the search could not have moved; or, if no research ran, one line saying so and why. A target marked yes corresponds to a source listed in Sources: the accounting never reports research the pack shows no trace of",
-        "No clause asserting something about Kelverton Rail specifically — its principles by name, its loop, its strategy, its interviewers — rests on a [generic] label: a [generic] bank or cell states a role-family pattern, and any clause in it naming this company carries its own [grounded] or [inferred] source"
+        "No row labelled [generic] contains a clause asserting something about Kelverton Rail specifically — its principles by name, its loop, its strategy, its interviewers; such a clause is either absent or sits in a row labelled [grounded] or [inferred] with its source named"
       ]
     },
     {
@@ -115,8 +115,8 @@
         "Every question row carries a provenance label in its own column, and where guidance coaches a claim about Yusuf's experience the cell also carries his own quoted sentence",
         "No guidance cell coaches language Yusuf's own material does not support: 'ran our hiring loop, about 40 interviews last year' is not promoted into owning hiring strategy, and 'team lead of 6' is not promoted into managing managers",
         "A prohibited-claims section appears naming what the pack will not coach and why — built from the fit snapshot's gaps, since no dossier is present",
-        "Vocabulary matches the conventions: confidence bands from high/medium/low/none, provenance from [grounded]/[inferred]/[generic], each cell holding exactly one token with no compound or parenthetical value",
-        "The response closes with the upgrade menu, then the drill and dossier offers, then at most three questions counted across the whole message — the pack itself ending with the menu — with no recap or summary beneath them"
+        "Vocabulary matches the conventions: each confidence cell holds exactly one of high/medium/low/none, and every Provenance cell leads with exactly one of [grounded]/[inferred]/[generic] — never a compound such as [grounded, partial] — with a question-bank cell free to follow its label with the candidate's quoted sentence",
+        "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions"
       ]
     }
   ]

@@ -148,7 +148,7 @@ Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior
 
 | L1 target | Ran | What it moved, or could not have |
 |---|---|---|
-| 1. Official site and careers page | yes | Role reality: organization, working pattern, contradictions row |
+| 1. Official site and careers page | yes | Role reality: the contradictions row — JD and careers page agree |
 | 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
 | 3. Hiring manager's public footprint | n/a | No name was given, so there was nothing to look up. The upgrade menu names what a name would unlock |
 

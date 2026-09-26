@@ -70,6 +70,8 @@ None of this is required. Skills in Tuesday stand alone; the dossier just means 
 ```
 mock-interview/
 ├── SKILL.md                      # the skill itself — instructions Claude follows
+├── README.md
+├── LICENSE
 ├── references/
 │   ├── personas.md               # 7 interviewer personas, relationship priors, signal rules
 │   ├── question-rubric.md        # 5 question types, coverage rules, guidance-writing rules

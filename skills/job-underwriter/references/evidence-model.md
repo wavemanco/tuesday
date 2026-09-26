@@ -117,8 +117,10 @@ Rules for building rows:
   beside it from the first version rather than the second. Where a cell only
   reads the row — "confirmed and specific, but no inspectable artifact yet" —
   `[grounded]` names the evidence it read. Where it reaches past the row —
-  "enterprise SE roles usually touch pre-sales" — the label is `[generic]` and
-  the pull to write `[inferred]` is the thing to resist.
+  "enterprise SE roles usually touch pre-sales" — that clause is `[generic]`, and
+  the pull to write `[inferred]` is the thing to resist; a cell that does both
+  carries both labels, each beside its clause, as `evidence-conventions.md` §5
+  allows.
 - **`next_action` is where recovery starts.** A row with an unresolved gap and no concrete next action is an unfinished row.
 
 ## The confirmation card
