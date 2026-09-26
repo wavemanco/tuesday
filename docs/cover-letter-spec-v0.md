@@ -38,20 +38,20 @@ knows.
 
 What it found:
 
-| Result | Number |
-|---|---|
-| Access to the tool raised cover-letter tailoring | +0.16 SD |
-| Actual usage raised tailoring | +1.36 SD |
-| Access raised callback probability | +0.43 pp |
-| Usage raised callback probability | +3.56 pp, a 51% lift on a 7.02% baseline |
-| **Correlation between tailoring and callback, after the tool** | **fell 51%** |
-| **Correlation between tailoring and offer, after the tool** | **fell 79%** |
-| Correlation between callbacks and worker review scores (past work history) | rose 5% |
-| Uptake | 62% of eligible workers used it at least once; 17% of all cover letters |
+| Result | Number | Source |
+|---|---|---|
+| Access to the tool raised cover-letter tailoring | +0.16 SD | (cite C6) |
+| Actual usage raised tailoring | +1.36 SD | (cite C6) |
+| Access raised callback probability | +0.43 pp | (cite C4) |
+| Usage raised callback probability | +3.56 pp, a 51% lift on a 7.02% baseline | (cite C4) |
+| **Correlation between tailoring and callback, after the tool** | **fell 51%** | (cite C1) |
+| **Correlation between tailoring and offer, after the tool** | **fell 79%** | (cite C1) |
+| Correlation between callbacks and worker review scores (past work history) | rose 5% | (cite C2) |
+| Uptake | 62% of eligible workers used it at least once; 17% of all cover letters | (cite C8) |
 
 Two caveats the authors state and this spec keeps: the callback effects are
 significant at the 10% level but **not at 5%**, and the effect on callbacks
-**tapered off after two months**. The estimates on actual awards are too
+**tapered off after two months** (cite C5). The estimates on actual awards are too
 imprecise to conclude anything.
 
 The structural finding is not the lift. It is the collapse. Tailoring — measured
@@ -63,16 +63,17 @@ record of the worker's past jobs.
 
 The authors also find AI **substitutes for** writing skill rather than
 complementing it: workers who already wrote well gained half as much as the
-weakest writers. The gap narrows. They flag the distributional consequence
-plainly — a shift toward harder-to-fake history "may favour established workers
-at the expense of newcomers trying to enter the market."
+weakest writers (cite C7). The gap narrows. They flag the distributional consequence
+plainly, and hedged: "This shift may have important implications, including
+favoring established workers at the expense of newcomers trying to enter the
+market." (cite C3)
 
 ### 2.2 The finding about editing
 
 The paper's fifth question is whether people revise the drafts and whether it
 matters. Most do not: below-median writers show a pronounced concentration of
 editing times **between 0 and 1 minute**, accepting the output nearly as-is,
-while above-median writers spread effort over longer durations. Time spent
+while above-median writers spread effort over longer durations (cite C9). Time spent
 editing is positively and highly significantly associated with both callbacks and
 offers, including *within* a worker.
 
@@ -80,7 +81,7 @@ offers, including *within* a worker.
 "these results should not be interpreted as evidence of a causal relationship:
 the decision to spend more time editing a cover letter is unlikely to be random
 and may correlate with unobserved bid characteristics that employers find
-appealing." A candidate who edits for ten minutes may simply be a candidate who
+appealing." (cite C10) A candidate who edits for ten minutes may simply be a candidate who
 cared, and caring is not something the editing caused.
 
 It is still the most design-relevant correlation available, for a reason that
@@ -92,8 +93,8 @@ candidate.
 
 ResumeGo ran a field experiment from 15 July 2019 to 10 January 2020, submitting
 7,287 fictitious applications across ZipRecruiter, Glassdoor and Indeed in three
-arms — no letter, generic letter, tailored letter. Tailored letters drew a **53%
-higher callback rate** than no letter.
+arms — no letter, generic letter, tailored letter (cite C12). Tailored letters
+drew a **53% higher callback rate** than no letter (cite C11).
 
 Two limits, both material. It predates generative AI entirely, and §2.1 is
 precisely a finding that the value of tailoring changed afterwards. And it is a
@@ -259,12 +260,28 @@ could have produced from the posting.
 ### 5.5 Never disclose what the candidate did not ask to disclose
 
 A cover letter is free-form, which makes it the easiest place in an application
-to volunteer information that invites discrimination. Visa or citizenship status,
+to volunteer information the reader has no need of. Visa or citizenship status,
 health, caring responsibilities, age markers, pregnancy, religion, and salary
-expectations are never introduced by this skill. US federal guidance to employers
-is that they should not ask about citizenship status at application stage; a
-skill that writes it in unprompted has handed over what the employer was advised
-not to request.
+expectations are never introduced by this skill.
+
+**This is a design choice about who controls disclosure, not a legal
+requirement** — and an earlier draft of this section stated the law wrongly,
+from a search tool's summary rather than the source it then cited. In the United
+States, employers may ask two questions outright: "Are you legally authorized to
+work in the United States?" (cite C13) and "Will you now or in the future require
+sponsorship for employment visa status (e.g., H-1B visa status)?" (cite C13). A
+candidate can answer those whenever they are asked. What federal law prohibits is
+discrimination: "Discrimination based on citizenship status is expressly
+prohibited by the Immigration and Nationality Act's anti-discrimination
+provision, 8 U.S.C. § 1324b." (cite C14)
+
+So the reasoning is not that the employer was forbidden to ask. It is that a
+letter volunteering more than those two questions reach — a nationality, a visa
+type, a timeline — hands the reader detail the letter did not need, on a subject
+where the law exists because such detail gets misused. That is an inference from
+C14, not a finding. And all of it is US federal law; the rule itself holds
+everywhere, because it rests on the candidate's control of their own disclosure,
+not on any one jurisdiction.
 
 Where the candidate raises one themselves — a visa timeline they have decided to
 be upfront about — the skill supports the decision they have already made, states

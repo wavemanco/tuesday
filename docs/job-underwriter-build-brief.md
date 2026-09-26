@@ -9,12 +9,12 @@ Build `skills/job-underwriter/` in this repository, v0.1, using the skill-creato
 ## 2. Read first, in this order
 
 1. This brief, whole.
-2. `docs/job-underwriter-spec-v0.md` — the full design: purpose, evidence model, gap taxonomy, recovery flow, risk register, decision logic, schema, edge cases, incorrect behaviors (§13).
+2. `docs/job-underwriter-spec-v0.md` — the full design: purpose, evidence model, gap taxonomy, recovery flow, risk register, decision logic, schema, edge cases, incorrect behaviors (`job-underwriter-spec-v0.md` §13).
 3. `conventions/` — all three files. Binding, not advisory. This is the first skill *born* under them.
 4. `skills/mock-interview/` — the house-style exemplar: SKILL.md length and register, frontmatter description style (trigger-rich, with an explicit negative boundary), references/ layout, evals/evals.json schema-in-practice.
 5. skill-creator's own SKILL.md and its schemas reference, in whatever location your session has it installed — follow its formats for init, evals, and packaging. **Do not assume the file paths from any prior session; discover them locally.**
 
-## 3. The four adjustments (these override spec §14's deliverables list)
+## 3. The four adjustments (these override `job-underwriter-spec-v0.md` §14's deliverables list)
 
 1. **Skill-anatomy reshape.** Deliverables are `SKILL.md` + `references/` + `evals/evals.json`. The spec's `output-schema.json` and worked examples live inside `references/`; `tests/acceptance-tests.md` becomes eval expectations; **no `ui-contract.md`** in v0.1 (Phases 0–2 forbid building UI — the spec document remains Phase 4's source of truth); **no scripts** — nothing in this skill computes deterministically, so nothing should exist to rot.
 2. **One dossier, not six files.** The output artifact is a single `tuesday-dossier.md` per `conventions/dossier-schema.md`: human-readable report on top, one fenced JSON envelope (`dossier_version: "1.0"`) at the bottom. The spec's six objects are *sections* of that envelope. Include `handoff_to_mock_interview` exactly per schema §6.
@@ -51,7 +51,7 @@ skills/job-underwriter/
 
 Three fixtures straight from spec Phase 2, self-contained prompts: **direct-fit**, **adjacent-pivot**, **suspicious-role** (the suspicious-role fixture may use a fictional posting with planted red-flag language; a real public company is acceptable only where live research is the point). Expectations must include, beyond happy-path structure:
 
-- **Negative expectations from spec §13:** output contains no single numeric fit score; never suggests adding an unverified claim to the CV; a hard-gate failure surfaces in the decision snapshot regardless of fit elsewhere; a memory-style lead is never converted into asserted experience.
+- **Negative expectations from `job-underwriter-spec-v0.md` §13:** output contains no single numeric fit score; never suggests adding an unverified claim to the CV; a hard-gate failure surfaces in the decision snapshot regardless of fit elsewhere; a memory-style lead is never converted into asserted experience.
 - **Process expectations:** the first response contains a first-pass assessment, not questions alone; no turn asks more than three questions; the dossier is offered at the end; any beyond-spec addition arrives as a labeled n+x offer, not woven in.
 - **Vocabulary expectations:** gap types, confidence bands, and provenance labels appear using the conventions' exact terms.
 

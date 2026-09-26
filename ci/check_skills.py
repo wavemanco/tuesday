@@ -485,6 +485,250 @@ def check_columns() -> None:
                             f"'## ' section with a table in references/")
 
 
+# --- Citations -------------------------------------------------------------
+# Shared with ci/verify_citations.py, which imports these rather than restating
+# them: two normalisers would be two definitions of "verbatim", and they would
+# drift apart exactly where it matters.
+
+CITATIONS = CONVENTIONS / "citations.md"
+CITE = re.compile(r"\(cite (C\d+)\)")
+QUOTE_THEN_CITE = re.compile(r'"([^"\n]{3,}(?:\n[^"\n]+)*)"[.,;:]?\s*\(cite (C\d+)\)')
+
+
+def citation_entries() -> dict[str, dict[str, str]]:
+    if not CITATIONS.exists():
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    for block in re.split(r"^## (?=C\d+\s*$)", CITATIONS.read_text(), flags=re.MULTILINE)[1:]:
+        cid, _, body = block.partition("\n")
+        out[cid.strip()] = dict(re.findall(r"^- \*\*([A-Za-z ]+):\*\* (.*)$", body, flags=re.MULTILINE))
+    return out
+
+
+def quoted_spans(verbatim: str) -> list[str]:
+    return [s for s in re.findall(r'"([^"]+)"', verbatim) if s.strip()]
+
+
+def normalise_quote(text: str) -> str:
+    import html as _html
+    text = _html.unescape(text).lower()
+    text = text.translate(str.maketrans({"\u2019": "'", "\u2018": "'", "\u201c": '"',
+                                         "\u201d": '"', "\u2014": " ", "\u2013": " "}))
+    text = re.sub(r"-\n(?=[a-z])", "", text)
+    text = re.sub(r"[^a-z0-9%.$§ ]+", " ", text)
+    text = re.sub(r"(?<=[a-z]) \d{1,3} (?=[a-z])", " ", text)   # footnote markers
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def quote_in(span: str, haystack: str) -> bool:
+    """Every fragment of span, split at an ellipsis, appears in haystack in order."""
+    position = 0
+    for fragment in re.split(r"\s*(?:…|\.\.\.)\s*", span):
+        needle = normalise_quote(fragment)
+        if not needle:
+            continue
+        found = haystack.find(needle, position)
+        if found < 0:
+            return False
+        position = found + len(needle)
+    return True
+
+
+def citing_files() -> list[Path]:
+    files = [REPO / "README.md", REPO / "CONTRIBUTING.md"]
+    files += sorted(CONVENTIONS.glob("*.md")) + sorted((REPO / "docs").glob("*.md"))
+    for skill in skills():
+        files.append(skill / "SKILL.md")
+        files += [r for r in sorted((skill / "references").glob("*.md"))
+                  if not SYNCED_HEADER.match(r.read_text())]   # mirrors inherit canonical's cites
+    return [f for f in files if f.exists() and f != CITATIONS]
+
+
+def check_citations() -> None:
+    """A claim about the outside world is quoted from a recorded source, or not quoted.
+
+    The suite requires every line a skill proposes to trace to a verbatim source
+    in a cell. The conventions imposing that rule paraphrased a paper from memory,
+    and a quotation later certified "verbatim" was a compression copied from a spec
+    whose own quotation was already wrong. citations.md holds each source sentence
+    once; this checks that nothing elsewhere quotes more than an entry holds.
+    What it cannot check is an entry against its source — that needs the network,
+    and is ci/verify_citations.py.
+    """
+    group = "citations"
+    entries = citation_entries()
+    if not entries:
+        fail(group, "conventions/citations.md is missing or has no entries — the check would pass vacuously")
+        return
+
+    for cid, fields in entries.items():
+        missing = [k for k in ("Claim", "Verbatim", "Source", "Retrieved") if not fields.get(k)]
+        if missing:
+            fail(group, f"{cid}: missing field(s) {', '.join(missing)}")
+        elif not quoted_spans(fields["Verbatim"]):
+            fail(group, f"{cid}: Verbatim has no quoted span — nothing to check a quotation against")
+        else:
+            ok(group, f"{cid} is complete")
+
+    used: set[str] = set()
+    source_text = {cid: normalise_quote(" ".join(quoted_spans(f.get("Verbatim", ""))))
+                   for cid, f in entries.items()}
+    for path in citing_files():
+        text = path.read_text()
+        rel = path.relative_to(REPO)
+        for cid in CITE.findall(text):
+            used.add(cid)
+            if cid not in entries:
+                fail(group, f"{rel}: (cite {cid}) names no entry in citations.md")
+        for span, cid in QUOTE_THEN_CITE.findall(text):
+            if cid in entries and not quote_in(span, source_text[cid]):
+                fail(group, f"{rel}: quotes \"{' '.join(span.split())[:70]}\" as {cid}, "
+                            f"and {cid}'s Verbatim does not contain it")
+        # A quotation of a source with no marker is the paraphrase problem arriving
+        # by another door: text that is verbatim somewhere, cited nowhere here.
+        cited_spans = {m[0] for m in QUOTE_THEN_CITE.findall(text)}
+        for span in re.findall(r'"([^"\n]{3,}(?:\n[^"\n]+)*)"', text):
+            if span in cited_spans or len(normalise_quote(span).split()) < 6:
+                continue
+            for cid, body in source_text.items():
+                if quote_in(span, body):
+                    fail(group, f"{rel}: quotes {cid}'s source verbatim without (cite {cid}): "
+                                f"\"{' '.join(span.split())[:60]}\"")
+                    break
+
+    unused = sorted(set(entries) - used, key=lambda c: int(c[1:]))
+    if unused:
+        fail(group, f"citations.md entries cited nowhere: {', '.join(unused)} — an entry no "
+                    f"claim rests on is not evidence for anything")
+    else:
+        ok(group, f"all {len(entries)} citations are cited, and every marker resolves")
+
+
+SECTION_REF = re.compile(r"`?(?:[a-z0-9-]+/)*([a-z0-9-]+\.md)`?\s*§(\d+(?:\.\d+)?)")
+
+
+def section_numbers(path: Path) -> set[str]:
+    return set(re.findall(r"^#{2,4} (\d+(?:\.\d+)?)[.\s]", path.read_text(), re.MULTILINE))
+
+
+def check_sections() -> None:
+    """Every section reference points at a section that exists.
+
+    A `file.md` §N is a claim that the section is there and says something, and
+    none had ever been checked. Thirteen references across the repo were bare —
+    "§2 of the mirror", a table column headed "Section of the mirror", "spec §13"
+    — each meaning some other file, recoverable only from context a reader may
+    not have and a check never does. So the rule has two halves: a reference into
+    another file names it, and a bare §N means this file. Both halves resolve.
+    """
+    group = "sections"
+    targets: dict[str, Path] = {}
+    for path in list(CONVENTIONS.glob("*.md")) + list((REPO / "docs").glob("*.md")):
+        targets[path.name] = path
+    for skill in skills():
+        for ref in (skill / "references").glob("*.md"):
+            targets.setdefault(ref.name, ref)
+
+    checked = 0
+    for path in citing_files() + [CITATIONS]:
+        text = path.read_text()
+        rel = path.relative_to(REPO)
+        spans = []
+        for match in SECTION_REF.finditer(text):
+            spans.append(match.span())
+            checked += 1
+            name, number = match.group(1), match.group(2)
+            target = targets.get(name)
+            if target is None:
+                fail(group, f"{rel}: §{number} of `{name}` — no such file")
+            elif number not in section_numbers(target):
+                fail(group, f"{rel}: `{name}` §{number} — that file has no section {number}")
+        own = section_numbers(path)
+        for match in re.finditer(r"§(\d+(?:\.\d+)?)", text):
+            if any(start <= match.start() < end for start, end in spans):
+                continue
+            checked += 1
+            if match.group(1) not in own:
+                line = text[:match.start()].count("\n") + 1
+                fail(group, f"{rel}:{line}: bare §{match.group(1)} — this file has no such section. "
+                            f"A reference into another file names that file")
+    if checked == 0:
+        fail(group, "no section references found — the check would pass vacuously")
+    elif not any(f.startswith("[sections]") for f in failures):
+        ok(group, f"all {checked} section references resolve")
+
+
+COUNT_WORDS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten".split())}
+COUNT_LEAD = re.compile(r"^\**(One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten) [^\n]{0,90}?:\s*$",
+                        re.IGNORECASE)
+LIST_ITEM = re.compile(r"^(- |\* |\d+\. )")
+
+
+def list_length(lines: list[str], lead: int) -> int:
+    """Items in the list that follows a lead-in, allowing blank lines between items."""
+    j, count = lead + 1, 0
+    while j < len(lines) and not lines[j].strip():
+        j += 1
+    while j < len(lines):
+        line = lines[j]
+        if LIST_ITEM.match(line):
+            count += 1
+        elif line.startswith("  ") and count:
+            pass                                    # an item's continuation
+        elif not line.strip():
+            k = j + 1
+            while k < len(lines) and not lines[k].strip():
+                k += 1
+            if k < len(lines) and LIST_ITEM.match(lines[k]):
+                j = k
+                continue
+            break
+        else:
+            break
+        j += 1
+    return count
+
+
+def check_counts() -> None:
+    """A count that introduces a list agrees with the list.
+
+    "Two overrides that beat every label:" sat above three bullets, and "Five
+    disciplines make the audit actually catch things:" above six — the second
+    restated as "five disciplines" in a dozen other files, all of them trusting a
+    number wrong at the source. Both are one shape: a count, a colon, a list
+    beside it. Every count word in the lead-in is summed, because "Four things
+    this ledger is doing, and one it is refusing:" is five and correct; reading
+    only the first number would have "fixed" a true sentence into a false one.
+
+    It checks only a count with its list in the same file. A restatement
+    elsewhere — "six axes, five disciplines" in a SKILL.md — cannot be checked
+    without false positives, since "axes" means something else in mock-interview.
+    Those are left true and unguarded, and CONTRIBUTING says so.
+    """
+    group = "counts"
+    checked = 0
+    for path in citing_files() + [CITATIONS]:
+        lines = path.read_text().split("\n")
+        for i, line in enumerate(lines):
+            match = COUNT_LEAD.match(line)
+            if not match:
+                continue
+            actual = list_length(lines, i)
+            if actual == 0:
+                continue                            # a count with no list after it
+            stated = sum(COUNT_WORDS[w.lower()] for w in re.findall(
+                r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\b", line, re.IGNORECASE))
+            checked += 1
+            if stated != actual:
+                fail(group, f"{path.relative_to(REPO)}:{i + 1}: says {stated}, its list has "
+                            f"{actual} — \"{line.strip()[:60]}\"")
+    if checked == 0:
+        fail(group, "no counted lists found — the check would pass vacuously")
+    elif not any(f.startswith("[counts]") for f in failures):
+        ok(group, f"all {checked} counted lists agree with their counts")
+
+
 def check_ledger() -> None:
     """The Tracked-work ledger is the project's memory; it must not contradict itself.
 
@@ -538,6 +782,9 @@ def check_ledger() -> None:
 GROUPS = {
     "frontmatter": check_frontmatter,
     "columns": check_columns,
+    "citations": check_citations,
+    "sections": check_sections,
+    "counts": check_counts,
     "ledger": check_ledger,
     "parameters": check_parameters,
     "package": check_package,

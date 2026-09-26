@@ -137,3 +137,4 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 - `references/dossier-template.md` — emission rules and the full worked `tuesday-dossier.md` example, envelope included. Read before emitting a dossier.
 - `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers and the depth rule that bounds them, privacy scope, and the n + x rule. Canonical wins on conflict.
 - `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill owns versus reads.
+- `references/citations.md` — the suite's recorded sources, mirrored verbatim: every outside claim a convention or reference relies on, quoted exactly beside its source, with what weakens it. A `(cite C1)` elsewhere points here; quote nothing from a source that its entry does not hold.

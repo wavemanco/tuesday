@@ -111,48 +111,34 @@ Three overrides that beat every label:
 
 Why the third override exists, and why it is newer than the other two:
 
-Cui, Dias & Ye (2025) measured what happens to a signal once generative AI makes
-it cheap to produce. On a large freelancing platform, the correlation between how
-closely a cover letter matched its job post and whether it drew a callback **fell
-51%**, and for offers **79%**, while the correlation between callbacks and
-workers' review scores — the platform's record of past work — **rose 5%**. The generalisation is not about cover letters:
-**whatever becomes cheap to generate stops carrying information, and what remains
-is what can be checked.**
+It rests on outside evidence rather than on a defect this repository measured,
+so its evidence is cited, not paraphrased — see `citations.md`.
 
-The three figures are not the same size and the asymmetry is the point: a 51%
-and a 79% collapse against a 5% rise is a signal losing its value much faster
-than any single replacement gains it. What employers shifted *toward* is a
-smaller and more diffuse effect than what they shifted *away from*.
+On one freelancing platform, once an AI tool made cover-letter tailoring cheap,
+"The correlation between cover-letter tailoring and receiving a callback fell by
+51% after the launch of the AI tool, and the correlation with receiving an offer
+fell by 79%." (cite C1) Over the same period the correlation between callbacks
+and workers' review scores "rose by 5%" (cite C2). The asymmetry is the finding:
+a signal losing most of its value, against a replacement gaining a little.
 
-`[generic]` is this suite's own name for the cheap-to-generate part. An output
-whose load-bearing claims rest on it is built from exactly the material that
-deflates. Keeping `[generic]` non-load-bearing is therefore not a purity rule —
-it is the part of the work that stays worth something.
+The reading this suite takes from it is an **inference**, not a result — one
+platform, one tool, remote short-term work, a proprietary score that also sets
+default ranking. Stated as an inference: *whatever becomes cheap to generate
+stops carrying information, and what can be checked keeps carrying it.*
+`[generic]` is this suite's own name for the cheap-to-generate part, and an
+output whose load-bearing claims rest on it is built from exactly what deflates.
+Keeping `[generic]` off entity-specific claims is therefore not a purity rule; it
+is the part of the work that stays worth something.
 
-Three honesty notes, because this override rests on external evidence rather
-than on a defect this repository measured.
-
-The study is one platform — remote freelance work, where the platform's own
-review score summarises past work and sets the default ranking of applications.
-Generalising from it to hiring at large is an **inference**, and so is the wider
-reading above that any cheap signal deflates. Both are recorded as inferences.
-
-The consequence the authors flag is **hedged in the original and stays hedged
-here**: the shift toward harder-to-fake history, they write, "may favour
-established workers at the expense of newcomers trying to enter the market."
-Workers on one platform, and *may*. An earlier draft of this paragraph wrote
-"favours established candidates", which dropped the hedge and widened the
-population inside an attributed sentence — two of the reframing audit's six axes,
-committed in the file that defines them.
-
-Whether that consequence reaches this suite's users is **unknown**, and an
-earlier draft asserted it did, claiming such candidates are "a large share of who
-needs it." There is no usage data behind that; `docs/cover-letter-spec-v0.md` §7
-says so in terms. The rule is adopted anyway, because relaxing it would only sell
-those candidates a signal that has already deflated — but the reason to keep
-`discovery` and `capability` gaps as first-class outputs with real closure paths
-is that they are the honest output when evidence is thin, not that we know who is
-reading.
+The authors name a consequence, and it stays hedged exactly as they wrote it:
+"This shift may have important implications, including favoring established
+workers at the expense of newcomers trying to enter the market." (cite C3) Their
+*may*, their *workers*, their one platform. Whether anything like it reaches this
+suite's users is **unknown** — there is no usage data. The rule is adopted
+anyway, because relaxing it would only sell thin-evidence candidates a signal that
+has already deflated; `discovery` and `capability` gaps stay first-class outputs
+with real closure paths because they are the honest output when evidence is thin,
+not because anyone knows who is reading.
 
 ## 6. Truthfulness core
 

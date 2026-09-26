@@ -126,6 +126,57 @@ A test that cannot fail is worse than no test, so each of the four bugs above wa
 reintroduced against the finished suite and confirmed caught before this was
 written down.
 
+## The documentation is graded too
+
+A skill's output is graded: every line traces to a quoted source in a cell, and
+evals check it. Until this rule existed nothing else was — not the conventions
+imposing that discipline, not the ledger describing them, not the specs, and not
+the self-test certifying the checks. Twenty-one findings over three review panels
+came from that exempted zone, and none was caught by its author. The discipline
+now applies to the documents that state it.
+
+**A claim about the outside world is cited, and its quotation is verbatim.**
+`conventions/citations.md` holds each source sentence once, beside its source and
+what weakens it. Prose cites it as `(cite C1)` and may quote only what the entry
+holds. The paraphrase problem is a comparison problem: a restatement in one file
+and its source in another are never read side by side, which is this document's
+own test for when a sentence must become a slot. `check_skills.py --only
+citations` verifies every marker resolves, every entry is used, and every quoted
+span sits inside its entry. `ci/verify_citations.py` refetches the sources and
+checks each entry against them; it needs the network, so it runs by hand, and it
+reports *unreachable* as unchecked rather than as a pass.
+
+What it cannot see is a claim about the world made **without** a marker and
+without quotation marks — a paraphrase. That still needs a reviewer. The check
+does catch a source quoted verbatim with no marker, because the entry's text is
+there to match.
+
+**A reference into another file names that file; a bare §N means this one.**
+`--only sections` resolves every reference. Thirteen bare references in this
+repository each meant some other file, recoverable only from context — a parenthetical naming "the mirror" by section number, a table column
+headed "Section of the mirror" — and a check cannot resolve context. (It cannot
+tell a quoted example from a reference either, which is why this paragraph
+describes that parenthetical rather than reproducing it.)
+
+**A count that introduces a list agrees with the list.** `--only counts` sums
+every count word in the lead-in, so "four things it does, and one it refuses" is
+five. It checks only a count and its list in the **same file**. A count restated
+elsewhere — "six axes, five disciplines" in a `SKILL.md` — is not checked, because
+"axes" means persona and question-type axes in mock-interview and a check would
+misfire. Those restatements are currently true. Prefer not to add more: a fact
+stated in thirteen places goes stale in twelve, which is what happened to "five
+disciplines".
+
+**The ledger points; it does not restate.** Name the file and section that
+changed (`evidence-conventions.md` §5), and cite rather than quote a source. A
+ledger entry restating a rule becomes a second copy of it, and this ledger once
+asserted a rule and its retraction four bullets apart because the rule changed
+and the copy did not.
+
+**The self-test's baseline is the whole gate.** `ci/test_checks.py` used to run
+one group on the clean repo and then print "clean repo passes". A mutation of a
+group already failing proves nothing about the mutation.
+
 ## Structural rules
 
 - Skills are dependency-free: nothing outside a skill's folder may be required

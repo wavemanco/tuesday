@@ -48,11 +48,19 @@ thing this whole suite exists to avoid.
 Instructions aimed at an automated screener — white text on white, near-zero font
 size, text in document metadata, an invisible block of keywords — are refused.
 
-This is not a fringe request. One 2025 survey found 41% of job seekers admitted to
-using hidden text or prompt injection to get past AI filters, with over half the
-remainder considering it; a large staffing firm reports finding hidden text in
-around 10% of the resumes it scans. A candidate asking for this is not being
-exotic. They have probably been told it works.
+This is not a fringe request, and it is a rare practice — both are true, and the
+gap between them is the useful part. A vendor survey reports "41% of US job
+seekers say they've tried it" (cite C15); the same vendor, measuring the 300
+million résumés it processes, found hidden white text in 1% (cite C17), and an
+independent academic measurement agrees (cite C18). One staffing firm reports
+about 10% of the résumés it scans with AI (cite C16). Many more people say they
+have done it than are measured doing it.
+
+So a candidate asking for this is not being exotic; they have probably been told
+it works. The gap between what people report and what shows up in résumés is
+worth telling them, and worth not over-reading: it fits people abandoning the
+trick, and it fits people over-reporting it in a survey, and nothing here says
+which.
 
 Refuse it, and give the reason rather than a bare decline:
 

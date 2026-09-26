@@ -14,13 +14,13 @@ redefines a band or coins a synonym breaks every consumer downstream of it.
 
 What that file settles, and where:
 
-| Need | Section of the mirror |
+| Need | Where it is settled |
 |---|---|
-| Which `source_type` a piece of evidence carries | §1 |
-| Which `confidence` band a candidate claim earns | §2 |
-| Whether a written line is `[grounded]`, `[inferred]`, or `[generic]` | §4 |
-| What may be asserted on top of a claim at each band | §5, including the two overrides that beat every label |
-| The never-do list binding every output | §6 |
+| Which `source_type` a piece of evidence carries | `evidence-conventions.md` §1 |
+| Which `confidence` band a candidate claim earns | `evidence-conventions.md` §2 |
+| Whether a written line is `[grounded]`, `[inferred]`, or `[generic]` | `evidence-conventions.md` §4 |
+| What may be asserted on top of a claim at each band | `evidence-conventions.md` §5, including the overrides that beat every label |
+| The never-do list binding every output | `evidence-conventions.md` §6 |
 
 Three readings this skill adds on top, because they concern its own intake and
 output rather than the shared vocabulary:

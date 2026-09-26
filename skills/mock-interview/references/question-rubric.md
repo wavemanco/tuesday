@@ -36,7 +36,7 @@ Every question row carries one label, in its own Provenance column — not appen
 
 Two connections that matter when writing a rationale cell:
 
-- **Confidence and provenance are different axes.** Confidence (§2 of the mirror) grades the *candidate's* evidence; provenance grades *what this pack wrote* on top of it. The mapping in §5 says which is allowed from which — most usefully, a `low`-confidence claim may never be asserted as the candidate's story, only coached as a clarify-strategy note, and it is labeled `[inferred]` with the derivation named.
+- **Confidence and provenance are different axes.** Confidence (`evidence-conventions.md` §2) grades the *candidate's* evidence; provenance grades *what this pack wrote* on top of it. The mapping in `evidence-conventions.md` §5 says which is allowed from which — most usefully, a `low`-confidence claim may never be asserted as the candidate's story, only coached as a clarify-strategy note, and it is labeled `[inferred]` with the derivation named.
 - **A `[generic]` label is an upgrade-menu argument, not an apology.** "These six `[generic]` rows become `[grounded]` if you add the JD text" tells the candidate exactly what their next five minutes of effort buys.
 
 Why label at all: a candidate who rehearses a fabricated specific repeats it live and gets burned. The pack's honesty about its own epistemics is part of its quality.

@@ -35,7 +35,14 @@ Five disciplines make the audit actually catch things:
 - **A number stays attached to the noun it came from.** "Requirements documents across 30+ integrations" counts integrations, not documents; sliding the quantifier to the nearer noun manufactures a larger claim out of the candidate's own sentence, and it survives every check that looks only for invented figures, because the figure was not invented. Re-read the source clause before carrying any number into a proposal.
 - **Ambiguity resolves downward.** When the candidate's own sentence admits two readings — "growth lead, then Head of Growth, at two companies" is one Head-of tenure or two — take the reading that claims less, or ask. Resolving upward and then labelling the result `[grounded]` is how a fabricated credential acquires a citation.
 - **Drift in the flattering direction is the one to hunt, but the rule is direction-agnostic** — untraceable language fails whether it raises or lowers the candidate.
-- **When a clause cannot be traced to the user's own sentence, cut it or ask about it.** An asked question can turn a reframe into confirmed evidence; a guessed one turns it into a claim the interview will test.
+
+**And when a clause cannot be traced to the user's own sentence, cut it or ask
+about it.** That is not a sixth discipline; it is what the five are for, and it
+sat inside their list for long enough that the list said six while its lead-in
+said five and every file describing the audit said "five disciplines" — a count
+stated in thirteen places and wrong at the source. An asked question can turn a
+reframe into confirmed evidence; a guessed one turns it into a claim the
+interview will test.
 
 A self-certification is part of the audited text, not a substitute for it. Writing "every claim here traces to a sentence you wrote" above a line that does not is worse than writing nothing: it tells the candidate to stop checking. Make the claim only after the clause-by-clause pass, and if a clause cannot be traced, cut the clause rather than soften the certification.
 

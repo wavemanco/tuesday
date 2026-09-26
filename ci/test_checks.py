@@ -22,9 +22,11 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-COPIED = ["skills", "dist", "conventions", "ci", "evals"]
+COPIED = ["skills", "dist", "conventions", "ci", "evals", "docs"]
 # Files, not directories: the ledger lives in README.md and the ledger check reads it.
-COPIED_FILES = ["README.md"]
+# docs/ and CONTRIBUTING.md joined when the citations check did: it reads both, and a
+# staged repo without them would let every citation in a spec pass by being unseen.
+COPIED_FILES = ["README.md", "CONTRIBUTING.md"]
 
 
 def stage(tmp: Path) -> Path:
@@ -57,11 +59,10 @@ def fingerprint(root: Path) -> str:
     return digest.hexdigest()
 
 
-def run(root: Path, group: str) -> tuple[int, str]:
-    proc = subprocess.run(
-        [sys.executable, "ci/check_skills.py", "--only", group],
-        cwd=root, capture_output=True, text=True,
-    )
+def run(root: Path, group: str | None) -> tuple[int, str]:
+    """Run one group, or every group when group is None."""
+    command = [sys.executable, "ci/check_skills.py"] + (["--only", group] if group else [])
+    proc = subprocess.run(command, cwd=root, capture_output=True, text=True)
     return proc.returncode, proc.stdout + proc.stderr
 
 
@@ -392,6 +393,108 @@ def break_unreferenced_file(root: Path) -> str:
     return "not named in SKILL.md"
 
 
+def break_paraphrase_as_quote(root: Path) -> str:
+    """Restore the exact defect: a compression inside quotation marks, cited.
+
+    The authors wrote "This shift may have important implications, including
+    favoring established workers". The conventions shipped "may favour
+    established workers" in quotation marks, and a correction certified it
+    verbatim. citations.md holds the real sentence, so the paraphrase fails.
+    """
+    path = root / "conventions/evidence-conventions.md"
+    text = path.read_text()
+    mutated = text.replace(
+        '"This shift may have important implications, including favoring established\nworkers at the expense of newcomers trying to enter the market." (cite C3)',
+        '"may favour established workers at the expense of newcomers trying to enter\nthe market." (cite C3)', 1)
+    if mutated == text:
+        raise SystemExit("break_paraphrase_as_quote found no C3 quotation — it has gone stale")
+    path.write_text(mutated)
+    return "Verbatim does not contain it"
+
+
+def break_uncited_source_quote(root: Path) -> str:
+    """Quote a source verbatim and drop its marker."""
+    path = root / "skills/resume-tailor/references/machine-readers.md"
+    text = path.read_text()
+    mutated = text.replace(' (cite C15)', '', 1)
+    if mutated == text:
+        raise SystemExit("break_uncited_source_quote found no C15 marker — it has gone stale")
+    path.write_text(mutated)
+    return "verbatim without (cite"
+
+
+def break_dangling_cite(root: Path) -> str:
+    """Cite an entry that does not exist."""
+    path = root / "docs/cover-letter-spec-v0.md"
+    text = path.read_text()
+    mutated = text.replace("(cite C5)", "(cite C99)", 1)
+    if mutated == text:
+        raise SystemExit("break_dangling_cite found no C5 marker — it has gone stale")
+    path.write_text(mutated)
+    return "names no entry"
+
+
+def break_unused_citation(root: Path) -> str:
+    """Leave an entry that no claim rests on."""
+    path = root / "conventions/citations.md"
+    path.write_text(path.read_text() + """
+## C99
+
+- **Claim:** An orphan.
+- **Verbatim:** "a sentence nothing cites"
+- **Source:** nowhere — https://example.invalid/
+- **Retrieved:** 2026-09-26
+""")
+    return "cited nowhere"
+
+
+def break_stale_count(root: Path) -> str:
+    """Restore "Two overrides" above three bullets — the first of two real cases."""
+    path = root / "conventions/evidence-conventions.md"
+    text = path.read_text()
+    mutated = text.replace("Three overrides that beat every label:", "Two overrides that beat every label:", 1)
+    if mutated == text:
+        raise SystemExit("break_stale_count found no overrides lead-in — it has gone stale")
+    path.write_text(mutated)
+    return "says 2, its list has 3"
+
+
+def break_list_outgrows_count(root: Path) -> str:
+    """Put the procedure back inside the disciplines list — the second real case."""
+    path = root / "conventions/reframing-audit.md"
+    text = path.read_text()
+    anchor = "- **Drift in the flattering direction is the one to hunt"
+    i = text.find(anchor)
+    if i < 0:
+        raise SystemExit("break_list_outgrows_count found no disciplines list — it has gone stale")
+    end = text.index("\n", i)
+    mutated = text[:end + 1] + "- **Cut or ask.** A clause that cannot be traced is cut or asked about.\n" + text[end + 1:]
+    path.write_text(mutated)
+    return "says 5, its list has 6"
+
+
+def break_dangling_section(root: Path) -> str:
+    """Point a qualified reference at a section the file does not have."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    mutated = text.replace("`references/interaction-grammar.md` §4", "`references/interaction-grammar.md` §19", 1)
+    if mutated == text:
+        raise SystemExit("break_dangling_section found no §4 reference — it has gone stale")
+    path.write_text(mutated)
+    return "has no section 19"
+
+
+def break_ambiguous_section(root: Path) -> str:
+    """A bare §N meaning another file — the thirteen the check was built from."""
+    path = root / "skills/mock-interview/references/question-rubric.md"
+    text = path.read_text()
+    mutated = text.replace("Confidence (`evidence-conventions.md` §2)", "Confidence (§2 of the mirror)", 1)
+    if mutated == text:
+        raise SystemExit("break_ambiguous_section found no qualified §2 — it has gone stale")
+    path.write_text(mutated)
+    return "bare §2"
+
+
 CASES: list[tuple[str, str, callable]] = [
     ("frontmatter", "description over the length limit", break_description_length),
     ("frontmatter", "angle brackets in description", break_description_brackets),
@@ -420,6 +523,14 @@ CASES: list[tuple[str, str, callable]] = [
     ("mirrors", "a reference pointing at a file the skill lacks", break_dangling_reference),
     ("mirrors", "canonical text naming a skill-local file", break_skill_local_reference),
     ("mirrors", "a reference file nothing names", break_unreferenced_file),
+    ("citations", "a paraphrase inside quotation marks, cited", break_paraphrase_as_quote),
+    ("citations", "a source quoted verbatim with no marker", break_uncited_source_quote),
+    ("citations", "a marker naming no entry", break_dangling_cite),
+    ("citations", "an entry no claim rests on", break_unused_citation),
+    ("counts", "a count left behind by its list", break_stale_count),
+    ("counts", "a list that outgrew its count", break_list_outgrows_count),
+    ("sections", "a reference to a section that does not exist", break_dangling_section),
+    ("sections", "a bare section number meaning another file", break_ambiguous_section),
 ]
 
 
@@ -431,11 +542,15 @@ def main() -> int:
         clean = tmp / "clean"
         clean.mkdir()
         root = stage(clean)
-        code, out = run(root, "frontmatter")
+        # The whole gate, not one group. This baseline used to run "frontmatter"
+        # alone and then print "clean repo passes" — a claim about eleven groups
+        # made after checking one. With a group already failing on the clean repo,
+        # a mutation of that group is not attributable to the mutation at all.
+        code, out = run(root, None)
         if code != 0:
-            print("clean repo does not pass its own checks:\n" + out)
+            print("clean repo does not pass its own checks — no mutation below would mean anything:\n" + out)
             return 1
-        print("  ok   baseline: clean repo passes\n")
+        print("  ok   baseline: clean repo passes every group\n")
 
         failed = []
         for index, (group, label, mutate) in enumerate(CASES):
