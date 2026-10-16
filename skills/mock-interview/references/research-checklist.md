@@ -39,14 +39,21 @@ In claude.ai, the platform's deep-research feature is the natural way to produce
 
 From L1 target 2, try to name the company's actual rounds. When research can't establish the loop, fall back to an archetype **and say so in the pack** — the candidate should know their persona weights rest on a pattern, not on this company's documented process.
 
-| Archetype | Typical loop | Persona tilt | Values-style round? |
+| Archetype | Typical loop | Persona tilt | Values-style round, as a fallback |
 |---|---|---|---|
-| Big-tech structured | Recruiter → HM → skills/case → behavioral/values → committee | Values/Behavioral and Case up | Usually yes — treat as guaranteed somewhere in the loop |
-| Consulting / case-led | Screens → multiple case rounds → partner fit | Case/Strategist dominant; Pressure via time-boxed math | Fit round, less codified |
-| High-growth startup | HM → team panel → founder chat | Skeptic (scrappiness probes) and Conversational up; expect builder stories to be tested | Rare as a named round; values probed informally |
-| Finance / quant-adjacent | Screens → technical depth → fit | Prober and Pressure dominant | Rare |
-| Public sector / regulated enterprise | Structured competency-based panels | Values/Behavioral (competency framework) dominant; scripted questions | Competency framework plays the role |
-| Generic | Screen → HM → panel | Flat weights, said plainly | Unknown — prep one story per common value theme |
+| Big-tech structured | Recruiter → HM → skills/case → behavioral/values → committee | Values/Behavioral and Case up | `yes` — usually somewhere in the loop |
+| Consulting / case-led | Screens → multiple case rounds → partner fit | Case/Strategist dominant; Pressure via time-boxed math | `no` — a fit round, less codified |
+| High-growth startup | HM → team panel → founder chat | Skeptic (scrappiness probes) and Conversational up; expect builder stories to be tested | `no` — values probed informally, not as a named round |
+| Finance / quant-adjacent | Screens → technical depth → fit | Prober and Pressure dominant | `no` — rare |
+| Public sector / regulated enterprise | Structured competency-based panels | Values/Behavioral (competency framework) dominant; scripted questions | `yes` — the competency framework plays the role |
+| Generic | Screen → HM → panel | Flat weights, said plainly | `no` — unknown, so not assumed |
+
+**A values-style round is detected** in exactly two cases; this is the one definition, and the template's section 10, `SKILL.md` Step 3 and the rubric's VAL coverage rule point here.
+
+- **A source documents one.** A source for the loop that the pack read and names in Sources — the company's interviewing or careers page, a candidate guide labelled as Source quality below says, or the user's, the recruiter's or the interviewer's own words — names a round, or a part of one, that assesses values, principles, behaviours or a competency framework.
+- **The fallback archetype has one.** No source establishes the loop, and the archetype the pack names as its fallback reads `yes` in the last column above.
+
+In every other case no values-style round is detected: a values page read while nothing establishes the loop does not detect one, and neither does a loop source that names no such round. Published values the pack read may still theme VAL questions, as the raising sources `references/question-rubric.md` names.
 
 ## Source quality
 

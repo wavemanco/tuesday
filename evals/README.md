@@ -191,23 +191,44 @@ denied, as every fixture always has.
   with the target, or in a canned room the server returned such a page
   (`output_checks.aimed_at`). Each target also lists `on_target_samples`, queries
   a correct run might send for it, and a target that accepts `n/a` or `skipped`
-  lists `hunt_samples`, queries that really are hunts for it; CI checks the terms
-  against both with `aimed_at` itself.
+  lists `hunt_samples`, queries that really are hunts for it. CI checks the terms
+  against both with `aimed_at` itself, in every mode the fixture runs, a canned
+  room's sample read as the log entry the stub server's own page route
+  (`research_server.search`) would leave; where no correct run sends a call
+  (`zero_calls` or `declined`), it skips the cross-target collision check.
 - `user_links`: the links the user gave the skill to read (absent means none).
   A URL the prompt names only as the source of text the user pasted is not one.
 - `declined`: `true` when the user's prompt declines research or chooses L0
   (absent means false). It is the fixture's word, never inferred from the run.
+  With it, `declined_phrase` quotes the prompt's own words that decline research
+  or choose L0; CI fails a `declined` that is not a boolean, one set beside
+  `zero_calls`, one with no phrase or a phrase not in the prompt, and a phrase
+  without `declined: true`.
 - For canned rooms, `pages` (each with its `url`, `target`, `keywords` and text)
   and `canaries`: a fact only one page carries, the spellings that prove it was
   read, its `target`, and the `page` it sits on, which must be one of the
   fixture's pages for that target.
+
+**What a canary may be.** A canary is a token a correct response carries over
+whole: a figure ("143"), a proper name ("Pricewell") or a published title
+("Small Books, Loud Errors"). Its spellings are such tokens from its page, or
+one of them written another way a correct response writes it (a figure rounded),
+and any one of them counts; never a paraphrase.
+It is never a common-noun phrase a response may restate ("four days a week in the
+Leeds office"): a correct run can say that in more ways than any list of exact
+strings holds, so a fact that exists only as such a phrase is left to the
+fixture's graded expectation, which judges meaning. This is the one statement of
+the rule; `CONTRIBUTING.md` points here.
 
 A fixture with the `quotes` check also declares `candidate_text`, top-level: the
 candidate's own words, against which the verbatim evidence column and the banks'
 Provenance are checked (`[]` when the candidate gave nothing quotable). A
 fixture with the `fit_ledger` check declares `candidate_constraints`, top-level:
 `"known"` when the prompt states the candidate's own constraints or
-non-negotiables, `"unknown"` when it does not.
+non-negotiables, `"unknown"` when it does not. It is the only source of that fact
+for a fixture's run: a fit_ledger fixture without it, or with any other value,
+fails the run as a `fixture` error, and the response's own envelope never stands
+in for it.
 
 - **denied** is the historical condition, now pinned: `--setting-sources project
   --strict-mcp-config`, with WebSearch and WebFetch present and refused. Never
@@ -252,9 +273,11 @@ counts); recorded, no calls made; or the calls themselves, each with its tool,
 query or URL, and whether it returned (a search with the URLs it returned), was
 refused or errored. A fetch of a
 link the fixture declares in `research.user_links` is listed in a group of its
-own, out of the research count, because the tally line names it apart; the block
-sorts calls with `output_checks.is_user_link`, the classifier the checks use, so
-a grader and the checks compare the tally with the same numbers. Graders had been
+own, out of the research count, because the tally line names it apart: the reads
+that returned under "User links read", and those the host refused or that errored
+under "User links not opened", which are not reads and are not counted. The block
+sorts calls with `output_checks.user_link_reads`, the classifier the checks use,
+so a grader and the checks compare the tally with the same numbers. Graders had been
 failing true claims of refused searches because nothing told them the searches
 happened.
 The block is ground truth for the response's claims about its own research and
@@ -298,9 +321,11 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   URL equals a link in `research.user_links` after `output_checks.norm_url`
   (scheme and host lowercased; the scheme, a leading `www.`, a `#fragment` and
   one trailing `/` dropped; path and query kept) is reading an input, not
-  research: it is left out of those counts, of attribution and of `zero_calls`,
-  and counted instead against `; user links read N` on every form of the line,
-  `no searches` included. Nothing is inferred from the prompt, so a prefix, a
+  research: it is left out of those counts, of attribution and of `zero_calls`.
+  `; user links read N`, on every form of the line, `no searches` included,
+  counts the declared-link fetches that returned; one the host could not open is
+  not a read and is not counted (the response should say it could not open it,
+  which the graders judge). Nothing is inferred from the prompt, so a prefix, a
   parent path or the home page of a declared link is research.
 - **Canaries**, for a fixture that plants them: in a denied room a canary must
   never appear. In a canned room each canary must name its `page`, one of the
@@ -314,39 +339,53 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   snapshot is read by the rules in `skills/job-underwriter/references/risk-and-decision.md`
   ("The decision snapshot") and `evidence-model.md` ("The row is the unit"). The
   patterns and rule functions are `ci/ledger_rules.py`, the same ones CI runs on
-  the worked dossier, so the two checks of a rule cannot disagree. Checks:
+  the worked dossier, so the two checks of a rule cannot disagree; how they read
+  prose — a year is no count, a fit or tier word that is also ordinary English
+  ("two important unknowns") is a map word only as a token or at the end of its
+  noun phrase — is stated once there, above `MAP_WORDS`. A ledger row's
+  parenthetical and a failed or unconfirmed gate row's are judged by one naming
+  rule, `ledger_rules.names_requirement`. Checks:
   `ledger_sentence` (no count, fraction or listed quantifier after the ledger,
   and no second sentence), `snapshot_count` (no count, fraction or listed
-  quantifier over the map in the snapshot's prose), `snapshot_band` (a bare band
+  quantifier over the map in the snapshot's prose), `summary_count` (the same in
+  the last JSON envelope's `decision.summary`, read with `map_claim` as CI reads
+  the worked dossier's; unchecked when the response has no envelope with one),
+  `snapshot_band` (a bare band
   word, backticked or not, only as `R4 (\`medium\`)` and equal to that row's
   Confidence; `RR2 (\`high\`)` or `RR2 (high)` is a severity written as a band,
   and fails), `gates_line` and
-  `gates_form` (the `Hard gates:` slot, anchored at the start of its line; a
-  missing slot fails as format when the map has gate rows; a `hard_gate` row at any
+  `gates_form` (the `Hard gates:` slot, anchored at the start of its line, in
+  every snapshot: a missing slot fails as format whether or not the map has gate
+  rows; each failed and unconfirmed row carries a few of its Requirement's own
+  words in parentheses, and anything else there fails as format; a `hard_gate` row at any
   fit but `direct`, `unclear` or `hard_gate_fail`, or `hard_gate_fail` on a row that
   is not a gate, fails `gates_line` however the line reads, per `evidence-model.md`
   "A gate is met, not established, or failed"), and `severity` and
   `severity_form` (every `RR4 (\`severity: high\`)` against the risk register's
   Severity, and the severe-red-flags slot naming exactly its high entries). The
   hard-gates line's closing "candidate constraints not given" clause is judged
-  against the fixture's `candidate_constraints`, or, where a fixture declares
-  none, the response's own JSON `candidate_constraints.status`, and not at all
-  when neither says; a response with no risk register leaves `severity`
-  unchecked.
+  against the fixture's `candidate_constraints` (above); a response with no risk
+  register leaves `severity` unchecked.
 - **Quotes** (`quotes`): the verbatim evidence column and the banks' Provenance
   cells hold the candidate's words, so every quotation in either, of any length,
   must appear on word boundaries in the fixture's `candidate_text` — `[]` means
   nothing the candidate gave is quotable, and a fixture without the key has that
   check reported unchecked, never run against the prompt instead. A Provenance
   quotation must also appear in the response's own evidence column, because the
-  template quotes it "exactly as it appears in the fit snapshot". Quotations of
+  template quotes it "exactly as it appears in the fit snapshot". The one
+  exception is a dossier field named by its field, the source
+  `references/question-rubric.md` allows a plain acknowledgment: a quotation right
+  after `prohibited_claims`, `acknowledge_gap` or `rejected_inferences` is that
+  field's item, and must equal, whole, an item the request's dossier lists under
+  that field. Quotations of
   three words or more in a Requirement column beside the verbatim one must appear
   in the request or in a canned room's pages; that is existence, not attribution,
   which stays with the graders. `evidence_form`, a format check, parses each
   evidence cell whole against the grammar in mock-interview's
   `references/output-template.md`: `none given`, or quotations each followed by a
   dash and its origin (your CV, your message, the coach's notes, a dossier row),
-  with nothing else in the cell.
+  separated by nothing that adds a word (a comma, semicolon, full stop, line
+  break, "and" or a space), with nothing else in the cell.
 
 Each finding is judgement or format and they are counted apart: a qualifier
 beside a status label and a `yes` with no search behind it are different defects

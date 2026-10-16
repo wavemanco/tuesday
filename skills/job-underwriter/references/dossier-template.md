@@ -9,7 +9,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 - **Offered, never forced.** A one-line offer stands in every delivered assessment, first pass included, immediately before the upgrade menu; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
 - **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
-- **Report-only parts, which no envelope field holds:** Evidence status's research line and target table; the upgrade menu; the Role reality rows `role_profile` has no field for (organization, working pattern, scope read, market calibration, contradictions); and the Why and Provenance cells of the application plan. They describe this engagement's research and reading of the role, not the candidate's evidence, and `dossier-schema.md` §2 binds them: carried as the delivered assessment wrote them, read by no later skill, and never a second copy of a fact the envelope holds. Every other line renders from the envelope.
+- **Report-only parts, which no envelope field holds:** Evidence status's research line and target table; the upgrade menu; the Role reality rows `role_profile` has no field for (organization, working pattern, scope read, market calibration, contradictions); and the Why, Provenance and Status cells of the application plan (every plan row is proposed until the user approves it, which is engagement state, not evidence). They describe this engagement's research and reading of the role, not the candidate's evidence, and `dossier-schema.md` §2 binds them: carried as the delivered assessment wrote them, read by no later skill, and never a second copy of a fact the envelope holds. Every other line renders from the envelope.
 - **The fit ledger renders from `evidence_map`.** Its lines are `evidence_map[].requirement_id`, `priority` and `fit_status`, projected, with a few of `requirement`'s own words beside each row below `direct`, and `decision.summary` does not restate them. A summary that carries its own tally is a third copy of the map, and copies agree with each other more readily than with the map: this file's report line and its summary read "five of seven material requirements `direct`" from v0.1 onward, over a map that had four.
 - **`handoff_to_mock_interview` follows the canonical schema, `dossier-schema.md` §6, exactly** — those keys are a contract with another skill, not a suggestion. `uncertain_or_weak_areas` carries only `low`/`none`-confidence requirements; `medium`-confidence claims belong in `verified_candidate_evidence` with their caveat attached. `prohibited_claims` are absolute for every downstream consumer — list every claim this engagement established as un-assertable.
 
@@ -36,13 +36,13 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 
 R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on an artifact.
 
-**Opportunity ledger.** Sound but under-specified: authority over awards is asserted and not evidenced (RR1), and the contract basis is unstated against the candidate's permanent-only constraint (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
+**Opportunity ledger.** Sound but under-specified: authority over awards is asserted and not evidenced (RR1), the salary is withheld (RR4), and the contract basis is unstated against the candidate's permanent-only constraint (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
 
 - **Hard gates:** none failed (R1 `direct`, R9 `direct`); unconfirmed: R8 (Permanent contract, not fixed-term).
 - **Severe red flags:** none found.
 - **Conditions for go:** (1) award authority verifies concrete in interviews — see risk register RR1; (2) the post confirmed as permanent — R8, RR2; (3) the retrofit bridge is framed honestly as adjacent, never as community-energy expertise.
 
-The hard-gates line names every gate row with its fit, whatever failed (`risk-and-decision.md` rule 4). Had the user needed sponsorship, R1 would be `hard_gate_fail`, the status `no_go` with that gate as its reason, and the line would open with the failure: ``- **Hard gates:** failed: R1 (UK work eligibility without sponsorship); unconfirmed: R8 (Permanent contract, not fixed-term); met: R9 `direct` ``. Had the user stated no constraints at all, R8 and R9 would not exist, R1 would be `unclear`, and the line would carry the flag the input contract requires: ``- **Hard gates:** none failed; unconfirmed: R1 (UK work eligibility without sponsorship); candidate constraints not given — checks against them unknown``.
+The hard-gates line names the gate rows by ID with their fits, whatever failed (`risk-and-decision.md` rule 4). Had the user needed sponsorship, R1 would be `hard_gate_fail`, the status `no_go` with that gate as its reason, and the line would open with the failure: ``- **Hard gates:** failed: R1 (UK work eligibility without sponsorship); unconfirmed: R8 (Permanent contract, not fixed-term); met: R9 `direct` ``. Had the user stated no constraints at all, R8 and R9 would not exist, R1 would be `unclear`, and the line would carry the flag the input contract requires: ``- **Hard gates:** none failed; unconfirmed: R1 (UK work eligibility without sponsorship); candidate constraints not given — checks against them unknown``.
 
 ## Role reality
 
@@ -53,8 +53,8 @@ The hard-gates line names every gate row with its fit, whatever failed (`risk-an
 | First-year outcomes | Open the capital-grants strand; publish the fund's first impact report | `[grounded]` JD states both |
 | Working pattern | Home-based, with quarterly trustee meetings in Cardiff | `[grounded]` JD |
 | Scope read | A normally-scoped senior programme post — three strands and two named outcomes is ordinary for the title, not unusually broad | `[inferred]` from the strand count against the stated outcomes |
-| Market calibration | One fund, with grants officers reporting in, is the usual remit for this title at an endowed foundation | `[generic]` role-family sweep, this month |
-| Unknowns | Award authority versus the trustees' grants committee; contract basis; who owns the impact measures | — |
+| Market calibration | One fund, with grants officers reporting in, is the usual remit for this title at an endowed foundation, paid £45–55k; the posting withholds the salary, so the band is what to expect, never this employer's offer (RR4) | `[generic]` role-family sweep, this month — a remit search and a salary search; `[grounded]` JD, for the withheld salary |
+| Unknowns | Award authority versus the trustees' grants committee; contract basis; salary; who owns the impact measures | — |
 | Contradictions | None between the JD and the foundation's jobs page | `[grounded]` jobs page fetched |
 
 The Provenance column is not decoration and it is not optional. It is here because
@@ -114,6 +114,7 @@ failure, same fix, one section apart and four months late.
 | RR1 | Authority over awards asserted, not evidenced | unknown | — | "lead the fund across its three strands" | Role may carry the fund's outcomes while award decisions sit with the trustees' grants committee | `[inferred]` from the JD's strand count against its silence on decision rights | Which award decisions does this role make alone, and which go to the grants committee? | unresolved |
 | RR2 | Contract basis unstated against a permanent-only constraint (R8) | risk_signal | medium | "see the fund through its first phase" | The post may be fixed-term, funded only for the fund's first phase | `[inferred]` from the JD's tie of the post to the first phase against its silence on contract basis | Is this post permanent, or fixed-term to the end of the fund's first phase? | unresolved |
 | RR3 | First-year outcomes explicitly stated in the JD | positive_signal | — | "publish the fund's first impact report in year one" | Role scope is genuinely defined; success is measurable | `[grounded]` JD states both outcomes | Who owns the impact-report measures today? | noted |
+| RR4 | Salary withheld | unknown | — | "salary on application" | The figure may sit below the role-family band in role reality, or the foundation may simply not publish salaries | `[inferred]` from the posting's withheld figure, against the `[generic]` band | What salary is budgeted for this post? | unresolved |
 
 The verification question is a column for the same reason. Rendered as a prose
 line beneath the table it survived only for the entries that arrived with a
@@ -141,10 +142,10 @@ where severity does not apply does not acquire an invented `n/a`, `none`, or a
 
 | # | Action | Why | Provenance | Status |
 |---|---|---|---|---|
-| E1 | Surface the portfolio-reporting workbook from the tools list into an outcome bullet | Reorganizes existing verified material, adds nothing; draft in envelope | `[grounded]` CV, tools list | pending your approval |
-| W1 | A one-page sanitized due-diligence note | Raises R3 to high and is the natural artifact for the R4 bridge | `[grounded]` R3, R4 rows | pending your approval |
-| Q1 | Ask RR1 and RR2's verification questions verbatim in the loop | The register doubles as interview preparation | `[grounded]` register | pending your approval |
-| A1 | Confirm the contract basis with the recruiter before investing in the loop | The contract basis is unstated against a stated constraint | `[grounded]` RR2 | pending your approval |
+| E1 | Surface the portfolio-reporting workbook from the tools list into an outcome bullet | see R6 | `[grounded]` CV, tools list | pending your approval |
+| W1 | A one-page sanitized due-diligence note | see R3, R4 | `[grounded]` R3, R4 rows | pending your approval |
+| Q1 | Ask the verification questions of RR1, RR2, RR3 and RR4 verbatim in the loop | The register doubles as interview preparation | `[grounded]` register | pending your approval |
+| A1 | Confirm the contract basis with the recruiter before investing in the loop | see RR2, R8 | `[grounded]` RR2 | pending your approval |
 | A2 | Ask a current grantee or a sector contact for an introduction before applying cold | How hiring often works at small funders, not a fact about this employer | `[generic]` role-family pattern | pending your approval |
 
 The plan is a table for the same reason role reality is. Written as prose it
@@ -157,14 +158,14 @@ something the analysis cannot source.
 
 ## Evidence status
 
-Verified: R1, R2, R3, R4, R6, R8, R9 claims (sources in envelope) — verified is about the claim, not the fit: R4 is verified adjacent experience and its fit stays `adjacent`. Unverified leads: a prior-context mention of a participatory-grantmaking pilot — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "line-manages officers", initially inferred from "led the assessment panel" — corrected by user: no direct reports; recorded so it is never re-derived.
+Verified: R1, R2, R3, R4, R6, R8, R9 claims (sources in envelope) — verified is about the claim, not the fit: R4 is verified adjacent experience and its fit stays `adjacent`. Unverified leads: a prior-context mention of a participatory-grantmaking pilot — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "awarded grants under delegated authority", initially inferred from "led the assessment panel" — corrected by user: the panel recommended, the committee decided; recorded so it is never re-derived.
 
 Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1
 
 | Target | Status | What it moved, or would have |
 |---|---|---|
 | 1. Official site and careers page | yes | Searched "Penhallow Foundation community energy fund" and "Penhallow Foundation jobs senior programme manager"; fetched the jobs page for this role. Role reality: the contradictions row — JD and jobs page agree |
-| 2. Role-family sweep | yes | Searched "senior programme manager grant-making foundation remit" and "grants programme manager endowed foundation scope". Market calibration `[generic]`, and the norm the scope read is set against |
+| 2. Role-family sweep | yes | Searched "senior programme manager grant-making foundation salary" and "grants programme manager endowed foundation scope". Market calibration `[generic]` — its band and its remit — and the norm the scope read is set against |
 | 3. Hiring manager's public footprint | n/a | No name was given, so there was no query to form. The upgrade menu names what a name would unlock |
 
 In a host with no search the same rows read `unavailable`, `unavailable`, `n/a`:
@@ -190,6 +191,7 @@ unfilled row is the only version of that rule anyone can check.
 - A sanitized due-diligence checklist, a site-visit report, or any inspectable artifact → R3 to `high`, work sample half-done.
 - An answer to G1 → R4's bridge strengthens or resolves.
 - The recruiter's answer on contract basis → R8 and RR2 close; decision likely simplifies to `go` or `no_go`.
+- The budgeted salary → RR4 closes, and the figure is set against the band in role reality.
 - The hiring manager's name → role reality's scope read, and which verified story the application plan leads with for that reader.
 - A deeper research pass on Penhallow Foundation (trustee and leadership changes, past grant rounds, staff reports; up to 5 more searches and 2 more fetches) — say the word and it runs.
 
@@ -205,7 +207,7 @@ unfilled row is the only version of that rule anyone can check.
   "sections": {
     "decision": {
       "status": "conditional_go",
-      "summary": "Fit as evidence_map reads it, with R4 (must_have, adjacent) carrying a credible bridge, its limit named; sound but under-specified opportunity (RR1 award authority and RR2 contract basis unverified). Conditions: RR1 and RR2 verify acceptably; retrofit bridge framed as adjacent, never as community-energy expertise.",
+      "summary": "Fit as evidence_map reads it, with R4 (must_have, adjacent) carrying a credible bridge, its limit named; sound but under-specified opportunity (RR1 award authority and RR2 contract basis unverified; RR4 salary withheld). Conditions: RR1 and RR2 verify acceptably; retrofit bridge framed as adjacent, never as community-energy expertise.",
       "hard_gates": [],
       "severe_red_flags": []
     },
@@ -234,6 +236,7 @@ unfilled row is the only version of that rule anyone can check.
       "unknowns": [
         "Award authority versus the trustees' grants committee",
         "Contract basis",
+        "Salary",
         "Ownership of the impact measures"
       ]
     },
@@ -450,6 +453,17 @@ unfilled row is the only version of that rule anyone can check.
         "verification_question": "Who owns the impact-report measures today?",
         "decision_rule": null,
         "status": "noted"
+      },
+      {
+        "signal": "Salary withheld",
+        "class": "unknown",
+        "severity": null,
+        "source_quote": "salary on application",
+        "hypothesis": "The figure may sit below the role-family band in role reality, or the foundation may simply not publish salaries.",
+        "provenance": "[inferred] from the posting's withheld figure, against the [generic] band",
+        "verification_question": "What salary is budgeted for this post?",
+        "decision_rule": "Know the figure before investing in the loop; set it against the band, never read the band as the offer.",
+        "status": "unresolved"
       }
     ],
     "application_plan": {
@@ -468,7 +482,8 @@ unfilled row is the only version of that rule anyone can check.
       "interview_questions": [
         "Which award decisions does this role make alone, and which go to the grants committee?",
         "Is this post permanent, or fixed-term to the end of the fund's first phase?",
-        "Who owns the impact-report measures today?"
+        "Who owns the impact-report measures today?",
+        "What salary is budgeted for this post?"
       ],
       "research_actions": [
         "Confirm the contract basis with the recruiter before investing in the loop",
@@ -489,7 +504,7 @@ unfilled row is the only version of that rule anyone can check.
         "Participatory-grantmaking pilot mentioned in prior context - memory_lead, unconfirmed"
       ],
       "rejected_inferences": [
-        "Line-manages officers - inferred from 'led the assessment panel', corrected by user: no direct reports"
+        "Awarded grants under delegated authority - inferred from 'led the assessment panel', corrected by user: the panel recommended, the committee decided"
       ]
     },
     "handoff_to_mock_interview": {
@@ -513,16 +528,18 @@ unfilled row is the only version of that rule anyone can check.
       ],
       "opportunity_risks_to_validate": [
         "Award authority versus the trustees' grants committee (RR1)",
-        "Contract basis versus the permanent-only constraint (RR2)"
+        "Contract basis versus the permanent-only constraint (RR2)",
+        "Salary withheld; only the role-family band is known (RR4)"
       ],
       "questions_for_employer": [
         "Which award decisions does this role make alone, and which go to the grants committee?",
         "Is this post permanent, or fixed-term to the end of the fund's first phase?",
-        "Who owns the impact-report measures today?"
+        "Who owns the impact-report measures today?",
+        "What salary is budgeted for this post?"
       ],
       "prohibited_claims": [
         "Direct community-energy, grid-connection, or share-offer experience",
-        "Line-management or direct-report experience",
+        "Awarding grants under delegated authority: the panel recommended, the committee decided",
         "The participatory-grantmaking pilot (unconfirmed memory lead)"
       ]
     }

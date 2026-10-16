@@ -47,8 +47,8 @@ Read `references/personas.md` and `references/question-rubric.md` before writing
 2. **Prohibited claims** — the claims this pack will not coach, and why, built here so the banks are written against them. With a dossier, `prohibited_claims` arrives from the underwriter and binds every guidance cell. **Without one, build it locally** from the fit snapshot — the claims a candidate reaches for under pressure, each entry with its basis. What may be listed, what is an answer slot instead, and the honest form of each kind of entry are defined once, in the prohibited-list rule of `references/question-rubric.md`. The temptations are identical either way, and both sibling skills maintain such a list — a pack that carries one only when a dossier happens to be present is protected by luck. It still renders near the end of the pack; it is built second because a list written after the banks can only describe what they already did.
 3. **Interviewer read** — only when real interviewer information exists. Career pattern, self-described style, what will land with them and why.
 4. **Persona weights** — relationship priors adjusted by interviewer signals and company archetype, with the reasoning shown.
-5. **Question banks** — per persona, under the coverage rules in the rubric; what a question may presuppose is defined once there too. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
-6. **Values / principles cheat sheet** — only when a values-style round is detected; map each published value to a story one of the candidate's quoted sentences carries, or give a selection scaffold, with the honest branch the rubric requires, where none does.
+5. **Question banks** — per persona, under the coverage rules in the rubric; what a question may presuppose is defined once there too. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, worded as the rubric's premise rule allows, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
+6. **Values / principles cheat sheet** — only when section 10's condition in `references/output-template.md` holds ("detected" is defined in `references/research-checklist.md`); map each published value to a story one of the candidate's quoted sentences carries, or give a selection scaffold, with the honest branch the rubric requires, where none does.
 7. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in.
 8. **Delivery coaching** — only when an assessment was provided; see guardrails.
 
@@ -71,7 +71,7 @@ are absolute; the parameters it names are declared here.
 ```text
 question_budget: 3
 enum_fields: confidence, gap_type, question_type
-enum_columns: confidence=Confidence, gap_type=Gap type, question_type=Type
+enum_columns: confidence=output-template.md#The fit snapshot/Confidence, gap_type=output-template.md#The fit snapshot/Gap type, question_type=output-template.md#Question banks/Type
 closing_order: upgrade menu, drill and dossier offers, questions
 qualifier_fields: gap-and-bridge language
 provenance_sections: The fit snapshot, Question banks

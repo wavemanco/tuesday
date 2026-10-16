@@ -82,10 +82,13 @@ to appear gets invented at write time, and an invented column arrives with no
 token set: `low-medium` and `[grounded, partial]` are what that looks like. The
 declaration and the output shape have to agree, or the parameter is a promise
 about a cell that does not exist. So each skill declares, beside `enum_fields`,
-the column each enum lives in — `enum_columns: confidence=Confidence, …`, one
-explicit mapping per declared enum, to a header of a worked table in its
-references — and CI fails a declared enum with no mapping, a mapping to no such
-column, or a mapping for an undeclared field (`CONTRIBUTING.md`).
+the column each enum lives in — `enum_columns:
+confidence=output-template.md#The fit snapshot/Confidence, …`, one explicit
+mapping per declared enum, `field=file.md#Section/Column`, naming a column of the
+first worked table under that `##` section of one of its own references, never a
+mirrored one — and CI fails a declared enum with no mapping, a mapping to no such
+file, section, table or column, a mapping into a mirror, or a mapping for an
+undeclared field (`CONTRIBUTING.md`).
 
 **Parameter: `qualifier_fields`** — the free-text columns a qualifier goes to when
 it will not fit an enum cell. Every field named here must exist as a column in the

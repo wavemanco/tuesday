@@ -13,7 +13,12 @@ harness.
 What is a rule here, and where it is written:
 - no count, fraction or quantifier over the map — job-underwriter
   references/evidence-model.md, "The row is the unit" (its quoted list is the rule;
-  QUANTIFIERS must contain every phrase in it, and rule_quantifiers() reads it);
+  QUANTIFIERS and AFTER_LEDGER_ONLY hold exactly it, scope by scope, as
+  rule_quantifier_scopes() reads it, and CI checks that they do);
+  how prose is read for it (years, map words that are also ordinary English, row
+  names, articles, parentheses) is stated once, above MAP_WORDS;
+- naming a row in its Requirement's own words — the fit ledger's rule 2, which
+  the hard-gates line's failed and unconfirmed rows use too (names_requirement);
 - which fits a gate row may take — references/evidence-model.md, "A gate is met, not
   established, or failed" (gate_fit_problems, run with the hard-gates line);
 - the sentence after the ledger, the bands, the hard-gates line and the severe red
@@ -42,37 +47,84 @@ _NUMBER = r"(?:\d+|" + "|".join(COUNT_WORDS) + r")"
 COUNTED = re.compile(r"\b" + _NUMBER + r"\s+of\s+" + _NUMBER + r"\b", re.I)
 # "4/7", "four out of".
 FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b|\b" + _NUMBER + r"\s+out\s+of\b", re.I)
-TIER_WORDS = r"(?:hard[_ -]?gates?|must[_ -]?haves?|important|preferred|requirements?|rows?|gates?)"
-FIT_WORDS = r"(?:direct|adjacent|unclear|absent|hard[_ -]?gate[_ -]?fails?)"
+
 # What a count or a quantifier is about when it is about the map: a tier, rows or
-# requirements, a fit, or the rows below `direct` as "gaps".
-MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|gaps?)"
+# requirements, a fit, or the rows below `direct` as "gaps". How the prose is read:
+#
+# - Some map words are also ordinary English: "two important unknowns", "one direct
+#   conversation", "two direct reports", "absent a reference", "a gap analysis". Each
+#   of these — important, preferred, direct, absent, gate(s), gap(s) — is a map word
+#   only as a token (in backticks, `important`), where it ends its noun phrase
+#   ("only two direct.", "five important", "the one gap", "both gates are met"), or
+#   where a requirement noun follows it ("two direct rows", "the one preferred
+#   item") (_map_word, _NP_END); followed by any other noun it is that noun's
+#   adjective, and the count is about the noun. The words that are never ordinary
+#   English — must-have, hard gate, requirement, row, adjacent, unclear,
+#   hard_gate_fail — are map words wherever they stand.
+# - A year is not a count: "February 2027" never counts rows (_COUNT).
+# - A count does not reach a singular map noun named by a row ID: "round 2 of the
+#   interviews, and the R8 gate" names R8's gate and counts nothing (MAP_COUNT only; a
+#   quantifier such as "only the R4 gap" still picks rows out).
+# - "a"/"an" opens a new noun phrase, so a count or quantifier does not reach past it
+#   to a map word ("the one question a hard gate may ask") unless only a row ID or a
+#   linking verb stands between ("two have a gap", "only R4 has a gap" still count).
+# - A count inside a parenthesis does not reach a map word outside it: "(mentor two
+#   juniors) is `unclear`" counts juniors (_search).
+_NP_END = (r"(?=\s*(?:[^\w\s]|\Z|(?:and|or|but|nor|is|are|was|were|be|been|sit|sits|remain|remains|read|reads|"
+           r"stand|stands|has|have|had|would|will|can|may|might|must|should|in|on|at|to|for|of|with|from|under|"
+           r"below|above|across|among|against|than|a|an|the|that|which|this|left|remaining|open|outstanding|"
+           r"here|there|now|ones?|" + ROW_ID + r"|rows?|requirements?|tiers?|items?|skills?|qualifications?|"
+           r"criteri(?:on|a)|dut(?:y|ies)|responsibilit(?:y|ies)|asks?|terms?|conditions?)\b))")
+
+
+def _map_word(words: str) -> str:
+    """`words` read as map words, the ordinary-English ones only as a token or where
+    they end their noun phrase."""
+    return r"(?:(?<=`)" + words + r"\b|" + words + r"\b" + _NP_END + r")"
+
+
+TIER_WORDS = (r"(?:hard[_ -]?gates?|must[_ -]?haves?|requirements?|rows?|"
+              + _map_word(r"(?:important|preferred|gates?)") + r")")
+FIT_WORDS = r"(?:adjacent|unclear|hard[_ -]?gate[_ -]?fails?|" + _map_word(r"(?:direct|absent)") + r")"
+MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|" + _map_word(r"gaps?") + r")"
+# A singular map noun right after a row ID is that row's name, not a counted word.
+_NAMED = "".join(rf"(?<!R{d}{x} )(?<!R{d}{x}` )" for d in (r"\d", r"\d\d") for x in ("", "[a-z]"))
+_COUNTED_MAP_WORDS = r"(?:" + _NAMED + r"|(?!(?:gate|gap|requirement|row)\b))" + MAP_WORDS
 # Up to four words between, inside one clause: a full stop, semicolon, colon or
 # question mark ends the reach, so a number in one sentence is never tied to a map
-# word in the next.
-_REACH = r"(?:[^\w.!?;:]+\w+){0,4}?[^\w.!?;:]+"
+# word in the next. An article ends it too, unless only row IDs and linking words
+# came before it.
+_SEP = r"[^\w.!?;:]+"
+_LINK = r"(?:" + ROW_ID + r"|of|them|they|which|is|are|was|were|has|have|had|carry|carries|show|shows|need|needs)"
+_REACH = (r"(?:(?:" + _SEP + _LINK + r"\b){0,3}?" + _SEP + r"an?\b)?(?:" + _SEP + r"(?!an?\b)\w+){0,4}?" + _SEP)
 # A number that is a count: not an enumerator "(2)", not a price "£95k", not part
 # of a decimal, a range ("3–7") or a row ID ("R4" has no word boundary before its
-# digit), not quoted ("a team of one"), and not a figure with its unit — "8+ years", "an 8-year bar", "9 years", "three squads" are
-# the candidate's or the posting's numbers, which the rule leaves alone.
+# digit), not quoted ("a team of one"), not a year ("2027"), and not a figure with
+# its unit — "8+ years", "an 8-year bar", "9 years", "three squads" are the
+# candidate's or the posting's numbers, which the rule leaves alone.
 _UNIT = (r"(?:years?|yrs?|months?|weeks?|days?|hours?|minutes?|people|persons?|employees|staff|"
          r"reports?|squads?|teams?|engineers?|times?|percent)")
-_COUNT = (r"(?<![(£$€#.\d–—-])\b" + _NUMBER + r"\b(?!\s*\)|[.,]\d|%|\+|[-–—]\s*\d|-|[\"”’']|\s+" + _UNIT + r"\b)")
+_COUNT = (r"(?<![(£$€#.\d–—-])\b(?!(?:19|20)\d\d\b)" + _NUMBER
+          + r"\b(?!\s*\)|[.,]\d|%|\+|[-–—]\s*\d|-|[\"”’']|\s+" + _UNIT + r"\b)")
 # "Four rows", "four direct", "four of the seven material requirements",
 # "5/7 must-haves": a count, then within reach a map word.
 MAP_COUNT = re.compile(
     r"(?:" + _COUNT + r"(?:\s+of)?(?:\s+(?:the|my|its|these|those|our|your|their))?(?:\s+" + _NUMBER + r"\b)?"
-    + r"|" + FRACTION.pattern + r")" + r"(?:" + _REACH + r")?" + MAP_WORDS + r"\b", re.I)
+    + r"|" + FRACTION.pattern + r")" + r"(?:" + _REACH + r")?" + _COUNTED_MAP_WORDS + r"\b", re.I)
 
-# The quantifiers the rule forbids over the map or a tier of it. The first eleven are
-# evidence-model.md's list, verbatim ("The row is the unit"); the last three are
-# rule 2's own words in risk-and-decision.md — the sentence after the ledger "says
-# nothing about the rows it does not name" — which "no other", "any other" and a
-# bare "none" ("none is a gate") all do. The token `none` in backticks is a band or
-# a gap type, and the rule says it is not a quantifier, so only the bare word is.
+# The quantifiers the rule forbids over the map or a tier of it: evidence-model.md's
+# list, verbatim ("The row is the unit"), which states it once. The list scopes
+# three — AFTER_LEDGER_ONLY: "no other", "any other" and a bare "none" — to the one
+# sentence after the fit ledger, where any of them fails wherever it stands
+# (AFTER_LEDGER_UNIVERSAL). ci/check_skills.py holds both scopes to the list as
+# rule_quantifier_scopes() reads it, so a word added to either side there fails CI
+# until it is added here.
+# Elsewhere (MAP_UNIVERSAL) "no other" and "any other" fail only with a map word in
+# reach, like the first eleven, and bare "none" not at all. The token `none` in
+# backticks is a band or a gap type, and the list says it is not a quantifier.
+AFTER_LEDGER_ONLY = ("no other", "any other", "none")
 QUANTIFIERS = ("N of M", "every", "all", "each of", "only", "the one", "none of", "both",
-               "neither", "the rest", "no `must_have` row",
-               "no other", "any other", "none")
+               "neither", "the rest", "no `must_have` row") + AFTER_LEDGER_ONLY
 
 
 def _phrase(phrase: str) -> str:
@@ -106,15 +158,35 @@ MAP_UNIVERSAL = re.compile(
 
 
 def rule_quantifiers(evidence_model: str) -> list[str]:
-    """The quoted quantifiers in evidence-model.md's "The row is the unit" bullet.
+    """The quoted quantifiers in evidence-model.md's "The row is the unit" bullet,
+    the ones it scopes to the sentence after the ledger included.
 
-    For a drift check: every one must be in QUANTIFIERS. Returns [] when the
-    bullet or its list cannot be found, which a caller should treat as a failure.
+    For a drift check. Returns [] when the bullet or its list cannot be found,
+    which a caller should treat as a failure.
     """
+    general, after = rule_quantifier_scopes(evidence_model)
+    return general + after
+
+
+# Where evidence-model.md's list turns from the whole map to the one sentence after
+# the ledger: "— and in the one sentence after the snapshot's fit ledger, … no …".
+SCOPE_TURN = re.compile(r"\bin the one sentence after\b[^\"]*")
+
+
+def rule_quantifier_scopes(evidence_model: str) -> tuple[list[str], list[str]]:
+    """evidence-model.md's list in its two scopes: (the quantifiers over the map
+    anywhere, the further ones it scopes to the sentence after the fit ledger).
+    For the drift check that holds them to QUANTIFIERS and AFTER_LEDGER_ONLY.
+    Both empty when the bullet or its list cannot be found."""
     bullet = next((line for line in evidence_model.splitlines()
                    if line.lstrip("- ").startswith("**The row is the unit")), "")
     lead = re.search(r"quantifier over the map or a tier of it:\s*(.*?)\.\s", bullet)
-    return re.findall(r'"([^"]+)"', lead.group(1)) if lead else []
+    if not lead:
+        return [], []
+    turn = SCOPE_TURN.search(lead.group(1))
+    cut = turn.start() if turn else len(lead.group(1))
+    return (re.findall(r'"([^"]+)"', lead.group(1)[:cut]),
+            re.findall(r'"([^"]+)"', lead.group(1)[cut:]))
 
 
 # --- Sentences ---------------------------------------------------------------------
@@ -133,12 +205,24 @@ def sentences(text: str) -> list[str]:
     return [text[a:b].strip() for a, b in zip(cuts, cuts[1:]) if text[a:b].strip()]
 
 
+def _search(pattern: re.Pattern, text: str) -> re.Match | None:
+    """The first match of a count-or-quantifier pattern that does not reach out of a
+    parenthesis: in "(mentor two juniors) is `unclear`" the count is inside one and
+    the map word outside, so the count is the candidate's, not the map's."""
+    at = 0
+    while (hit := pattern.search(text, at)) is not None:
+        if hit.group(0).count(")") <= hit.group(0).count("("):
+            return hit
+        at = hit.start() + 1
+    return None
+
+
 def map_claim(text: str) -> re.Match | None:
     """A count, fraction or quantifier over the map in prose that summarises it
     (decision.summary): any "N of M" or fraction, or a count or list word with a
     map word in reach."""
-    return COUNTED.search(text) or FRACTION.search(text) or MAP_COUNT.search(text) \
-        or MAP_UNIVERSAL.search(text)
+    return COUNTED.search(text) or FRACTION.search(text) or _search(MAP_COUNT, text) \
+        or _search(MAP_UNIVERSAL, text)
 
 
 SECOND_SENTENCE = re.compile(r"(?s)(?<=\S)\s.*")
@@ -148,7 +232,7 @@ def after_ledger_claim(text: str) -> re.Match | None:
     """What rule 2 forbids after the ledger: a count, fraction or any listed quantifier
     ("at most one sentence … says nothing about the rows it does not name"), or a
     second sentence. For a second sentence the match is that sentence."""
-    hit = COUNTED.search(text) or FRACTION.search(text) or MAP_COUNT.search(text) \
+    hit = COUNTED.search(text) or FRACTION.search(text) or _search(MAP_COUNT, text) \
         or AFTER_LEDGER_UNIVERSAL.search(text)
     if hit:
         return hit
@@ -171,8 +255,9 @@ def prose_count(text: str) -> re.Match | None:
     (MAP_COUNT, MAP_UNIVERSAL). Counts that are not about map rows — the candidate's
     own figures, "two of three squads", the Research tier line — are outside the rule,
     and bare "none" stays out because the slots require "none failed" and "none
-    found"."""
-    return MAP_COUNT.search(text) or MAP_UNIVERSAL.search(text)
+    found". How the words are read — the ordinary-English map words, years, row
+    names, articles, parentheses — is stated once above MAP_WORDS."""
+    return _search(MAP_COUNT, text) or _search(MAP_UNIVERSAL, text)
 
 
 LEDGER_MARK = re.compile(r"^\s*[*_]*\s*fit ledger\b", re.I)
@@ -409,8 +494,11 @@ def _gates_line(snapshot: str, rows: dict[str, dict],
     gate = {rid: row for rid, row in rows.items() if _token(row.get("priority", "")) == "hard_gate"}
     found = slot_lines(snapshot, "hard gates")
     if not found:
+        # Every snapshot carries the slot, gate rows or not (rule 4): with none it
+        # reads "none stated", and it is where unknown constraints are flagged.
         return [("slot", "the snapshot has no **Hard gates:** line"
-                         + (f"; the map's hard_gate rows are {sorted(gate)}" if gate else ""))] if gate else []
+                         + (f"; the map's hard_gate rows are {sorted(gate)}" if gate else
+                            "; with no hard_gate row it reads \"none stated\""))]
     if len(found) > 1:
         return [("slot", f"the snapshot has {len(found)} **Hard gates:** lines; the rule is one")]
     body = re.sub(r"(?:\*\*|__)\s*$", "", found[0].group(1)).strip()
@@ -494,16 +582,19 @@ def _gates_line(snapshot: str, rows: dict[str, dict],
                                       f"other gate rows are {sorted(met_rows) or 'none'}"))
     if "met" in clauses and "none failed" in clauses:
         problems.append(("form", "when none failed, the met rows sit in \"none failed (…)\", not a met: clause"))
+    # Each failed and each unconfirmed row carries a few of its Requirement's own
+    # words in parentheses, by the fit ledger's naming rule (names_requirement); the
+    # conflict itself belongs in what would change this, not here.
     for kind in ("failed", "unconfirmed"):
         for rid, fit, words in clauses.get(kind) or []:
             requirement = gate.get(rid, {}).get("requirement", "")
             if words is None:
-                if kind == "unconfirmed":
-                    problems.append(("form", f"the hard-gates line's unconfirmed {rid} carries no Requirement words "
-                                             f"in parentheses"))
+                problems.append(("form", f"the hard-gates line's {kind} {rid} carries no Requirement words "
+                                         f"in parentheses"))
             elif not names_requirement(words, requirement):
-                problems.append(("form", f"the hard-gates line names {rid} \"{words}\" in words its Requirement "
-                                         f"cell does not use"))
+                problems.append(("form", f"the hard-gates line names {kind} {rid} \"{words}\" in words its "
+                                         f"Requirement cell does not use (the conflict goes in what would change "
+                                         f"this)"))
     for kind in ("met", "none failed"):
         for rid, fit, words in clauses.get(kind) or []:
             if fit is None:

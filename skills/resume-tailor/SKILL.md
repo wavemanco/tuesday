@@ -64,7 +64,7 @@ are absolute; the parameters it names are declared here.
 ```text
 question_budget: 3
 enum_fields: operation, coverage_status, priority, row_status
-enum_columns: operation=Operation, coverage_status=Status, priority=Priority, row_status=Status
+enum_columns: operation=edit-ledger.md#The row/Operation, coverage_status=coverage-and-gaps.md#The coverage map/Status, priority=coverage-and-gaps.md#The coverage map/Priority, row_status=edit-ledger.md#The row/Status
 closing_order: upgrade menu, questions
 qualifier_fields: none
 sibling_mentions: 1

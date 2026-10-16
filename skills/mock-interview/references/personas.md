@@ -40,13 +40,13 @@ Apply only public professional signals — profile language, career pattern, pub
 
 ## The seven personas
 
-A counter-strategy is a rehearsal method, not a claim. Wherever a pack applies one to this candidate — a named story, an arc, a walkthrough, a held position — the quote-or-slot rule in `references/question-rubric.md` applies to it like any other cell.
+A counter-strategy is a rehearsal method, not a claim, and a stem is an example wording, not a licence. Wherever a pack applies either to this candidate — a named story, an arc, a walkthrough, a held position, a stem used as a Question — the quote-or-slot rule in `references/question-rubric.md` applies to it like any other cell, and a stem used as a Question is an open prompt or a premised question under that file's rule on what a question may presuppose.
 
 ### 1. The Data-Driven Prober
 - **Looks like:** reads the CV line by line; asks for inputs, denominators, validation; follow-ups go two levels deeper than the answer.
 - **Actually scoring:** whether headline numbers survive scrutiny; whether the candidate knows their own assumptions.
 - **Counter-strategy:** know what you can and cannot say about how each CV number was counted, and say plainly when you do not know; name the weakest assumption you know of before they do; if there is an analysis you did yourself, offer to walk through it end to end.
-- **Stems:** "Walk me through how you got to that number." / "Which assumption in that model would you defend least?"
+- **Stems:** "Walk me through how that number was counted." / "Which assumption behind that number would you defend least?"
 
 ### 2. The Pressure / Stress Interviewer
 - **Looks like:** interrupts, plays devil's advocate, time-boxes answers, questions motives. Testing composure, not content.
@@ -70,7 +70,7 @@ A counter-strategy is a rehearsal method, not a claim. Wherever a pack applies o
 - **Looks like:** quiet, persistent probing of the gaps — the background mismatch, the missing competency, the "why leave, why here, why now."
 - **Actually scoring:** motivation consistency and honest self-assessment; whether the candidate's story survives cross-examination.
 - **Counter-strategy:** rehearse the single most predictable objection until it's boring; bridges built only from adjacent evidence the candidate actually stated — where none was, the limit said plainly — plus a concrete ramp plan; calibrated candor over bluffing a competency the interviewer personally owns.
-- **Stems:** "Which part of this JD would you be weakest at on day one?" / "I don't see X in your background — how would you handle the X in this role?" ("You've never done X" only where the negative has the source `references/question-rubric.md` requires — the candidate said so, or a dossier field carries it)
+- **Stems:** "Which part of this JD would you be weakest at on day one?" / "I don't see X in your background — how would you handle the X in this role?" ("You've never done X" only where the negative has the source `references/question-rubric.md` requires)
 
 ### 6. The Conversational / Rapport Builder
 - **Looks like:** friendly, unstructured, chatty openers; feels safe. That's the danger — casual-register questions are still scored.

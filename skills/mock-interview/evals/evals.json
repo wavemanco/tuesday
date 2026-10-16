@@ -2,16 +2,20 @@
   "skill_name": "mock-interview",
   "clauses": {
     "pack_first": "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
-    "slot_not_question": "An instruction inside a pack cell addressed to the candidate's interview answer, carrying no question mark and asking for no reply here, is not a question to the user",
     "bridge_guidance": "bridge guidance here may be the limit said plainly with adjacent material the candidate's own words carry, or with an instruction for the answer that presupposes nothing; an affirmative claim none of the candidate's sentences carries is not bridge guidance",
     "defend_number": "in the candidate's own words, as instructions or answer slots, and only the defend-the-number ones: how it was counted, what it is sensitive to, the assumption behind it they would defend least, and which part was theirs. None of them names a method, model, baseline, process or responsibility; the pack does not itself supply a sizing method, baseline, attribution model or assumption the candidate did not state, and 'I don't know how it was counted' is an honest branch",
-    "no_overclaim": "No cell that speaks about the candidate's past coaches language their own material does not support — every such cell counts, including answer guidance, bridge and hold language, rationale, question cells, the values cheat sheet, any deliverable build, the interviewer's mirror opportunities and the fit snapshot's evidence cells, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens or reverses the logic of what they said, supplies an event or outcome they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state; a first-person negative for them to say ('I haven't done X') needs a source like any other claim: a negative they stated, or a dossier acknowledge_gap area or prohibited_claims item, named by its field. An instruction or scripted line that presupposes such a practice or event ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it.",
-    "question_premise": "What a question may presuppose: a raising source is a quoted line from the supplied JD (a dossier's role_profile requirement text stands as the supplied JD's lines; its unknowns and inferred outcomes do not); from a fetched representative JD (that clause labelled [inferred] and framed as typical for the role, not as this team's practice); from the company's published values or principles (fetched or pasted, and named in Sources); or from the recruiter's or interviewer's own words — a [generic] requirement, a search-result paraphrase and the skill's own role-family knowledge are never one. An open prompt ('Tell me about a time you…') asks the candidate to choose an instance: it supplies no event, its theme comes from a raising source or a persona stem, and its guidance is a story map from a quoted sentence or a selection scaffold that ends with an honest branch ('if no such time comes to mind, say so plainly, then give the nearest thing your material does carry, or how you would handle it'). A premised question names or describes a particular occasion, artifact, number, method or outcome as the candidate's, and may presuppose only what a sentence quoted in its own row's Provenance says, keeping that sentence's scope, attribution and polarity; where it presupposes a practice or responsibility that a raising source names and the row's quotes do not carry, its guidance is an answer slot whose second branch allows the premise is false — the practice never existed, not only that someone else did it. No question supplies an event, incident, number or outcome that neither its quotes nor a raising source contain, or a negative without the source a first-person negative needs (one the candidate stated, or a dossier acknowledge_gap area or prohibited_claims item — so a dossier's likely_interviewer_objections item may be asked as the underwriter wrote it)",
-    "provenance_column": "Every question row carries a provenance label ([grounded], [inferred], or [generic]) in its own Provenance column",
+    "no_overclaim": "No cell that speaks about the candidate's past coaches language their own material does not support — every such cell counts, including answer guidance, bridge and hold language, rationale, question cells, the values cheat sheet, any deliverable build, the interviewer's mirror opportunities and the fit snapshot's evidence cells, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens or reverses the logic of what they said, supplies an event or outcome they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state; a first-person negative for them to say ('I haven't done X') needs a source like any other claim: a negative they stated (quoted, or recorded as their correction in a dossier evidence_state.rejected_inferences item), or a dossier acknowledge_gap area or prohibited_claims item, each dossier item named by its field. An instruction or scripted line that presupposes such a practice or event ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it.",
+    "question_premise": "What a question may presuppose: a raising source is a quoted line from the supplied JD (a dossier's role_profile requirement text stands as the supplied JD's lines; its unknowns and inferred outcomes do not); from a fetched representative JD (that clause labelled [inferred] and framed as typical for the role, not as this team's practice); from the company's published values or principles (fetched or pasted, and named in Sources); or from the recruiter's or interviewer's own words — a [generic] requirement, a search-result paraphrase and the skill's own role-family knowledge are never one. An open prompt ('Tell me about a time you…') asks the candidate to choose an instance: it supplies no event, its theme comes from a raising source or a persona stem, and its guidance is a story map from a quoted sentence or a selection scaffold that ends with an honest branch ('if no such time comes to mind, say so plainly, then give the nearest thing your material does carry, or how you would handle it'). A premised question names or describes a particular occasion, artifact, number, method or outcome as the candidate's, and may presuppose only what a sentence quoted in its own row's Provenance says, keeping that sentence's scope, attribution and polarity; where it presupposes a practice or responsibility that a raising source names and the row's quotes do not carry, its guidance is an answer slot whose second branch allows the premise is false — the practice never existed, not only that someone else did it. No question supplies an event, incident, number or outcome that neither its quotes nor a raising source contain, or a negative without the source a first-person negative needs (one the candidate stated, quoted or recorded as their correction in a dossier evidence_state.rejected_inferences item, or a dossier acknowledge_gap area or prohibited_claims item, named by its field). A dossier's likely_interviewer_objections item is asked as the underwriter wrote it only where every negative in it has one of those sources; otherwise the unsourced negative is dropped from the question, which asks about the requirement it was aimed at, and the guidance follows that area's allowed_interview_strategy",
+    "provenance_column": "Every question row carries a provenance label ([grounded], [inferred], or [generic]) in its own Provenance column, placed before the answer guidance",
     "generic_rows": "No row labelled [generic] contains a clause asserting something about the employer specifically — its principles by name, its loop, its strategy, its interviewers; such a clause is either absent or sits in a row labelled [grounded] or [inferred] with its source named",
-    "closing": "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then any questions, with nothing after them",
-    "accounting": "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned a result (an empty or unattributable one included) and unavailable only if every call was refused or errored, because an error returns nothing; it is never skipped or n/a. A target no call was sent for is n/a only when no name at all was given to form its query (a first name with a title and the company is a name), skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved; in a room that could search, unavailable with no call sent is right only when the search budget was fully spent and every search went to a lower-numbered (higher-priority) target. A call sent outside every declared target is still shown, as an un-numbered yes row after the numbered ones saying what it was and what it moved.",
-    "accounting_counts": "Every yes row's search appears among the queries Sources lists, and that list agrees with the research calls the harness observed, refused ones included, as does the Research tier line. A read of a link the user gave to read — the harness lists such reads apart from research calls — is named on that line as user links read and never counted as a fetch; a fetch of a URL the user named only as the source of text they pasted is a research call like any other"
+    "closing": "The pack — in the saved file where one was written — ends with the upgrade menu, which names each missing input and what adding it would concretely unlock; and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions. The drill and dossier offers are one line each, neither pushed nor made a condition of anything. Only questions to the user count: an instruction inside a pack cell addressed to the candidate's interview answer, carrying no question mark and asking for no reply here, is not one",
+    "accounting": "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned a result (an empty or unattributable one included) and unavailable only if every call was refused or errored, because an error returns nothing; it is never skipped or n/a. A target no call was sent for is n/a only when no name at all was given to form its query (a first name with a title and the company is a name), skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved; in a room that could search, unavailable with no call sent is right only when the user chose L0 or declined research (and the tally then reads L0 — no searches), or when the search budget was fully spent and every search went to a lower-numbered (higher-priority) target. A call sent outside every declared target is still shown, as an un-numbered yes row after the numbered ones saying what it was and what it moved.",
+    "accounting_counts": "Every yes row's search appears among the queries Sources lists, and that list agrees with the research calls the harness observed, refused ones included, as does the Research tier line. A read of a link the user gave to read — the harness lists such reads apart from research calls — is named on that line as user links read only where the read returned, and never counted as a fetch; a link the host could not open is not counted, and the response says it could not open it. A fetch of a URL the user named only as the source of text they pasted is a research call like any other",
+    "values_source": "Every value name the pack uses is the company's own, spelled exactly as a read or pasted source gives it, with that source cited in Sources; where the company's published values could not be established — research came back non-attributable or could not run — the pack says so and says which, labels any values bank [generic], and names no value a source did not supply, rather than silently omitting the values section or filling it from memory",
+    "loop_source": "Where a source documents the interview loop — the company's interviewing or careers page, read or pasted, or the recruiter's or interviewer's own words — persona weights and the banks follow its named rounds, with the source named; where none does, the pack says the loop is unestablished, names the archetype its weights fall back to, and asserts no company-specific round or format",
+    "interviewer_read": "A section reading the interviewer appears only where that interviewer's public profile, talk or own words were actually read or supplied, and draws only on that source; otherwise nothing about any interviewer appears beyond the name and title the request gives",
+    "sources_list": "Sources lists every source the pack uses — pasted or supplied material as provided, never as a web page, and a web page only where a call the harness recorded returned it, with its URL — and nothing about the company is asserted from model memory",
+    "co_grounded": "At least one CO or CASE question is grounded in what a strategy or news source the run read or the request supplied says, with that source named; where no such source was available, the CO questions are labeled [generic] and the upgrade menu says what research would add"
   },
   "evals": [
     {
@@ -26,10 +30,10 @@
         "A Peer Evaluator persona appears with elevated likelihood explicitly justified by the stated peer relationship, and its bank includes at least one seam/boundary question and one credit-sharing or reciprocity question",
         "A Data-Driven Prober persona is weighted up with reasoning that cites Dan's 'data-driven' self-description, and at least one question asks Priya to defend the ~$400M ARR claim including her personal attribution",
         "The fit snapshot maps the stated JD requirements to Priya's evidence and treats quota-setting/sales-ops as an explicit gap with bridge language, and at least one Skeptic or Pressure question rehearses that exact objection — {{bridge_guidance}}",
-        "At least one case or company question is grounded in the supplied research note (Compass launch, profitability push, or the bundling threat) rather than generic strategy",
+        "{{co_grounded}}. Here that source is the supplied research note — the Compass launch, the profitability push or the bundling threat",
         "{{provenance_column}}",
-        "The pack ends with an upgrade menu listing concrete missing inputs (e.g., full JD text, full CV document, Dan's full profile) and what each unlocks",
-        "Where the company's published values or documented interview process could not be established — whether research came back non-attributable or could not run at all — the pack says so and says which, rather than silently omitting the values section or filling it from memory",
+        "{{closing}}. Here the menu names concrete missing inputs such as the full JD text, the full CV document and Dan's full profile",
+        "{{values_source}}. {{loop_source}}",
         "{{no_overclaim}} {{question_premise}}"
       ],
       "enumerate": [
@@ -49,13 +53,13 @@
       "files": [],
       "expectations": [
         "{{pack_first}}",
-        "Any clarifying questions ride with the delivered pack rather than preceding it — at most three, covering round type/relationship to the interviewer and research-depth consent — and the pack is complete despite the interviewer's identity remaining unknown, with that assumption stated. {{slot_not_question}}",
-        "No 'Reading the interviewer' section appears in the pack, and no facts about any specific interviewer are invented",
+        "{{closing}}. Here any clarifying questions cover round type or relationship to the interviewer and research-depth consent, and the pack is complete despite the interviewer's identity remaining unknown, with that assumption stated",
+        "{{interviewer_read}}. Here no interviewer was named, so no 'Reading the interviewer' section appears",
         "Reverse questions are role-generic (about the team, the sites, success criteria) with no fabricated references to a named interviewer",
         "Each stated JD requirement (multi-site operations, on-time/cost metrics, team of 12, Power BI, Lean/Six Sigma) has at least one JD-tagged question, and the 3-supervisors-to-12 and Power BI gaps each get a Skeptic or Pressure question with bridge guidance — {{bridge_guidance}}",
         "The 40% mis-pick claim gets a defend-the-number EXP question whose guidance includes naming the weakest assumption and precise personal attribution — {{defend_number}}",
         "The upgrade menu lists interviewer identity/profile and company research among the unlocks",
-        "The pack explicitly states that the company's published values and interview process could not be established from attributable sources, and names the archetype its loop assumptions fall back to",
+        "{{values_source}}. {{loop_source}}. Here neither the values nor the interview process could be established from attributable sources",
         "{{no_overclaim}} {{question_premise}}"
       ],
       "enumerate": [
@@ -75,13 +79,13 @@
       "files": [],
       "expectations": [
         "{{pack_first}}",
-        "At most three clarifying questions appear (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and they accompany a pack that is already complete rather than gating it. {{slot_not_question}}",
-        "Nothing about Stripe's operating principles or interview process is answered from model memory: either research runs and the Sources section cites what it found, or the response says plainly that research was unavailable and treats those facts as unestablished",
+        "{{closing}}. Here any clarifying questions cover round detail or relationship, an offer to paste the JD and CV, and research-depth consent",
+        "{{sources_list}}. Here, where research could not run or found nothing attributable, the response says so plainly and treats Stripe's operating principles and interview process as unestablished",
         "JD-derived questions carry a provenance label and the pack says what they were built from — [inferred] from a researched representative JD where research ran, [generic] from the role-family pattern where it did not — never presented as Stripe-specific without a source",
         "With no CV or background provided, the fit snapshot is the worksheet variant: every evidence cell reads none given, nothing in quotation marks is presented as the candidate's words, and the bridge column says what strong evidence would look like with an answer slot or a story-selection scaffold instead of story-mapped guidance",
-        "A values/behavioral bank exists, and either maps its questions to the company's actual published principles by name where research found them, or states that the principles could not be confirmed and labels the bank generic rather than inventing named values",
-        "The pack ends with an upgrade menu, and no section fabricates a specific interviewer, team, or unverified company fact",
-        "The pack runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu for when the schedule is known; it does not assert Stripe's final-round format unless research established it, in which case it names the source",
+        "A values or behavioral bank exists. {{values_source}}",
+        "{{interviewer_read}}. Here no interviewer was named, and no section fabricates a team or an unverified company fact either",
+        "The pack runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu for when the schedule is known. {{loop_source}}",
         "{{no_overclaim}} {{question_premise}}",
         "{{accounting}} Here no JD, values, process or strategy material was supplied, so those four targets cannot be skipped, and no interviewer was named, so that target is n/a. {{accounting_counts}}",
         "{{generic_rows}}"
@@ -148,7 +152,9 @@
               "Stripe final round interview loop",
               "Stripe product operations interview process what does the interviewer ask",
               "Stripe product operations interview questions what will my interviewer ask",
-              "Stripe interview glassdoor product operations"
+              "Stripe interview glassdoor product operations",
+              "Stripe final round who will interview me",
+              "Stripe final round interview who is the interviewer usually"
             ]
           },
           {
@@ -178,9 +184,7 @@
             "name": "interviewer",
             "terms": [
               "interviewer name",
-              "who is the interviewer",
               "who is my interviewer",
-              "who will interview me",
               "hiring manager name",
               "who is the hiring manager",
               "linkedin.com/in"
@@ -195,7 +199,6 @@
             "hunt_samples": [
               "Stripe product operations manager interviewer name",
               "who is the hiring manager for Stripe product operations manager",
-              "who will interview me in the Stripe final round",
               "Stripe product operations hiring manager linkedin.com/in"
             ]
           },
@@ -240,8 +243,8 @@
         "The dossier's likely_interviewer_objections item (never held the PM title or owned a roadmap) is named as the pack's highest-ROI rehearsal and gets the deepest treatment, and the pack attributes it to the dossier rather than presenting it as the pack's own inference",
         "No prohibited claim is asserted, softened, or implied anywhere in the pack: no guidance, story mapping, or reverse question has the candidate claim she held a PM title, owned a roadmap, or set prioritization for an engineering squad; an instruction such as 'if you set the squad's priorities, say how' names a prohibited claim and so implies it",
         "Both opportunity_risks_to_validate items and both questions_for_employer appear in the reverse-question bank (in substance, not necessarily verbatim), each with a 'why it lands' line",
-        "The Sources section states that a tuesday-dossier.md was consumed and names which sections it supplied",
-        "The pack ends with an upgrade menu and offers, in one line and without pressure, to emit or update the dossier with a pack_feedback section — it does not emit one unprompted and does not make the offer a condition of anything",
+        "{{sources_list}}. Here it states that a tuesday-dossier.md was consumed and names which sections it supplied",
+        "{{closing}}. Here the dossier offer is to emit or update the dossier with a pack_feedback section, and none is emitted unprompted",
         "The pack does not relitigate the underwriter's conditional_go decision or tell the candidate whether to apply, and nothing in the pack treats the dossier as having been required for the pack to be built",
         "{{no_overclaim}} {{question_premise}}",
         "Guidance on the agile-delivery area (R5, strategy clarify) states no agile practice — sprints, standups, ceremonies, a backlog — as something the candidate did: agile appears only as the interviewer's probe inside a two-branch answer slot whose second branch allows she never worked that way, and the integration-delivery evidence is not presented as agile experience"
@@ -276,7 +279,7 @@
         "The transport-consulting background is used as a genuine adjacency (operator-side domain knowledge) with its limit named, and is never presented as rail sales experience",
         "{{provenance_column}}, and claims about Kelverton that research could not attribute are labeled or dropped rather than asserted",
         "Any section beyond the skill's own spec arrives as a clearly labeled offer with one line on what it would add, rather than being woven into the pack unannounced",
-        "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition",
+        "{{closing}}",
         "{{no_overclaim}} {{question_premise}}",
         "{{accounting}} Here the values and representative-JD targets cannot be skipped (neither was supplied); the strategy target cannot be skipped, because the market report's content is not in the request; the interview-process target is unavailable, not skipped — the recruiter's email fixes this round's panel, length and format but not the rest of the loop or whether a values round exists, and a target the inputs only partly answer is never skipped — and never n/a; and the interviewer target is not n/a, because Deepa and Ross were named. {{accounting_counts}}",
         "{{generic_rows}}"
@@ -418,14 +421,14 @@
         "{{pack_first}}",
         "The pack is structured for a loop rather than repeated three times: a shared fit snapshot and shared sections appear once, with a per-round mini-pack for each of the three rounds",
         "Persona weights are computed per round and genuinely differ across them — the hiring-manager round, the two-staff-engineer-plus-PM panel, and the VP values round do not carry the same weighting, and the reasoning for each is shown",
-        "The values round is treated as a values-style round: either a values cheat sheet appears mapped to principles research established, or the response states plainly that Larkfield's published values could not be confirmed and labels that bank generic rather than inventing named values",
+        "The values round is treated as a values-style round, with a values cheat sheet or a values bank prepared for it. {{values_source}}",
         "The peer panel is weighted for peers rather than for a manager — at least one reciprocity or peer-evaluator element appears that the hiring-manager round does not carry",
         "The 'never managed managers' and 'never owned a hardware-adjacent roadmap' gaps are surfaced as the pack's highest-ROI rehearsal material rather than omitted, and are handled as gaps rather than coached into claims Yusuf did not make",
         "{{provenance_column}}, and where guidance coaches a claim about Yusuf's experience the cell also carries his own quoted sentences — every one the claim rests on",
         "{{no_overclaim}} {{question_premise}}. In particular, 'ran our hiring loop, about 40 interviews last year' is not promoted into owning hiring strategy, and 'team lead of 6' is not promoted into managing managers",
         "A prohibited-claims section appears naming what the pack will not coach and why. With no dossier present it is built locally from the fit snapshot: the negatives Yusuf stated (managing managers, owning a hardware-adjacent roadmap), any claim his quoted material contradicts, and the inflated forms of what he did say (e.g. 'ran our hiring loop, about 40 interviews' promoted into owning hiring strategy; 'team lead of 6' promoted into managing managers), each with its basis. A requirement his material is merely silent on (e.g. industrial-IoT or device-management experience) is not listed, because it stays an answer slot: listing one fails this, and so does a listed claim that an answer slot anywhere in the pack names",
         "Vocabulary matches the conventions: each confidence cell holds exactly one of high/medium/low/none, and every Provenance cell leads with exactly one of [grounded]/[inferred]/[generic] — never a compound such as [grounded, partial] — with a question-bank cell free to follow its label with the candidate's quoted sentences",
-        "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions. {{slot_not_question}}"
+        "{{closing}}"
       ],
       "enumerate": [
         8
@@ -445,13 +448,13 @@
       "expectations": [
         "{{pack_first}}",
         "{{accounting}} Here the JD was supplied, so the representative-JD target is skipped; every other target could change the pack and the interviewer was named, so none of the other four is skipped or n/a. {{accounting_counts}}",
-        "Where both the values page and the interviewing page were read (returned by a call the harness recorded), a values cheat sheet appears, using Saltmarsh's published value names exactly as the values page gives them, and Sources cites that page. Where the values page was read and the interviewing page was not, a cheat sheet is optional, since no values-style round is established; any value name used is the page's own, spelled as it gives it, and Sources cites the page. Where the values page could not be read, the pack says the values could not be established and labels any values bank [generic], and no value name appears that a page did not supply",
-        "Where the interviewing page was read, persona weights and the banks follow its named steps, with the source named; where it was not, the pack says the loop is unestablished and names the archetype its weights fall back to",
-        "Where the news page was read, at least one CO or CASE question is grounded in what it announced, with the source named; where it was not, the CO questions are labeled [generic] and the upgrade menu says what research would add",
-        "A section reading the interviewer appears only where Tobias Wrenfield's public talk was actually read, and draws only on that source; otherwise nothing about him appears beyond his name and title",
+        "{{values_source}}. Here a values cheat sheet appears exactly when the values page was read and a values-style round is detected, which references/research-checklist.md defines in two cases: a loop source the pack read and names documents such a round, or no source establishes the loop and the archetype the pack names as its fallback has one (Big-tech structured, or Public sector / regulated enterprise; no other archetype counts). So where both pages were read, the cheat sheet appears, because the interviewing page's Outage Hour ends in a values conversation; where the values page was read and the interviewing page was not, it appears only when the named fallback archetype is one of those two, and is absent otherwise, though the page's values may still theme VAL questions; where the values page could not be read, no cheat sheet appears",
+        "{{loop_source}}",
+        "{{co_grounded}}. Here that source is the news page, where it was read",
+        "{{interviewer_read}}. Here that source is Tobias Wrenfield's public talk",
         "{{no_overclaim}} {{question_premise}}",
-        "{{provenance_column}}, placed before the answer guidance",
-        "Every web page Sources lists was returned by a call the harness recorded, and every page whose facts the pack uses is listed with its URL; the pasted JD is listed as provided, not as a web page; nothing about Saltmarsh is asserted from model memory",
+        "{{provenance_column}}",
+        "{{sources_list}}",
         "{{closing}}"
       ],
       "research": {
@@ -677,9 +680,7 @@
             "target": 2,
             "page": "https://saltmarshgames.com/careers/interviewing",
             "text": [
-              "Outage Hour",
-              "live-incident tabletop",
-              "live incident tabletop"
+              "Outage Hour"
             ]
           },
           {
@@ -717,12 +718,12 @@
       "expectations": [
         "{{pack_first}}",
         "{{accounting}} Here the request's own content fixes every target but the interviewer: values, interview process, strategy and the representative JD read skipped, each naming the pack outputs the pasted material already fixes, and the interviewer reads n/a because none was named. No search or fetch is sent for any target, whatever this room offers: the ashgrovecu.org URL the request names is where its pasted values came from, not a link to read, so fetching it is a research call. {{accounting_counts}}",
-        "The values cheat sheet uses the four pasted value names exactly — Members First, Always; Plain Words; Neighbours, Not Numbers; Own the Fix — each mapped to a story one of Dara's quoted sentences carries, or to a selection scaffold where none does",
-        "Persona weights follow the recruiter's three rounds, the panel round is treated as the values round, and its 20-minute complaint-escalation case gets its own rehearsal",
-        "At least one CO question is grounded in the pasted strategy brief — digital channels, branch consolidation, small-business lending or app-only competitors — with the brief named as its source",
+        "{{values_source}}. Here the values cheat sheet uses the four pasted value names — Members First, Always; Plain Words; Neighbours, Not Numbers; Own the Fix — each mapped to a story one of Dara's quoted sentences carries, or to a selection scaffold where none does",
+        "{{loop_source}}. Here the source is the recruiter's three rounds: the panel round is treated as the values round, and its 20-minute complaint-escalation case gets its own rehearsal",
+        "{{co_grounded}}. Here it is the pasted strategy brief — digital channels, branch consolidation, small-business lending or app-only competitors",
         "{{no_overclaim}} {{question_premise}}",
-        "{{provenance_column}}, placed before the answer guidance",
-        "The Sources section names the pasted JD, values page, recruiter email and strategy brief as the pack's sources, and lists no web research",
+        "{{provenance_column}}",
+        "{{sources_list}}. Here it names the pasted JD, values page, recruiter email and strategy brief, and lists no web research",
         "{{closing}}"
       ],
       "research": {
@@ -789,7 +790,9 @@
             "on_target_samples": [
               "Ashgrove Credit Union interview process",
               "Ashgrove Credit Union hiring process member experience lead",
-              "Ashgrove Credit Union panel interview case glassdoor"
+              "Ashgrove Credit Union panel interview case glassdoor",
+              "Ashgrove Credit Union panel interview who will interview me",
+              "Ashgrove Credit Union panel interview who is the interviewer usually"
             ],
             "hunt_samples": [
               "Ashgrove Credit Union interview process",
@@ -827,9 +830,7 @@
             "name": "interviewer",
             "terms": [
               "interviewer name",
-              "who is the interviewer",
               "who is my interviewer",
-              "who will interview me",
               "hiring manager name",
               "who is the hiring manager",
               "linkedin.com/in",

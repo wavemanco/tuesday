@@ -16,6 +16,7 @@ What this skill reads, and what each section replaces:
 | `role_profile` | The JD equivalent: requirements with priority, inferred outcomes, unknowns. A dossier with this section satisfies the JD input tier, and its requirement text stands as the supplied JD's lines — a raising source as `references/question-rubric.md` defines one — while its `unknowns` and inferred outcomes are the underwriter's analysis and are not |
 | `evidence_map` | Per-requirement candidate evidence with confidence and gap type — the fit snapshot's grading, and its evidence quotes the snapshot's evidence cells. `reasoning` is the underwriter's analysis: a bridge may cite it as a limit, never as something the candidate did |
 | `verified_candidate_evidence` | The CV equivalent for elicitation purposes: user-confirmed claims, already graded. A dossier carrying it satisfies the CV input tier |
+| `evidence_state` | Its `rejected_inferences` — claims the candidate already corrected — are entries in the prohibited list (template section 13), with the basis and honest form `references/question-rubric.md` gives them |
 | `risk_register` | Unresolved opportunity risks; feeds reverse questions alongside `opportunity_risks_to_validate` |
 | `decision` | Context only. A `no_go` is not this skill's business to relitigate — if the candidate is prepping anyway, prep them |
 
@@ -35,7 +36,7 @@ These are what a handoff actually buys. Each replaces guesswork with something t
    - `acknowledge_gap` — no credible evidence. Coach the plain acknowledgment plus a ramp plan. Never coach a bridge here; the underwriter already looked and found nothing, and inventing one live is how a candidate gets caught.
    - An answer slot (`references/question-rubric.md`) follows the same strategy: allowed on a `clarify` area, inside the named limit on a `bridge` area, and never on an `acknowledge_gap` area — a slot asking "if you did this, say how" about what the underwriter found absent reopens the bridge this rule closes.
 
-3. **`likely_interviewer_objections` names the highest-ROI rehearsal.** The rubric normally asks you to infer the most predictable objection from the fit snapshot. When the underwriter named it, use theirs — it was derived from evidence the candidate confirmed, not from a document read cold. Give it the deepest rehearsal in the pack and say in the pack that the underwriter named it.
+3. **`likely_interviewer_objections` names the highest-ROI rehearsal.** The rubric normally asks you to infer the most predictable objection from the fit snapshot. When the underwriter named it, use theirs — it was derived from evidence the candidate confirmed, not from a document read cold. Give it the deepest rehearsal in the pack and say in the pack that the underwriter named it. Word its Question under the premise rule in `references/question-rubric.md` ("What a question may presuppose"), which says when a negative in it may be kept.
 
 4. **Risks and employer questions seed the reverse-question bank.** `opportunity_risks_to_validate` and `questions_for_employer` arrive interview-ready. Carry them into the reverse-question section with their "why it lands" written from the risk's own hypothesis — these questions do double duty: they read as diligence, and they answer something the candidate genuinely needs to know before accepting.
 

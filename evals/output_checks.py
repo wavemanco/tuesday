@@ -294,6 +294,20 @@ def is_user_link(entry: dict, research: dict | None) -> bool:
     return bool(url) and url in declared
 
 
+def user_link_reads(log: list, research: dict | None) -> tuple[list[dict], list[dict]]:
+    """The fetches of declared user links, as (read, not read).
+
+    `user links read N` counts the links actually read: a fetch that returned
+    (interaction-grammar §4's tally paragraph). One the host could not open —
+    refused or errored — is not a read and is not counted; the response says it
+    could not open the link. Neither kind is research. The runner's observed block
+    calls this too, so the grader and the checks count the same reads.
+    """
+    links = [e for e in log if is_user_link(e, research)]
+    return ([e for e in links if e.get("outcome") == "returned"],
+            [e for e in links if e.get("outcome") != "returned"])
+
+
 def aimed_at(entry: dict, target: dict, pages: list[dict], mode: str) -> bool:
     """Was this call aimed at this target?
 
@@ -357,7 +371,7 @@ def check_accounting(response: str, research: dict, mode: str,
     # a link the fixture declares counts as one (`is_user_link`), so a run cannot
     # relabel a research fetch — of a pasted text's source, the employer's home
     # page, a parent path — as a user link.
-    links = [e for e in full if is_user_link(e, research)]
+    links_read, links_unread = user_link_reads(full, research)
     log = [e for e in full if not is_user_link(e, research)]
 
     def unchecked_once(name: str) -> None:
@@ -376,8 +390,11 @@ def check_accounting(response: str, research: dict, mode: str,
     if have_log:
         for entry in stray:
             info.append(f"unattributed call: {describe(entry, 100)}")
-        for entry in links:
+        for entry in links_read:
             info.append(f"user link read (an input, not research): {describe(entry, 100)}")
+        for entry in links_unread:
+            info.append(f"user link not read (the host could not open it; not counted, and the "
+                        f"response should say it could not open it): {describe(entry, 100)}")
     else:
         unchecked = list(LOG_CHECKS)
         info.append("no research log recorded for this run: the checks that need one "
@@ -530,10 +547,11 @@ def check_accounting(response: str, research: dict, mode: str,
         if have_log:
             # On every form of the line: a link read at L0 is the case the clause
             # exists for.
-            checks.append(finding("tally_user_links", "all", tally.get("user_links", 0) == len(links),
+            checks.append(finding("tally_user_links", "all", tally.get("user_links", 0) == len(links_read),
                                   f"the tally names {tally.get('user_links', 0)} user link(s) read; "
-                                  f"{len(links)} fetch(es) of a link the fixture declares the user "
-                                  f"gave to read recorded, refused ones included"))
+                                  f"{len(links_read)} fetch(es) of a link the fixture declares the user "
+                                  f"gave to read returned (user_link_reads: one the host could not open "
+                                  f"is not a read; {len(links_unread)} such recorded)"))
         if declined:
             # The user's choice sets the tier: L0, and nothing spent.
             checks.append(finding("tally_l0", "all", tally["tier"] == "L0" and tally["no_searches"],
@@ -578,9 +596,9 @@ def check_accounting(response: str, research: dict, mode: str,
         n = canary.get("target")
         spellings = canary.get("text", "")
         spellings = [spellings] if isinstance(spellings, str) else list(spellings)
-        # One fact may be written several ways — "143 employees", "143 staff" — and
-        # a probe run rounded a survey's "$147,300" to "~$147K". A canary lists the
-        # spellings that still prove the page was read; any one of them counts.
+        # A canary is one token a correct response carries over whole — a figure, a
+        # proper name, a published title; never a common-noun phrase (evals/README.md,
+        # "What a canary may be"). Any one of its spellings counts.
         present = any(canary_in(normalise_ws(unify_dashes(s)), unify_dashes(said)) for s in spellings if s.strip())
         if mode == "denied":
             checks.append(finding("canary_absent", n, not present,
@@ -618,7 +636,8 @@ def check_accounting(response: str, research: dict, mode: str,
                               f"row {n} reads `yes` and the room returned {page}, so what that "
                               f"page alone says should reach the response; the canary "
                               f"{'appears' if present else 'does not appear'}"))
-    info.append(f"recorded attempts: {searches} search, {fetches} fetch, {len(links)} user link"
+    info.append(f"recorded attempts: {searches} search, {fetches} fetch, {len(links_read)} user link "
+                f"read, {len(links_unread)} user link not opened"
                 if have_log else "recorded attempts: not recorded")
     return {"checks": checks, "info": info, "unchecked": unchecked,
             "accounting": table["outcome"], "tally": tally["outcome"]}
@@ -710,16 +729,6 @@ def evidence_map(text: str) -> dict | None:
     return None
 
 
-def leading_fragment(note: str, requirement: str) -> bool:
-    def norm(s):
-        return normalise_ws(s.replace("`", "").replace("*", ""))
-    frag, whole = norm(note), norm(requirement)
-    if not frag or not re.search(r"[a-z0-9]", frag):
-        return False
-    return whole == frag or whole.startswith(frag + " ") or (
-        whole.startswith(frag) and not whole[len(frag)].isalnum())
-
-
 def snapshot_section(text: str) -> str | None:
     """The decision snapshot: its own heading's section, or what surrounds the ledger.
 
@@ -749,6 +758,22 @@ def snapshot_section(text: str) -> str | None:
 JSON_BLOCK = re.compile(r"```json[ \t]*\n(.*?)\n[ \t]*```", re.S)
 
 
+def envelope_sections(response: str) -> dict | None:
+    """The `sections` of the response's last JSON envelope that parses, as CI reads
+    the worked dossier's last block; None when the response has none."""
+    for block in reversed(JSON_BLOCK.findall(response)):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        if isinstance(data, dict) and isinstance(data.get("sections"), dict):
+            return data["sections"]
+    return None
+
+
+CONSTRAINTS = ("known", "unknown")
+
+
 def constraints_unknown(response: str, declared: str | None = None) -> bool | None:
     """candidate_constraints.status == "unknown".
 
@@ -756,7 +781,7 @@ def constraints_unknown(response: str, declared: str | None = None) -> bool | No
     that declares `candidate_constraints` ("known" or "unknown") settles it. Without
     one it is read from the response's own JSON envelope; None when neither says,
     and then the hard-gates line's closing clause is not judged."""
-    if declared in ("known", "unknown"):
+    if declared in CONSTRAINTS:
         return declared == "unknown"
     for block in reversed(JSON_BLOCK.findall(response)):
         try:
@@ -789,15 +814,25 @@ def rule_findings(problems: list[tuple[str, str]], judged: str, form: str, what:
     return out
 
 
-def check_fit_ledger(response: str, constraints: str | None = None) -> dict:
+def check_fit_ledger(response: str, constraints: str | None = None, fixture: bool = False) -> dict:
     """The fit ledger is an exact projection of the evidence map, and counts nothing.
 
     The ledger replaced a sentence — "five of seven requirements are `direct`" —
     that the worked example taught with a wrong count from v0.1 and that measured
     runs copied and got wrong the same way. A projection can be compared with
     the map row by row; a sentence could only be argued with.
+
+    `fixture` is set when the call comes from a fixture (run_checks): then the
+    fixture's `candidate_constraints` is the only source of truth for the closing
+    clause, and a value that is not "known" or "unknown" is a fixture error, never a
+    fallback to the response's own envelope. A direct caller with no fixture (a
+    unit test, the worked dossier) may leave it to the envelope.
     """
     checks, info, unchecked = [], [], []
+    if fixture and constraints not in CONSTRAINTS:
+        checks.append(finding("candidate_constraints", "all", False,
+                              f"fixture error: a fit_ledger fixture declares top-level candidate_constraints "
+                              f"as \"known\" or \"unknown\"; this one gives {constraints!r}", "fixture"))
     source_text = None
     for source, body in split_response(response):
         if parse_fit_ledger(body)["outcome"] != "absent":
@@ -870,13 +905,13 @@ def check_fit_ledger(response: str, constraints: str | None = None) -> dict:
     for r, where in placed.items():
         for _, fit, note in where:
             requirement = rows.get(r, {}).get("requirement", "")
-            if note and (leading_fragment(note, requirement) or names_requirement(note, requirement)):
+            if note and names_requirement(note, requirement):
                 copied_notes.add(note)
             if fit == "direct":
                 continue
             if not note:
                 bad_notes.append(f"{r} (`{fit}`) has no parenthetical")
-            elif not (leading_fragment(note, requirement) or names_requirement(note, requirement)):
+            elif not names_requirement(note, requirement):
                 bad_notes.append(f"{r}'s ({note}) uses words its Requirement does not "
                                  f"({requirement[:60]!r})")
     checks.append(finding("ledger_parenthetical", "all", not bad_notes,
@@ -914,6 +949,19 @@ def check_fit_ledger(response: str, constraints: str | None = None) -> dict:
         said = "the sentence after the ledger names rows and claims nothing about the rest"
     checks.append(finding("ledger_sentence", "all", word is None, said))
 
+    # decision.summary is prose that summarises the map, read with the function CI
+    # reads the worked dossier's with (ledger_rules.map_claim).
+    decision = (envelope_sections(response) or {}).get("decision")
+    summary = decision.get("summary") if isinstance(decision, dict) else None
+    if not isinstance(summary, str):
+        unchecked.append("summary_count")
+        info.append("no JSON envelope with sections.decision.summary: summary_count not checked")
+    else:
+        claim = ledger_rules.map_claim(summary)
+        checks.append(finding("summary_count", "all", claim is None,
+                              f"decision.summary counts the map: {claim.group(0)!r}" if claim
+                              else "decision.summary carries no count, fraction or listed quantifier over the map"))
+
     section = snapshot_section(source_text)
     if section is None:
         checks.append(finding("snapshot_band", "all", False,
@@ -931,12 +979,13 @@ def check_fit_ledger(response: str, constraints: str | None = None) -> dict:
     checks.append(finding("snapshot_count", "all", count is None,
                           f"the snapshot counts the map: {count.group(0)!r}" if count
                           else "no count, fraction or listed quantifier over the map in the snapshot's prose"))
-
-    unknown = constraints_unknown(response, constraints)
+    unknown = (constraints == "unknown" if constraints in CONSTRAINTS else None) if fixture \
+        else constraints_unknown(response, constraints)
     if unknown is None:
-        info.append("hard-gates line: neither the fixture nor the response declares "
-                    "candidate_constraints.status, so its closing \"candidate constraints not given\" "
-                    "clause is not judged")
+        info.append("hard-gates line: " + ("the fixture's candidate_constraints is not \"known\" or \"unknown\""
+                                           if fixture else "neither the fixture nor the response declares "
+                                           "candidate_constraints.status")
+                    + ", so its closing \"candidate constraints not given\" clause is not judged")
     checks += rule_findings(ledger_rules.gates_line_problems(section, rows, unknown),
                             "gates_line", "gates_form",
                             "the hard-gates line agrees with the map's hard_gate rows", unchecked)
@@ -973,7 +1022,10 @@ EDGE = " \t\"'.,;:!?()[]{}-"
 ORIGIN = (r"(?:your\s+cv|your\s+message|the\s+coach's\s+notes|"
           r"(?:a\s+|the\s+)?dossier(?:'s)?(?:\s+row)?(?:,?\s+(?:row\s+)?r\d+[a-z]?)?)")
 EVIDENCE_SEGMENT = r'"[^"\n]+"\s*-{1,2}\s*' + ORIGIN
-EVIDENCE_JOIN = r"(?:\s*(?:[;,]|<br\s*/?>|\band\b)\s*|\s+)"
+# Segments are separated by punctuation or markup that adds no words — a comma,
+# semicolon, full stop, line break, "and" or a space; each piece must still be a
+# whole quote-and-origin segment, so nothing can be appended between them.
+EVIDENCE_JOIN = r"(?:\s*(?:[;,.]|<br\s*/?>|\band\b)\s*|\s+)"
 EVIDENCE_CELL = re.compile(r"\s*" + EVIDENCE_SEGMENT + r"(?:" + EVIDENCE_JOIN + EVIDENCE_SEGMENT
                            + r")*\s*[.;]?\s*", re.I)
 NONE_GIVEN = re.compile(r"\s*none given\s*[.;]?\s*", re.I)
@@ -986,8 +1038,52 @@ def normalise_quote(text: str) -> str:
 
 
 def quoted_spans(cell: str) -> list[str]:
-    plain = cell.translate(DQUOTES)
-    return [m.group(1) for m in re.finditer(r'"([^"\n]+)"', plain)]
+    return [span for span, _ in quoted_spans_named(cell)]
+
+
+def quoted_spans_named(cell: str) -> list[tuple[str, str | None]]:
+    """Each quotation in the cell, with the dossier field named right before it."""
+    plain = cell.translate(DQUOTES).replace("`", "")
+    out = []
+    for m in re.finditer(r'"([^"\n]+)"', plain):
+        field = FIELD_BEFORE.search(plain[:m.start()].translate(DASHES))
+        out.append((m.group(1), field.group(1).lower() if field else None))
+    return out
+
+
+# A plain acknowledgment's source may be a dossier field, "named by its field"
+# (mock-interview references/question-rubric.md, "A plain acknowledgment"). A
+# quotation right after such a field's name is that field's item, so it is checked
+# against the items the dossier in the request actually lists, whole: a field
+# name cannot carry text the dossier does not hold, nor one field's item another's.
+DOSSIER_FIELDS = ("prohibited_claims", "acknowledge_gap", "rejected_inferences")
+FIELD_BEFORE = re.compile(r"(?<![A-Za-z_])(" + "|".join(DOSSIER_FIELDS) + r")`?\s*(?:item|area|entry)?"
+                          r"\s*[:\-]?\s*$", re.I)
+
+
+def dossier_items(prompt: str) -> dict[str, set[str]] | None:
+    """The items of each named dossier field in the request's dossier envelope,
+    normalised as quotations are; None when the request carries no dossier."""
+    for block in reversed(JSON_BLOCK.findall(prompt)):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        sections = data.get("sections") if isinstance(data, dict) else None
+        if not isinstance(sections, dict) or "handoff_to_mock_interview" not in sections:
+            continue
+        handoff = sections.get("handoff_to_mock_interview")
+        handoff = handoff if isinstance(handoff, dict) else {}
+        state = sections.get("evidence_state")
+        found = {
+            "prohibited_claims": handoff.get("prohibited_claims") or [],
+            "acknowledge_gap": [a.get("requirement", "") for a in handoff.get("uncertain_or_weak_areas") or []
+                                if isinstance(a, dict) and a.get("allowed_interview_strategy") == "acknowledge_gap"],
+            "rejected_inferences": state.get("rejected_inferences") or [] if isinstance(state, dict) else [],
+        }
+        return {field: {normalise_quote(str(item)).strip(EDGE) for item in items if isinstance(item, str)}
+                for field, items in found.items()}
+    return None
 
 
 def evidence_cell_lawful(cell: str) -> bool:
@@ -1018,11 +1114,13 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     no `candidate_text` gets that check reported unchecked, never a fallback to the
     prompt; `[]` means the candidate gave nothing quotable. A Provenance quote must
     also stand in the fit snapshot's evidence column, because the template says it
-    is quoted exactly as it appears there. The requirement column quotes the JD,
+    is quoted exactly as it appears there — except a quotation right after a dossier
+    field's name (FIELD_BEFORE), which is that field's item and must be one, whole. The requirement column quotes the JD,
     so it is checked against the request and the pages, from three words up.
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
     own = normalise_quote("\n".join(candidate_text)) if candidate_text is not None else None
+    dossier = dossier_items(prompt)
     checks, info, unchecked = [], [], []
     counted = {"fit_snapshot": [0, 0], "banks": [0, 0], "requirements": [0, 0]}   # spans, failures
     seen = {"fit_snapshot": False, "banks": False, "requirements": False}
@@ -1059,12 +1157,19 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 f"each followed by a dash and its origin (your CV, your message, the coach's notes, "
                 f"a dossier row), with nothing else: {cell.strip()[:100]!r}", "format"))
         candidate_column = section in ("fit_snapshot", "banks")
-        for span in quoted_spans(cell):
+        for span, field in quoted_spans_named(cell):
             whole = normalise_quote(span).strip(EDGE)
             if not whole or (not candidate_column and len(whole.split()) < 3):
                 continue
             frags = [f for f in (x.strip(EDGE) for x in re.split(r"\.\.\.|…", normalise_quote(span))) if f]
-            if candidate_column:
+            if section == "banks" and field:
+                # A dossier field named by its field: the item, whole, as the
+                # request's dossier lists it under that field.
+                if dossier is None:
+                    bad, where = [whole], f"a dossier in the request (it carries none to hold {field})"
+                else:
+                    bad, where = ([] if whole in dossier[field] else [whole]), f"the dossier's {field} items"
+            elif candidate_column:
                 if own is None:
                     bad, where = [], ""
                 else:
@@ -1124,7 +1229,7 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     if research:
         parts.append(check_accounting(response, research, mode, research_log))
     if "fit_ledger" in wanted:
-        parts.append(check_fit_ledger(response, case.get("candidate_constraints")))
+        parts.append(check_fit_ledger(response, case.get("candidate_constraints"), fixture=True))
     if "quotes" in wanted:
         corpus = [p.get("text", "") for p in (research or {}).get("pages", [])] \
             if mode == "canned" else []

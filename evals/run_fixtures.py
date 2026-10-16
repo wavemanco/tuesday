@@ -783,13 +783,14 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 harness={"status": status, "reasons": reasons})
     write_meta(out, stem, meta)
     init = graded.get("init") or {}
-    links = sum(1 for e in graded["research_log"]
-                if output_checks.is_user_link(e, case.get("research")))
+    read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
+    links = len(read) + len(unread)
     print(f"  ran {skill} eval {case['id']} [{mode}] (run {run}): {len(text)} chars"
           f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not graded['nudged'] else ' (needed a nudge to fire)'}"
           f", {len(graded['research_log']) - links} research call(s)"
-          f"{f', {links} user link(s) read' if links else ''}, model {init.get('model')}"
+          f"{f', {len(read)} user link(s) read' if read else ''}"
+          f"{f', {len(unread)} user link(s) not opened' if unread else ''}, model {init.get('model')}"
           f"{'' if status == 'ok' else ' — HARNESS-INVALID: ' + '; '.join(reasons)}", flush=True)
     return meta
 
@@ -880,16 +881,17 @@ def observed_block(meta: dict, research: dict | None = None) -> str:
     be graded from the record rather than inferred from the response.
 
     A fetch of a link the fixture declares the user gave to read is sorted out by
-    `output_checks.is_user_link`, the classifier the deterministic checks use, and
-    listed in its own group: it is reading an input, named on the tally line as
-    `user links read N` and never in its fetch count, so a grader comparing the
-    tally with this record compares it with the same numbers the checks do.
+    `output_checks.user_link_reads`, the classifier the deterministic checks use,
+    and listed in its own group: it is reading an input, never in the fetch count,
+    and `user links read N` counts only the reads that returned, so a grader
+    comparing the tally with this record compares it with the same numbers the
+    checks do.
     """
     if meta.get("research_log") is None:
         return ("Not recorded for this run: do not infer whether research was attempted, "
                 "and do not grade research counts.")
     log = meta["research_log"]
-    links = [e for e in log if output_checks.is_user_link(e, research)]
+    links, unopened = output_checks.user_link_reads(log, research)
     calls = [e for e in log if not output_checks.is_user_link(e, research)]
 
     def line(e: dict) -> str:
@@ -913,10 +915,15 @@ def observed_block(meta: dict, research: dict | None = None) -> str:
             lines += [line(e) for e in calls]
         if links:
             lines.append(f"User links read: {len(links)} fetch(es) of a link the user gave to read "
-                         f"— reading an input, not research, so named on the tally line as "
-                         f"`user links read {len(links)}` and never in its fetch count, refused "
-                         f"ones included:")
+                         f"that returned — reading an input, not research, so named on the tally "
+                         f"line as `user links read {len(links)}` and never in its fetch count:")
             lines += [line(e) for e in links]
+        if unopened:
+            lines.append(f"User links not opened: {len(unopened)} fetch(es) of a link the user gave "
+                         f"to read that the host refused or that errored — not reads, so not counted "
+                         f"on the tally line or in its fetch count; the response should say it could "
+                         f"not open the link:")
+            lines += [line(e) for e in unopened]
     if meta.get("research_log_provenance"):
         lines.append("(Reconstructed from the run's session transcript.)")
     earlier = [inv for i, inv in enumerate(meta.get("invocations") or [])

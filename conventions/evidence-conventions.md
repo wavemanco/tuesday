@@ -75,7 +75,7 @@ Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`,
 | `discovery` | Evidence may exist; current inputs are inconclusive | Ask one targeted, example-rich question; suggest exact artifacts |
 | `transferability` | No direct match, but credible adjacent work | Make the transferable case *and its limits*; consider a work sample |
 | `capability` | No credible direct or adjacent evidence | Name a realistic closure path, or carry as material risk |
-| `hard_gate` | Eligibility, credential, or constraint not met | Surface prominently; wording cannot solve it and no skill may imply otherwise |
+| `hard_gate` | Eligibility, credential, or constraint not met, or not yet established — a gate the inputs do not settle is still `hard_gate`, never `discovery` | Surface prominently; the one question allowed asks whether the gate is met, never for a workaround; wording cannot solve it and no skill may imply otherwise |
 
 The taxonomy exists because "missing from the CV" is four different situations wearing one costume, and only one of them is a real capability problem.
 

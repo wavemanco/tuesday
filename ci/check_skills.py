@@ -44,6 +44,8 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "evals"))
 from fixture_clauses import ClauseError, expand_spec, unused_clauses  # noqa: E402
 import output_checks  # noqa: E402  (the harness's readers, for the checks that lint what it reads)
+import research_server  # noqa: E402  (the canned room's own search, for the fixtures lint)
+import run_fixtures  # noqa: E402  (the modes a fixture runs in)
 sys.path.insert(0, str(REPO / "ci"))
 # The fit-ledger and snapshot rules, shared with evals/output_checks.py so the two
 # checks of one rule cannot disagree (ci/ledger_rules.py says why).
@@ -603,23 +605,21 @@ def check_columns() -> None:
             ok(group, f"{skill.name}: qualifier_fields declared as none — no free-text column, on purpose")
             fields = []
 
-        # Every header cell of every markdown table in the skill's references.
-        headers: set[str] = set()
+        # The header rows of the worked tables — a header row, then a separator row —
+        # in the skill's own references. A mirror is not read: its tables define the
+        # suite's tokens, and a column of the same name there is not a column of the
+        # shape the skill writes. (Every row of every table was read once, so a
+        # field named in any body cell, a mirror's included, answered as a column.)
+        header_rows: list[list[str]] = []
         for ref in sorted((skill / "references").glob("*.md")):
-            for line in ref.read_text(encoding="utf-8").splitlines():
-                if line.startswith("|") and line.count("|") > 2:
-                    for cell in line.strip().strip("|").split("|"):
-                        headers.add(re.sub(r"[^a-z0-9]+", " ", cell.strip().lower()).strip())
+            text = ref.read_text(encoding="utf-8")
+            if not SYNCED_HEADER.match(text):
+                header_rows += worked_tables(text)
+        headers = {cell for row in header_rows for cell in row}
         # A free-text column is where world-claims land, so it needs a Provenance
         # cell in the same table. Learned twice in one session: the register's
         # Hypothesis column shipped without one and was fixed; the evidence map's
         # Reasoning column shipped without one in the same commit and was not.
-        header_rows: list[list[str]] = []
-        for ref in sorted((skill / "references").glob("*.md")):
-            for line in ref.read_text(encoding="utf-8").splitlines():
-                if line.startswith("|") and line.count("|") > 2:
-                    header_rows.append([re.sub(r"[^a-z0-9]+", " ", c.strip().lower()).strip()
-                                        for c in line.strip().strip("|").split("|")])
         for field in fields:
             want = re.sub(r"[^a-z0-9]+", " ", field.lower()).strip()
             carrying = [row for row in header_rows if want in row]
@@ -630,13 +630,17 @@ def check_columns() -> None:
                 ok(group, f"{skill.name}: '{field}' is a rendered column")
             else:
                 fail(group, f"{skill.name}: qualifier_fields names '{field}', which is not a column "
-                            f"in any references/ table — a rule pointing at a cell that does not exist")
+                            f"in any references/ table outside the mirrors — a rule pointing at a cell that "
+                            f"does not exist")
 
-        # Every declared enum names the column it lives in, and the column exists.
-        # output-discipline.md: "every declared enum needs a column to live in" — a
-        # field declared an enum with no column is invented at write time, with no
-        # token set. The mapping is explicit, never matched by name: a fuzzy match
-        # would let an unrelated column with a similar header answer for the field.
+        # Every declared enum names the one table that renders it, and the column
+        # exists in that table. output-discipline.md: "every declared enum needs a
+        # column to live in" — a field declared an enum with no column is invented at
+        # write time, with no token set. The mapping names a file, a '## ' section and
+        # a column, never a header alone: a header matched anywhere let the mirrored
+        # glossary's "Gap type" answer for the fit snapshot's, so dropping the column
+        # from the snapshot — the MI-11 defect — passed. A mirror is never the home: it
+        # defines tokens, it is not a table the response renders.
         enums = re.search(r"^\s*enum_fields\s*:(.*)$", section.group(1), re.MULTILINE)
         mapped = re.search(r"^\s*enum_columns\s*:(.*)$", section.group(1), re.MULTILINE)
         enum_names = [f.strip() for f in enums.group(1).split(",") if f.strip()] if enums else []
@@ -645,33 +649,47 @@ def check_columns() -> None:
                 fail(group, f"{skill.name}: enum_fields are declared and enum_columns is not — say which column "
                             f"holds each enum")
             else:
-                pairs = [part.split("=", 1) for part in mapped.group(1).split(",") if part.strip()]
-                columns = {k.strip(): v.strip() for k, v in (pair for pair in pairs if len(pair) == 2)}
-                if any(len(pair) != 2 for pair in pairs):
-                    fail(group, f"{skill.name}: enum_columns is not a list of field=Column pairs")
-                worked = set()
-                for ref in sorted((skill / "references").glob("*.md")):
-                    lines = ref.read_text(encoding="utf-8").splitlines()
-                    for i in range(len(lines) - 1):
-                        if lines[i].lstrip().startswith("|") and re.match(r"^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$", lines[i + 1]):
-                            worked |= {re.sub(r"[^a-z0-9]+", " ", c.strip().lower()).strip()
-                                       for c in lines[i].strip().strip("|").split("|")}
+                homes: dict[str, tuple[str, str, str]] = {}
+                for part in (p.strip() for p in mapped.group(1).split(",") if p.strip()):
+                    m = ENUM_HOME.match(part)
+                    if not m:
+                        fail(group, f"{skill.name}: enum_columns entry {part!r} is not field=file.md#Section/Column")
+                        continue
+                    homes[m.group(1)] = (m.group(2), m.group(3).strip(), m.group(4).strip())
                 for name in enum_names:
-                    column = columns.get(name)
-                    if not column:
+                    if name not in homes:
                         fail(group, f"{skill.name}: enum_fields names '{name}' and enum_columns gives it no column "
                                     f"— a declared enum with nowhere to live")
-                    elif re.sub(r"[^a-z0-9]+", " ", column.lower()).strip() not in worked:
+                        continue
+                    file, heading, column = homes[name]
+                    ref = skill / "references" / file
+                    where = f"'{heading}' in {file}"
+                    if not ref.is_file():
+                        fail(group, f"{skill.name}: enum_columns puts '{name}' in {file}, which is not a file "
+                                    f"in references/")
+                    elif SYNCED_HEADER.match(ref.read_text(encoding="utf-8")):
+                        fail(group, f"{skill.name}: enum_columns puts '{name}' in {file}, a mirror — a mirrored "
+                                    f"glossary defines the tokens and is never the table an enum is rendered in")
+                    elif heading not in (tables := section_tables(ref)):
+                        fail(group, f"{skill.name}: enum_columns puts '{name}' under {where}, which is no '## ' "
+                                    f"section of that file")
+                    elif tables[heading] is None:
+                        fail(group, f"{skill.name}: enum_columns puts '{name}' under {where}, a section with no "
+                                    f"worked table (a header row, then a separator row)")
+                    elif header_key(column) not in tables[heading]:
                         fail(group, f"{skill.name}: enum_columns puts '{name}' in '{column}', which is no column "
-                                    f"of a worked table in references/")
+                                    f"of the table under {where}")
                     else:
-                        ok(group, f"{skill.name}: enum '{name}' lives in the '{column}' column")
-                for name in sorted(set(columns) - set(enum_names)):
+                        ok(group, f"{skill.name}: enum '{name}' lives in the '{column}' column of the table under "
+                                  f"{where}")
+                for name in sorted(set(homes) - set(enum_names)):
                     fail(group, f"{skill.name}: enum_columns maps '{name}', which enum_fields does not declare")
         elif mapped and [c.strip() for c in mapped.group(1).split(",")] != ["none"]:
             fail(group, f"{skill.name}: enum_columns maps fields while enum_fields declares none")
 
-        # Sections declared as carrying provenance must actually have the column.
+        # Sections declared as carrying provenance must actually have the column, in
+        # the first worked table of every section of that name outside the mirrors —
+        # the same reading of a section as the enum homes above (section_tables).
         declared_sections = re.search(r"^\s*provenance_sections\s*:(.*)$", section.group(1),
                                       re.MULTILINE)
         if not declared_sections:
@@ -680,26 +698,54 @@ def check_columns() -> None:
         if wanted == ["none"]:
             ok(group, f"{skill.name}: provenance_sections declared as none")
             continue
-        found: dict[str, bool] = {}
+        found: dict[str, list[str]] = {}
         for ref in sorted((skill / "references").glob("*.md")):
-            chunks = re.split(r"^## (.+)$", ref.read_text(encoding="utf-8"), flags=re.MULTILINE)
-            for heading, body in zip(chunks[1::2], chunks[2::2]):
-                if heading.strip() not in wanted:
-                    continue
-                row = re.search(r"^\|(.+)\|\s*$", body, re.MULTILINE)
-                cells = [c.strip().lower() for c in row.group(1).split("|")] if row else []
-                # First table inside the section only — the split stops at the next
-                # heading, so a later section's table cannot answer for this one.
-                found[heading.strip()] = "provenance" in cells
+            if SYNCED_HEADER.match(ref.read_text(encoding="utf-8")):
+                continue
+            for heading, header in section_tables(ref).items():
+                if heading in wanted and header is not None:
+                    found.setdefault(heading, []).append("" if "provenance" in header else ref.name)
         for name in wanted:
-            if found.get(name):
-                ok(group, f"{skill.name}: '{name}' carries a Provenance column")
-            elif name in found:
-                fail(group, f"{skill.name}: section '{name}' is declared a provenance carrier "
-                            f"but its table has no Provenance column")
-            else:
+            if name not in found:
                 fail(group, f"{skill.name}: provenance_sections names '{name}', which is not a "
-                            f"'## ' section with a table in references/")
+                            f"'## ' section with a table in references/ outside the mirrors")
+            elif any(found[name]):
+                fail(group, f"{skill.name}: section '{name}' is declared a provenance carrier "
+                            f"but its table has no Provenance column ({', '.join(f for f in found[name] if f)})")
+            else:
+                ok(group, f"{skill.name}: '{name}' carries a Provenance column")
+
+
+# A mapping's home: field=file.md#Section/Column. The section is a '## ' heading,
+# written as it stands; the column is the last '/'-separated part.
+ENUM_HOME = re.compile(r"^([a-z_]+)\s*=\s*([A-Za-z0-9._-]+\.md)#(.+)/([^/]+)$")
+TABLE_SEPARATOR = re.compile(r"^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$")
+
+
+def header_key(cell: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", cell.strip().lower()).strip()
+
+
+def section_tables(ref: Path) -> dict[str, list[str] | None]:
+    """Each '## ' section of a reference file, mapped to the header cells of the
+    first worked table inside it — a header row, then a separator row — or None
+    when it has none. The split stops at the next '## ' heading, so a later
+    section's table cannot answer for this one; of two sections with one name, the
+    first is read."""
+    chunks = re.split(r"^## (.+)$", ref.read_text(encoding="utf-8"), flags=re.MULTILINE)
+    out: dict[str, list[str] | None] = {}
+    for heading, body in zip(chunks[1::2], chunks[2::2]):
+        out.setdefault(heading.strip(), next(iter(worked_tables(body)), None))
+    return out
+
+
+def worked_tables(text: str) -> list[list[str]]:
+    """The header cells of every worked table in `text`, in order: a table row
+    followed by a separator row."""
+    lines = text.splitlines()
+    return [[header_key(c) for c in lines[i].strip().strip("|").split("|")]
+            for i in range(len(lines) - 1)
+            if lines[i].lstrip().startswith("|") and TABLE_SEPARATOR.match(lines[i + 1])]
 
 
 # --- Citations -------------------------------------------------------------
@@ -1731,6 +1777,7 @@ def check_fit_ledger() -> None:
     revert to prose is caught, not excused.
     """
     group = "fit-ledger"
+    quantifier_drift(group)  # the list's own drift check runs whether or not the dossier parses
     path = REPO / WORKED_DOSSIER
     text = path.read_text(encoding="utf-8")
     snap = re.search(r"^## Decision snapshot\s*$(.*?)(?=^## )", text, re.MULTILINE | re.DOTALL)
@@ -1822,26 +1869,6 @@ def check_fit_ledger() -> None:
     if hit:
         fail(group, f"{WORKED_DOSSIER}: the snapshot counts or quantifies the map (\"{hit.group(0)}\")")
 
-    # The quantifier list is evidence-model.md's; the shared set and every grader
-    # expectation that lists it must hold all of it (D6), so the next copy cannot
-    # drop a word silently.
-    rule = ledger_rules.rule_quantifiers((REPO / "skills/job-underwriter/references/evidence-model.md")
-                                         .read_text(encoding="utf-8"))
-    if not rule:
-        fail(group, "evidence-model.md's \"The row is the unit\" list of quantifiers was not found — the drift check would pass vacuously")
-    missing = [q for q in rule if q not in ledger_rules.QUANTIFIERS]
-    if missing:
-        fail(group, f"ci/ledger_rules.py QUANTIFIERS lacks {missing} from evidence-model.md's list")
-    for case in load_evals(REPO / "skills/job-underwriter/evals/evals.json") or []:
-        for n, expectation in enumerate(case.get("expectations", []), 1):
-            if "quantifier" not in expectation:
-                continue
-            quoted = set(re.findall(r"['\"‘“]([^'\"’”]+)['\"’”]", expectation))
-            lacking = [q for q in rule if q not in quoted]
-            if lacking:
-                fail(group, f"job-underwriter eval {case.get('id')} #{n} lists quantifiers without {lacking} "
-                            f"from evidence-model.md's list")
-
     try:
         status = json.loads(blocks[-1])["sections"]["candidate_constraints"]["status"]
     except (KeyError, TypeError, ValueError):
@@ -1878,6 +1905,81 @@ def check_fit_ledger() -> None:
         ok(group, f"worked dossier: fit ledger matches the evidence map and the envelope, {len(items)} rows")
 
 
+# A quoted span in a grader expectation: straight, curly, single or double quotes;
+# an apostrophe inside a word ("ledger's") neither opens nor closes one.
+GRADER_QUOTE = re.compile(r"(?<!\w)['‘\"“]((?:[^'\"‘’“”\n]|(?<=\w)['’](?=\w))+)['’\"”](?!\w)")
+
+
+def quantifier_drift(group: str) -> None:
+    """D9: the after-ledger words are written once, in evidence-model.md.
+
+    Its "The row is the unit" list is the rule, in two scopes: the quantifiers over
+    the map anywhere, and the further ones — "no other", "any other", bare "none" —
+    it scopes to the one sentence after the fit ledger. ci/ledger_rules.py holds
+    exactly that list in those scopes (QUANTIFIERS, AFTER_LEDGER_ONLY);
+    risk-and-decision.md's rule 2 points to the list and spells none of it; and
+    every job-underwriter expectation that speaks of quantifiers quotes each word of
+    the list, the scoped ones inside its sentence about the sentence after the
+    ledger and nowhere else — so a grader is never told bare 'none' is exempt.
+    """
+    refs = REPO / "skills/job-underwriter/references"
+    general, after_only = ledger_rules.rule_quantifier_scopes((refs / "evidence-model.md").read_text(encoding="utf-8"))
+    if not general or not after_only:
+        fail(group, "evidence-model.md's \"The row is the unit\" list of quantifiers, in its two scopes, was not "
+                    "found — the drift check would pass vacuously")
+        return
+    shared_general = [q for q in ledger_rules.QUANTIFIERS if q not in ledger_rules.AFTER_LEDGER_ONLY]
+    for scope, rule, shared in (("", general, shared_general),
+                                (" it scopes to the sentence after the ledger", after_only,
+                                 list(ledger_rules.AFTER_LEDGER_ONLY))):
+        missing = [q for q in rule if q not in shared]
+        extra = [q for q in shared if q not in rule]
+        if missing:
+            fail(group, f"ci/ledger_rules.py QUANTIFIERS lacks {missing} from evidence-model.md's list{scope}")
+        if extra:
+            fail(group, f"ci/ledger_rules.py holds {extra} among the quantifiers{scope}, which evidence-model.md's "
+                        f"list does not")
+
+    decision = (refs / "risk-and-decision.md").read_text(encoding="utf-8")
+    rule2 = re.search(r"^2\. \*\*Fit ledger\*\*.*$", decision, re.MULTILINE)
+    if not rule2:
+        fail(group, "risk-and-decision.md has no rule 2 (\"2. **Fit ledger**\") to read")
+    else:
+        if "evidence-model.md" not in rule2.group(0) or '"The row is the unit"' not in rule2.group(0):
+            fail(group, "risk-and-decision.md rule 2 no longer points to evidence-model.md (\"The row is the "
+                        "unit\") for the words the sentence after the ledger may not carry")
+        spelled = sorted({m.group(1) for m in GRADER_QUOTE.finditer(rule2.group(0))} & set(general + after_only))
+        if spelled:
+            fail(group, f"risk-and-decision.md rule 2 spells {spelled} from evidence-model.md's list — a second "
+                        f"copy of it; point to the list instead")
+
+    for case in load_evals(REPO / "skills/job-underwriter/evals/evals.json") or []:
+        for n, expectation in enumerate(case.get("expectations", []), 1):
+            if "quantifier" not in expectation:
+                continue
+            where = f"job-underwriter eval {case.get('id')} #{n}"
+            turn = ledger_rules.SCOPE_TURN.search(expectation)
+            end = len(expectation)
+            if turn:
+                stop = re.search(r"[.;](?:\s|$)", expectation[turn.start():])
+                end = turn.start() + stop.start() if stop else end
+            inside = {m.group(1) for m in GRADER_QUOTE.finditer(expectation[turn.start():end])} if turn else set()
+            outside = {m.group(1) for m in GRADER_QUOTE.finditer(
+                expectation[:turn.start()] + " | " + expectation[end:] if turn else expectation)}
+            lacking = [q for q in general if q not in inside | outside]
+            if lacking:
+                fail(group, f"{where} lists quantifiers without {lacking} from evidence-model.md's list")
+            lacking = [q for q in after_only if q not in inside]
+            if lacking:
+                fail(group, f"{where} lists quantifiers without {lacking}, which evidence-model.md's list scopes to "
+                            f"the sentence after the ledger — say so \"in the one sentence after\" the ledger")
+            stray = [q for q in after_only if q in outside]
+            if stray:
+                fail(group, f"{where} quotes {stray} outside its sentence on the sentence after the ledger; "
+                            f"evidence-model.md's list scopes them there, and the token `none` in backticks is "
+                            f"a band or a gap type")
+
+
 # Phrases an installed file shares with a fixture by design, never as an example: the
 # shared contract's own words, which a fixture that feeds a skill a dossier or a
 # schema field necessarily repeats. Each is masked wherever it appears, so the words
@@ -1905,7 +2007,9 @@ def key_text(text: str) -> str:
 
 
 def key_tokens(text: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+(?:'[a-z]+)?", text)
+    """Words, and a snake_case identifier as one word: `handoff_to_mock_interview` is a
+    schema field a fixture repeats by contract, not five words of its prose."""
+    return re.findall(r"[a-z0-9]+(?:_[a-z0-9]+)*(?:'[a-z]+)?", text)
 
 
 def key_runs(tokens: list[str], n: int) -> set[tuple[str, ...]]:
@@ -1922,13 +2026,13 @@ QUOTED_SPAN = re.compile(
     r'"([^"\n]+(?:\n[^"\n]+)*?)"'                              # double, straight or curly
     r"|(?<![a-z0-9])'((?:[^'\n]|'(?=[a-z0-9])){8,}?)'(?![a-z0-9])")  # single; an apostrophe is not one
 INLINE_CODE = re.compile(r"`[^`\n]+`")
-FENCE = re.compile(r"^[ \t]*```.*?^[ \t]*```[^\n]*$", re.MULTILINE | re.DOTALL)
 
 
 def answer_key_spans(text: str) -> tuple[list[tuple[int, str]], str]:
     """(offset, span) for every quoted span — double, single and curly quotes, and
-    code spans holding more than one word — and the prose left when those and fenced
-    code are taken out. `text` is already key_text()."""
+    code spans holding more than one word — and the prose left when those are taken
+    out. Fenced code stays in the prose: an unquoted value in a worked YAML row is
+    read like any other sentence. `text` is already key_text()."""
     spans = []
     for m in INLINE_CODE.finditer(text):
         if " " in m.group(0).strip("`").strip():
@@ -1936,7 +2040,7 @@ def answer_key_spans(text: str) -> tuple[list[tuple[int, str]], str]:
     blanked = INLINE_CODE.sub(lambda m: " " * len(m.group(0)), text)
     for m in QUOTED_SPAN.finditer(blanked):
         spans.append((m.start(), m.group(1) or m.group(2)))
-    prose = QUOTED_SPAN.sub(" | ", FENCE.sub(" | ", blanked))
+    prose = QUOTED_SPAN.sub(" | ", blanked)
     return spans, prose
 
 
@@ -1976,7 +2080,8 @@ def check_answer_keys() -> None:
     installed in every skill that carries it, so each copy is read against its own
     skill's fixtures. A quoted span (double, single or curly quotes, or a code span
     of more than one word) fails on QUOTED_RUN content words in a row; the prose
-    outside quotes fails on PROSE_RUN words in a row. ANSWER_KEY_CONTRACT lists the
+    outside quotes and code spans, fenced code included, fails on PROSE_RUN words in
+    a row. A snake_case identifier is one word (key_tokens). ANSWER_KEY_CONTRACT lists the
     contract wording a fixture repeats by design, each with its reason.
     """
     group = "answer-keys"
@@ -2035,17 +2140,37 @@ def check_answer_keys() -> None:
                   f"words with the skill's own fixtures")
 
 
+def search_entry(query: str, research: dict, mode: str) -> dict:
+    """The log entry a run's search for `query` would leave in a `mode` room: in a
+    canned room the stub server's own answer (research_server.search over the corpus
+    run_fixtures.write_research_files gives it) tags the call with the targets of the
+    pages it returned; in a denied room the call is refused and returns nothing."""
+    targets = []
+    if mode == "canned":
+        _, hits = research_server.search({"entity_tokens": research.get("entity_tokens", []),
+                                          "pages": research.get("pages", [])}, query)
+        targets = research_server.target_tags(hits)
+    return {"kind": "search", "query_or_url": query, "targets": targets}
+
+
 def check_fixtures() -> None:
     """The fixture fields the harness reads are what the harness assumes (D5).
 
-    Three fields steer deterministic checks, and each fails quietly when it drifts:
-    a canary whose `page` names no page of its fixture is never asked for, so its
-    check passes in every canned run; a `candidate_text` entry that is not in the
-    prompt fails correct quotes; and a research target's `terms` decide which calls
-    were aimed at it, so a term that also matches another target's natural query
-    fails a correct `n/a`, and a target whose terms match none of its own queries
-    passes every hunt. Each is read here with the harness's own functions
-    (evals/output_checks.py), so the lint and the checks cannot disagree.
+    Each field below steers a deterministic check, and each fails quietly when it
+    drifts: a canary whose `page` names no page of its fixture is never asked for, so
+    its check passes in every canned run; a `candidate_text` entry that is not in the
+    prompt fails correct quotes; a `candidate_constraints` that is not exactly
+    "known" or "unknown" leaves the hard-gates closing clause unjudged; a
+    `research.declined` with no decline in the prompt makes lazy no-call
+    `unavailable` rows lawful; a `research.user_links` entry that is also a research
+    page takes that page's fetch out of the target accounting; and a research
+    target's `terms` decide which calls were aimed at it, so a sample of another
+    target that is aimed at an `n/a` or `skipped` one — by its terms, or in a canned
+    room by a page the server returns — fails a correct row, and a target whose terms
+    match none of its own queries passes every hunt. Each is read here with the
+    harness's own functions (evals/output_checks.py, evals/research_server.py), in
+    every mode the fixture runs (run_fixtures.modes_of), so the lint and the checks
+    cannot disagree.
     """
     group = "fixtures"
     linted = 0
@@ -2053,8 +2178,9 @@ def check_fixtures() -> None:
         for case in load_evals(skill / "evals" / "evals.json") or []:
             label = f"{skill.name} eval {case.get('id')}"
             prompt = output_checks.normalise_quote(case.get("prompt", ""))
+            checks = case.get("checks") or []
             text = case.get("candidate_text")
-            if "quotes" in (case.get("checks") or []) and not isinstance(text, list):
+            if "quotes" in checks and not isinstance(text, list):
                 fail(group, f"{label}: runs the quotes check and declares no candidate_text list — the evidence "
                             f"column would go unchecked ([] says nothing the candidate gave is quotable)")
             for entry in text if isinstance(text, list) else []:
@@ -2062,10 +2188,56 @@ def check_fixtures() -> None:
                 if not isinstance(entry, str) or output_checks.normalise_quote(entry) not in prompt:
                     fail(group, f"{label}: candidate_text entry {str(entry)[:60]!r} is not in the prompt — "
                                 f"correct quotes of the prompt would fail")
+            if "fit_ledger" in checks:
+                linted += 1
+                if case.get("candidate_constraints") not in output_checks.CONSTRAINTS:
+                    fail(group, f"{label}: runs the fit_ledger check and declares candidate_constraints "
+                                f"{case.get('candidate_constraints')!r}, not exactly \"known\" or \"unknown\" — the "
+                                f"hard-gates line's closing clause would go unjudged")
             research = case.get("research") or {}
             pages = research.get("pages") or []
-            modes = research.get("modes") or []
-            for canary in research.get("canaries") or []:
+            modes = run_fixtures.modes_of(case)
+            canaries = research.get("canaries") or []
+
+            # The two grounds for sending no call. `declined` is the fixture's word that
+            # the prompt declines research or chooses L0; the prompt must say so, in the
+            # words `declined_phrase` quotes. `zero_calls` is the other ground (the
+            # inputs answer every target), and `declined` already brings its check.
+            declined, phrase = research.get("declined"), research.get("declined_phrase")
+            if "declined" in research or phrase is not None:
+                linted += 1
+            if "declined" in research and not isinstance(declined, bool):
+                fail(group, f"{label}: research.declined is {declined!r}, not true or false")
+            elif declined is True:
+                if research.get("zero_calls"):
+                    fail(group, f"{label}: declares both research.declined and zero_calls — two different grounds "
+                                f"for sending no call, and declined already brings the zero-calls check")
+                if not isinstance(phrase, str) or not phrase.strip():
+                    fail(group, f"{label}: declares research.declined and no declined_phrase — the prompt's own "
+                                f"words that decline research or choose L0")
+                elif output_checks.normalise_quote(phrase) not in prompt:
+                    fail(group, f"{label}: declined_phrase {phrase[:60]!r} is not in the prompt — a fixture whose "
+                                f"user did not decline research would pass no-call unavailable rows")
+            elif phrase is not None:
+                fail(group, f"{label}: declares a declined_phrase without research.declined: true")
+
+            # A declared user link is an input, never research: one that is also a page
+            # (a canary's included) would take that page's fetch out of the accounting.
+            links = research.get("user_links")
+            if links is not None and not isinstance(links, list):
+                fail(group, f"{label}: research.user_links is {type(links).__name__}, not a list")
+                links = []
+            for link in links or []:
+                linted += 1
+                if not isinstance(link, str) or not link.strip():
+                    fail(group, f"{label}: research.user_links holds {link!r}, not a URL")
+                elif any(output_checks.same_url(p.get("url", ""), link) for p in pages):
+                    fail(group, f"{label}: user link {link} is also a research page — a fetch of it would be "
+                                f"read as the user's input and never charged to the page's target")
+                elif any(output_checks.same_url(c.get("page") or "", link) for c in canaries if c.get("page")):
+                    fail(group, f"{label}: user link {link} is a canary's page — a user link is never research")
+
+            for canary in canaries:
                 linted += 1
                 n, page = canary.get("target"), canary.get("page")
                 if not page:
@@ -2085,39 +2257,58 @@ def check_fixtures() -> None:
                 if not any(output_checks.canary_in(output_checks.normalise_ws(output_checks.unify_dashes(sp)), body)
                            for sp in spellings if str(sp).strip()):
                     fail(group, f"{label}: no spelling of the canary for target {n} is in its page {page}")
+
+            # Where no correct run sends a call (zero_calls, or declined), a collision
+            # cannot fail a correct n/a: any call there fails zero_calls first.
+            no_call = bool(research.get("zero_calls")) or declined is True
             targets = research.get("targets") or []
             for target in targets:
                 linted += 1
                 n = target.get("n")
-                accept = set(output_checks.accepted(target, "canned") + output_checks.accepted(target, "denied"))
                 own = target.get("on_target_samples")
                 if not own:
                     fail(group, f"{label}: target {n} has no on_target_samples")
                     own = []
                 for query in own:
-                    if not output_checks.aimed_at({"kind": "search", "query_or_url": query}, target, pages, "denied"):
-                        fail(group, f"{label}: target {n}'s own sample {query!r} is aimed at no term of it — a "
-                                    f"correct call for it would be read as a call outside every target")
-                if not accept & {"n/a", "skipped"}:
+                    for mode in modes:
+                        if not output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode):
+                            fail(group, f"{label}: target {n}'s own sample {query!r} is aimed at no term of it in "
+                                        f"a {mode} room — a correct call for it would be read as a call outside "
+                                        f"every target")
+                quiet = [m for m in modes if set(output_checks.accepted(target, m)) & {"n/a", "skipped"}]
+                if not quiet:
                     continue
                 hunts = target.get("hunt_samples")
                 if not hunts:
                     fail(group, f"{label}: target {n} accepts n/a or skipped and has no hunt_samples")
-                elif not any(output_checks.aimed_at({"kind": "search", "query_or_url": q}, target, pages, "denied")
-                             for q in hunts):
-                    fail(group, f"{label}: target {n}'s terms match none of its own hunt_samples — a hunt for it "
-                                f"would pass as no call")
+                else:
+                    for mode in quiet:
+                        if not any(output_checks.aimed_at(search_entry(q, research, mode), target, pages, mode)
+                                   for q in hunts):
+                            fail(group, f"{label}: target {n}'s terms match none of its own hunt_samples in a "
+                                        f"{mode} room — a hunt for it would pass as no call")
+                if no_call:
+                    continue
                 for other in targets:
                     if other is target:
                         continue
                     for query in other.get("on_target_samples") or []:
-                        if output_checks.aimed_at({"kind": "search", "query_or_url": query}, target, pages, "denied"):
-                            fail(group, f"{label}: target {n} accepts n/a or skipped, and its terms match target "
-                                        f"{other.get('n')}'s sample {query!r} — a correct run would fail its n/a")
+                        for mode in quiet:
+                            if not output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode):
+                                continue
+                            if output_checks.aimed_at(search_entry(query, research, "denied"), target, pages, "denied"):
+                                fail(group, f"{label}: target {n} accepts n/a or skipped, and its terms match target "
+                                            f"{other.get('n')}'s sample {query!r} — a correct run would fail its n/a")
+                            else:
+                                fail(group, f"{label}: target {n} accepts n/a or skipped, and in a {mode} room target "
+                                            f"{other.get('n')}'s sample {query!r} returns its page — a correct run "
+                                            f"would fail its n/a")
+                            break
     if linted == 0:
         fail(group, "no fixture field read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
-        ok(group, f"{linted} canaries, candidate_text entries and research targets agree with what the harness reads")
+        ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links "
+                  f"and research targets agree with what the harness reads")
 
 
 # Phrasings a rule change retired. Each was rewritten everywhere once and came back
@@ -2129,6 +2320,22 @@ RETIRED = [
     (re.compile(r"\bevery call (?:was|is) refused\b(?!\s+or\s+errored)", re.I),
      "\"every call was refused\" without \"or errored\" is the retired accounting wording; an errored call "
      "counts as refused (interaction-grammar.md §4)"),
+    # Round 4's rule changes, each retired in every surface at once.
+    (re.compile(r"\bonly when the (?:fixture's )?(?:whole )?(?:declared )?search budget was fully spent\b", re.I),
+     "\"only when the search budget was fully spent\" is the retired accounting ground — the user choosing L0 or "
+     "declining research is the other (interaction-grammar.md §4)"),
+    (re.compile(r"\buser links? read\b[^.]{0,120}\brefused ones included\b", re.I),
+     "user links counted \"refused ones included\" is the retired tally — `user links read N` counts reads that "
+     "returned (interaction-grammar.md §4)"),
+    (re.compile(r"\b(?:hard_gate_fail|failed) rows first,?\s+plainly\b", re.I),
+     "failed gate rows \"plainly\" is the retired hard-gates wording — each carries a few of its Requirement's "
+     "own words (risk-and-decision.md rule 4)"),
+    (re.compile(r"\bmissing (?:hard-gates |Hard gates )?slot\b[^.]{0,40}\b(?:only )?when the map has gate rows\b", re.I),
+     "a hard-gates slot required only with gate rows is the retired rule — it is in every snapshot "
+     "(risk-and-decision.md rule 4)"),
+    (re.compile(r"\bhard gates?\b[^.]{0,160}\byears(?:/level)?\b", re.I),
+     "years listed as a hard gate is the retired gate list — a gate is a term, not experience "
+     "(evidence-model.md, \"A gate is met, not established, or failed\")"),
 ]
 LABELS_DEFINED = re.compile(r"(?=.*\byes\b)(?=.*\bunavailable\b)(?=.*\bcalls?\b)", re.I | re.S)
 
@@ -2167,7 +2374,9 @@ def check_wording() -> None:
     deterministic check gave opposite verdicts on one run. mock-interview's L0 said
     "No network" after §4 made reading a link the user gave a provided document. And
     personas.md once pre-mapped a story per stem with no quote behind it. Each is a
-    phrase, so each is checked as one: the retired phrasings anywhere a rule is
+    phrase, so each is checked as one (round 4 added the old accounting ground, the
+    user-link tally that counted refused reads, "plainly" for failed gate rows, the
+    slot required only with gate rows, and years in a hard-gate list): the retired phrasings anywhere a rule is
     stated or graded; any expectation that defines the yes/unavailable labels carries
     "returned a result" and "or errored"; no L0 definition says "no network"; and
     personas.md keeps its pointer to the quote-or-slot rule and pre-maps nothing

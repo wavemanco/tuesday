@@ -83,7 +83,9 @@ against the skill's own budget for the tier reached; at L2 the same line reads
 added together and counted once. Reading a link the user gave you to read — a JD
 or a portfolio they linked rather than pasted — is reading an input, not
 research: it is named on the same line — `; user links read 1` — and never
-charged to the budget. A URL the user names as the source of text they pasted
+charged to the budget. `user links read N` counts the links actually read, the
+fetch returned; a link the host could not open is not counted, and the response
+says it could not open it. A URL the user names as the source of text they pasted
 ("copied from …") is not a link to read: that content is already in hand, and
 fetching it, or any other page on that site, is a research call, charged and
 attributed to the target the page serves like any other. No other sentence

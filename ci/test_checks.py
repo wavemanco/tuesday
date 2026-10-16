@@ -1600,6 +1600,89 @@ def break_hunt_samples_missing(root: Path) -> str:
     return "has no hunt_samples"
 
 
+def break_constraints_missing(root: Path) -> str:
+    """NP-8: a fit_ledger fixture with no candidate_constraints left the run's envelope to decide."""
+    mutate_case(root, JU, 1, lambda c: c.pop("candidate_constraints"))
+    return "job-underwriter eval 1: runs the fit_ledger check and declares candidate_constraints None"
+
+
+def break_constraints_misspelt(root: Path) -> str:
+    mutate_case(root, JU, 3, lambda c: c.update(candidate_constraints="Unknown"))
+    return "declares candidate_constraints 'Unknown', not exactly"
+
+
+DECLINE = "Please don't look anything up — work from what I've given you."
+
+
+def decline(case: dict, phrase: str | None = DECLINE, prompt: bool = True) -> None:
+    case["research"]["declined"] = True
+    if phrase is not None:
+        case["research"]["declined_phrase"] = phrase
+    if prompt:
+        case["prompt"] += " " + DECLINE
+
+
+def break_declined_not_bool(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: c["research"].update(declined="yes"))
+    return "research.declined is 'yes', not true or false"
+
+
+def break_declined_and_zero_calls(root: Path) -> str:
+    mutate_case(root, JU, 5, decline)
+    return "declares both research.declined and zero_calls"
+
+
+def break_declined_no_phrase(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: decline(c, phrase=None))
+    return "declares research.declined and no declined_phrase"
+
+
+def break_declined_phrase_absent(root: Path) -> str:
+    """HN3: declined set on a prompt that does not decline lets lazy no-call rows pass."""
+    mutate_case(root, MI, 3, lambda c: decline(c, prompt=False))
+    return "is not in the prompt — a fixture whose user did not decline research"
+
+
+def break_declined_phrase_stray(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: c["research"].update(declined_phrase=DECLINE))
+    return "declares a declined_phrase without research.declined: true"
+
+
+def keep_declined_fixture(root: Path) -> None:
+    """A fixture whose user declines research, said in the prompt and declared."""
+    mutate_case(root, MI, 3, decline)
+
+
+def break_user_link_is_page(root: Path) -> str:
+    """RV4: a declared user link that is a research page, written another way."""
+    page = "https://www.brindlemoor.co.uk/careers/senior-pricing-analyst/"
+    mutate_case(root, JU, 4, lambda c: c["research"].update(user_links=[page]))
+    return f"user link {page} is also a research page"
+
+
+def break_user_link_is_canary_page(root: Path) -> str:
+    def change(c):
+        c["research"]["canaries"][0].update(page="https://brindlemoor.co.uk/abuot")
+        c["research"]["user_links"] = ["https://brindlemoor.co.uk/abuot"]
+    mutate_case(root, JU, 4, change)
+    return "user link https://brindlemoor.co.uk/abuot is a canary's page"
+
+
+def break_user_links_not_list(root: Path) -> str:
+    mutate_case(root, MI, 7, lambda c: c["research"].update(user_links="https://example.com/jd"))
+    return "research.user_links is str, not a list"
+
+
+def break_collision_canned_page(root: Path) -> str:
+    """NP-4: a skipped target's page shares a keyword with another target's sample, so
+    in a canned room the server returns it and the call is aimed at the skipped target."""
+    mutate_case(root, MI, 7, lambda c: c["research"]["pages"].append({
+        "url": "https://saltmarshgames.com/careers/live-operations-producer", "target": 5,
+        "title": "Live Operations Producer", "keywords": ["careers", "interview"],
+        "text": "The posting for the live operations producer role."}))
+    return "in a canned room target 2's sample 'Saltmarsh Games interview process' returns its page"
+
+
 # Retired wording and rewritten rules (NEW-RV-C, RV14, NEW-RV-I, MI-7).
 
 def break_retired_returned_something(root: Path) -> str:
@@ -1618,6 +1701,51 @@ def break_retired_refused_only(root: Path) -> str:
     swap_once(root, "skills/mock-interview/references/output-template.md", "if every call was refused or errored",
               "if every call was refused", "break_retired_refused_only")
     return "without \"or errored\" is the retired accounting wording"
+
+
+def break_retired_budget_ground(root: Path) -> str:
+    path = root / JU
+    data = json.loads(path.read_text())
+    old = data["clauses"]["accounting"]
+    data["clauses"]["accounting"] = old.replace(
+        "right only when the user chose L0 or declined research (and the tally then reads L0 — no searches), or "
+        "when the search budget was fully spent", "lawful in a canned room only when the fixture's search budget "
+        "was fully spent")
+    if data["clauses"]["accounting"] == old:
+        raise SystemExit("break_retired_budget_ground has gone stale")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "is the retired accounting ground"
+
+
+def break_retired_user_links_refused(root: Path) -> str:
+    path = root / JU
+    data = json.loads(path.read_text())
+    old = data["clauses"]["accounting_counts"]
+    data["clauses"]["accounting_counts"] = old.replace("as user links read only where the read returned",
+                                                       "as user links read, refused ones included")
+    if data["clauses"]["accounting_counts"] == old:
+        raise SystemExit("break_retired_user_links_refused has gone stale")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "is the retired tally"
+
+
+def break_retired_gates_plainly(root: Path) -> str:
+    swap_once(root, "skills/job-underwriter/references/risk-and-decision.md",
+              "the `hard_gate_fail` rows first, after `failed:`",
+              "the `hard_gate_fail` rows first, plainly, after `failed:`", "break_retired_gates_plainly")
+    return "is the retired hard-gates wording"
+
+
+def break_retired_slot_with_gates(root: Path) -> str:
+    swap_once(root, "evals/README.md", "whether or not the map has gate", "only when the map has gate",
+              "break_retired_slot_with_gates")
+    return "required only with gate rows is the retired rule"
+
+
+def break_retired_years_gate(root: Path) -> str:
+    swap_once(root, "skills/job-underwriter/SKILL.md", "location, schedule, pay,", "location, schedule, years, pay,",
+              "break_retired_years_gate")
+    return "years listed as a hard gate is the retired gate list"
 
 
 def break_labels_without_result(root: Path) -> str:
@@ -1659,22 +1787,157 @@ def keep_no_network_elsewhere(root: Path) -> None:
               "keep_no_network_elsewhere")
 
 
-# Every declared enum names its column (MI-11).
+# Every declared enum names the one table that renders it (MI-11, NP-1).
+
+FIT_SNAPSHOT_HOME = "gap_type=output-template.md#The fit snapshot/Gap type"
+
 
 def break_enum_without_column(root: Path) -> str:
-    swap_once(root, "skills/job-underwriter/SKILL.md", ", severity=Severity", "", "break_enum_without_column")
+    swap_once(root, "skills/job-underwriter/SKILL.md", ", severity=dossier-template.md#Opportunity risk register/Severity",
+              "", "break_enum_without_column")
     return "enum_fields names 'severity' and enum_columns gives it no column"
 
 
 def break_enum_column_missing(root: Path) -> str:
-    swap_once(root, "skills/mock-interview/SKILL.md", "gap_type=Gap type", "gap_type=Gap kind", "break_enum_column_missing")
-    return "puts 'gap_type' in 'Gap kind', which is no column"
+    swap_once(root, "skills/mock-interview/SKILL.md", FIT_SNAPSHOT_HOME,
+              "gap_type=output-template.md#The fit snapshot/Gap kind", "break_enum_column_missing")
+    return "puts 'gap_type' in 'Gap kind', which is no column of the table under 'The fit snapshot'"
 
 
 def break_enum_column_stale(root: Path) -> str:
-    swap_once(root, "skills/resume-tailor/SKILL.md", "row_status=Status", "row_status=Status, stage=Status",
+    swap_once(root, "skills/resume-tailor/SKILL.md", "row_status=edit-ledger.md#The row/Status",
+              "row_status=edit-ledger.md#The row/Status, stage=edit-ledger.md#The row/Status",
               "break_enum_column_stale")
     return "maps 'stage', which enum_fields does not declare"
+
+
+def drop_table_column(root: Path, rel: str, heading: str, column: str, name: str) -> None:
+    """Delete one column — header, separator and every row — from the first table
+    under a '## ' heading, leaving every other table of the file as it was."""
+    path = root / rel
+    lines = path.read_text().splitlines(keepends=True)
+    at = lines.index(f"## {heading}\n")
+    first = next(i for i in range(at + 1, len(lines)) if lines[i].startswith("|"))
+    last = next((i for i in range(first, len(lines)) if not lines[i].startswith("|")), len(lines))
+    cells = [c.strip() for c in lines[first].strip().strip("|").split("|")]
+    if column not in cells:
+        raise SystemExit(f"{name} found no {column!r} column under {heading!r} — it has gone stale")
+    k = cells.index(column)
+    for i in range(first, last):
+        row = lines[i].rstrip("\n").strip().strip("|").split("|")
+        del row[k]
+        lines[i] = "|" + "|".join(row) + "|\n"
+    path.write_text("".join(lines))
+
+
+def break_enum_column_dropped(root: Path) -> str:
+    """MI-11 itself: the fit snapshot loses its Gap type column, and the mirrored
+    glossary's "Gap type" header used to answer for it."""
+    drop_table_column(root, "skills/mock-interview/references/output-template.md", "The fit snapshot", "Gap type",
+                      "break_enum_column_dropped")
+    return "puts 'gap_type' in 'Gap type', which is no column of the table under 'The fit snapshot'"
+
+
+def break_enum_status_dropped_from_one_table(root: Path) -> str:
+    """Two enums share a header ("Status"); dropping it from the edit ledger's row
+    must fail the one rendered there, though the coverage map still has a Status."""
+    drop_table_column(root, "skills/resume-tailor/references/edit-ledger.md", "The row", "Status",
+                      "break_enum_status_dropped_from_one_table")
+    return "puts 'row_status' in 'Status', which is no column of the table under 'The row'"
+
+
+def break_enum_into_mirror(root: Path) -> str:
+    swap_once(root, "skills/mock-interview/SKILL.md", FIT_SNAPSHOT_HOME,
+              "gap_type=evidence-conventions.md#3. Fit status and the gap taxonomy/Gap type", "break_enum_into_mirror")
+    return "puts 'gap_type' in evidence-conventions.md, a mirror"
+
+
+def break_enum_header_only(root: Path) -> str:
+    """The old form, a header with no table: it let any same-named column answer."""
+    swap_once(root, "skills/mock-interview/SKILL.md", FIT_SNAPSHOT_HOME, "gap_type=Gap type",
+              "break_enum_header_only")
+    return "enum_columns entry 'gap_type=Gap type' is not field=file.md#Section/Column"
+
+
+def break_qualifier_in_mirror_only(root: Path) -> str:
+    """A qualifier field whose only column is a mirrored glossary's."""
+    swap_once(root, "skills/mock-interview/SKILL.md", "qualifier_fields: gap-and-bridge language",
+              "qualifier_fields: definition", "break_qualifier_in_mirror_only")
+    return "names 'definition', which is not a column in any references/ table outside the mirrors"
+
+
+# The answer-key check reads fenced code as prose (NP-5).
+
+def break_answer_key_fenced(root: Path) -> str:
+    """An unquoted fixture run inside a worked YAML block: the fence used to hide it."""
+    swap_once(root, "skills/job-underwriter/references/evidence-model.md",
+              "```yaml\nrequirement_id: R1 ",
+              "```yaml\nnote: Led 30+ client integrations of our REST APIs end to end\nrequirement_id: R1 ",
+              "break_answer_key_fenced")
+    return "repeats this skill's own fixtures unquoted"
+
+
+def keep_answer_key_snake_case(root: Path) -> None:
+    """Schema fields a dossier fixture repeats by contract, fenced: one word each."""
+    path = root / "skills/mock-interview/references/dossier-handoff.md"
+    path.write_text(path.read_text() + "\n\n```yaml\nhandoff_to_mock_interview:\n  high_priority_requirements: [...]\n"
+                                       "  allowed_interview_strategy: [...]\n```\n")
+
+
+# The after-ledger words are written once (D9, NP-7).
+
+EVIDENCE_MODEL = "skills/job-underwriter/references/evidence-model.md"
+RISK_AND_DECISION = "skills/job-underwriter/references/risk-and-decision.md"
+
+
+def break_quantifier_scope_drift(root: Path) -> str:
+    """The list scopes a new word to the sentence after the ledger; the shared set does not."""
+    swap_once(root, EVIDENCE_MODEL, '"any other" or bare "none"', '"any other", "most" or bare "none"',
+              "break_quantifier_scope_drift")
+    return "lacks ['most'] from evidence-model.md's list it scopes to the sentence after the ledger"
+
+
+def break_quantifier_set_extra(root: Path) -> str:
+    """The shared set holds a word the rule does not: set equality, not a subset."""
+    swap_once(root, "ci/ledger_rules.py", '"neither", "the rest",', '"neither", "most", "the rest",',
+              "break_quantifier_set_extra")
+    return "holds ['most'] among the quantifiers, which evidence-model.md's list does not"
+
+
+def clause_swap(root: Path, rel: str, clause: str, old: str, new: str, name: str) -> None:
+    path = root / rel
+    data = json.loads(path.read_text())
+    if data["clauses"][clause].count(old) != 1:
+        raise SystemExit(f"{name} expected one {old!r} in the {clause} clause — it has gone stale")
+    data["clauses"][clause] = data["clauses"][clause].replace(old, new)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def break_grader_bare_none(root: Path) -> str:
+    """NP-7: the grader told 'none' is exempt, its backticks lost."""
+    clause_swap(root, JU, "ledger_counts", "the token `none` in backticks, a band or a gap type,", "the token 'none'",
+                "break_grader_bare_none")
+    return "quotes ['none'] outside its sentence on the sentence after the ledger"
+
+
+def break_grader_scope_missing(root: Path) -> str:
+    clause_swap(root, JU, "ledger_counts",
+                "; and in the one sentence after the fit ledger, 'no other', 'any other' and a bare 'none' fail as "
+                "well, because each speaks for the rows that sentence does not name", "",
+                "break_grader_scope_missing")
+    return "lists quantifiers without ['no other', 'any other', 'none'], which evidence-model.md's list scopes"
+
+
+def break_rule2_unpointed(root: Path) -> str:
+    swap_once(root, RISK_AND_DECISION, 'listed in `references/evidence-model.md` ("The row is the unit")',
+              'such as "every", "all" or "both"', "break_rule2_unpointed")
+    return "rule 2 no longer points to evidence-model.md"
+
+
+def break_rule2_spells_list(root: Path) -> str:
+    swap_once(root, RISK_AND_DECISION, 'including the ones that list scopes to this sentence',
+              'including the ones that list scopes to this sentence, such as "no other"', "break_rule2_spells_list")
+    return "rule 2 spells ['no other']"
 
 
 # The clause mechanism (D1).
@@ -1741,6 +2004,8 @@ PASSES = [
     ("answer-keys", "a common phrase of rule prose", keep_answer_key_common_phrase),
     ("answer-keys", "the shared contract's own wording", keep_answer_key_contract),
     ("wording", "\"no network\" outside an L0 definition", keep_no_network_elsewhere),
+    ("answer-keys", "schema fields a dossier fixture repeats, fenced", keep_answer_key_snake_case),
+    ("fixtures", "a fixture whose user declines research", keep_declined_fixture),
 ]
 
 
@@ -1999,12 +2264,40 @@ CASES: list[tuple[str, str, callable]] = [
     ("wording", "\"returned something\" back in a grader clause", break_retired_returned_something),
     ("wording", "\"every call was refused\" without \"or errored\"", break_retired_refused_only),
     ("wording", "a label definition without \"returned a result\"", break_labels_without_result),
+    ("wording", "the budget-only ground for a no-call unavailable", break_retired_budget_ground),
+    ("wording", "user links counted with refused reads", break_retired_user_links_refused),
+    ("wording", "failed gate rows named \"plainly\"", break_retired_gates_plainly),
+    ("wording", "the hard-gates slot required only with gate rows", break_retired_slot_with_gates),
+    ("wording", "years back in the hard-gate list", break_retired_years_gate),
     ("wording", "\"No network\" back in the L0 definition", break_l0_no_network),
     ("wording", "a story pre-mapped with no quote", break_personas_premap),
     ("wording", "the personas scope line removed", break_personas_scope_line),
     ("columns", "a declared enum with no column", break_enum_without_column),
     ("columns", "an enum mapped to a column no worked table has", break_enum_column_missing),
     ("columns", "an enum_columns entry for an undeclared field", break_enum_column_stale),
+    ("columns", "the Gap type column dropped from the fit snapshot", break_enum_column_dropped),
+    ("columns", "Status dropped from the edit ledger's row only", break_enum_status_dropped_from_one_table),
+    ("columns", "an enum mapped into a mirrored glossary", break_enum_into_mirror),
+    ("columns", "an enum mapped to a header with no table", break_enum_header_only),
+    ("columns", "a qualifier field only a mirror has a column for", break_qualifier_in_mirror_only),
+    ("answer-keys", "an unquoted fixture run inside a fenced YAML block", break_answer_key_fenced),
+    ("fit-ledger", "a word the list scopes to the after-ledger sentence and the set lacks", break_quantifier_scope_drift),
+    ("fit-ledger", "a word the shared set holds and the list does not", break_quantifier_set_extra),
+    ("fit-ledger", "a grader clause calling bare 'none' exempt", break_grader_bare_none),
+    ("fit-ledger", "a grader clause without the after-ledger words", break_grader_scope_missing),
+    ("fit-ledger", "rule 2 no longer pointing to the list", break_rule2_unpointed),
+    ("fit-ledger", "rule 2 spelling a word of the list", break_rule2_spells_list),
+    ("fixtures", "a fit_ledger fixture with no candidate_constraints", break_constraints_missing),
+    ("fixtures", "candidate_constraints misspelt", break_constraints_misspelt),
+    ("fixtures", "research.declined that is not a boolean", break_declined_not_bool),
+    ("fixtures", "research.declined beside zero_calls", break_declined_and_zero_calls),
+    ("fixtures", "research.declined with no declined_phrase", break_declined_no_phrase),
+    ("fixtures", "a declined_phrase the prompt does not carry", break_declined_phrase_absent),
+    ("fixtures", "a declined_phrase without research.declined", break_declined_phrase_stray),
+    ("fixtures", "a user link that is a research page", break_user_link_is_page),
+    ("fixtures", "a user link that is a canary's page", break_user_link_is_canary_page),
+    ("fixtures", "user_links that is not a list", break_user_links_not_list),
+    ("fixtures", "a skipped target's page returned for another target's sample", break_collision_canned_page),
     ("evals", "an expectation naming an unknown clause", break_clause_unknown),
     ("evals", "a clause nothing uses", break_clause_unused),
     ("evals", "a clause inside a clause", break_clause_nested),
