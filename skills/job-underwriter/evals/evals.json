@@ -58,7 +58,12 @@
               "vacancy",
               "funding",
               "headquarters",
-              "founded"
+              "founded",
+              "series",
+              "stage",
+              "headcount",
+              "size",
+              "overview"
             ],
             "accept": [
               "unavailable"
@@ -177,7 +182,12 @@
               "vacancy",
               "funding",
               "headquarters",
-              "founded"
+              "founded",
+              "series",
+              "stage",
+              "headcount",
+              "size",
+              "overview"
             ],
             "accept": [
               "unavailable"
@@ -273,7 +283,12 @@
               "vacancy",
               "funding",
               "headquarters",
-              "founded"
+              "founded",
+              "series",
+              "stage",
+              "headcount",
+              "size",
+              "overview"
             ],
             "accept": {
               "canned": [
@@ -363,22 +378,23 @@
             "text": "Accepting applications. Senior Pricing Analyst, Leeds office four days a week. Own pricing analytics for our pet-insurance product; reports to the Director of Pricing."
           },
           {
-            "url": "https://pricingpay.example/2026-uk-pricing-analytics-pay-survey",
-            "title": "2026 UK Pricing and Actuarial Analytics Pay Survey",
+            "url": "https://pricewell.example/2026-uk-pricing-analytics-pay-survey",
+            "title": "Pricewell 2026 UK Pricing and Actuarial Analytics Pay Survey",
             "target": 2,
             "keywords": [
-              "salary",
-              "salaries",
-              "pay",
-              "compensation",
-              "survey",
               "band",
-              "range",
               "benchmark",
+              "compensation",
+              "levels",
               "market",
-              "levels"
+              "pay",
+              "pricewell",
+              "range",
+              "salaries",
+              "salary",
+              "survey"
             ],
-            "text": "Senior pricing analyst, UK insurers and insurtechs (n=612): median base £58,400; interquartile range £52,100 to £64,900."
+            "text": "Pricewell 2026: senior pricing analyst, UK insurers and insurtechs (n=612) — median base £58,400; interquartile range £52,100 to £64,900."
           },
           {
             "url": "https://www.linkedin.example/in/odile-varga",
@@ -397,15 +413,29 @@
         "canaries": [
           {
             "target": 1,
-            "text": "143"
+            "text": [
+              "143 employees",
+              "143 staff",
+              "143 people",
+              "143-person",
+              "143-strong",
+              "143 FTE"
+            ]
           },
           {
             "target": 2,
-            "text": "58,400"
+            "text": [
+              "Pricewell",
+              "58,400",
+              "58.4k",
+              "58.4K"
+            ]
           },
           {
             "target": 3,
-            "text": "Calloway Re"
+            "text": [
+              "Calloway Re"
+            ]
           }
         ]
       },
@@ -465,7 +495,12 @@
               "vacancy",
               "funding",
               "headquarters",
-              "founded"
+              "founded",
+              "series",
+              "stage",
+              "headcount",
+              "size",
+              "overview"
             ],
             "accept": [
               "skipped"

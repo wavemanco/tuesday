@@ -719,8 +719,12 @@ def test_parse_accounting() -> None:
     got = output_checks.parse_accounting(JU1_CANNED_PROBE)
     check("a numbered table with the target in column two is read, not absent (canned probe)",
           {n: r["label"] for n, r in got["rows"].items()}, {1: "yes", 2: "yes", 3: "n/a"})
-    check_true("and its layout is a format violation",
-               any("not the first column" in p for _, p in got["format"]))
+    check_true("and a number in its own column is the same table, not a format violation",
+               not any("not the first column" in p for _, p in got["format"]))
+    moved = JU1_CANNED_PROBE.replace("| # | Target | Status | Reason |", "| Status | Target | # | Reason |")
+    check_true("a table with its target moved further along is still a format violation",
+               any("not the first column" in p for _, p in output_checks.parse_accounting(moved)["format"])
+               or output_checks.parse_accounting(moved)["outcome"] != "checked")
     check("its tally line is read", output_checks.parse_tally(JU1_CANNED_PROBE)["searches"], 2)
     got = output_checks.parse_accounting("A response with no table at all.")
     check("a response with no table is absent", got["outcome"], "absent")
@@ -881,8 +885,28 @@ def test_fit_ledger() -> None:
     check("a risk severity is not a confidence band", ledger_fails(severity), [])
     headless = LEDGER_OK.replace("## Decision snapshot", "# Should you apply?")
     band = [c for c in output_checks.check_fit_ledger(headless)["checks"] if c["check"] == "snapshot_band"]
-    check("with no snapshot heading the band check fails as format, not judgement",
-          [(c["verdict"], c["kind"]) for c in band], [("FAIL", "format")])
+    check("with no snapshot heading the bands are read around the ledger (denied probe)",
+          [c["verdict"] for c in band], ["PASS"])
+    check("and a wrong band there still fails", ledger_fails(headless.replace(
+        "R3 (`medium`) waits", "R3 (`high`) waits")), ["snapshot_band"])
+    check("a universal in the sentence after the ledger fails, true or not", ledger_fails(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "Every must-have but R4 is `direct`.")), ["ledger_sentence"])
+    check("\"the only rows below\" fails there too (canned probe)", ledger_fails(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "R4 and R5 are the only rows below `direct`.")), ["ledger_sentence"])
+    check("a next slot directly after the ledger is no sentence to judge", ledger_fails(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "**Opportunity ledger.** Every register entry is `low` severity.")), [])
+    check("a parenthetical in the Requirement's own words, reordered, passes (denied probe)",
+          ledger_fails(LEDGER_OK.replace("(Mentoring or leading PMs)", "(PMs, mentoring or leading)")), [])
+    check("a parenthetical using words the Requirement lacks fails, as format",
+          [(c["verdict"], c["kind"]) for c in output_checks.check_fit_ledger(
+              LEDGER_OK.replace("(Mentoring or leading PMs)", "(people management)"))["checks"]
+           if c["check"] == "ledger_parenthetical"], [("FAIL", "format")])
+    check("a canary is a whole token: 143 is not inside 1430",
+          (output_checks.canary_in("143", "a team of 1430"), output_checks.canary_in("143", "143 staff")),
+          (False, True))
     probe = JU1_CANNED_LEDGER + "\n\n## Evidence map\n\n" + \
         "| # | Requirement | Priority | Fit | Confidence |\n|---|---|---|---|---|\n" + "\n".join(
             f"| {r} | {req} | {p} | {f} | {c} |" for r, req, p, f, c in (

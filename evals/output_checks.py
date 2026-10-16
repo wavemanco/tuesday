@@ -122,11 +122,14 @@ def parse_accounting(text: str) -> dict:
         for table in md_tables(body):
             names = header_names(table)
             status_col = next((i for i, h in enumerate(names) if h in ("status", "ran")), None)
-            if not names or "target" not in names[0]:
-                # A numbered table with the target in a later column — "# | Target |
-                # Status | Reason" — is readable and was written by a measured run;
-                # calling it absent would fail three correct rows. It is read, and
-                # its layout is reported as the format violation it is.
+            numbered = bool(names) and names[0] in ("#", "no", "no.", "n") and len(names) > 1 \
+                and "target" in names[1]
+            if not names or ("target" not in names[0] and not numbered):
+                # A table with the target further along — "Status | Target", say — is
+                # still read, and its layout reported. A number in its own first column
+                # ("# | Target | Status | Reason") is the same table drawn another way:
+                # a probe run wrote it, and failing it would fail a correct accounting
+                # on its drawing, so it is read without comment.
                 if status_col is None or not any("target" in h for h in names[1:status_col]):
                     continue
                 problems.append((None, f"{source}: the target is not the first column "
@@ -252,6 +255,11 @@ def normalise_ws(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
+def canary_in(spelling: str, text: str) -> bool:
+    """A canary as a whole token run: "143" is not found inside "1430"."""
+    return bool(spelling) and re.search(r"(?<![\w])" + re.escape(spelling) + r"(?![\w])", text) is not None
+
+
 def check_accounting(response: str, research: dict, mode: str,
                      research_log: list | None) -> dict:
     """Judge the accounting against what the harness recorded. Returns findings.
@@ -372,8 +380,13 @@ def check_accounting(response: str, research: dict, mode: str,
 
     said = normalise_ws(response)
     for canary in research.get("canaries", []):
-        n, text = canary.get("target"), normalise_ws(canary.get("text", ""))
-        present = bool(text) and text in said
+        n = canary.get("target")
+        spellings = canary.get("text", "")
+        spellings = [spellings] if isinstance(spellings, str) else list(spellings)
+        # One fact may be written several ways — "143 employees", "143 staff" — and
+        # a probe run rounded a survey's "$147,300" to "~$147K". A canary lists the
+        # spellings that still prove the page was read; any one of them counts.
+        present = any(canary_in(normalise_ws(s), said) for s in spellings if s.strip())
         if mode == "denied":
             checks.append(finding("canary_absent", n, not present,
                                   f"no search can return in this room, so the canary for "
@@ -498,6 +511,26 @@ def evidence_map(text: str) -> dict | None:
     return None
 
 
+NAME_STOP = {"a", "an", "the", "and", "or", "of", "for", "with", "in", "on", "to", "at", "by"}
+
+
+def names_requirement(note: str, requirement: str) -> bool:
+    """The parenthetical is made of the Requirement's own words, in any order.
+
+    The rule asks for a few of the Requirement's words so the reader can tell which
+    row an ID is without scrolling to the map. A probe run wrote "R9 (Healthcare
+    data / HIPAA experience)" for "Healthcare data experience (HIPAA)": the same
+    words, reordered. A leading-fragment test failed it, and a check that fails a
+    correct name teaches nothing but rewording. What it still refuses is a word the
+    Requirement does not contain — a name that says something the map does not.
+    """
+    def words(s):
+        return {w.rstrip("s") for w in re.findall(r"[a-z0-9+]+", s.replace("*", "").replace("`", "").lower())
+                if w not in NAME_STOP}
+    got = words(note)
+    return bool(got) and got <= words(requirement)
+
+
 def leading_fragment(note: str, requirement: str) -> bool:
     def norm(s):
         return normalise_ws(s.replace("`", "").replace("*", ""))
@@ -509,7 +542,20 @@ def leading_fragment(note: str, requirement: str) -> bool:
 
 
 def snapshot_section(text: str) -> str | None:
+    """The decision snapshot: its own heading's section, or what surrounds the ledger.
+
+    A probe run titled its response with the user's question and gave the snapshot
+    no heading; the ledger was there and its bands could not be read. Without a
+    heading, the snapshot is the stretch from the heading above the ledger (or the
+    top) to the next heading at level two or above.
+    """
     lines = text.splitlines()
+    mark = next((i for i, line in enumerate(lines) if LEDGER_MARK.match(line)), None)
+    titled = any(re.match(r"^#{1,6}\s+.*snapshot", line, re.I) for line in lines)
+    if not titled and mark is not None:
+        start = next((j + 1 for j in range(mark, -1, -1) if re.match(r"^#{1,6}\s", lines[j])), 0)
+        end = next((j for j in range(mark + 1, len(lines)) if re.match(r"^#{1,2}\s", lines[j])), len(lines))
+        return "\n".join(lines[start:end])
     for i, line in enumerate(lines):
         head = re.match(r"^(#{1,6})\s+(.*)$", line)
         if head and "snapshot" in head.group(2).lower():
@@ -519,6 +565,31 @@ def snapshot_section(text: str) -> str | None:
                        len(lines))
             return "\n".join(lines[i + 1:end])
     return None
+
+
+AFTER_UNIVERSAL = re.compile(
+    r"\b(?:every|only|none|the one|the rest|no other|any other|"
+    r"all(?=\s+(?:the\s+|of\s+the\s+|other\s+)?(?:\w+[- ])?(?:rows?|requirements?|must[- _]?haves?|gates?|items?)\b))\b",
+    re.I)
+
+
+def ledger_sentence(text: str) -> str | None:
+    """The paragraph directly after the ledger's lines, unless it is the next slot."""
+    lines = text.splitlines()
+    mark = next((i for i, line in enumerate(lines) if LEDGER_MARK.match(line)), None)
+    if mark is None:
+        return None
+    i = mark + 1
+    while i < len(lines) and (not lines[i].strip() or lines[i].lstrip().startswith("- ")):
+        i += 1
+    para = []
+    while i < len(lines) and lines[i].strip():
+        para.append(lines[i].strip())
+        i += 1
+    text = " ".join(para)
+    if not text or text.startswith("**") or text.startswith("#") or text.startswith("|"):
+        return None
+    return text
 
 
 def check_fit_ledger(response: str) -> dict:
@@ -602,18 +673,18 @@ def check_fit_ledger(response: str) -> dict:
     for r, where in placed.items():
         for _, fit, note in where:
             requirement = rows.get(r, {}).get("requirement", "")
-            if note and leading_fragment(note, requirement):
+            if note and (leading_fragment(note, requirement) or names_requirement(note, requirement)):
                 copied_notes.add(note)
             if fit == "direct":
                 continue
             if not note:
                 bad_notes.append(f"{r} (`{fit}`) has no parenthetical")
-            elif not leading_fragment(note, requirement):
-                bad_notes.append(f"{r}'s ({note}) is not how its Requirement begins "
+            elif not (leading_fragment(note, requirement) or names_requirement(note, requirement)):
+                bad_notes.append(f"{r}'s ({note}) uses words its Requirement does not "
                                  f"({requirement[:60]!r})")
     checks.append(finding("ledger_parenthetical", "all", not bad_notes,
-                          "; ".join(bad_notes) or "every row below `direct` carries the start "
-                                                  "of its Requirement"))
+                          "; ".join(bad_notes) or "every row below `direct` is named in its "
+                                                  "Requirement's own words", "format"))
 
     wording = []
     for line in ledger["lines"]:
@@ -630,6 +701,18 @@ def check_fit_ledger(response: str) -> dict:
             wording.append(f"{word.group(0)!r} in {line['line'][:80]!r}")
     checks.append(finding("ledger_wording", "all", not wording,
                           "; ".join(wording) or "no numeral or quantifier in the ledger"))
+
+    # The one sentence the slot allows after the ledger is where the count came
+    # back: a probe run wrote "R5b and R8 are the only rows below `direct`" under a
+    # ledger that listed a third, and another "Every must-have is `direct`". The
+    # rule forbids any universal over the map there, true or not, because the
+    # true ones and the false ones read the same.
+    after = ledger_sentence(source_text)
+    word = AFTER_UNIVERSAL.search(after or "")
+    checks.append(finding("ledger_sentence", "all", word is None,
+                          f"{word.group(0)!r} in the sentence after the ledger: {after[:120]!r}"
+                          if word else "the sentence after the ledger names rows and claims "
+                                       "nothing about the rest"))
 
     section = snapshot_section(source_text)
     if section is None:

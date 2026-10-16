@@ -1180,7 +1180,7 @@ def break_ledger_summary_count(root: Path) -> str:
 
 def break_ledger_name(root: Path) -> str:
     swap_once(root, DOSSIER, "adjacent: R4 (Regulatory exposure)", "adjacent: R4 (Regulation)", "break_ledger_name")
-    return "which does not begin its Requirement cell"
+    return "in words its Requirement cell does not use"
 
 
 def break_ledger_band(root: Path) -> str:

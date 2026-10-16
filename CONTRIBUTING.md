@@ -101,7 +101,9 @@ limit, return a truncated reply, exit non-zero. **Every path where that can happ
 needs an explicit third outcome beside success and failure**, and it needs a test.
 
 The rule is written from four bugs, all in this repository's own harnesses, all
-the same mistake wearing different clothes — a non-result recorded as a result:
+the same mistake wearing different clothes — a non-result recorded as a result.
+The rows after those are the decline paths a research room and a pinned grader
+added, written down before they could become bugs of their own:
 
 | What declined | What it was recorded as | What it should have been |
 |---|---|---|
@@ -109,6 +111,10 @@ the same mistake wearing different clothes — a non-result recorded as a result
 | A run the CLI failed, usually a rate limit | `neither` | `error` |
 | A grader reply truncated mid-object | twelve expectations failed | the verdicts it did contain, marked truncated |
 | A session usage-limit message | a 48-character response, graded | a skipped execution with a reason |
+| A grader reply covering six of sixteen expectations | ten unflagged gaps, the run summarised as if complete | the gaps listed as incomplete, re-asked once, and an expectation with an ungraded run reported as unresolved, never clean |
+| A canned research room whose stub server never connected | a run that chose not to search | harness-invalid, replaced, and kept out of the run count |
+| A run that fired another skill with the same base name | the installed skill's output | a nudge in a fresh room, and harness-invalid if it still does not fire |
+| A run cut off by the timeout | a crash that ended the whole pass | a timed-out execution with its partial stream kept, and no nudge |
 
 Each was found by a person reading output that looked wrong, which is the slowest
 detector available and the one that fails silently when the output looks
@@ -234,7 +240,7 @@ reads job-underwriter's worked dossier: the decision snapshot's ledger, one line
 per Priority tier and its rows grouped by Fit, against the evidence-map table's
 #, Priority, Fit and Confidence columns and against the JSON envelope's
 `evidence_map`. Every row appears once, in enum order, each filed where the map
-files it; a row below `direct` carries the first words of its Requirement; a
+files it; a row below `direct` is named in its Requirement's own words; a
 band in the snapshot sits beside one row and is that row's; and the envelope's
 `decision.summary` holds no "N of M". The ledger was a sentence from v0.1 —
 "five of seven material requirements are `direct`" over a map with four — and a

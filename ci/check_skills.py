@@ -1608,6 +1608,12 @@ COUNTED = re.compile(r"\b(?:\d+|" + "|".join(COUNT_WORDS) + r")\s+of\s+(?:\d+|" 
 WORKED_DOSSIER = "skills/job-underwriter/references/dossier-template.md"
 
 
+def ledger_name_words(text: str) -> set[str]:
+    """A parenthetical's words, for checking it names its row in the row's own words."""
+    stop = {"a", "an", "the", "and", "or", "of", "for", "with", "in", "on", "to", "at", "by"}
+    return {w.rstrip("s") for w in re.findall(r"[a-z0-9+]+", text.lower()) if w not in stop}
+
+
 def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | None]], list[str]]:
     """(priority, fit, id, name) per item of the snapshot's ledger, and what failed to parse."""
     lines = snapshot.splitlines()
@@ -1709,8 +1715,8 @@ def check_fit_ledger() -> None:
         if fit != "direct":
             if not name:
                 fail(group, f"{WORKED_DOSSIER}: fit ledger's {rid} is below direct and carries no name")
-            elif not row["requirement"].lower().startswith(name.lower()):
-                fail(group, f"{WORKED_DOSSIER}: fit ledger names {rid} \"{name}\", which does not begin its Requirement cell")
+            elif not ledger_name_words(name) <= ledger_name_words(row["requirement"]):
+                fail(group, f"{WORKED_DOSSIER}: fit ledger names {rid} \"{name}\" in words its Requirement cell does not use")
     for rid, n in seen.items():
         if n > 1:
             fail(group, f"{WORKED_DOSSIER}: fit ledger lists {rid} {n} times")
