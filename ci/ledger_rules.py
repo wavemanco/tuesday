@@ -49,18 +49,29 @@ COUNTED = re.compile(r"\b" + _NUMBER + r"\s+of\s+" + _NUMBER + r"\b", re.I)
 FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b|\b" + _NUMBER + r"\s+out\s+of\b", re.I)
 
 # What a count or a quantifier is about when it is about the map: a tier, rows or
-# requirements, a fit, or the rows below `direct` as "gaps". How the prose is read:
+# requirements, a fit, or the rows below `direct` as "gaps". How the prose is read,
+# stated once here for every check that reads it:
 #
 # - Some map words are also ordinary English: "two important unknowns", "one direct
 #   conversation", "two direct reports", "absent a reference", "a gap analysis". Each
-#   of these — important, preferred, direct, absent, gate(s), gap(s) — is a map word
-#   only as a token (in backticks, `important`), where it ends its noun phrase
-#   ("only two direct.", "five important", "the one gap", "both gates are met"), or
-#   where a requirement noun follows it ("two direct rows", "the one preferred
-#   item") (_map_word, _NP_END); followed by any other noun it is that noun's
-#   adjective, and the count is about the noun. The words that are never ordinary
-#   English — must-have, hard gate, requirement, row, adjacent, unclear,
-#   hard_gate_fail — are map words wherever they stand.
+#   of these — important, preferred, direct, absent and singular gate and gap — is a
+#   map word only as a token (in backticks, `important`), where it ends its noun
+#   phrase ("only two direct.", "five important", "the one gap"), or where a word in
+#   _NP_END follows it: a linking verb or preposition ("both gate rows are met"), a
+#   requirement noun ("two direct rows", "the one preferred item"), a fit noun ("five
+#   direct fits", "two direct matches") or a verb a gate, gap or fit takes as its
+#   predicate ("every gate passes", "neither gate fails", "4 of 7 met"). Followed by
+#   any other word it is that word's adjective, and the count is about that word. A
+#   hyphen that joins a word ("direct-to-consumer", "on-call") does not end a noun
+#   phrase. The words that are never ordinary English — must-have, hard gate,
+#   requirement, row, adjacent, unclear, hard_gate_fail, and the plurals gates and
+#   gaps — are map words wherever they stand ("two gates fail outright").
+# - "N of M" and a fraction ("4/7", "four out of seven") are a count over the map when
+#   they end their noun phrase ("Fit: 4 of 7.", "4 of 7 met") or a map word follows in
+#   reach ("4/7 direct", "five of seven material requirements"). Followed by any other
+#   noun they count that noun ("one of two openings", "24/7 on-call", "3 of 5 years").
+#   One whose first number exceeds its second ("24/7", "2024/25") counts no rows.
+#   That is RATIO, read through map_claim with everything else here.
 # - A year is not a count: "February 2027" never counts rows (_COUNT).
 # - A count does not reach a singular map noun named by a row ID: "round 2 of the
 #   interviews, and the R8 gate" names R8's gate and counts nothing (MAP_COUNT only; a
@@ -70,11 +81,14 @@ FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b|\b" + _NUMBER + r"\s+out\s+of\b", re.I
 #   linking verb stands between ("two have a gap", "only R4 has a gap" still count).
 # - A count inside a parenthesis does not reach a map word outside it: "(mentor two
 #   juniors) is `unclear`" counts juniors (_search).
-_NP_END = (r"(?=\s*(?:[^\w\s]|\Z|(?:and|or|but|nor|is|are|was|were|be|been|sit|sits|remain|remains|read|reads|"
+_NP_END = (r"(?=\s*(?:-(?!\w)|[^\w\s-]|\Z|(?:and|or|but|nor|is|are|was|were|be|been|sit|sits|remain|remains|read|reads|"
            r"stand|stands|has|have|had|would|will|can|may|might|must|should|in|on|at|to|for|of|with|from|under|"
            r"below|above|across|among|against|than|a|an|the|that|which|this|left|remaining|open|outstanding|"
            r"here|there|now|ones?|" + ROW_ID + r"|rows?|requirements?|tiers?|items?|skills?|qualifications?|"
-           r"criteri(?:on|a)|dut(?:y|ies)|responsibilit(?:y|ies)|asks?|terms?|conditions?)\b))")
+           r"criteri(?:on|a)|dut(?:y|ies)|responsibilit(?:y|ies)|asks?|terms?|conditions?|"
+           # the fit nouns, and the verbs a gate, gap or fit takes as its predicate
+           r"fits?|match(?:es)?|met|meets?|fail(?:s|ed)?|pass(?:es|ed)?|holds?|held|blocks?|blocked|"
+           r"clears?|cleared|matters?|closes?|closed|stays?)\b(?!-\w)))")
 
 
 def _map_word(words: str) -> str:
@@ -83,10 +97,10 @@ def _map_word(words: str) -> str:
     return r"(?:(?<=`)" + words + r"\b|" + words + r"\b" + _NP_END + r")"
 
 
-TIER_WORDS = (r"(?:hard[_ -]?gates?|must[_ -]?haves?|requirements?|rows?|"
-              + _map_word(r"(?:important|preferred|gates?)") + r")")
+TIER_WORDS = (r"(?:hard[_ -]?gates?|must[_ -]?haves?|requirements?|rows?|gates|"
+              + _map_word(r"(?:important|preferred|gate)") + r")")
 FIT_WORDS = r"(?:adjacent|unclear|hard[_ -]?gate[_ -]?fails?|" + _map_word(r"(?:direct|absent)") + r")"
-MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|" + _map_word(r"gaps?") + r")"
+MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|gaps|" + _map_word(r"gap") + r")"
 # A singular map noun right after a row ID is that row's name, not a counted word.
 _NAMED = "".join(rf"(?<!R{d}{x} )(?<!R{d}{x}` )" for d in (r"\d", r"\d\d") for x in ("", "[a-z]"))
 _COUNTED_MAP_WORDS = r"(?:" + _NAMED + r"|(?!(?:gate|gap|requirement|row)\b))" + MAP_WORDS
@@ -101,10 +115,11 @@ _REACH = (r"(?:(?:" + _SEP + _LINK + r"\b){0,3}?" + _SEP + r"an?\b)?(?:" + _SEP 
 # of a decimal, a range ("3–7") or a row ID ("R4" has no word boundary before its
 # digit), not quoted ("a team of one"), not a year ("2027"), and not a figure with
 # its unit — "8+ years", "an 8-year bar", "9 years", "three squads" are the
-# candidate's or the posting's numbers, which the rule leaves alone.
+# candidate's or the posting's numbers, which the rule leaves alone — and not the
+# pronoun in "this one" or "that one".
 _UNIT = (r"(?:years?|yrs?|months?|weeks?|days?|hours?|minutes?|people|persons?|employees|staff|"
          r"reports?|squads?|teams?|engineers?|times?|percent)")
-_COUNT = (r"(?<![(£$€#.\d–—-])\b(?!(?:19|20)\d\d\b)" + _NUMBER
+_COUNT = (r"(?<![(£$€#.\d–—-])(?<!\bthis )(?<!\bthat )\b(?!(?:19|20)\d\d\b)" + _NUMBER
           + r"\b(?!\s*\)|[.,]\d|%|\+|[-–—]\s*\d|-|[\"”’']|\s+" + _UNIT + r"\b)")
 # "Four rows", "four direct", "four of the seven material requirements",
 # "5/7 must-haves": a count, then within reach a map word.
@@ -113,18 +128,18 @@ MAP_COUNT = re.compile(
     + r"|" + FRACTION.pattern + r")" + r"(?:" + _REACH + r")?" + _COUNTED_MAP_WORDS + r"\b", re.I)
 
 # The quantifiers the rule forbids over the map or a tier of it: evidence-model.md's
-# list, verbatim ("The row is the unit"), which states it once. The list scopes
-# three — AFTER_LEDGER_ONLY: "no other", "any other" and a bare "none" — to the one
-# sentence after the fit ledger, where any of them fails wherever it stands
-# (AFTER_LEDGER_UNIVERSAL). ci/check_skills.py holds both scopes to the list as
+# list, verbatim ("The row is the unit"), which states it once. Every word of it is a
+# quantifier over the map wherever a map word follows it within reach (MAP_UNIVERSAL),
+# and any of them fails in the one sentence after the fit ledger wherever it stands
+# (AFTER_LEDGER_UNIVERSAL). The list scopes one more to that sentence only —
+# AFTER_LEDGER_ONLY, a bare "none" — because the slots elsewhere require "none
+# failed" and "none found"; the token `none` in backticks is a band or a gap type and
+# never a quantifier. ci/check_skills.py holds both scopes to the list as
 # rule_quantifier_scopes() reads it, so a word added to either side there fails CI
 # until it is added here.
-# Elsewhere (MAP_UNIVERSAL) "no other" and "any other" fail only with a map word in
-# reach, like the first eleven, and bare "none" not at all. The token `none` in
-# backticks is a band or a gap type, and the list says it is not a quantifier.
-AFTER_LEDGER_ONLY = ("no other", "any other", "none")
+AFTER_LEDGER_ONLY = ("none",)
 QUANTIFIERS = ("N of M", "every", "all", "each of", "only", "the one", "none of", "both",
-               "neither", "the rest", "no `must_have` row") + AFTER_LEDGER_ONLY
+               "neither", "the rest", "no other", "any other", "no `must_have` row") + AFTER_LEDGER_ONLY
 
 
 def _phrase(phrase: str) -> str:
@@ -217,23 +232,49 @@ def _search(pattern: re.Pattern, text: str) -> re.Match | None:
     return None
 
 
+# "N of M", "N out of M" and "4/7" (not a date's "10/16/2026", not a decimal). They
+# count the map only as the comment above MAP_WORDS says: ending their noun phrase, or
+# with a map word in reach, which MAP_COUNT reads.
+RATIO = re.compile(r"(?:\b(" + _NUMBER + r")\s+(?:out\s+)?of\s+(" + _NUMBER + r")\b|(?<![\d/.,])\b(\d+)\s*/\s*(\d+)\b"
+                   r"(?!\s*/\s*\d|[.,]\d))" + _NP_END, re.I)
+
+
+def _number(word: str) -> int:
+    return int(word) if word.isdigit() else COUNT_WORDS[word.lower()]
+
+
+def _ratio(text: str) -> re.Match | None:
+    """The first RATIO that could count rows: its first number no larger than its
+    second."""
+    for hit in RATIO.finditer(text):
+        n, m = (hit.group(1), hit.group(2)) if hit.group(1) else (hit.group(3), hit.group(4))
+        if _number(n) <= _number(m):
+            return hit
+    return None
+
+
 def map_claim(text: str) -> re.Match | None:
-    """A count, fraction or quantifier over the map in prose that summarises it
-    (decision.summary): any "N of M" or fraction, or a count or list word with a
-    map word in reach."""
-    return COUNTED.search(text) or FRACTION.search(text) or _search(MAP_COUNT, text) \
-        or _search(MAP_UNIVERSAL, text)
+    """A count, fraction or quantifier over the map, in any prose that reads it: the
+    snapshot's prose, decision.summary, and the counts in the sentence after the
+    ledger. The one reader every check of the rule calls, in CI and in the harness: a
+    ratio that counts rows (RATIO), a count with a map word in reach (MAP_COUNT), or a
+    word of the list with a map word in reach (MAP_UNIVERSAL). Counts that are not
+    about map rows — the candidate's own figures, "two of three squads", "24/7
+    on-call", the Research tier line — are outside the rule, and bare "none" stays out
+    because the slots require "none failed" and "none found". How the words are read
+    is stated once, above MAP_WORDS."""
+    return _ratio(text) or _search(MAP_COUNT, text) or _search(MAP_UNIVERSAL, text)
 
 
 SECOND_SENTENCE = re.compile(r"(?s)(?<=\S)\s.*")
 
 
 def after_ledger_claim(text: str) -> re.Match | None:
-    """What rule 2 forbids after the ledger: a count, fraction or any listed quantifier
-    ("at most one sentence … says nothing about the rows it does not name"), or a
-    second sentence. For a second sentence the match is that sentence."""
-    hit = COUNTED.search(text) or FRACTION.search(text) or _search(MAP_COUNT, text) \
-        or AFTER_LEDGER_UNIVERSAL.search(text)
+    """What rule 2 forbids after the ledger: a count or fraction over the map, read as
+    map_claim reads it everywhere; any word of the list, "N of M" included, wherever
+    it stands ("at most one sentence … says nothing about the rows it does not
+    name"); or a second sentence. For a second sentence the match is that sentence."""
+    hit = map_claim(text) or AFTER_LEDGER_UNIVERSAL.search(text)
     if hit:
         return hit
     parts = sentences(text)
@@ -247,17 +288,6 @@ def is_second_sentence(text: str, hit: re.Match | None) -> bool:
     """Whether after_ledger_claim's hit is the extra-sentence case rather than a
     count or quantifier, so both checkers word the failure the same way."""
     return bool(hit) and len(sentences(text)) > 1 and hit.group(0) == text[hit.start():]
-
-
-def prose_count(text: str) -> re.Match | None:
-    """A count, fraction or quantifier over the map in the snapshot's prose: a count
-    or a word of the list with a tier, "rows"/"requirements"/"gaps" or a fit in reach
-    (MAP_COUNT, MAP_UNIVERSAL). Counts that are not about map rows — the candidate's
-    own figures, "two of three squads", the Research tier line — are outside the rule,
-    and bare "none" stays out because the slots require "none failed" and "none
-    found". How the words are read — the ordinary-English map words, years, row
-    names, articles, parentheses — is stated once above MAP_WORDS."""
-    return _search(MAP_COUNT, text) or _search(MAP_UNIVERSAL, text)
 
 
 LEDGER_MARK = re.compile(r"^\s*[*_]*\s*fit ledger\b", re.I)
@@ -425,6 +455,16 @@ def name_words(text: str) -> set[str]:
             if w not in NAME_STOP}
 
 
+# A row named in its Requirement's own words, "R6 (Fully remote (UK))": the words in
+# parentheses, which may hold one level of their own, since a Requirement's words do
+# ("Remote (US) or our Denver office"). One grammar for the item wherever rule 2's
+# naming rule applies — the fit ledger (LEDGER_ITEM, read by CI on the worked
+# dossier and by the harness on runs) and the hard-gates line's failed and
+# unconfirmed rows (GATE_ITEM) — so the two cannot accept different words.
+ITEM_WORDS = r"\(((?:[^()]|\([^()]*\))+)\)"
+LEDGER_ITEM = re.compile(r"^(" + ROW_ID + r")(?:\s+" + ITEM_WORDS + r")?$")
+
+
 def names_requirement(note: str, requirement: str) -> bool:
     got = name_words(note)
     return bool(got) and got <= name_words(requirement)
@@ -434,7 +474,7 @@ def names_requirement(note: str, requirement: str) -> bool:
 
 CONSTRAINTS_CLAUSE = re.compile(
     r"\s*;?\s*candidate constraints not given\s*[-—–]+\s*checks against them unknown\s*$", re.I)
-GATE_ITEM = re.compile(r"^(" + ROW_ID + r")\s*(?:\(\s*`([a-z_]+)`\s*\)|`([a-z_]+)`|\(([^()]*)\))?$")
+GATE_ITEM = re.compile(r"^(" + ROW_ID + r")\s*(?:\(\s*`([a-z_]+)`\s*\)|`([a-z_]+)`|" + ITEM_WORDS + r")?$")
 CLAUSE_ORDER = {"failed": 0, "none failed": 0, "none stated": 0, "unconfirmed": 1, "met": 2}
 
 

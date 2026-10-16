@@ -784,7 +784,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     write_meta(out, stem, meta)
     init = graded.get("init") or {}
     read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
-    links = len(read) + len(unread)
+    links = sum(len(fetches) for fetches in [*read.values(), *unread.values()])
     print(f"  ran {skill} eval {case['id']} [{mode}] (run {run}): {len(text)} chars"
           f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not graded['nudged'] else ' (needed a nudge to fire)'}"
@@ -883,9 +883,9 @@ def observed_block(meta: dict, research: dict | None = None) -> str:
     A fetch of a link the fixture declares the user gave to read is sorted out by
     `output_checks.user_link_reads`, the classifier the deterministic checks use,
     and listed in its own group: it is reading an input, never in the fetch count,
-    and `user links read N` counts only the reads that returned, so a grader
-    comparing the tally with this record compares it with the same numbers the
-    checks do.
+    and `user links read N` counts the links with a fetch that returned, each once,
+    so a grader comparing the tally with this record compares it with the same
+    numbers the checks do.
     """
     if meta.get("research_log") is None:
         return ("Not recorded for this run: do not infer whether research was attempted, "
@@ -914,16 +914,19 @@ def observed_block(meta: dict, research: dict | None = None) -> str:
                      f"{len(calls) - searches} fetch(es), refused ones included:"]
             lines += [line(e) for e in calls]
         if links:
-            lines.append(f"User links read: {len(links)} fetch(es) of a link the user gave to read "
-                         f"that returned — reading an input, not research, so named on the tally "
-                         f"line as `user links read {len(links)}` and never in its fetch count:")
-            lines += [line(e) for e in links]
+            fetched = [e for es in links.values() for e in es]
+            lines.append(f"User links read: {len(links)} link(s) the user gave to read, fetched and "
+                         f"returned ({len(fetched)} fetch(es) listed below) — reading an input, not "
+                         f"research, so named on the tally line as `user links read {len(links)}`, each "
+                         f"link once however often fetched, and never in its fetch count:")
+            lines += [line(e) for e in fetched]
         if unopened:
-            lines.append(f"User links not opened: {len(unopened)} fetch(es) of a link the user gave "
-                         f"to read that the host refused or that errored — not reads, so not counted "
-                         f"on the tally line or in its fetch count; the response should say it could "
-                         f"not open the link:")
-            lines += [line(e) for e in unopened]
+            fetched = [e for es in unopened.values() for e in es]
+            lines.append(f"User links not opened: {len(unopened)} link(s) the user gave to read that no "
+                         f"fetch returned — the host refused or errored ({len(fetched)} fetch(es) listed "
+                         f"below); not reads, so not counted on the tally line or in its fetch count; the "
+                         f"response should say it could not open the link:")
+            lines += [line(e) for e in fetched]
     if meta.get("research_log_provenance"):
         lines.append("(Reconstructed from the run's session transcript.)")
     earlier = [inv for i, inv in enumerate(meta.get("invocations") or [])

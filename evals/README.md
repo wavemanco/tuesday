@@ -323,8 +323,10 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   one trailing `/` dropped; path and query kept) is reading an input, not
   research: it is left out of those counts, of attribution and of `zero_calls`.
   `; user links read N`, on every form of the line, `no searches` included,
-  counts the declared-link fetches that returned; one the host could not open is
-  not a read and is not counted (the response should say it could not open it,
+  counts the declared links with at least one fetch that returned, each once
+  after `norm_url` however often it was fetched (`output_checks.user_link_reads`,
+  which the grader's observed block reads too); a link no fetch of which returned
+  is not a read and is not counted (the response should say it could not open it,
   which the graders judge). Nothing is inferred from the prompt, so a prefix, a
   parent path or the home page of a declared link is research.
 - **Canaries**, for a fixture that plants them: in a denied room a canary must
@@ -341,15 +343,18 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   patterns and rule functions are `ci/ledger_rules.py`, the same ones CI runs on
   the worked dossier, so the two checks of a rule cannot disagree; how they read
   prose — a year is no count, a fit or tier word that is also ordinary English
-  ("two important unknowns") is a map word only as a token or at the end of its
-  noun phrase — is stated once there, above `MAP_WORDS`. A ledger row's
-  parenthetical and a failed or unconfirmed gate row's are judged by one naming
-  rule, `ledger_rules.names_requirement`. Checks:
-  `ledger_sentence` (no count, fraction or listed quantifier after the ledger,
-  and no second sentence), `snapshot_count` (no count, fraction or listed
-  quantifier over the map in the snapshot's prose), `summary_count` (the same in
-  the last JSON envelope's `decision.summary`, read with `map_claim` as CI reads
-  the worked dossier's; unchecked when the response has no envelope with one),
+  ("two important unknowns") is a map word only as a token or where its noun
+  phrase ends, and "N of M" or a fraction counts rows only where it ends its noun
+  phrase or a map word follows — is stated once there, above `MAP_WORDS`. A
+  ledger row's parenthetical and a failed or unconfirmed gate row's are judged by
+  one naming rule, `ledger_rules.names_requirement`, on one item grammar,
+  `ledger_rules.ITEM_WORDS`. One count reader, `ledger_rules.map_claim`, reads
+  every count, fraction and quantifier over the map, here and in CI. Checks:
+  `ledger_sentence` (no count over the map, no word of the quantifier list in
+  any sense, and no second sentence after the ledger), `snapshot_count` (no
+  count, fraction or listed quantifier over the map in the snapshot's prose),
+  `summary_count` (the same, by the same reader, in the last JSON envelope's
+  `decision.summary`; unchecked when the response has no envelope with one),
   `snapshot_band` (a bare band
   word, backticked or not, only as `R4 (\`medium\`)` and equal to that row's
   Confidence; `RR2 (\`high\`)` or `RR2 (high)` is a severity written as a band,
@@ -361,7 +366,7 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   fit but `direct`, `unclear` or `hard_gate_fail`, or `hard_gate_fail` on a row that
   is not a gate, fails `gates_line` however the line reads, per `evidence-model.md`
   "A gate is met, not established, or failed"), and `severity` and
-  `severity_form` (every `RR4 (\`severity: high\`)` against the risk register's
+  `severity_form` (every `RR5 (\`severity: high\`)` against the risk register's
   Severity, and the severe-red-flags slot naming exactly its high entries). The
   hard-gates line's closing "candidate constraints not given" clause is judged
   against the fixture's `candidate_constraints` (above); a response with no risk
@@ -373,11 +378,11 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   check reported unchecked, never run against the prompt instead. A Provenance
   quotation must also appear in the response's own evidence column, because the
   template quotes it "exactly as it appears in the fit snapshot". The one
-  exception is a dossier field named by its field, the source
-  `references/question-rubric.md` allows a plain acknowledgment: a quotation right
-  after `prohibited_claims`, `acknowledge_gap` or `rejected_inferences` is that
-  field's item, and must equal, whole, an item the request's dossier lists under
-  that field. Quotations of
+  exception is a dossier item named by its field, the source mock-interview's
+  `references/question-rubric.md` ("A plain acknowledgment") allows and defines:
+  a quotation that equals, whole, one item the request's dossier lists under a
+  field its Provenance cell names (`output_checks.fields_named`) is that item;
+  any other quotation in the cell is the candidate's words. Quotations of
   three words or more in a Requirement column beside the verbatim one must appear
   in the request or in a canned room's pages; that is existence, not attribution,
   which stays with the graders. `evidence_form`, a format check, parses each

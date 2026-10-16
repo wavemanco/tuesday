@@ -9,7 +9,7 @@ Deliver these sections in this order. The conditionality column is binding — a
 | 1 | Title block | Always | Role, company, interviewer name + relationship if known; one line on what changed if this is a regeneration |
 | 2 | How to use + type key | Always | Personas = how it's asked, types = what's scored; the five type tags with one-line meanings; "guidance is scaffolding, not a script" |
 | 3 | Prep triage | Prep time known | A prioritized schedule sized to the stated time: the few things done well, in order, each tied to a section or question ID — closing with an explicit "everything else is insurance" line. Never pad it to look busy |
-| 4 | Fit snapshot | Always | The table worked below under **The fit snapshot**. Confidence holds exactly one of `high`, `medium`, `low`, `none`; provenance exactly one of `[grounded]`, `[inferred]`, `[generic]`; gap type exactly one of the six in `references/evidence-conventions.md` §3, chosen by the routing rule below the worked table. With no background at all — no CV, nothing about the candidate's past in the conversation or a dossier — it is the worksheet variant: the same columns, every evidence cell `none given`, confidence `none`, gap type `discovery`, and the bridge column holding what strong evidence looks like, then an answer slot (F3's shape) where a raising source raises the requirement, otherwise a selection scaffold ending in its honest branch, both as defined in `references/question-rubric.md`; where only some requirements have no quote, those rows take that shape and the snapshot stays a normal one. Where the requirements come from: the JD's own words, quoted; with no JD, the recruiter's or interviewer's own words, quoted, `[grounded]`; then a fetched representative JD, quoted with its source named, `[inferred]`; otherwise role-family requirements as plain unquoted prose, `[generic]`, with the representative-JD search in the upgrade menu. Only text that exists in the user's inputs or a fetched page goes inside quotation marks |
+| 4 | Fit snapshot | Always | The table worked below under **The fit snapshot**. Confidence holds exactly one of `high`, `medium`, `low`, `none`; provenance exactly one of `[grounded]`, `[inferred]`, `[generic]`; gap type exactly one of the six in `references/evidence-conventions.md` §3, chosen by the routing rule below the worked table. With no background at all — no CV, nothing about the candidate's past in the conversation or a dossier — it is the worksheet variant: the same columns, every evidence cell `none given`, confidence `none`, gap type `discovery` except a gate row, which the routing rule makes `hard_gate` with that rule's one question as its bridge, and every other row's bridge column holding what strong evidence looks like, then an answer slot (F3's shape) where a raising source raises the requirement, otherwise a selection scaffold ending in its honest branch, both as defined in `references/question-rubric.md`; where only some requirements have no quote, those rows take that shape and the snapshot stays a normal one. Where the requirements come from: the JD's own words, quoted; with no JD, the recruiter's or interviewer's own words, quoted, `[grounded]`; then a fetched representative JD, quoted with its source named, `[inferred]`; otherwise role-family requirements as plain unquoted prose, `[generic]`, with the representative-JD search in the upgrade menu. Only text that exists in the user's inputs or a fetched page goes inside quotation marks |
 | 5 | Graded deliverables | Recruiter/HR pre-declared a deliverable (POV, presentation, take-home) | One build section per declared deliverable: the grounded facts to build on — any about the candidate given as the fit-snapshot row it draws on (F#) and a sentence quoted exactly from that row's evidence cell, per the pack-cell rule in `references/question-rubric.md` — 2–3 defensible theses each with a mandatory concession, differentiation strategy against the consensus answer (with the anti-pick where the role warrants saying no), and the requested close (e.g., customer benefit) if HR named one. In loop mode these are shared sections, like the values cheat sheet |
 | 6 | Grounding brief | L2 research ran, or an equivalent strategy brief was provided | Learn-the-vocabulary company section: current segmentation language, headline numbers, live leadership and strategy context, recent moves. The candidate should sound current, not archival; flag stale framings in provided documents without coaching the candidate to correct the interviewer |
 | 7 | Reading the interviewer | Real interviewer info exists | Career pattern, self-described style, 2–4 practical implications, the mirror opportunities (shared jumps, shared vocabulary) — a shared jump pairs the interviewer's public path with a sentence quoted exactly from a named fit-snapshot row's evidence cell (F#), never a summary of it; where no row's evidence carries the candidate's side of the jump, it is not offered as one. Public footprint only |
@@ -71,7 +71,15 @@ Seven rules the columns enforce, in the order they get broken:
   acknowledgment the candidate never stated is as much an invention as a claim
   they never made.
 - **The gap type follows the evidence cell, not the writer's sense of the row.**
-  This is the one statement of the routing; `SKILL.md` points here.
+  This is the one statement of the routing; `SKILL.md` points here. A gate is
+  decided first, and every other bullet applies only to a requirement that is
+  not a gate the material leaves open:
+  - `hard_gate` when the requirement is a gate — an eligibility, credential or
+    constraint, as `references/evidence-conventions.md` §3 defines it — and the
+    material does not show it met, whether it shows it unmet or says nothing.
+    That section governs the row: surfaced, never bridged, and its only words
+    are the one question it allows, whether the gate is met. A gate the
+    material shows met routes by its evidence cell like any other row.
   - `none` when a quote already reaches the requirement in role-relevant terms
     (F2). The band plays no part here: confidence is the other axis, set by
     `references/evidence-conventions.md` §2 alone.
@@ -87,8 +95,6 @@ Seven rules the columns enforce, in the order they get broken:
     are an answer slot. Silence is `discovery`, never `capability`.
   - `capability` only when the candidate stated the absence, or a dossier records
     it (F4). Its words come only from the stated negative or the dossier field.
-  - `hard_gate` when an eligibility, credential or constraint is not met, per
-    `references/evidence-conventions.md` §3, surfaced and never bridged.
 - **Bridge language is spoken aloud, so `reframing-audit.md` governs every clause
   of it** — six axes, and the incident-or-practice axis is the one that slips:
   F1 ran a round, and running a round does not mean setting its stages. That is
@@ -153,9 +159,8 @@ Rules this shape enforces:
 
 - **Provenance carries every sentence the guidance's claims about the candidate
   rest on, each quoted exactly as it appears in the fit snapshot** — except a
-  dossier item a plain acknowledgment rests on, which is named by its field as the
-  plain-acknowledgment paragraph of `references/question-rubric.md` allows, and
-  quoted, if at all, as that field's whole item. A row reference
+  dossier item a plain acknowledgment rests on, which is named and quoted as the
+  plain-acknowledgment paragraph of `references/question-rubric.md` says. A row reference
   ("see F1"), "as above", or a paraphrase is not a quote. A row whose guidance makes
   no claim about the candidate, like A3, carries its label alone.
 - **Any clause in a bank cell that says what the candidate did, owned, decided or
@@ -223,9 +228,9 @@ of them listed as "refused" or "errored".
 
 ## Loop mode
 
-Use when the user faces multiple scheduled rounds. Ask which rounds are on the calendar (this piggybacks on the Step 1 message — it does not add a second elicitation round). Structure: one shared fit snapshot + sources block, then a mini-pack per round with that round's persona weights, its own bank (8–12 questions), and its own reverse questions. The values cheat sheet lives with whichever round research says is values-focused. The upgrade menu is shared and sits at the end.
+Use when the user faces multiple scheduled rounds. Ask which rounds are on the calendar (this piggybacks on the Step 1 message — it does not add a second elicitation round). Structure: one shared fit snapshot + sources block, then a mini-pack per round with that round's persona weights, its own bank (8–12 questions), and its own reverse questions. The values cheat sheet lives with whichever round a loop source names as values-style (`references/research-checklist.md`). The upgrade menu is shared and sits at the end.
 
-A known multi-session round with an *unknown* schedule — "the final round" at companies whose finals are several back-to-back sessions — is not loop mode. Run session mode with blended persona weights, and offer per-session mini-packs in the upgrade menu for when the user has the schedule. Do not assert how this company's final is structured unless research or the user established it; the upgrade-menu line can be conditional — "if your final is several sessions, send the schedule" — which needs no claim at all. Loop mode needs a schedule to key on; guessing one fabricates structure.
+A known multi-session round with an *unknown* schedule — "the final round" at companies whose finals are several back-to-back sessions — is not loop mode. Run session mode with blended persona weights, and offer per-session mini-packs in the upgrade menu for when the user has the schedule. Do not assert how this company's final is structured unless a loop source, as `references/research-checklist.md` defines it, established it; the upgrade-menu line can be conditional — "if your final is several sessions, send the schedule" — which needs no claim at all. Loop mode needs a schedule to key on; guessing one fabricates structure.
 
 ## Drill mode
 

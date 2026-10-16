@@ -248,13 +248,14 @@ row below `direct` named only in words its Requirement cell uses. A band beside 
 row ID, backticked or not — R3 (`medium`), R3 (medium) — is that row's Confidence; a
 band beside a register ID is a severity written like a band and fails, and so does
 one attached to nothing. Everything between the ledger and the next slot is rule 2's
-one sentence: it fails as a second sentence, or with any "N of M" or fraction, a
-count, or any word of evidence-model.md's quantifier list, the words the list scopes
-to that sentence included. The rest of the snapshot, and the envelope's
-`decision.summary`, fail on a count or a word of that list with a map word in reach,
-or on "all but"; the summary fails on any "N of M" or fraction too. What is a count,
-which words are map words, and how far a count reaches are stated once, in the
-comment above `MAP_WORDS` in `ci/ledger_rules.py`. The **Hard gates:** slot is
+one sentence: it fails as a second sentence, with a count over the map, or with any
+word of evidence-model.md's quantifier list in any sense, the bare "none" the list
+scopes to that sentence included. The rest of the snapshot, and the envelope's
+`decision.summary`, fail on a count over the map or a word of that list with a map
+word in reach, or on "all but". One reader, `ledger_rules.map_claim`, reads every
+count for all three, here and in the harness. What is a count, which words are map
+words, how far a count reaches, and when "N of M" or a fraction counts rows are
+stated once, in the comment above `MAP_WORDS` in `ci/ledger_rules.py`. The **Hard gates:** slot is
 required in every snapshot and parsed as rule 4 states it: its failed, unconfirmed
 and met clauses are compared with the map's `hard_gate` rows, each failed and
 unconfirmed row named in words its Requirement uses, and the closing clause with the
@@ -268,7 +269,7 @@ L1 budget SKILL.md's and no count above its budget. And the quantifier list in
 evidence-model.md ("The row is the unit") is the one statement of the words: the
 shared set holds exactly it, scope by scope; risk-and-decision.md's rule 2 points to
 it and spells none of it; and every job-underwriter expectation that speaks of
-quantifiers quotes each of its words, the ones it scopes to the sentence after the
+quantifiers quotes each of its words, the one it scopes to the sentence after the
 ledger inside the expectation's sentence about that sentence and nowhere else.
 The ledger was a sentence from v0.1 — "five of seven material requirements are
 `direct`" over a map with four — and a dossier whose ledger cannot be parsed fails
@@ -337,17 +338,21 @@ README and references, conventions/, `evals/README.md`, and every clause,
 expectation and expected output as the runner expands them. It fails "returned
 something" and "every call was refused" without "or errored", the accounting labels
 an errored call broke; the wordings this round's rule changes retired — "only when
-the search budget was fully spent" as the sole ground for a no-call `unavailable`,
-`user links read` counted with "refused ones included", failed gate rows named
-"plainly", a missing hard-gates slot failing only "when the map has gate rows", and
-"years" in a sentence that lists hard gates; an expectation or clause that defines the yes/unavailable
-labels without "returned a result" and "or errored"; an L0 definition — a paragraph
+the search budget was fully spent" in a sentence that names neither L0 nor declining
+research, the sole ground for a no-call `unavailable`; `user links read` counted with
+"refused ones included"; failed gate rows named "plainly"; a missing hard-gates slot
+failing only "when the map has gate rows"; and "years" within a sentence after "hard
+gate(s)" with no negation ("not", "never", "except", "rather than", "instead of",
+"n't") before it — a gate list, not the rule that retired years from it. It also
+fails an expectation or clause that defines the yes/unavailable labels without
+"returned a result" and "or errored"; an L0 definition — a paragraph
 or list item naming L0, or one under a heading that does — that says "no network";
 and, in mock-interview's personas.md, a story pre-mapped ("pre-map", "every … story
 ends with") in a block that says nothing of a quote, or the loss of the line under
 "The seven personas" that points to the quote-or-slot rule in question-rubric.md.
-It reads these phrases and nothing near them: a paraphrase of a retired wording
-passes.
+It reads these phrases, and for the budget and years wordings the sentence each
+stands in (`SentenceRule` in `ci/check_skills.py`), and nothing else: a paraphrase
+of a retired wording passes.
 
 **Every declared enum has a column.** `--only columns` reads each skill's
 `enum_columns` declaration beside `enum_fields`: it maps every declared enum to the

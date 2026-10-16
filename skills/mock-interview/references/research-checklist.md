@@ -37,7 +37,7 @@ In claude.ai, the platform's deep-research feature is the natural way to produce
 
 ## Loop detection → archetype fallback
 
-From L1 target 2, try to name the company's actual rounds. When research can't establish the loop, fall back to an archetype **and say so in the pack** — the candidate should know their persona weights rest on a pattern, not on this company's documented process.
+From L1 target 2, try to name the company's actual rounds. **A loop source** is a source the pack read and names in Sources: the company's interviewing or careers page, read or pasted; a candidate guide labelled as Source quality below says; or the user's, the recruiter's or the interviewer's own words. This is the one definition of it; the template points here. When no loop source establishes the loop, fall back to an archetype **and say so in the pack** — the candidate should know their persona weights rest on a pattern, not on this company's documented process.
 
 | Archetype | Typical loop | Persona tilt | Values-style round, as a fallback |
 |---|---|---|---|
@@ -50,10 +50,10 @@ From L1 target 2, try to name the company's actual rounds. When research can't e
 
 **A values-style round is detected** in exactly two cases; this is the one definition, and the template's section 10, `SKILL.md` Step 3 and the rubric's VAL coverage rule point here.
 
-- **A source documents one.** A source for the loop that the pack read and names in Sources — the company's interviewing or careers page, a candidate guide labelled as Source quality below says, or the user's, the recruiter's or the interviewer's own words — names a round, or a part of one, that assesses values, principles, behaviours or a competency framework.
-- **The fallback archetype has one.** No source establishes the loop, and the archetype the pack names as its fallback reads `yes` in the last column above.
+- **A loop source documents one.** A loop source names a round, or a part of one, that assesses values, principles, behaviours or a competency framework.
+- **The fallback archetype has one.** No loop source establishes the loop, and the archetype the pack names as its fallback reads `yes` in the last column above.
 
-In every other case no values-style round is detected: a values page read while nothing establishes the loop does not detect one, and neither does a loop source that names no such round. Published values the pack read may still theme VAL questions, as the raising sources `references/question-rubric.md` names.
+In every other case no values-style round is detected: a values page read while no loop source establishes the loop does not detect one, and neither does a loop source that names no such round. Published values the pack read may still theme VAL questions, as the raising sources `references/question-rubric.md` names.
 
 ## Source quality
 

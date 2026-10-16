@@ -1472,6 +1472,79 @@ def keep_ledger_only_adverb(root: Path) -> None:
               "keep_ledger_only_adverb")
 
 
+# Round 5: one count reader (N4), plural gates and gaps and the map's predicates
+# (N1), "no other" over the map anywhere (N5), and one item grammar (FX-N4), each
+# held in CI on the worked dossier as the harness holds it on runs.
+
+SNAPSHOT_PROSE = "One entry runs the other way"
+
+
+def break_ledger_plural_gates(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Both gates hold. " + SNAPSHOT_PROSE, "break_ledger_plural_gates")
+    return "the snapshot counts or quantifies the map (\"Both gates\")"
+
+
+def break_ledger_gate_predicate(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Every gate passes. " + SNAPSHOT_PROSE, "break_ledger_gate_predicate")
+    return "the snapshot counts or quantifies the map (\"Every gate\")"
+
+
+def break_ledger_fit_noun(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Five direct fits back it. " + SNAPSHOT_PROSE, "break_ledger_fit_noun")
+    return "the snapshot counts or quantifies the map (\"Five direct\")"
+
+
+def break_ledger_ratio_alone(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Fit: 4 of 7 met. " + SNAPSHOT_PROSE, "break_ledger_ratio_alone")
+    return "the snapshot counts or quantifies the map (\"4 of 7\")"
+
+
+def break_ledger_no_other(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "R8 is the open gate; no other gate is in doubt. " + SNAPSHOT_PROSE,
+              "break_ledger_no_other")
+    return "the snapshot counts or quantifies the map (\"no other gate\")"
+
+
+def keep_ledger_ratio_of_other_noun(root: Path) -> None:
+    """A ratio followed by a noun that is not the map's counts that noun."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE,
+              "The post is one of two openings, with a 24/7 on-call rota (RR3). " + SNAPSHOT_PROSE,
+              "keep_ledger_ratio_of_other_noun")
+
+
+def keep_summary_ratio_of_other_noun(root: Path) -> None:
+    """decision.summary is read by the same reader as the snapshot (N4)."""
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+              '"summary": "One of two openings, with a 24/7 on-call rota. Fit as evidence_map reads it,',
+              "keep_summary_ratio_of_other_noun")
+
+
+def keep_ledger_nested_name(root: Path) -> None:
+    """A ledger item's Requirement words may hold a parenthesis: one item grammar (FX-N4)."""
+    swap_once(root, DOSSIER, "adjacent: R4 (Community energy knowledge)",
+              "adjacent: R4 (Community energy knowledge (generation, grid connection))", "keep_ledger_nested_name")
+
+
+def keep_years_negated_gate(root: Path) -> None:
+    """The rule that retired years as a gate, stated as a negation, is not the retired list (N6)."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", "terms, never a length of experience",
+              "terms, never years of experience", "keep_years_negated_gate")
+    swap_once(root, EVIDENCE_MODEL, "\n- **The row is the unit",
+              "\n- Here R1 is not a hard gate: five years of sales experience keeps the tier the posting gives it, read on the fit scale.\n"
+              "- **The row is the unit", "keep_years_negated_gate")
+
+
+def keep_budget_grounds_reversed(root: Path) -> None:
+    """The amended accounting rule with its two grounds in the other order (N6)."""
+    clause_swap(root, JU, "accounting",
+                "right only when the user chose L0 or declined research (and the tally then reads L0 — no searches), "
+                "or when the search budget was fully spent and every search went to a lower-numbered "
+                "(higher-priority) target",
+                "right only when the search budget was fully spent and every search went to a lower-numbered "
+                "(higher-priority) target, or when the user chose L0 or declined research (and the tally then "
+                "reads L0 — no searches)", "keep_budget_grounds_reversed")
+
+
 def keep_ledger_figure_with_unit(root: Path) -> None:
     """The candidate's own figures are not counts of rows, beside a map word or not."""
     swap_once(root, DOSSIER, "One entry runs the other way",
@@ -1721,7 +1794,7 @@ def break_retired_user_links_refused(root: Path) -> str:
     path = root / JU
     data = json.loads(path.read_text())
     old = data["clauses"]["accounting_counts"]
-    data["clauses"]["accounting_counts"] = old.replace("as user links read only where the read returned",
+    data["clauses"]["accounting_counts"] = old.replace("as user links read only where a read of it returned",
                                                        "as user links read, refused ones included")
     if data["clauses"]["accounting_counts"] == old:
         raise SystemExit("break_retired_user_links_refused has gone stale")
@@ -1892,7 +1965,7 @@ RISK_AND_DECISION = "skills/job-underwriter/references/risk-and-decision.md"
 
 def break_quantifier_scope_drift(root: Path) -> str:
     """The list scopes a new word to the sentence after the ledger; the shared set does not."""
-    swap_once(root, EVIDENCE_MODEL, '"any other" or bare "none"', '"any other", "most" or bare "none"',
+    swap_once(root, EVIDENCE_MODEL, 'no bare "none" either', 'no bare "none" or "most" either',
               "break_quantifier_scope_drift")
     return "lacks ['most'] from evidence-model.md's list it scopes to the sentence after the ledger"
 
@@ -1922,10 +1995,9 @@ def break_grader_bare_none(root: Path) -> str:
 
 def break_grader_scope_missing(root: Path) -> str:
     clause_swap(root, JU, "ledger_counts",
-                "; and in the one sentence after the fit ledger, 'no other', 'any other' and a bare 'none' fail as "
-                "well, because each speaks for the rows that sentence does not name", "",
+                ", and so does a bare 'none', because it speaks for the rows that sentence does not name", "",
                 "break_grader_scope_missing")
-    return "lists quantifiers without ['no other', 'any other', 'none'], which evidence-model.md's list scopes"
+    return "lists quantifiers without ['none'], which evidence-model.md's list scopes"
 
 
 def break_rule2_unpointed(root: Path) -> str:
@@ -1935,8 +2007,8 @@ def break_rule2_unpointed(root: Path) -> str:
 
 
 def break_rule2_spells_list(root: Path) -> str:
-    swap_once(root, RISK_AND_DECISION, 'including the ones that list scopes to this sentence',
-              'including the ones that list scopes to this sentence, such as "no other"', "break_rule2_spells_list")
+    swap_once(root, RISK_AND_DECISION, 'including the one word that list scopes to this sentence',
+              'including the one word that list scopes to this sentence, such as "no other"', "break_rule2_spells_list")
     return "rule 2 spells ['no other']"
 
 
@@ -2006,6 +2078,11 @@ PASSES = [
     ("wording", "\"no network\" outside an L0 definition", keep_no_network_elsewhere),
     ("answer-keys", "schema fields a dossier fixture repeats, fenced", keep_answer_key_snake_case),
     ("fixtures", "a fixture whose user declines research", keep_declined_fixture),
+    ("fit-ledger", "a ratio that counts something other than rows", keep_ledger_ratio_of_other_noun),
+    ("fit-ledger", "a ratio that counts something else in decision.summary", keep_summary_ratio_of_other_noun),
+    ("fit-ledger", "a ledger name whose Requirement words hold a parenthesis", keep_ledger_nested_name),
+    ("wording", "years named as not a hard gate", keep_years_negated_gate),
+    ("wording", "the two accounting grounds in the other order", keep_budget_grounds_reversed),
 ]
 
 
@@ -2203,6 +2280,11 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "the envelope disagreeing with the ledger", break_ledger_envelope),
     ("fit-ledger", "the v0.1 count sentence back in place", break_ledger_back_to_prose),
     ("fit-ledger", "a count back in decision.summary", break_ledger_summary_count),
+    ("fit-ledger", "plural gates with their predicate", break_ledger_plural_gates),
+    ("fit-ledger", "a singular gate with its predicate", break_ledger_gate_predicate),
+    ("fit-ledger", "a map word before a fit noun", break_ledger_fit_noun),
+    ("fit-ledger", "a ratio ending its noun phrase", break_ledger_ratio_alone),
+    ("fit-ledger", "\"no other\" over the map outside the sentence after the ledger", break_ledger_no_other),
     ("fit-ledger", "a name that is not the row's requirement", break_ledger_name),
     ("fit-ledger", "a band the map does not carry", break_ledger_band),
     ("fit-ledger", "a count beside an intact ledger", break_ledger_count_beside),

@@ -462,7 +462,7 @@ unfilled row is the only version of that rule anyone can check.
         "hypothesis": "The figure may sit below the role-family band in role reality, or the foundation may simply not publish salaries.",
         "provenance": "[inferred] from the posting's withheld figure, against the [generic] band",
         "verification_question": "What salary is budgeted for this post?",
-        "decision_rule": "Know the figure before investing in the loop; set it against the band, never read the band as the offer.",
+        "decision_rule": "Ask in the loop, before any offer stage; set the figure against the band, never read the band as the offer.",
         "status": "unresolved"
       }
     ],

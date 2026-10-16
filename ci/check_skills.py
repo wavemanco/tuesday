@@ -1713,10 +1713,11 @@ def check_readmes() -> None:
 
 
 # PRIORITY_ORDER, FIT_ORDER, BANDS, ROW_ID, COUNTED, FRACTION, TIER_WORDS and
-# MAP_UNIVERSAL come from ci/ledger_rules.py, as do the rule functions used below.
+# MAP_UNIVERSAL come from ci/ledger_rules.py, as do the rule functions used below and
+# LEDGER_ITEM, the one grammar of a ledger item the harness reads runs with too.
 LEDGER_LINE = re.compile(r"^- `?(" + "|".join(PRIORITY_ORDER) + r")`? — (.+)$")
 LEDGER_GROUP = re.compile(r"^(" + "|".join(FIT_ORDER) + r"): (.+)$")
-LEDGER_ITEM = re.compile(r"^(" + ROW_ID + r")(?: \(([^()]+)\))?$")
+LEDGER_ITEM = ledger_rules.LEDGER_ITEM
 WORKED_DOSSIER = "skills/job-underwriter/references/dossier-template.md"
 
 
@@ -1855,17 +1856,18 @@ def check_fit_ledger() -> None:
         fail(group, f"{WORKED_DOSSIER}: decision.summary counts the map (\"{counted.group(0)}\") instead of leaving it to evidence_map")
 
     # Everything between the ledger and the next slot is rule 2's "at most one
-    # sentence", and it may hold no count and no word of the quantifier list. The
-    # rest of the snapshot may hold no count or list word with a map word in reach;
-    # bare "none" is read only after the ledger, because the slots require "none
-    # failed" and "none found" and the list exempts it.
+    # sentence", and it may hold no count over the map and no word of the quantifier
+    # list (after_ledger_claim). The rest of the snapshot, like the summary above, is
+    # read by the one count reader, map_claim; bare "none" is read only after the
+    # ledger, because the slots require "none failed" and "none found" and the list
+    # exempts it.
     after = ledger_rules.ledger_sentence(snapshot)
     hit = after and ledger_rules.after_ledger_claim(after)
     if ledger_rules.is_second_sentence(after, hit):
         fail(group, f"{WORKED_DOSSIER}: the fit ledger is followed by more than one sentence (\"{hit.group(0)[:80]}\"); rule 2 allows one")
     elif hit:
         fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger says \"{hit.group(0)}\" about the map")
-    hit = ledger_rules.prose_count(ledger_rules.snapshot_prose(snapshot))
+    hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot))
     if hit:
         fail(group, f"{WORKED_DOSSIER}: the snapshot counts or quantifies the map (\"{hit.group(0)}\")")
 
@@ -1914,12 +1916,12 @@ def quantifier_drift(group: str) -> None:
     """D9: the after-ledger words are written once, in evidence-model.md.
 
     Its "The row is the unit" list is the rule, in two scopes: the quantifiers over
-    the map anywhere, and the further ones — "no other", "any other", bare "none" —
-    it scopes to the one sentence after the fit ledger. ci/ledger_rules.py holds
+    the map anywhere, and the further one — a bare "none" — it scopes to the one
+    sentence after the fit ledger. ci/ledger_rules.py holds
     exactly that list in those scopes (QUANTIFIERS, AFTER_LEDGER_ONLY);
     risk-and-decision.md's rule 2 points to the list and spells none of it; and
     every job-underwriter expectation that speaks of quantifiers quotes each word of
-    the list, the scoped ones inside its sentence about the sentence after the
+    the list, the scoped one inside its sentence about the sentence after the
     ledger and nowhere else — so a grader is never told bare 'none' is exempt.
     """
     refs = REPO / "skills/job-underwriter/references"
@@ -2311,8 +2313,38 @@ def check_fixtures() -> None:
                   f"and research targets agree with what the harness reads")
 
 
+class SentenceRule:
+    """A retired claim read one sentence at a time, so the words of the claim do
+    not fail a sentence that states the rule that retired it. A sentence fails when
+    it matches `pattern`, unless it also matches `unless` anywhere, or `unless_before`
+    before the match's last word (a negation of the claim: "not a hard gate: 3+ years
+    …", "terms, never years"). A sentence ends at a full stop, as the phrase
+    patterns' own reach does."""
+
+    def __init__(self, pattern: str, unless: str | None = None, unless_before: str | None = None):
+        self.pattern = re.compile(pattern, re.I)
+        self.unless = re.compile(unless, re.I) if unless else None
+        self.unless_before = re.compile(unless_before, re.I) if unless_before else None
+
+    def search(self, text: str) -> re.Match | None:
+        for sentence in re.split(r"(?<=\.)\s+|\n\s*\n", text):
+            hit = self.pattern.search(sentence)
+            if not hit or (self.unless and self.unless.search(sentence)):
+                continue
+            last = hit.end() - len(re.search(r"\w+$", hit.group(0)).group(0))
+            if self.unless_before and self.unless_before.search(sentence[:last]):
+                continue
+            return hit
+        return None
+
+
+# A word that negates what follows it. Not a bare "no", which a gate list carries as
+# a term ("no sponsorship").
+NEGATION = r"\b(?:not|never|except|rather than|instead of)\b|n't\b"
+
 # Phrasings a rule change retired. Each was rewritten everywhere once and came back
-# in the place nobody re-read, so its return fails the build.
+# in the place nobody re-read, so its return fails the build. A SentenceRule fails
+# only the retired claim, not a sentence that states the rule that retired it.
 RETIRED = [
     (re.compile(r"\breturned something\b", re.I),
      "\"returned something\" is the retired accounting wording — an error returns something too; "
@@ -2321,9 +2353,10 @@ RETIRED = [
      "\"every call was refused\" without \"or errored\" is the retired accounting wording; an errored call "
      "counts as refused (interaction-grammar.md §4)"),
     # Round 4's rule changes, each retired in every surface at once.
-    (re.compile(r"\bonly when the (?:fixture's )?(?:whole )?(?:declared )?search budget was fully spent\b", re.I),
-     "\"only when the search budget was fully spent\" is the retired accounting ground — the user choosing L0 or "
-     "declining research is the other (interaction-grammar.md §4)"),
+    (SentenceRule(r"\bonly when the (?:fixture's )?(?:whole )?(?:declared )?search budget was fully spent\b",
+                  unless=r"\bL0\b|\bdeclin\w*"),
+     "\"only when the search budget was fully spent\" as the sole ground is the retired accounting ground — the "
+     "user choosing L0 or declining research is the other (interaction-grammar.md §4)"),
     (re.compile(r"\buser links? read\b[^.]{0,120}\brefused ones included\b", re.I),
      "user links counted \"refused ones included\" is the retired tally — `user links read N` counts reads that "
      "returned (interaction-grammar.md §4)"),
@@ -2333,7 +2366,7 @@ RETIRED = [
     (re.compile(r"\bmissing (?:hard-gates |Hard gates )?slot\b[^.]{0,40}\b(?:only )?when the map has gate rows\b", re.I),
      "a hard-gates slot required only with gate rows is the retired rule — it is in every snapshot "
      "(risk-and-decision.md rule 4)"),
-    (re.compile(r"\bhard gates?\b[^.]{0,160}\byears(?:/level)?\b", re.I),
+    (SentenceRule(r"\bhard gates?\b[^.]{0,160}\byears(?:/level)?\b", unless_before=NEGATION),
      "years listed as a hard gate is the retired gate list — a gate is a term, not experience "
      "(evidence-model.md, \"A gate is met, not established, or failed\")"),
 ]
@@ -2376,8 +2409,9 @@ def check_wording() -> None:
     personas.md once pre-mapped a story per stem with no quote behind it. Each is a
     phrase, so each is checked as one (round 4 added the old accounting ground, the
     user-link tally that counted refused reads, "plainly" for failed gate rows, the
-    slot required only with gate rows, and years in a hard-gate list): the retired phrasings anywhere a rule is
-    stated or graded; any expectation that defines the yes/unavailable labels carries
+    slot required only with gate rows, and years in a hard-gate list; the first and
+    the last are read in their sentence, so the rule that retired them, stated in
+    the same words, passes): the retired phrasings anywhere a rule is stated or graded; any expectation that defines the yes/unavailable labels carries
     "returned a result" and "or errored"; no L0 definition says "no network"; and
     personas.md keeps its pointer to the quote-or-slot rule and pre-maps nothing
     unquoted.

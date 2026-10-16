@@ -43,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import backfill_tools
 import output_checks
+import ledger_rules  # noqa: E402  (ci/, put on the path by output_checks)
 import recurring
 import run_fixtures
 import run_routing
@@ -1202,9 +1203,10 @@ def test_provenance_pool() -> None:
     check("a candidate sentence the fit snapshot does not quote fails: Provenance quotes it as it appears there",
           banks("Led 30+ end-to-end client integrations of the vendor's REST APIs"), ["FAIL"])
 
-    # A plain acknowledgment's source may be a dossier field named by its field
-    # (question-rubric.md): the quotation after the field's name is that field's
-    # item, whole, as the request's dossier lists it (HN1).
+    # A plain acknowledgment's source may be a dossier item named by its field
+    # (question-rubric.md, "A plain acknowledgment"): the cell names the field
+    # anywhere, and a quotation that is one whole item of a field it names is that
+    # item; any other quotation is the candidate's (HN1; round 5 N2).
     def named(provenance):
         got = output_checks.run_checks(mi4, "denied", pack("x").replace('[grounded] "x"', provenance), None)
         return [c["verdict"] for c in got["checks"] if c["check"] == "quotes" and c["target"] == "banks"]
@@ -1228,9 +1230,25 @@ def test_provenance_pool() -> None:
               pack("x").replace('[grounded] "x"', '[grounded] prohibited_claims: "Having owned a product roadmap"'),
               "no dossier here", (), mi4["candidate_text"])["checks"]
            if c["check"] == "quotes" and c["target"] == "banks"], ["FAIL"])
-    check("a second quotation after a field's item is checked as the candidate's, and fails",
+    check("two whole items after one naming of their field pass",
           named('[grounded] prohibited_claims: "Having owned a product roadmap", "Having held a product '
-                'manager title or role"'), ["FAIL"])
+                'manager title or role"'), ["PASS"])
+    for form in ('[grounded] dossier prohibited_claims ("Having owned a product roadmap")',
+                 '[grounded] "Having owned a product roadmap" (dossier prohibited_claims)',
+                 '[grounded] dossier prohibited_claims items: "Having owned a product roadmap"; "Having held a '
+                 'product manager title or role"',
+                 '[grounded] a dossier `prohibited_claim`: "Having owned a product roadmap"',
+                 '[grounded] dossier acknowledge_gap area, R1: "Owning a roadmap and prioritization authority '
+                 '(R1 sub-claim)"'):
+        check(f"the field named anywhere in the cell, the item whole, passes: {form!r}", named(form), ["PASS"])
+    check("a cell that names only acknowledge_gap cannot cite a prohibited_claims item, wherever it sits",
+          named('[grounded] acknowledge_gap area, as the dossier frames it; see "Having owned a product roadmap"'),
+          ["FAIL"])
+    check("a field's name inside a quotation names nothing: both quotations are read as the candidate's",
+          named('[grounded] "prohibited_claims" and "Having owned a product roadmap"'), ["FAIL", "FAIL"])
+    check("a candidate quotation beside a field's item is still checked as the candidate's",
+          named('[grounded] prohibited_claims: "Having owned a product roadmap"; "Led the roadmap for the '
+                'partner API"'), ["FAIL"])
 
 
 GATED_MAP = """
@@ -1267,6 +1285,27 @@ def gated(gates="- **Hard gates:** failed: R2 (On-site five days a week); unconf
 
 def test_gates_line() -> None:
     print("\nchecks: the hard-gates line is the slot, and names every gate row (D3)")
+    # Round 5 FX-N4: a Requirement's own words may hold a parenthesis ("Fully remote
+    # (UK)"), and the fit ledger and the hard-gates line read them with one item
+    # grammar (ledger_rules.ITEM_WORDS), so a name one accepts the other accepts.
+    def slot(line: str) -> str:
+        return f"## Decision snapshot\n\n- **Hard gates:** {line}\n"
+    remote = {"R6": {"priority": "hard_gate", "fit": "unclear", "requirement": "Fully remote (UK)"}}
+    check("an unconfirmed gate named in Requirement words that hold a parenthesis passes",
+          ledger_rules.gates_line_problems(slot(
+              "none failed; unconfirmed: R6 (Fully remote (UK)); candidate constraints not given — checks against "
+              "them unknown"), remote, True), [])
+    check("a failed gate named so passes",
+          ledger_rules.gates_line_problems(slot("failed: R6 (Remote (US) or our Denver office)"), {
+              "R6": {"priority": "hard_gate", "fit": "hard_gate_fail",
+                     "requirement": "Remote (US) or our Denver office"}}, False), [])
+    check("words its Requirement does not use still fail, parenthesis or not",
+          [k for k, _ in ledger_rules.gates_line_problems(slot(
+              "none failed; unconfirmed: R6 (Fully remote (UK) — Leeds office)"), remote, False)], ["form"])
+    nested = output_checks.parse_fit_ledger("**Fit ledger.**\n\n- `hard_gate` — unclear: R6 (Fully remote (UK))\n")
+    check("and the fit ledger reads the same item the same way",
+          (nested["outcome"], nested["lines"][0]["groups"][0]["items"] if nested["lines"] else None),
+          ("checked", [{"id": "R6", "note": "Fully remote (UK)"}]))
     check("failed, unconfirmed and met rows, each in its clause, pass", ledger_fails(gated()), [])
     check("a met gate row left out beside a failed one fails", ledger_fails(gated(
         gates="- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary at or above "
@@ -1337,7 +1376,9 @@ def test_gates_line() -> None:
     check("a fixture declaring it exactly raises no fixture error", verdict_of(output_checks.run_checks(
         {"checks": ["fit_ledger"], "candidate_constraints": "known"}, "denied", gated(), None),
         "candidate_constraints"), None)
-    # decision.summary is read with CI's map_claim (NP-6).
+    # decision.summary is read with map_claim, the one count reader CI, snapshot_count
+    # and the sentence after the ledger use (NP-6; round 5 N4): a ratio counts rows
+    # only when it ends its noun phrase or a map word follows.
     def summary(text):
         return gated(tail='\n```json\n{"sections": {"decision": {"status": "no_go", "summary": '
                           + json.dumps(text) + '}}}\n```\n')
@@ -1347,6 +1388,16 @@ def test_gates_line() -> None:
     check("a summary that names rows passes",
           verdict_of(output_checks.check_fit_ledger(summary("R2 fails the on-site gate; R3 waits on the band.")),
                      "summary_count"), "PASS")
+    for text in ("Fit: 4 of 7 met.", "Conditional go: 4/7 direct.", "Go: four out of seven met.",
+                 "Conditional go: R8 is the open gate; no other gate is in doubt."):
+        check(f"a summary that counts the map fails summary_count: {text!r}",
+              verdict_of(output_checks.check_fit_ledger(summary(text)), "summary_count"), "FAIL")
+    for text in ("Conditional go: the 24/7 on-call rota (RR2) is unverified.",
+                 "Pass: the role is one of two openings and pay is withheld (RR4).",
+                 "Go: the band covers 3 of 5 years of experience (RR3)."):
+        check(f"a ratio that counts something else passes summary_count, as it passes snapshot_count: {text!r}",
+              (verdict_of(output_checks.check_fit_ledger(summary(text)), "summary_count"),
+               ledger_rules.map_claim(text)), ("PASS", None))
     got = output_checks.check_fit_ledger(gated())
     check("with no JSON envelope summary_count is unchecked, not passed",
           (verdict_of(got, "summary_count"), "summary_count" in got["unchecked"]), (None, True))
@@ -1511,7 +1562,7 @@ def test_shared_ledger_rules() -> None:
     # fit or tier word that is ordinary English counts only as a token or at the end
     # of its noun phrase, a row's named gate is no counted word, an article ends the
     # reach, and a count inside a parenthesis does not reach out of it (NP-2). Each
-    # holds in CI and here, because both call prose_count.
+    # holds in CI and here, because both call map_claim.
     for prose in ("Sound but under-specified, with two important unknowns: award authority (RR1) and the "
                   "contract basis (RR2).",
                   "(2) one direct conversation with the hiring manager — RR1.",
@@ -1521,16 +1572,34 @@ def test_shared_ledger_rules() -> None:
                   "RR1 answered in round 2 of the interviews, and the R8 gate settled.",
                   "R5 (mentor two juniors) is `unclear`.",
                   "She manages two direct reports.",
-                  "One gap analysis would settle RR1."):
-        check(f"ordinary prose passes: {prose!r}", (ledger_rules.prose_count(prose), ledger_fails(LEDGER_OK.replace(
+                  "One gap analysis would settle RR1.",
+                  "The 24/7 on-call rota (RR2) is unverified.",
+                  "The role runs 24/7.",
+                  "Pay for 2024/25 is withheld (RR4).",
+                  "Interviews close 10/16/2026 (RR3).",
+                  "The role is one of two openings (RR4).",
+                  "R2 shipped two direct-to-consumer launches.",
+                  "It would matter for a role like this one if the gates were not fatal (RR1)."):
+        check(f"ordinary prose passes: {prose!r}", (ledger_rules.map_claim(prose), ledger_fails(LEDGER_OK.replace(
             "**Opportunity ledger.** Authority", f"**Opportunity ledger.** {prose} Authority"))), (None, []))
     for prose in ("five must-haves", "Six of nine material requirements", "only two direct", "all read direct",
                   "one adjacent one", "Two hard gates fail", "the one gap", "five important", "every requirement",
                   "two have a gap", "only R4 has a gap", "the one gap a reference would close", "two direct rows",
                   "both gates are met", "two soft spots are `important`", "the one preferred item",
-                  "only the R4 gap is open", "two gaps in R4 and R5", "no important rows"):
+                  "only the R4 gap is open", "two gaps in R4 and R5", "no important rows",
+                  # round 5 N1: plural gates and gaps are map words wherever they stand,
+                  # and a predicate verb or a fit noun after a map word ends its phrase
+                  "Two gates fail outright: R1 on location and R2 on pay", "Two gates fail", "Both gates fail",
+                  "All gates hold", "Two gates block this: R1 and R2", "Every gate passes", "Neither gate fails",
+                  "Five direct fits: R1, R2, R3, R6 and R9", "Two direct matches, R2 and R3", "Two gaps matter",
+                  "Only two gaps matter",
+                  # round 5 N4: a ratio that ends its noun phrase, or with a map word after it
+                  "Fit: 4 of 7 met", "Fit: 4 of 7", "4/7 direct", "four out of seven met",
+                  # round 5 N5: "no other" and "any other" are quantifiers over the map anywhere
+                  "R8 is the open gate; no other gate is in doubt", "R4 is the stretch; no other must-have is "
+                  "below direct", "any other requirement is direct"):
         check(f"a count or quantifier over the map still fails: {prose!r}",
-              (bool(ledger_rules.prose_count(prose)), ledger_fails(LEDGER_OK.replace(
+              (bool(ledger_rules.map_claim(prose)), ledger_fails(LEDGER_OK.replace(
                   "**Opportunity ledger.** Authority", f"**Opportunity ledger.** RR2: {prose}. Authority"))),
               (True, ["snapshot_count"]))
 
@@ -1611,11 +1680,30 @@ def test_user_links() -> None:
               f"read it fails", (verdict_of(truthful, "tally_user_links"), verdict_of(truthful, "tally_searches"),
                                  verdict_of(claimed, "tally_user_links")), ("PASS", "PASS", "FAIL"))
         check_true("and the run's info says it was not opened",
-                   any("user link not read" in i for i in truthful["info"]))
+                   any("user link not opened" in i for i in truthful["info"]))
     block = run_fixtures.observed_block({"research_log": [entry("https://example.org/jd", "refused", kind="fetch")]}, l0)
     check_true("the grader's record lists a refused user link apart, as not read and not counted",
                "User links not opened: 1" in block and "User links read" not in block
                and block.startswith("Recorded: no research search or fetch calls were made."))
+    # Round 5 N3: the tally counts links, not fetches. One link fetched twice — the
+    # second time as www. with a trailing slash, the same link after norm_url — is
+    # one link read; a link refused and then fetched is read, not "not opened".
+    twice = [entry("https://example.org/jd", kind="fetch"), entry("https://www.example.org/jd/", kind="fetch")]
+    one, two = (output_checks.check_accounting(accounting(l0_rows, line), l0, "denied", twice)
+                for line in ("Research tier: L0 — no searches; user links read 1",
+                             "Research tier: L0 — no searches; user links read 2"))
+    check("one link fetched twice is one link read: \"read 1\" passes, \"read 2\" fails",
+          (verdict_of(one, "tally_user_links"), verdict_of(two, "tally_user_links")), ("PASS", "FAIL"))
+    retried = [entry("https://example.org/jd", "refused", kind="fetch"), entry("https://example.org/jd", kind="fetch")]
+    got = output_checks.check_accounting(
+        accounting(l0_rows, "Research tier: L0 — no searches; user links read 1"), l0, "denied", retried)
+    block = run_fixtures.observed_block({"research_log": retried}, l0)
+    check("a link refused and then read counts once as read and is not listed as not opened",
+          (verdict_of(got, "tally_user_links"), any("user link not opened" in i for i in got["info"]),
+           "User links read: 1 link(s)" in block, "not opened" in block), ("PASS", False, True, False))
+    block = run_fixtures.observed_block({"research_log": twice}, l0)
+    check_true("and the grader's record asks for the link count, listing both fetches",
+               "`user links read 1`" in block and "(2 fetch(es) listed below)" in block)
 
     meta = {"research_log": [entry("Kestrel careers", targets=[1]),
                              entry("https://example.org/jd", kind="fetch"),
@@ -1624,7 +1712,7 @@ def test_user_links() -> None:
     check_true("the grader's record counts research calls without the user link",
                block.startswith("Recorded: 2 research call(s) — 1 search(es), 1 fetch(es)"))
     check_true("and lists the user link in its own group, by the checks' own classifier",
-               "User links read: 1 fetch(es)" in block
+               "User links read: 1 link(s)" in block
                and block.index("example.org/jd") > block.index("User links read")
                and block.index("example.org/other") < block.index("User links read"))
     check_true("a fixture declaring no user link shows every fetch as research",

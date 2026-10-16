@@ -294,18 +294,24 @@ def is_user_link(entry: dict, research: dict | None) -> bool:
     return bool(url) and url in declared
 
 
-def user_link_reads(log: list, research: dict | None) -> tuple[list[dict], list[dict]]:
-    """The fetches of declared user links, as (read, not read).
+def user_link_reads(log: list, research: dict | None) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
+    """The declared user links the run fetched, as (read, not opened), each a map
+    from the link (norm_url) to its fetches.
 
-    `user links read N` counts the links actually read: a fetch that returned
-    (interaction-grammar §4's tally paragraph). One the host could not open —
-    refused or errored — is not a read and is not counted; the response says it
-    could not open the link. Neither kind is research. The runner's observed block
-    calls this too, so the grader and the checks count the same reads.
+    `user links read N` counts the links actually read (interaction-grammar §4's
+    tally paragraph): a link is read when a fetch of it returned, however many
+    fetches it took, so a link fetched twice, or refused and then fetched, is one
+    link read. A link no fetch of which returned — refused or errored every time —
+    is not opened: not counted, and the response says it could not open it.
+    Neither is research. Every count of user links, the runner's observed block
+    included, is len() of one of these, so the grader and the checks count alike.
     """
-    links = [e for e in log if is_user_link(e, research)]
-    return ([e for e in links if e.get("outcome") == "returned"],
-            [e for e in links if e.get("outcome") != "returned"])
+    fetched: dict[str, list[dict]] = {}
+    for e in log:
+        if is_user_link(e, research):
+            fetched.setdefault(norm_url(str(e.get("query_or_url") or "")), []).append(e)
+    read = {link: es for link, es in fetched.items() if any(e.get("outcome") == "returned" for e in es)}
+    return read, {link: es for link, es in fetched.items() if link not in read}
 
 
 def aimed_at(entry: dict, target: dict, pages: list[dict], mode: str) -> bool:
@@ -390,11 +396,13 @@ def check_accounting(response: str, research: dict, mode: str,
     if have_log:
         for entry in stray:
             info.append(f"unattributed call: {describe(entry, 100)}")
-        for entry in links_read:
-            info.append(f"user link read (an input, not research): {describe(entry, 100)}")
-        for entry in links_unread:
-            info.append(f"user link not read (the host could not open it; not counted, and the "
-                        f"response should say it could not open it): {describe(entry, 100)}")
+        for link, entries in links_read.items():
+            info.append(f"user link read (an input, not research): {link}, {len(entries)} fetch(es): "
+                        + "; ".join(describe(e, 100) for e in entries))
+        for link, entries in links_unread.items():
+            info.append(f"user link not opened (no fetch of it returned; not counted, and the response "
+                        f"should say it could not open it): {link}, {len(entries)} fetch(es): "
+                        + "; ".join(describe(e, 100) for e in entries))
     else:
         unchecked = list(LOG_CHECKS)
         info.append("no research log recorded for this run: the checks that need one "
@@ -549,9 +557,10 @@ def check_accounting(response: str, research: dict, mode: str,
             # exists for.
             checks.append(finding("tally_user_links", "all", tally.get("user_links", 0) == len(links_read),
                                   f"the tally names {tally.get('user_links', 0)} user link(s) read; "
-                                  f"{len(links_read)} fetch(es) of a link the fixture declares the user "
-                                  f"gave to read returned (user_link_reads: one the host could not open "
-                                  f"is not a read; {len(links_unread)} such recorded)"))
+                                  f"{len(links_read)} link(s) the fixture declares the user gave to read "
+                                  f"had a fetch that returned (user_link_reads: a link counts once however "
+                                  f"often fetched; one no fetch of which returned is not a read, "
+                                  f"{len(links_unread)} such recorded)"))
         if declined:
             # The user's choice sets the tier: L0, and nothing spent.
             checks.append(finding("tally_l0", "all", tally["tier"] == "L0" and tally["no_searches"],
@@ -636,8 +645,8 @@ def check_accounting(response: str, research: dict, mode: str,
                               f"row {n} reads `yes` and the room returned {page}, so what that "
                               f"page alone says should reach the response; the canary "
                               f"{'appears' if present else 'does not appear'}"))
-    info.append(f"recorded attempts: {searches} search, {fetches} fetch, {len(links_read)} user link "
-                f"read, {len(links_unread)} user link not opened"
+    info.append(f"recorded attempts: {searches} search, {fetches} fetch, {len(links_read)} user link(s) "
+                f"read, {len(links_unread)} user link(s) not opened"
                 if have_log else "recorded attempts: not recorded")
     return {"checks": checks, "info": info, "unchecked": unchecked,
             "accounting": table["outcome"], "tally": tally["outcome"]}
@@ -654,7 +663,7 @@ PRIORITIES = tuple(ledger_rules.PRIORITY_ORDER)
 FITS = tuple(ledger_rules.FIT_ORDER)
 LEDGER_MARK = ledger_rules.LEDGER_MARK
 LEDGER_LINE = re.compile(r"^-\s+`?([a-z_]+)`?\s*(?:—|–|-|:)\s*(.+?)\s*$")
-ITEM = re.compile(r"^(R\d+[a-z]?)(?:\s+\((.+)\))?$")
+ITEM = ledger_rules.LEDGER_ITEM      # one item grammar with CI's and the hard-gates line's
 GROUP = re.compile(r"^`?([a-z_]+)`?\s*:\s*(.+)$")
 ID_RE = re.compile(r"\bR\d+[a-z]?\b")
 split_top = ledger_rules.split_top
@@ -949,8 +958,8 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
         said = "the sentence after the ledger names rows and claims nothing about the rest"
     checks.append(finding("ledger_sentence", "all", word is None, said))
 
-    # decision.summary is prose that summarises the map, read with the function CI
-    # reads the worked dossier's with (ledger_rules.map_claim).
+    # decision.summary is prose that reads the map, read with the one count reader
+    # (ledger_rules.map_claim) that CI and snapshot_count use.
     decision = (envelope_sections(response) or {}).get("decision")
     summary = decision.get("summary") if isinstance(decision, dict) else None
     if not isinstance(summary, str):
@@ -975,7 +984,7 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     checks.append(finding("snapshot_band", "all", not band_problems,
                           "; ".join(band_problems) or "every band sits beside its row and "
                                                       "matches its Confidence"))
-    count = ledger_rules.prose_count(ledger_rules.snapshot_prose(section))
+    count = ledger_rules.map_claim(ledger_rules.snapshot_prose(section))
     checks.append(finding("snapshot_count", "all", count is None,
                           f"the snapshot counts the map: {count.group(0)!r}" if count
                           else "no count, fraction or listed quantifier over the map in the snapshot's prose"))
@@ -1038,27 +1047,27 @@ def normalise_quote(text: str) -> str:
 
 
 def quoted_spans(cell: str) -> list[str]:
-    return [span for span, _ in quoted_spans_named(cell)]
-
-
-def quoted_spans_named(cell: str) -> list[tuple[str, str | None]]:
-    """Each quotation in the cell, with the dossier field named right before it."""
     plain = cell.translate(DQUOTES).replace("`", "")
-    out = []
-    for m in re.finditer(r'"([^"\n]+)"', plain):
-        field = FIELD_BEFORE.search(plain[:m.start()].translate(DASHES))
-        out.append((m.group(1), field.group(1).lower() if field else None))
-    return out
+    return re.findall(r'"([^"\n]+)"', plain)
 
 
-# A plain acknowledgment's source may be a dossier field, "named by its field"
-# (mock-interview references/question-rubric.md, "A plain acknowledgment"). A
-# quotation right after such a field's name is that field's item, so it is checked
-# against the items the dossier in the request actually lists, whole: a field
-# name cannot carry text the dossier does not hold, nor one field's item another's.
+# A plain acknowledgment's source may be a dossier item, named by its field
+# (mock-interview references/question-rubric.md, "A plain acknowledgment", which
+# states the rule once): the cell that cites it names the field anywhere in it, and
+# quotes the item, if at all, whole and exactly as the dossier gives it. So a
+# Provenance quotation that equals one whole item of a field its cell names, in the
+# request's own dossier, is that item; every other quotation is the candidate's
+# words. A field the cell does not name never answers, and a field's name cannot
+# carry text the dossier does not hold.
 DOSSIER_FIELDS = ("prohibited_claims", "acknowledge_gap", "rejected_inferences")
-FIELD_BEFORE = re.compile(r"(?<![A-Za-z_])(" + "|".join(DOSSIER_FIELDS) + r")`?\s*(?:item|area|entry)?"
-                          r"\s*[:\-]?\s*$", re.I)
+FIELD_NAME = re.compile(r"(?<![A-Za-z_])(prohibited_claim|acknowledge_gap|rejected_inference)s?(?![A-Za-z_])", re.I)
+
+
+def fields_named(cell: str) -> set[str]:
+    """The dossier fields a cell names outside its quotations, singular or plural,
+    with or without backticks."""
+    plain = re.sub(r'"[^"\n]*"', " ", cell.translate(DQUOTES).replace("`", ""))
+    return {next(f for f in DOSSIER_FIELDS if f.startswith(m.group(1).lower())) for m in FIELD_NAME.finditer(plain)}
 
 
 def dossier_items(prompt: str) -> dict[str, set[str]] | None:
@@ -1114,8 +1123,8 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     no `candidate_text` gets that check reported unchecked, never a fallback to the
     prompt; `[]` means the candidate gave nothing quotable. A Provenance quote must
     also stand in the fit snapshot's evidence column, because the template says it
-    is quoted exactly as it appears there — except a quotation right after a dossier
-    field's name (FIELD_BEFORE), which is that field's item and must be one, whole. The requirement column quotes the JD,
+    is quoted exactly as it appears there — except a quotation that is one whole item
+    of a dossier field its cell names (fields_named). The requirement column quotes the JD,
     so it is checked against the request and the pages, from three words up.
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
@@ -1157,18 +1166,15 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 f"each followed by a dash and its origin (your CV, your message, the coach's notes, "
                 f"a dossier row), with nothing else: {cell.strip()[:100]!r}", "format"))
         candidate_column = section in ("fit_snapshot", "banks")
-        for span, field in quoted_spans_named(cell):
+        named = fields_named(cell) if section == "banks" else set()
+        for span in quoted_spans(cell):
             whole = normalise_quote(span).strip(EDGE)
             if not whole or (not candidate_column and len(whole.split()) < 3):
                 continue
             frags = [f for f in (x.strip(EDGE) for x in re.split(r"\.\.\.|…", normalise_quote(span))) if f]
-            if section == "banks" and field:
-                # A dossier field named by its field: the item, whole, as the
-                # request's dossier lists it under that field.
-                if dossier is None:
-                    bad, where = [whole], f"a dossier in the request (it carries none to hold {field})"
-                else:
-                    bad, where = ([] if whole in dossier[field] else [whole]), f"the dossier's {field} items"
+            if named and dossier is not None and any(whole in dossier[f] for f in named):
+                # One whole item of a dossier field the cell names: that item.
+                bad, where = [], ""
             elif candidate_column:
                 if own is None:
                     bad, where = [], ""
@@ -1181,6 +1187,10 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                     where = "the fit snapshot's evidence column"
                 if own is None and section == "fit_snapshot":
                     continue
+                if bad and named:
+                    where += (f", nor one whole item of the dossier's {' or '.join(sorted(named))}"
+                              if dossier is not None else
+                              f", and the request carries no dossier to hold {' or '.join(sorted(named))}")
             else:
                 bad = [f for f in frags if len(f.split()) >= 3 and f not in haystack]
                 where = "the request" + (" or the pages" if corpus_texts else "")
