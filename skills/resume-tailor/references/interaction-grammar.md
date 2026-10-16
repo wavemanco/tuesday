@@ -29,7 +29,7 @@ Corollary: skills compose in any order, or not at all. The dossier contract (see
 
 ## 4. Research tiers
 
-- **L0** — provided documents only: chosen by the user, or forced because the host offers no search. Everything else labeled `[generic]`.
+- **L0** — provided documents only: chosen by the user, or forced because the host offers no search. L0 sends no search and no fetch of the skill's choosing. A link the user gave you to read is a provided document, read when the host can fetch it and named on the tally line; a host that cannot fetch says so and uses only what was pasted. Everything else labeled `[generic]`.
 - **L1** — default: a small budgeted set of targeted searches (each skill defines its targets and caps). Official sources first; freshness rules per fact class; model memory is never a source for values, processes, or current facts.
 - **L2** — deep research: offered exactly once, cost stated, run only on consent; the offer rides an already-needed message or lands in the upgrade menu.
 - **Not-attributable rule:** results that can't be attributed to the specific entity (name collisions, no web presence) are treated as not-established — said plainly, archetype fallback named, missing facts listed in the upgrade menu.
@@ -80,10 +80,14 @@ searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches` — cou
 every call the skill chose to send in this engagement, refused ones included,
 against the skill's own budget for the tier reached; at L2 the same line reads
 `Research tier: L2 — searches N of B, fetches M of F`, with the L1 and L2 caps
-added together and counted once. Reading a link the user supplied is reading an
-input, not research: it is named on the same line — `; user links read 1` —
-and never charged to the budget, and only a URL that appears in the user's own
-message counts as one. No other sentence restates the line.
+added together and counted once. Reading a link the user gave you to read — a JD
+or a portfolio they linked rather than pasted — is reading an input, not
+research: it is named on the same line — `; user links read 1` — and never
+charged to the budget. A URL the user names as the source of text they pasted
+("copied from …") is not a link to read: that content is already in hand, and
+fetching it, or any other page on that site, is a research call, charged and
+attributed to the target the page serves like any other. No other sentence
+restates the line.
 
 The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
 gives: compliance here depends on noticing an absence, and a search that ran

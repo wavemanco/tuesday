@@ -42,13 +42,10 @@ Run `references/reframing-audit.md` over every proposed line **before** it enter
 the ledger, not over the finished table. A row that fails the audit does not get
 written and then corrected; it does not get written.
 
-The audit's discipline about the JD's vocabulary deserves repeating here, because
-this skill is where it will be tested hardest: the candidate wrote "client", the
-posting says "integration partner", and the proposed line says "partner". No fact
-changed and the words look like synonyms — which is exactly why it survives
-review, and exactly why it re-labels which side of the transaction they stood on.
-Mirror the JD's language in the coverage map where it helps the reader follow the
-mapping. Never in a line the candidate will say about their own past.
+The audit's discipline about the JD's vocabulary — "Never borrow the JD's
+vocabulary for the candidate's own history", stated and worked in
+`references/reframing-audit.md` — is tested hardest in this skill, because every
+row of the ledger is a line the candidate will say about their own past.
 
 ## A worked ledger
 
@@ -61,14 +58,14 @@ installed beside the skill.
 | # | Section | Current line | Proposed line | Operation | Traces to | Provenance | Status |
 |---|---|---|---|---|---|---|---|
 | E1 | Experience | "Ran the small-grants round" | "Ran the small-grants round for three years — call design, assessor briefing, panel scheduling, award letters" | `surface` | "Ran the small-grants round for three years — call design, assessor briefing, panel scheduling, award letters" | `[grounded]` resume, Experience | pending your approval |
-| E2 | Experience | "Built the applicant-tracking spreadsheet" | "Built the applicant-tracking spreadsheet the team uses" | `surface` | "Built the applicant-tracking spreadsheet the whole team uses" | `[grounded]` resume | pending your approval |
+| E2 | Experience | "Built the applicant-tracking spreadsheet" | "Built the applicant-tracking spreadsheet the grants team relies on" | `surface` | "Built the applicant-tracking spreadsheet our four-person grants team relies on" | `[grounded]` resume | pending your approval |
 | E3 | Summary | *(no current line)* | "Ran the small-grants round for three years. Coordinated our assessors, the applicant groups and the finance team on award payments." | `merge` | "Ran the small-grants round for three years — call design, assessor briefing, panel scheduling, award letters"; "Coordinated our assessors, the applicant groups, and the finance team on award payments" | `[grounded]` resume | pending your approval |
 | E4 | Experience | "Collected end-of-grant reports from every funded group" | *(unchanged — moved above the panel-scheduling bullet)* | `reorder` | "Collected end-of-grant reports from every funded group" | `[grounded]` resume | pending your approval |
 
 Four things this ledger is doing, and one it is refusing:
 
 - **E1 restores a qualifier rather than removing one.** The resume's own sentence carried "for three years" and the stages; the current line had compressed them away. Surfacing them is the honest direction of travel.
-- **E2 keeps "the team" and does not reach for "foundation-wide"** — the scope axis, in the smallest possible instance.
+- **E2 keeps "the grants team" and does not reach for "foundation-wide"** — the scope axis, in the smallest possible instance.
 - **E3 is a summary built only from existing sentences, and kept as two.** It is the row most likely to drift, so its trace cell quotes both in full. It is a `merge`, and merge's limit is the point: joined into one clause, the coordination would read as part of running the round, which neither sentence says. So "coordinated" has not become "led" or "managed", "on award payments" is still there, and the two claims stay separate. An earlier version of this row opened with a number of years and the word "enterprise", traced to one sentence that said neither, and was held up elsewhere as the model of a line with no predecessor.
 - **E4 changes nothing but position**, and its trace cell still quotes the line in full. A reorder is the row most tempting to annotate instead of quote — "same line, moved up" says everything a writer needs and nothing a reader can check. This example carried exactly that shorthand until a clean-room run caught the skill copying it. A reorder row with an empty proposed line is normal and is not a filler row: order is a real edit — `machine-readers.md` says why position may matter, and that the case for it is partly inference.
 - **What is not here:** no row proposes "programme management experience", "pipeline ownership", or "outcome measurement" — the three things this JD most wants and this resume cannot support. They belong in the coverage map as `not_evidenced` with a recall prompt, and in the prohibited-claims list. A ledger's quality is partly visible in what it declined to write.

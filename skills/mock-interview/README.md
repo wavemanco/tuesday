@@ -36,7 +36,7 @@ with [name], who'd be my [manager / peer / skip-level / unknown].
 JD and CV attached. [Optional: "Do the deeper research pass."]
 ```
 
-The bare minimum also works — "Help me prep, final round at Stripe for Product Operations Manager" — you'll just get one short setup question first and a pack with more `[inferred]` labels plus an upgrade menu telling you exactly what to add.
+The bare minimum also works — "Help me prep, final round at Canva for a Senior Program Manager role" — you'll just get one short setup question first and a pack with more `[inferred]` labels plus an upgrade menu telling you exactly what to add.
 
 ## What to provide
 
@@ -62,7 +62,7 @@ None of this is required. Skills in Tuesday stand alone; the dossier just means 
 ## Modes
 
 - **Session** (default) — one pack for one conversation.
-- **Loop** — "I have three rounds scheduled" gets a shared fit map plus per-round mini-packs.
+- **Loop** — "My loop is three interviews over two days" gets a shared fit map plus per-round mini-packs.
 - **Drill** — after any pack, ask for a rehearsal: Claude adopts a persona, asks with reactive follow-ups, then breaks character and scores you against the pack's own rubric.
 
 ## What's in this folder

@@ -26,14 +26,21 @@ on a response that has none — it is listed as unchecked, never passed.
 
 from __future__ import annotations
 
+import json
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
+import ledger_rules  # noqa: E402  (the fit-ledger rules, shared with ci/check_skills.py)
 
 VOCAB = ("yes", "skipped", "n/a", "unavailable")
 SEARCH_KIND = {"WebSearch": "search", "mcp__web__search": "search",
                "WebFetch": "fetch", "mcp__web__fetch": "fetch"}
 FILE_MARKER = re.compile(r"^----- file the response produced: (.+?) -----[ \t]*$", re.M)
 LOG_CHECKS = ("yes_has_call", "skip_has_no_call", "unavailable_has_refusal",
-              "zero_calls", "tally_searches", "tally_fetches")
+              "zero_calls", "tally_searches", "tally_fetches", "tally_user_links",
+              "off_target_shown", "off_target_has_call")
 
 
 def finding(check: str, target, ok: bool, why: str, kind: str = "judgement") -> dict:
@@ -115,7 +122,9 @@ def parse_accounting(text: str) -> dict:
     mapping by order or by name would mis-file rows as often as it found them.
     A status cell must hold exactly one label; a qualifier beside it is recorded
     as a format violation and the leading label is still read, so the summary
-    does not report a formatting slip as wrong accounting.
+    does not report a formatting slip as wrong accounting. The one un-numbered
+    row the rule allows — an off-target call's, bare `yes`, after every numbered
+    row — is returned under `extra` and never keyed to a target.
     """
     candidates, parsed, problems = 0, [], []
     for source, body in split_response(text):
@@ -140,16 +149,31 @@ def parse_accounting(text: str) -> dict:
                                        f"(header: {' | '.join(table['header'])})"))
                 continue
             rows: dict[int, dict] = {}
+            extras: list[dict] = []
             for cells in table["rows"]:
                 first = cells[0] if cells else ""
                 number = ROW_NUMBER.match(first)
-                if not number:
-                    problems.append((None, f"{source}: a row does not start with a target "
-                                           f"number: {first[:80]!r}"))
-                    continue
-                n = int(number.group(1))
                 raw = cells[status_col].strip() if status_col < len(cells) else ""
                 status = raw.replace("`", "").replace("*", "").strip().lower()
+                if not number:
+                    # A call sent outside every declared target is shown as an
+                    # un-numbered row after the numbered ones, labeled `yes`
+                    # (interaction-grammar §4). Only that exact form is read as one:
+                    # before the numbered rows, or under any other label, an
+                    # un-numbered row could stand in for a declared target's own.
+                    if rows and status == "yes":
+                        extras.append({"target": first, "raw": raw,
+                                       "why": cells[2].strip() if len(cells) > 2 else ""})
+                        continue
+                    problems.append((None, f"{source}: a row does not start with a target "
+                                           f"number: {first[:80]!r} (an un-numbered row is "
+                                           f"only an off-target call's: bare `yes`, after "
+                                           f"every numbered row)"))
+                    continue
+                n = int(number.group(1))
+                if extras:
+                    problems.append((n, f"{source}: row {n} comes after an un-numbered row; "
+                                        f"off-target rows come after every numbered row"))
                 label = status
                 if status not in VOCAB:
                     problems.append((n, f"{source}: row {n}'s status is {raw[:80]!r}, "
@@ -163,20 +187,22 @@ def parse_accounting(text: str) -> dict:
                 rows[n] = {"label": label, "raw": raw, "target": first,
                            "why": cells[2].strip() if len(cells) > 2 else ""}
             if rows:
-                parsed.append((source, rows))
+                parsed.append((source, rows, extras))
                 break                                   # the first readable table per source
             problems.append((None, f"{source}: the target table has no numbered rows"))
     if not candidates:
-        return {"outcome": "absent", "rows": {}, "format": [], "sources": []}
+        return {"outcome": "absent", "rows": {}, "extra": [], "format": [], "sources": []}
     if not parsed:
-        return {"outcome": "unparseable", "rows": {}, "format": problems, "sources": []}
-    first_source, rows = parsed[0]
-    for source, other in parsed[1:]:
-        if {n: r["label"] for n, r in other.items()} != {n: r["label"] for n, r in rows.items()}:
+        return {"outcome": "unparseable", "rows": {}, "extra": [], "format": problems,
+                "sources": []}
+    first_source, rows, extras = parsed[0]
+    for source, other, other_extras in parsed[1:]:
+        if {n: r["label"] for n, r in other.items()} != {n: r["label"] for n, r in rows.items()} \
+                or len(other_extras) != len(extras):
             problems.append((None, f"{first_source} and {source} carry accounting tables "
                                    f"that disagree"))
-    return {"outcome": "checked", "rows": rows, "format": problems,
-            "sources": [s for s, _ in parsed]}
+    return {"outcome": "checked", "rows": rows, "extra": extras, "format": problems,
+            "sources": [s for s, _, _ in parsed]}
 
 
 TALLY = re.compile(
@@ -226,8 +252,46 @@ def term_in(term: str, text: str) -> bool:
                      text.lower()) is not None
 
 
+SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*://", re.I)
+
+
+def norm_url(url: str) -> str:
+    """One URL identity for every comparison the checks make.
+
+    Lowercase scheme and host; drop the scheme, a leading `www.`, a `#fragment`
+    and one trailing `/`; keep the path and the query exactly as given, because a
+    different path or query is a different page.
+    """
+    text = str(url or "").strip().split("#", 1)[0]
+    text = SCHEME.sub("", text)
+    cut = min((i for i in (text.find("/"), text.find("?")) if i >= 0), default=len(text))
+    host, rest = text[:cut].lower(), text[cut:]
+    if host.startswith("www."):
+        host = host[4:]
+    text = host + rest
+    return text[:-1] if text.endswith("/") else text
+
+
 def same_url(a: str, b: str) -> bool:
-    return str(a).strip().rstrip("/") == str(b).strip().rstrip("/")
+    return norm_url(a) == norm_url(b)
+
+
+def is_user_link(entry: dict, research: dict | None) -> bool:
+    """Is this recorded call a read of a link the user gave to read?
+
+    Only a fetch, and only when its URL is exactly — after `norm_url` — one the
+    fixture declares in `research.user_links`. Nothing is inferred from the
+    prompt: a URL the user names as the source of text they pasted is provenance,
+    and fetching it, or any other page on that site, is research. A prefix, a
+    parent path or the bare host of a declared link is research too. The runner's
+    "What the harness observed" block imports this, so the grader and the checks
+    sort the same call the same way.
+    """
+    if entry.get("kind") != "fetch":
+        return False
+    declared = {norm_url(u) for u in (research or {}).get("user_links") or [] if str(u).strip()}
+    url = norm_url(str(entry.get("query_or_url") or ""))
+    return bool(url) and url in declared
 
 
 def aimed_at(entry: dict, target: dict, pages: list[dict], mode: str) -> bool:
@@ -265,25 +329,21 @@ def unify_dashes(text: str) -> str:
 DASH_FORMS = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
 
 
-def user_link(url: str, prompt: str) -> bool:
-    """A URL counts as the user's own only when their message contains it."""
-    bare = re.sub(r"^https?://(www\.)?", "", url.strip().rstrip("/").lower())
-    return bool(bare) and bare in prompt.lower()
-
-
 def canary_in(spelling: str, text: str) -> bool:
     """A canary as a whole token run: "143" is not found inside "1430"."""
     return bool(spelling) and re.search(r"(?<![\w])" + re.escape(spelling) + r"(?![\w])", text) is not None
 
 
 def check_accounting(response: str, research: dict, mode: str,
-                     research_log: list | None, prompt: str = "") -> dict:
+                     research_log: list | None) -> dict:
     """Judge the accounting against what the harness recorded. Returns findings.
 
     Attribution is per target, because a run-level check passed the failure the
     prototype actually produced: a `yes` on a target no call was aimed at, in a
     run that had made other calls. A refused call counts as a call — the budget
     is spent on what was sent, and a target searched and refused was not skipped.
+    The rule judged here is interaction-grammar §4; each check below is that rule
+    and no stricter.
     """
     checks, info, unchecked = [], [], []
     table = parse_accounting(response)
@@ -291,28 +351,59 @@ def check_accounting(response: str, research: dict, mode: str,
     targets = research.get("targets", [])
     pages = research.get("pages", [])
     have_log = research_log is not None
-    # Reading a link the user supplied is reading an input, not research: it is
-    # named on the tally line and never charged to the budget. Only a URL that
-    # appears in the user's own message counts as one, so a run cannot relabel a
-    # research fetch as a user link.
-    links = [e for e in (research_log or []) if e.get("kind") == "fetch"
-             and user_link(str(e.get("query_or_url") or ""), prompt)]
-    log = [e for e in (research_log or []) if e not in links]
+    full = list(research_log or [])
+    # Reading a link the user gave to read is reading an input, not research: it
+    # is named on the tally line and never charged to the budget. Only a fetch of
+    # a link the fixture declares counts as one (`is_user_link`), so a run cannot
+    # relabel a research fetch — of a pasted text's source, the employer's home
+    # page, a parent path — as a user link.
+    links = [e for e in full if is_user_link(e, research)]
+    log = [e for e in full if not is_user_link(e, research)]
+
+    def unchecked_once(name: str) -> None:
+        if name not in unchecked:
+            unchecked.append(name)
 
     for n, problem in table["format"]:
         checks.append(finding("format", n if n is not None else "all", False, problem, "format"))
     info.append(f"accounting table: {table['outcome']}")
 
+    def describe(e: dict, width: int = 60) -> str:
+        return f"{e.get('tool')} {str(e.get('query_or_url'))[:width]!r} {e.get('outcome')}"
+
     aimed = {t["n"]: [e for e in log if aimed_at(e, t, pages, mode)] for t in targets}
+    stray = [e for e in log if not any(aimed_at(e, t, pages, mode) for t in targets)]
     if have_log:
-        for entry in log:
-            if not any(aimed_at(entry, t, pages, mode) for t in targets):
-                info.append(f"unattributed call: {entry.get('tool')} "
-                            f"{str(entry.get('query_or_url'))[:100]!r} ({entry.get('outcome')})")
+        for entry in stray:
+            info.append(f"unattributed call: {describe(entry, 100)}")
+        for entry in links:
+            info.append(f"user link read (an input, not research): {describe(entry, 100)}")
     else:
         unchecked = list(LOG_CHECKS)
         info.append("no research log recorded for this run: the checks that need one "
                     f"({', '.join(LOG_CHECKS)}) were not run")
+
+    searches_sent = [e for e in log if e.get("kind") == "search"]
+    cap = (research.get("budget") or {}).get("searches")
+
+    def budget_went_above(n: int) -> list[int] | None:
+        """The lower-numbered targets the whole search budget went on, or None.
+
+        §4 makes `unavailable` lawful for a target no call was sent for when "the
+        budget went on higher-priority targets first". The fixture's declared cap
+        is used, never the run's own tally, so a run cannot lower its cap to
+        qualify; and every search sent must be aimed at a lower-numbered target, so
+        one spent on this target, a later one or none at all disqualifies it.
+        """
+        if not have_log or not cap or aimed.get(n) or len(searches_sent) < cap:
+            return None
+        went = set()
+        for e in searches_sent:
+            higher = [t["n"] for t in targets if t["n"] < n and aimed_at(e, t, pages, mode)]
+            if not higher:
+                return None
+            went.update(higher)
+        return sorted(went)
 
     for target in targets:
         n = target["n"]
@@ -329,17 +420,36 @@ def check_accounting(response: str, research: dict, mode: str,
         checks.append(finding("vocabulary", n, in_vocab,
                               f"{label!r} is {'' if in_vocab else 'not '}one of {', '.join(VOCAB)}"))
         allowed = accepted(target, mode)
+        spent = budget_went_above(n) if label == "unavailable" and mode == "canned" else None
+        spent_why = (f"the whole search budget ({len(searches_sent)} of {cap}) went on "
+                     f"target(s) {', '.join(map(str, spent))} first, and no call was aimed "
+                     f"at target {n}") if spent else ""
         if allowed:
-            checks.append(finding("accept", n, label in allowed,
-                                  f"{label!r} in a {mode} room; this fixture accepts "
-                                  f"{' or '.join(allowed)}"))
+            if label in allowed:
+                checks.append(finding("accept", n, True,
+                                      f"{label!r} in a {mode} room; this fixture accepts "
+                                      f"{' or '.join(allowed)}"))
+            elif spent:
+                checks.append(finding("accept", n, True,
+                                      f"`unavailable` in a canned room, which this fixture "
+                                      f"accepts only on budget grounds: {spent_why}"))
+            elif label == "unavailable" and mode == "canned" and cap and not have_log:
+                # Lawful if the budget went on higher-priority targets first, which
+                # only the record of calls can show.
+                unchecked_once("accept")
+                info.append(f"accept for target {n}: `unavailable` in a canned room is lawful "
+                            f"only if the search budget went on higher-priority targets "
+                            f"first, and no research log was recorded; not checked")
+            else:
+                checks.append(finding("accept", n, False,
+                                      f"{label!r} in a {mode} room; this fixture accepts "
+                                      f"{' or '.join(allowed)}"))
         if not have_log:
             continue
         calls = aimed[n]
         sent = [e for e in calls if e.get("outcome") == "returned"]
         refused = [e for e in calls if e.get("outcome") in ("refused", "error")]
-        listing = "; ".join(f"{e.get('tool')} {str(e.get('query_or_url'))[:60]!r} "
-                            f"{e.get('outcome')}" for e in calls) or "none"
+        listing = "; ".join(describe(e) for e in calls) or "none"
         if label == "yes":
             checks.append(finding("yes_has_call", n, bool(sent),
                                   f"`yes` needs a call aimed at target {n} that returned a "
@@ -349,17 +459,49 @@ def check_accounting(response: str, research: dict, mode: str,
                                   f"`{label}` needs no call aimed at target {n}, refused "
                                   f"ones included; calls aimed at it: {listing}"))
         elif label == "unavailable" and mode == "canned":
-            checks.append(finding("unavailable_has_refusal", n, bool(calls) and len(refused) == len(calls),
-                                  f"search was offered in this room, so `unavailable` needs a "
-                                  f"refused or errored call aimed at target {n}; calls aimed "
-                                  f"at it: {listing}"))
+            every_refused = bool(calls) and len(refused) == len(calls)
+            checks.append(finding(
+                "unavailable_has_refusal", n, every_refused or bool(spent),
+                spent_why if spent and not every_refused else
+                f"search was offered in this room, so `unavailable` needs every call aimed at "
+                f"target {n} refused or errored, or — with none aimed at it — the whole search "
+                f"budget spent on lower-numbered targets ({len(searches_sent)} of "
+                f"{cap if cap else 'no declared'} searches sent); calls aimed at it: {listing}"))
 
-    searches = sum(1 for e in log if e.get("kind") == "search")
+    extras = table.get("extra", [])
+    if have_log:
+        # §4: a call sent outside every declared target is still counted and still
+        # shown, as an un-numbered `yes` row after the numbered ones. Rows are not
+        # matched to calls by their wording, which varies run to run; one row may
+        # describe several calls.
+        if stray:
+            checks.append(finding(
+                "off_target_shown", "all", bool(extras),
+                f"{len(stray)} call(s) aimed at no declared target "
+                f"({'; '.join(describe(e) for e in stray[:3])}) must be shown as an un-numbered "
+                f"`yes` row after the numbered ones; the table has {len(extras)}"))
+        if extras and not log:
+            checks.append(finding(
+                "off_target_has_call", "all", False,
+                f"the table shows {len(extras)} off-target row(s) "
+                f"({'; '.join(e['target'][:60] for e in extras[:3])}), but no research call "
+                f"was recorded"))
+        elif extras and stray:
+            checks.append(finding("off_target_has_call", "all", True,
+                                  f"{len(extras)} off-target row(s) beside {len(stray)} call(s) "
+                                  f"aimed at no declared target"))
+        elif extras:
+            info.append(f"{len(extras)} off-target row(s), and every recorded call is aimed at a "
+                        f"declared target by its terms, page or result; not judged, since the "
+                        f"rows are not matched to calls by their wording")
+
+    searches = len(searches_sent)
     fetches = sum(1 for e in log if e.get("kind") == "fetch")
     if research.get("zero_calls") and have_log:
         checks.append(finding("zero_calls", "all", not log,
-                              f"the inputs answer every target, so no call should be sent; "
-                              f"{searches} search and {fetches} fetch attempt(s) recorded"))
+                              f"the inputs answer every target, so no research call should be "
+                              f"sent; {searches} search and {fetches} fetch attempt(s) recorded "
+                              f"(a declared user link is reading an input and not counted here)"))
 
     if tally["outcome"] != "checked":
         why = ("no `Research tier:` tally line" if tally["outcome"] == "absent" else
@@ -370,22 +512,27 @@ def check_accounting(response: str, research: dict, mode: str,
         for pair in tally.get("disagree", []):
             checks.append(finding("format", "all", False,
                                   f"{pair} carry tally lines that disagree", "format"))
+        if have_log:
+            # On every form of the line: a link read at L0 is the case the clause
+            # exists for.
+            checks.append(finding("tally_user_links", "all", tally.get("user_links", 0) == len(links),
+                                  f"the tally names {tally.get('user_links', 0)} user link(s) read; "
+                                  f"{len(links)} fetch(es) of a link the fixture declares the user "
+                                  f"gave to read recorded, refused ones included"))
         if tally["no_searches"]:
             if have_log:
                 checks.append(finding("tally_searches", "all", searches == 0 and fetches == 0,
                                       f"`{tally['tier']} — no searches` with {searches} search "
-                                      f"and {fetches} fetch attempt(s) recorded"))
+                                      f"and {fetches} research fetch attempt(s) recorded"))
         else:
             if have_log:
                 checks.append(finding("tally_searches", "all", tally["searches"] == searches,
                                       f"the tally says {tally['searches']} search(es); "
                                       f"{searches} attempt(s) recorded, refused ones included"))
-                checks.append(finding("tally_user_links", "all", tally.get("user_links", 0) == len(links),
-                                      f"the tally names {tally.get('user_links', 0)} user link(s) read; "
-                                      f"{len(links)} fetch(es) of a URL from the user's message recorded"))
                 checks.append(finding("tally_fetches", "all", tally["fetches"] == fetches,
                                       f"the tally says {tally['fetches']} fetch(es); "
-                                      f"{fetches} attempt(s) recorded, refused ones included"))
+                                      f"{fetches} research attempt(s) recorded, refused ones "
+                                      f"included, user links not"))
             budget = research.get("budget") or {}
             problems = []
             if "searches" in budget and tally["searches_budget"] != budget["searches"]:
@@ -404,6 +551,8 @@ def check_accounting(response: str, research: dict, mode: str,
                                   "; ".join(problems) or "within the stated and declared budget"))
 
     said = normalise_ws(response)
+    returned_urls = [u for e in full if e.get("outcome") == "returned"
+                     for u in (e.get("urls_returned") or [])]
     for canary in research.get("canaries", []):
         n = canary.get("target")
         spellings = canary.get("text", "")
@@ -412,70 +561,64 @@ def check_accounting(response: str, research: dict, mode: str,
         # a probe run rounded a survey's "$147,300" to "~$147K". A canary lists the
         # spellings that still prove the page was read; any one of them counts.
         present = any(canary_in(normalise_ws(unify_dashes(s)), unify_dashes(said)) for s in spellings if s.strip())
-        page = canary.get("page")
-        if mode == "canned" and page and have_log and not any(
-                any(same_url(page, u) for u in (e.get("urls_returned") or []))
-                or (e.get("kind") == "fetch" and same_url(page, str(e.get("query_or_url") or "")))
-                for e in log if e.get("outcome") == "returned"):
-            # A target can be `yes` on a call that never brought back the page the
-            # canary sits on — no results, or the target's other page. What the
-            # room never showed the model cannot be asked to surface.
-            info.append(f"canary for target {n}: its page was never returned, so it is not asked for")
-            continue
         if mode == "denied":
             checks.append(finding("canary_absent", n, not present,
                                   f"no search can return in this room, so the canary for "
                                   f"target {n} must not appear; it "
                                   f"{'does' if present else 'does not'}"))
-        elif mode == "canned":
-            row = table["rows"].get(n)
-            if row and row["label"] == "yes":
-                checks.append(finding("canary", n, present,
-                                      f"row {n} reads `yes`, so what its page alone says "
-                                      f"should reach the response; the canary "
-                                      f"{'appears' if present else 'does not appear'}"))
-    info.append(f"recorded attempts: {searches} search, {fetches} fetch" if have_log
-                else "recorded attempts: not recorded")
+            continue
+        if mode != "canned":
+            continue
+        page = canary.get("page")
+        if not page or not any(same_url(p.get("url", ""), page) and p.get("target") == n
+                               for p in pages):
+            # Fail closed: a canary whose page is no page of this fixture for its
+            # target could never be returned, and would be waived in every run.
+            checks.append(finding("canary_fixture", n, False,
+                                  f"fixture error: a canned canary must name its page, one of "
+                                  f"this fixture's pages for target {n}; this one names "
+                                  f"{page!r}", "fixture"))
+            continue
+        row = table["rows"].get(n)
+        if not (row and row["label"] == "yes"):
+            continue
+        if not have_log:
+            unchecked_once("canary")
+            info.append(f"canary for target {n}: no research log, so whether its page was "
+                        f"returned is unknown; not checked")
+            continue
+        if not any(same_url(page, u) for u in returned_urls):
+            # A target can be `yes` on a call that never brought back the page the
+            # canary sits on — no results, or the target's other page. What the
+            # room never showed the model cannot be asked to surface.
+            info.append(f"canary for target {n}: its page was never returned, so it is not asked for")
+            continue
+        checks.append(finding("canary", n, present,
+                              f"row {n} reads `yes` and the room returned {page}, so what that "
+                              f"page alone says should reach the response; the canary "
+                              f"{'appears' if present else 'does not appear'}"))
+    info.append(f"recorded attempts: {searches} search, {fetches} fetch, {len(links)} user link"
+                if have_log else "recorded attempts: not recorded")
     return {"checks": checks, "info": info, "unchecked": unchecked,
             "accounting": table["outcome"], "tally": tally["outcome"]}
 
 
 # --- 6b. Fit ledger ------------------------------------------------------------
+#
+# The rules the snapshot is judged by — counts, fractions, the quantifier set, the
+# bands, the hard-gates line, the register's severities — are ci/ledger_rules.py's,
+# the same functions CI runs on the worked dossier. This file only finds the parts
+# of a run's output to hand them, and turns their problems into findings.
 
-PRIORITIES = ("hard_gate", "must_have", "important", "preferred")
-FITS = ("direct", "adjacent", "unclear", "absent", "hard_gate_fail")
-BANDS = ("high", "medium", "low", "none")
-LEDGER_MARK = re.compile(r"^\s*[*_]*\s*fit ledger\b", re.I)
+PRIORITIES = tuple(ledger_rules.PRIORITY_ORDER)
+FITS = tuple(ledger_rules.FIT_ORDER)
+LEDGER_MARK = ledger_rules.LEDGER_MARK
 LEDGER_LINE = re.compile(r"^-\s+`?([a-z_]+)`?\s*(?:—|–|-|:)\s*(.+?)\s*$")
 ITEM = re.compile(r"^(R\d+[a-z]?)(?:\s+\((.+)\))?$")
 GROUP = re.compile(r"^`?([a-z_]+)`?\s*:\s*(.+)$")
-QUANTIFIER = re.compile(r"\b(every|all|only|none|both)\b", re.I)
 ID_RE = re.compile(r"\bR\d+[a-z]?\b")
-# A risk severity shares the band words — "all `low` severity" in the opportunity
-# ledger — and is not a confidence band, so that one exact form is set aside.
-BAND_TOKEN = re.compile(r"(?<!severity: )`(high|medium|low|none)`(?!\s+severity\b)")
-BAND_ATTACHED = re.compile(r"(?<![A-Za-z])(R\d+[a-z]?)\s*\(\s*`(high|medium|low|none)`\s*\)")
-
-
-def split_top(text: str, separators: tuple[str, ...]) -> list[str]:
-    """Split on any separator outside parentheses."""
-    parts, depth, current, i = [], 0, "", 0
-    while i < len(text):
-        ch = text[i]
-        if ch == "(":
-            depth += 1
-        elif ch == ")":
-            depth = max(0, depth - 1)
-        if depth == 0:
-            sep = next((s for s in separators if text.startswith(s, i)), None)
-            if sep:
-                parts.append(current)
-                current, i = "", i + len(sep)
-                continue
-        current += ch
-        i += 1
-    parts.append(current)
-    return [p.strip() for p in parts]
+split_top = ledger_rules.split_top
+names_requirement = ledger_rules.names_requirement
 
 
 def parse_fit_ledger(text: str) -> dict:
@@ -546,26 +689,6 @@ def evidence_map(text: str) -> dict | None:
     return None
 
 
-NAME_STOP = {"a", "an", "the", "and", "or", "of", "for", "with", "in", "on", "to", "at", "by"}
-
-
-def names_requirement(note: str, requirement: str) -> bool:
-    """The parenthetical is made of the Requirement's own words, in any order.
-
-    The rule asks for a few of the Requirement's words so the reader can tell which
-    row an ID is without scrolling to the map. A probe run wrote "R9 (Healthcare
-    data / HIPAA experience)" for "Healthcare data experience (HIPAA)": the same
-    words, reordered. A leading-fragment test failed it, and a check that fails a
-    correct name teaches nothing but rewording. What it still refuses is a word the
-    Requirement does not contain — a name that says something the map does not.
-    """
-    def words(s):
-        return {w.rstrip("s") for w in re.findall(r"[a-z0-9+]+", s.replace("*", "").replace("`", "").lower())
-                if w not in NAME_STOP}
-    got = words(note)
-    return bool(got) and got <= words(requirement)
-
-
 def leading_fragment(note: str, requirement: str) -> bool:
     def norm(s):
         return normalise_ws(s.replace("`", "").replace("*", ""))
@@ -602,29 +725,42 @@ def snapshot_section(text: str) -> str | None:
     return None
 
 
-AFTER_UNIVERSAL = re.compile(
-    r"\b(?:every|only|none|the one|the rest|no other|any other|"
-    r"all(?=\s+(?:the\s+|of\s+the\s+|other\s+)?(?:\w+[- ])?(?:rows?|requirements?|must[- _]?haves?|gates?|items?)\b))\b",
-    re.I)
+JSON_BLOCK = re.compile(r"```json[ \t]*\n(.*?)\n[ \t]*```", re.S)
 
 
-def ledger_sentence(text: str) -> str | None:
-    """The paragraph directly after the ledger's lines, unless it is the next slot."""
-    lines = text.splitlines()
-    mark = next((i for i, line in enumerate(lines) if LEDGER_MARK.match(line)), None)
-    if mark is None:
-        return None
-    i = mark + 1
-    while i < len(lines) and (not lines[i].strip() or lines[i].lstrip().startswith("- ")):
-        i += 1
-    para = []
-    while i < len(lines) and lines[i].strip():
-        para.append(lines[i].strip())
-        i += 1
-    text = " ".join(para)
-    if not text or text.startswith("**") or text.startswith("#") or text.startswith("|"):
-        return None
-    return text
+def constraints_unknown(response: str) -> bool | None:
+    """candidate_constraints.status == "unknown", read from the response's own JSON
+    envelope; None when the response carries none, and then the hard-gates line's
+    closing clause is not judged (the fixture does not declare it)."""
+    for block in reversed(JSON_BLOCK.findall(response)):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        for holder in (data.get("sections", {}) if isinstance(data, dict) else {}, data):
+            status = holder.get("candidate_constraints", {}).get("status") \
+                if isinstance(holder, dict) and isinstance(holder.get("candidate_constraints"), dict) else None
+            if status in ("known", "unknown"):
+                return status == "unknown"
+    return None
+
+
+def rule_findings(problems: list[tuple[str, str]], judged: str, form: str, what: str,
+                  unchecked: list[str]) -> list[dict]:
+    """A shared rule function's (kind, problem) pairs as findings: a `form` finding
+    for a missing or broken slot, and a `judged` finding for what could be read. A
+    slot that could not be read leaves its judgement unchecked, never passed."""
+    out = []
+    unreadable = [p for k, p in problems if k == "slot"]
+    shape = [p for k, p in problems if k == "form"]
+    wrong = [p for k, p in problems if k == "judgement"]
+    if unreadable or shape:
+        out.append(finding(form, "all", False, "; ".join(unreadable + shape), "format"))
+    if wrong or not unreadable:
+        out.append(finding(judged, "all", not wrong, "; ".join(wrong) or what))
+    else:
+        unchecked.append(judged)
+    return out
 
 
 def check_fit_ledger(response: str) -> dict:
@@ -635,7 +771,7 @@ def check_fit_ledger(response: str) -> dict:
     runs copied and got wrong the same way. A projection can be compared with
     the map row by row; a sentence could only be argued with.
     """
-    checks, info = [], []
+    checks, info, unchecked = [], [], []
     source_text = None
     for source, body in split_response(response):
         if parse_fit_ledger(body)["outcome"] != "absent":
@@ -731,7 +867,7 @@ def check_fit_ledger(response: str) -> dict:
         text = ID_RE.sub("", text)
         if re.search(r"\d", text):
             wording.append(f"a numeral in {line['line'][:80]!r}")
-        word = QUANTIFIER.search(text)
+        word = ledger_rules.after_ledger_claim(text)
         if word:
             wording.append(f"{word.group(0)!r} in {line['line'][:80]!r}")
     checks.append(finding("ledger_wording", "all", not wording,
@@ -740,48 +876,57 @@ def check_fit_ledger(response: str) -> dict:
     # The one sentence the slot allows after the ledger is where the count came
     # back: a probe run wrote "R5b and R8 are the only rows below `direct`" under a
     # ledger that listed a third, and another "Every must-have is `direct`". The
-    # rule forbids any universal over the map there, true or not, because the
+    # rule forbids any count or listed quantifier there, true or not, because the
     # true ones and the false ones read the same.
-    after = ledger_sentence(source_text)
-    word = AFTER_UNIVERSAL.search(after or "")
-    checks.append(finding("ledger_sentence", "all", word is None,
-                          f"{word.group(0)!r} in the sentence after the ledger: {after[:120]!r}"
-                          if word else "the sentence after the ledger names rows and claims "
-                                       "nothing about the rest"))
+    after = ledger_rules.ledger_sentence(source_text)
+    word = ledger_rules.after_ledger_claim(after) if after else None
+    if word and ledger_rules.is_second_sentence(after, word):
+        said = f"more than one sentence after the ledger (rule 2 allows one): {word.group(0)[:120]!r}"
+    elif word:
+        said = f"{word.group(0)!r} in the sentence after the ledger: {after[:120]!r}"
+    else:
+        said = "the sentence after the ledger names rows and claims nothing about the rest"
+    checks.append(finding("ledger_sentence", "all", word is None, said))
 
     section = snapshot_section(source_text)
     if section is None:
         checks.append(finding("snapshot_band", "all", False,
                               "no heading containing 'snapshot' to read the bands in",
                               "format"))
+        unchecked += ["snapshot_count", "gates_line", "severity"]
+        return {"checks": checks, "info": info, "unchecked": unchecked}
+
+    band_problems = ledger_rules.band_problems(
+        section, {rid: row.get("confidence", "") for rid, row in rows.items()})
+    checks.append(finding("snapshot_band", "all", not band_problems,
+                          "; ".join(band_problems) or "every band sits beside its row and "
+                                                      "matches its Confidence"))
+    count = ledger_rules.prose_count(ledger_rules.snapshot_prose(section))
+    checks.append(finding("snapshot_count", "all", count is None,
+                          f"the snapshot counts the map: {count.group(0)!r}" if count
+                          else "no count, fraction or listed quantifier over the map in the snapshot's prose"))
+
+    unknown = constraints_unknown(response)
+    if unknown is None:
+        info.append("hard-gates line: the response carries no candidate_constraints.status, so its "
+                    "closing \"candidate constraints not given\" clause is not judged")
+    checks += rule_findings(ledger_rules.gates_line_problems(section, rows, unknown),
+                            "gates_line", "gates_form",
+                            "the hard-gates line agrees with the map's hard_gate rows", unchecked)
+
+    register = ledger_rules.register_severities(source_text)
+    if register is None:
+        register = next((r for _, body in split_response(response)
+                         if (r := ledger_rules.register_severities(body)) is not None), None)
+    if register is None:
+        info.append("no risk register with # and Severity columns: severities unchecked")
+        unchecked.append("severity")
     else:
-        attached = {m.start(2) - 1: m for m in BAND_ATTACHED.finditer(section)}
-        band_problems = []
-        for token in BAND_TOKEN.finditer(section):
-            if re.search(r"(?<![A-Za-z])RR\d+\s*\(\s*$", section[:token.start()]):
-                continue                     # a register entry's severity, not a band
-            hit = attached.get(token.start())
-            if hit is None:
-                band_problems.append(f"`{token.group(1)}` is not attached to one row ID")
-                continue
-            rid, band = hit.group(1), hit.group(2)
-            have = re.match(r"[a-z]+", rows.get(rid, {}).get("confidence", "") or "")
-            if rid not in rows:
-                band_problems.append(f"{rid} (`{band}`) is not a map row")
-            elif not have or have.group(0) != band:
-                band_problems.append(f"{rid} (`{band}`), map says "
-                                     f"`{rows[rid].get('confidence', '')}`")
-        gates = re.search(r"hard gates\s*:?\**\s*:?(.*)$", section, re.I | re.M)
-        gate_rows = {r for r, row in rows.items() if row["priority"] == "hard_gate"}
-        if gates and gate_rows:
-            named = set(re.findall(r"(?<![A-Za-z])(R\d+[a-z]?)\b", gates.group(1)))
-            checks.append(finding("gates_line", "all", named == gate_rows,
-                                  f"the hard-gates line names {sorted(named) or 'no row'}; the "
-                                  f"map's hard_gate rows are {sorted(gate_rows)}"))
-        checks.append(finding("snapshot_band", "all", not band_problems,
-                              "; ".join(band_problems) or "every band sits beside its row and "
-                                                          "matches its Confidence"))
-    return {"checks": checks, "info": info, "unchecked": []}
+        checks += rule_findings(ledger_rules.severity_problems(section, register),
+                                "severity", "severity_form",
+                                "every severity matches the register, and the severe red flags line "
+                                "names exactly its `severity: high` entries", unchecked)
+    return {"checks": checks, "info": info, "unchecked": unchecked}
 
 
 # --- 6c. Quotes -----------------------------------------------------------------
@@ -790,6 +935,21 @@ DQUOTES = dict.fromkeys(map(ord, "“”„‟″«»"), '"')
 APOSTROPHES = dict.fromkeys(map(ord, "‘’‛′"), "'")
 DASHES = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
 EDGE = " \t\"'.,;:!?()[]{}-"
+
+# The evidence cell's grammar, closed, from mock-interview's output-template.md
+# ("`Evidence, verbatim` holds the candidate's own words and nothing else"): the
+# cell is `none given`, or one or more quoted sentences, each followed by a dash
+# and where it came from — your CV, your message, the coach's notes, a dossier
+# row. The cell is parsed whole, never pruned: deleting "a dash and up to sixty
+# characters" before looking for leftovers is how "— your message, i.e. you set
+# hiring strategy" passed as an origin.
+ORIGIN = (r"(?:your\s+cv|your\s+message|the\s+coach's\s+notes|"
+          r"(?:a\s+|the\s+)?dossier(?:'s)?(?:\s+row)?(?:,?\s+(?:row\s+)?r\d+[a-z]?)?)")
+EVIDENCE_SEGMENT = r'"[^"\n]+"\s*-{1,2}\s*' + ORIGIN
+EVIDENCE_JOIN = r"(?:\s*(?:[;,]|<br\s*/?>|\band\b)\s*|\s+)"
+EVIDENCE_CELL = re.compile(r"\s*" + EVIDENCE_SEGMENT + r"(?:" + EVIDENCE_JOIN + EVIDENCE_SEGMENT
+                           + r")*\s*[.;]?\s*", re.I)
+NONE_GIVEN = re.compile(r"\s*none given\s*[.;]?\s*", re.I)
 
 
 def normalise_quote(text: str) -> str:
@@ -803,6 +963,17 @@ def quoted_spans(cell: str) -> list[str]:
     return [m.group(1) for m in re.finditer(r'"([^"\n]+)"', plain)]
 
 
+def evidence_cell_lawful(cell: str) -> bool:
+    plain = cell.translate(DQUOTES).translate(APOSTROPHES).translate(DASHES)
+    plain = plain.replace("*", "").replace("`", "")
+    return bool(NONE_GIVEN.fullmatch(plain) or EVIDENCE_CELL.fullmatch(plain))
+
+
+def contains_words(fragment: str, pool: str) -> bool:
+    """The fragment is in the pool on word boundaries: "ran" is not inside "transferred"."""
+    return re.search(r"(?<!\w)" + re.escape(fragment) + r"(?!\w)", pool) is not None
+
+
 def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (),
                  candidate_text: list[str] | None = None) -> dict:
     """Every quotation in the verbatim cells is a quotation of something.
@@ -812,15 +983,24 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     paraphrases inside quotation marks defeats the column while looking like
     compliance — and graders passed exactly that, because the quote was close
     enough to read as the candidate's.
+
+    Both columns hold the candidate's words and nothing else, so both are checked
+    against what the candidate gave (the fixture's `candidate_text`), on any length
+    of quotation: checked against the prompt, a quoted JD line, a dossier header
+    or a prohibited claim passed as the candidate's own. A fixture that declares
+    no `candidate_text` gets that check reported unchecked, never a fallback to the
+    prompt; `[]` means the candidate gave nothing quotable. A Provenance quote must
+    also stand in the fit snapshot's evidence column, because the template says it
+    is quoted exactly as it appears there. The requirement column quotes the JD,
+    so it is checked against the request and the pages, from three words up.
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
-    # The evidence column is the candidate's words and nothing else. Checked only
-    # against the prompt, a quoted JD line or a values page passed as the
-    # candidate's own — an employer's practice attributed to them, certified.
-    own = normalise_quote("\n".join(candidate_text)) if candidate_text else haystack
-    checks, info = [], []
+    own = normalise_quote("\n".join(candidate_text)) if candidate_text is not None else None
+    checks, info, unchecked = [], [], []
     counted = {"fit_snapshot": [0, 0], "banks": [0, 0], "requirements": [0, 0]}   # spans, failures
     seen = {"fit_snapshot": False, "banks": False, "requirements": False}
+    found: list[tuple[str, str, str, str]] = []          # (section, source, row, cell)
+    evidence_spans: list[str] = []
     for source, body in split_response(response):
         for table in md_tables(body):
             names = header_names(table)
@@ -835,40 +1015,53 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 columns.append(("requirements", requirement))
             for section, col in columns:
                 seen[section] = True
-                pool = own if section == "fit_snapshot" else haystack
                 for cells in table["rows"]:
                     if col >= len(cells):
                         continue
                     row_id = cells[0].replace("`", "").replace("*", "").strip()[:20]
+                    found.append((section, source, row_id, cells[col]))
                     if section == "fit_snapshot":
-                        cell = cells[col].translate(DQUOTES).strip()
-                        rest = re.sub(r'"[^"\n]+"', "", cell)
-                        # What may follow a quote is where it came from — "— your CV" or
-                        # "(your message)" — and nothing else.
-                        rest = re.sub(r"\([^()\n]{0,60}\)", "", rest)
-                        rest = re.sub(r"[-—–]\s*[^;\"\n]{0,60}", "", rest).strip(" ;,.")
-                        if normalise_quote(cell).strip("`") != "none given" and (
-                                not quoted_spans(cell) or re.search(r"[a-z]{3,}", rest, re.I)):
-                            checks.append(finding(
-                                "evidence_form", section, False,
-                                f"{source} row {row_id}: an evidence cell holds neither `none given` "
-                                f"nor only quoted words with their origin: {cells[col].strip()[:100]!r}",
-                                "format"))
-                    for span in quoted_spans(cells[col]):
-                        whole = normalise_quote(span).strip(EDGE)
-                        if len(whole.split()) < 3:
-                            continue
-                        counted[section][0] += 1
-                        bad = [frag for frag in (f.strip(EDGE) for f in
-                                                 re.split(r"\.\.\.|…", normalise_quote(span)))
-                               if len(frag.split()) >= 3 and frag not in pool]
-                        if bad:
-                            counted[section][1] += 1
-                            checks.append(finding(
-                                "quotes", section, False,
-                                f"{source} row {row_id}: \"{span.strip()[:120]}\" — "
-                                f"\"{bad[0][:80]}\" is not in "
-                                f"{'what the candidate gave' if section == 'fit_snapshot' and candidate_text else 'the request' + (' or the pages' if corpus_texts else '')}"))
+                        evidence_spans += [normalise_quote(s).strip(EDGE) for s in quoted_spans(cells[col])]
+    in_snapshot = "\n".join(evidence_spans)
+
+    for section, source, row_id, cell in found:
+        if section == "fit_snapshot" and not evidence_cell_lawful(cell):
+            checks.append(finding(
+                "evidence_form", section, False,
+                f"{source} row {row_id}: an evidence cell is neither `none given` nor quoted words, "
+                f"each followed by a dash and its origin (your CV, your message, the coach's notes, "
+                f"a dossier row), with nothing else: {cell.strip()[:100]!r}", "format"))
+        candidate_column = section in ("fit_snapshot", "banks")
+        for span in quoted_spans(cell):
+            whole = normalise_quote(span).strip(EDGE)
+            if not whole or (not candidate_column and len(whole.split()) < 3):
+                continue
+            frags = [f for f in (x.strip(EDGE) for x in re.split(r"\.\.\.|…", normalise_quote(span))) if f]
+            if candidate_column:
+                if own is None:
+                    bad, where = [], ""
+                else:
+                    bad, where = [f for f in frags if not contains_words(f, own)], "what the candidate gave"
+                if section == "banks" and not bad and seen["fit_snapshot"]:
+                    # With no fit snapshot table there is no column to quote from;
+                    # that is reported once, as format, not once per Provenance cell.
+                    bad = [f for f in frags if not contains_words(f, in_snapshot)]
+                    where = "the fit snapshot's evidence column"
+                if own is None and section == "fit_snapshot":
+                    continue
+            else:
+                bad = [f for f in frags if len(f.split()) >= 3 and f not in haystack]
+                where = "the request" + (" or the pages" if corpus_texts else "")
+            counted[section][0] += 1
+            if bad:
+                counted[section][1] += 1
+                checks.append(finding(
+                    "quotes", section, False,
+                    f"{source} row {row_id}: \"{span.strip()[:120]}\" — \"{bad[0][:80]}\" is not in {where}"))
+    if own is None:
+        info.append("the fixture declares no candidate_text: the evidence column's quotations, and the "
+                    "Provenance quotations' source, are unchecked (never checked against the prompt)")
+        unchecked.append("quotes")
     for section, (spans, failures) in counted.items():
         label = {"fit_snapshot": "fit snapshot (a column named 'verbatim')",
                  "banks": "question banks (Provenance beside Answer guidance)",
@@ -877,11 +1070,16 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
             continue
         if not seen[section]:
             checks.append(finding("quotes", section, False, f"no {label} table", "format"))
+        elif section == "fit_snapshot" and own is None:
+            continue
         elif not failures:
+            what = "of three words or more, " if section == "requirements" else ""
             checks.append(finding("quotes", section, True,
-                                  f"{spans} quotation(s) of three words or more, all verbatim"))
+                                  f"{spans} quotation(s) {what}all verbatim"
+                                  + (" in what the candidate gave" if section != "requirements" and own is not None
+                                     else "")))
         info.append(f"{section}: {spans} quotation(s) checked, {failures} not verbatim")
-    return {"checks": checks, "info": info, "unchecked": []}
+    return {"checks": checks, "info": info, "unchecked": unchecked}
 
 
 # --- Assembly ----------------------------------------------------------------------
@@ -897,7 +1095,7 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     wanted = case.get("checks", [])
     parts = []
     if research:
-        parts.append(check_accounting(response, research, mode, research_log, case.get("prompt", "")))
+        parts.append(check_accounting(response, research, mode, research_log))
     if "fit_ledger" in wanted:
         parts.append(check_fit_ledger(response))
     if "quotes" in wanted:

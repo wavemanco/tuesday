@@ -13,7 +13,7 @@ What this skill reads, and what each section replaces:
 | Section | What it gives the pack |
 |---|---|
 | `handoff_to_mock_interview` | The five rules below — the core of the handoff |
-| `role_profile` | The JD equivalent: requirements with priority, inferred outcomes, unknowns. A dossier with this section satisfies the JD input tier |
+| `role_profile` | The JD equivalent: requirements with priority, inferred outcomes, unknowns. A dossier with this section satisfies the JD input tier, and its requirement text stands as the supplied JD's lines — a raising source as `references/question-rubric.md` defines one — while its `unknowns` and inferred outcomes are the underwriter's analysis and are not |
 | `evidence_map` | Per-requirement candidate evidence with confidence and gap type — the fit snapshot's grading, and its evidence quotes the snapshot's evidence cells. `reasoning` is the underwriter's analysis: a bridge may cite it as a limit, never as something the candidate did |
 | `verified_candidate_evidence` | The CV equivalent for elicitation purposes: user-confirmed claims, already graded. A dossier carrying it satisfies the CV input tier |
 | `risk_register` | Unresolved opportunity risks; feeds reverse questions alongside `opportunity_risks_to_validate` |
@@ -64,6 +64,6 @@ Rules for writing it honestly:
 - **`suggested_gap_type` is a suggestion, and the field name says so.** The underwriter owns classification; this skill proposes from what it saw. A story the candidate told fluently but that never reached the CV is `presentation`; a blank where a story should be is `discovery` before it is ever `capability` — one bad rehearsal is not evidence of absent capability, and calling it that in a file the candidate carries around does real harm.
 - **`new_evidence_leads` are leads, not evidence.** Anything the candidate said mid-rehearsal is a self-report made under practice pressure. Record it as a lead for the underwriter to verify. Never phrase it as established, and never let a lead you recorded feed back into this same pack's guidance as though it were confirmed.
 - **Nothing personal.** Rehearsal reveals nerves, hesitation, and self-doubt. None of that belongs in a file the candidate carries between sessions and may hand to a tool later. Record requirements and stories, never assessments of the person.
-- **Write only this section.** `pack_feedback` is this skill's only writable section. Carry every other section through unchanged, including sections this skill doesn't recognize.
+- **Write only this section.** `pack_feedback` is this skill's only writable section. Carry every other section through unchanged, including sections this skill doesn't recognize. Its lines in the report on top are rendered from the JSON section (`dossier-schema.md` §2); this skill adds no report-only part.
 
 When updating an existing dossier, preserve its envelope version and its other sections verbatim; when emitting a fresh dossier that carries only `pack_feedback` (the mock-interview-first ordering, where no underwriting has happened yet), fill `role` and `generated_by` from what this engagement knows and leave the underwriter's sections absent rather than stubbed — an absent section is honest, an empty one invites a consumer to think it was assessed.

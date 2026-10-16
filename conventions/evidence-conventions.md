@@ -32,6 +32,15 @@ Confidence grades a **candidate claim**, not a skill's prose:
 | `low` | Vague claim, indirect context, partial evidence, or an unconfirmed `memory_lead` |
 | `none` | No supporting evidence, or direct contradiction |
 
+**A candidate's own constraint is the one claim with nothing to inspect.** A
+non-negotiable the candidate states about themselves — a pay floor, the office
+days they will work, a right to work the suite never asks them to prove — has no
+artifact behind it and could not have one: their own specific, confirmed word is
+the strongest evidence that exists for it, so it is `high`. The band grades their
+statement of the constraint, never whether a role meets it; that is fit, carried
+by the fit status and gap type. A vague or unconfirmed constraint takes the band
+its evidence earns.
+
 **What counts as an inspectable artifact is domain-specific, and it is researched
 rather than assumed.** The `high` band turns on "an inspectable artifact", and one
 does not look the same in two fields: a repository in engineering, a portfolio in

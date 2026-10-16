@@ -4,7 +4,7 @@ Research is tiered because it trades the user's time (and, at the deep tier, the
 
 ## L0 — provided documents only
 
-No network. Use when offline, when the user declines research, or in API contexts without search. Everything not traceable to a provided document is labeled `[generic]`, and the upgrade menu says plainly what research would have added.
+L0 sends no search and no fetch of the skill's choosing. A link the user gave you to read is a provided document, read when the host can fetch it and named on the tally line; a host that cannot fetch says so and uses only what was pasted. A URL the user names only as where pasted text came from is not a link to read (`interaction-grammar.md` §4). Use L0 when offline, when the user declines research, or in a host without search. Everything not traceable to a provided document is labeled `[generic]`, and the upgrade menu says plainly what research would have added.
 
 ## L1 — default targeted research
 
@@ -20,11 +20,11 @@ Searches outside these targets do not run at L1. A question none of them covers 
 
 Freshness rules: values are stable (official page wins, fetch once); loop structure is semi-stable (prefer recent, note the source's age if older); strategy is perishable (under 6 months or label it).
 
-**When results aren't attributable:** some companies return nothing usable — stealth startups, tiny firms, name collisions with bigger entities (a search for a small "Northwind" drowns in unrelated results). Using a same-named company's values or process is worse than using nothing. Treat any target you can't attribute to *this specific company* as not-established: say so plainly in the pack, drop the values cheat sheet, fall back to the archetype table below, and put the missing facts in the upgrade menu — the user's recruiter can often supply them in one email.
+**When results aren't attributable:** some companies return nothing usable — stealth startups, tiny firms, name collisions with bigger entities (a search for a small "Fenwick" drowns in unrelated results). Using a same-named company's values or process is worse than using nothing. Treat any target you can't attribute to *this specific company* as not-established: say so plainly in the pack, drop the values cheat sheet, fall back to the archetype table below, and put the missing facts in the upgrade menu — the user's recruiter can often supply them in one email.
 
 ## L2 — deep research (consent-gated)
 
-Offer exactly once — in the Step 1 message when one is being sent anyway, otherwise as an upgrade-menu line in the delivered pack — with the cost stated ("a deeper research pass adds several minutes — want it?"). Never auto-run it; never re-offer after a decline. What it buys, and why it matters: historically, the strongest pack content — the strategy cases, the "why do you beat competitor X in 60 seconds" drills — comes from a company strategy brief. When the user can't supply one, this tier is its substitute; without it, CO and CASE questions go generic and are labeled as such.
+Offer exactly once — in the Step 1 message when one is being sent anyway, otherwise as an upgrade-menu line in the delivered pack — with the cost stated as its caps and its time ("a deeper research pass — up to 6 more searches and 2 more fetches, several more minutes — want it?"). Never auto-run it; never re-offer after a decline. What it buys, and why it matters: historically, the strongest pack content — the strategy cases, the "why do you beat competitor X in 60 seconds" drills — comes from a company strategy brief. When the user can't supply one, this tier is its substitute; without it, CO and CASE questions go generic and are labeled as such.
 
 The L2 targets, numbered after L1's, with a budget of **at most 6 further searches and 2 further fetches**:
 

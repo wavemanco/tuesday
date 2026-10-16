@@ -1286,6 +1286,373 @@ def keep_answer_key_other_skill(root: Path) -> None:
               '("we\'re a family, and families pitch in after hours")',
               '("ran the site\'s peak-season surge plan two years running")', "keep_answer_key_other_skill")
 
+# What the first fit-ledger fixes still let through (cross-cutting F1, JU-11, JU-2,
+# JU-8): each is a reading of the map the rule forbids, in a shape the narrower
+# patterns did not reach.
+
+AFTER_LEDGER = "R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on an artifact."
+
+
+def break_ledger_count_words_between(root: Path) -> str:
+    """"N of the M" with words before the noun: COUNTED needed "N of M" exactly."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, AFTER_LEDGER + " Four of the seven material requirements are `direct`.",
+              "break_ledger_count_words_between")
+    return "the sentence after the fit ledger says"
+
+
+def break_ledger_bare_count(root: Path) -> str:
+    """A count with no "of" at all."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Four rows are `direct`.", "break_ledger_bare_count")
+    return "the sentence after the fit ledger says"
+
+
+def break_ledger_second_paragraph(root: Path) -> str:
+    """The first paragraph after the ledger is clean; the second one quantifies."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, AFTER_LEDGER + "\n\nThe rest are `direct`.", "break_ledger_second_paragraph")
+    return "the sentence after the fit ledger says \"The rest"
+
+
+def break_ledger_two_sentences(root: Path) -> str:
+    """Rule 2 allows at most one sentence after the ledger, quantifier or not."""
+    swap_once(root, DOSSIER, AFTER_LEDGER,
+              "R4 has a credible bridge with its limit named. R3 (`medium`) is confirmed but waits on an artifact.",
+              "break_ledger_two_sentences")
+    return "is followed by more than one sentence"
+
+
+def break_ledger_both_after(root: Path) -> str:
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Both R4 and R3 (`medium`) wait on an artifact.", "break_ledger_both_after")
+    return "the sentence after the fit ledger says \"Both\""
+
+
+def break_ledger_universal_in_verdict(root: Path) -> str:
+    """A universal over a tier in a slot other than the sentence after the ledger."""
+    swap_once(root, DOSSIER, "**Worth applying to — on the conditions below.",
+              "**Worth applying to — every must_have requirement is direct but R4.", "break_ledger_universal_in_verdict")
+    return "the snapshot counts or quantifies the map"
+
+
+def break_ledger_summary_all_but(root: Path) -> str:
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Direct on all but R4;',
+              "break_ledger_summary_all_but")
+    return "decision.summary counts the map"
+
+
+def break_ledger_summary_bare_count(root: Path) -> str:
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Four direct;',
+              "break_ledger_summary_bare_count")
+    return "decision.summary counts the map"
+
+
+def break_ledger_summary_of_the(root: Path) -> str:
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Four of the seven direct;',
+              "break_ledger_summary_of_the")
+    return "decision.summary counts the map"
+
+
+def break_ledger_plain_band(root: Path) -> str:
+    """A band without backticks is still a band, and this one is not R3's."""
+    swap_once(root, DOSSIER, "R3 (`medium`)", "R3 (high)", "break_ledger_plain_band")
+    return "snapshot gives R3 `high`; the map says medium"
+
+
+def break_ledger_fit_twice(root: Path) -> str:
+    swap_once(root, DOSSIER, "- `must_have` — direct: R2, R3 · adjacent: R4 (Regulatory exposure)",
+              "- `must_have` — direct: R2 · direct: R3 · adjacent: R4 (Regulatory exposure)", "break_ledger_fit_twice")
+    return "fit direct appears twice under must_have"
+
+
+def break_ledger_severity_mismatch(root: Path) -> str:
+    """A full severity token the register does not carry: RR2 is medium."""
+    swap_once(root, DOSSIER, "- **Severe red flags:** none found.", "- **Severe red flags:** RR2 (`severity: high`).",
+              "break_ledger_severity_mismatch")
+    return "snapshot gives RR2 `severity: high`; the register says medium"
+
+
+def break_ledger_severity_unknown_id(root: Path) -> str:
+    swap_once(root, DOSSIER, "- **Severe red flags:** none found.", "- **Severe red flags:** RR9 (`severity: high`).",
+              "break_ledger_severity_unknown_id")
+    return "RR9 is not in the risk register"
+
+
+def break_ledger_none_found_over_high(root: Path) -> str:
+    """The register gains a high entry; the snapshot still says none found."""
+    swap_once(root, DOSSIER, "| RR1 | Authority over three squads asserted, not evidenced | unknown | — |",
+              "| RR1 | Authority over three squads asserted, not evidenced | unknown | high |",
+              "break_ledger_none_found_over_high")
+    return "says \"none found\" while the register has"
+
+
+def break_ledger_gate_wrong_fit(root: Path) -> str:
+    swap_once(root, DOSSIER, "none failed (R1 `direct`, R9 `direct`)", "none failed (R1 `direct`, R9 `adjacent`)",
+              "break_ledger_gate_wrong_fit")
+    return "the hard-gates line gives R9 `adjacent`; the map says direct"
+
+
+def break_ledger_constraints_clause(root: Path) -> str:
+    """The envelope says the constraints were not given; the gates line does not say so."""
+    swap_once(root, DOSSIER, '"candidate_constraints": {\n      "status": "known",',
+              '"candidate_constraints": {\n      "status": "unknown",', "break_ledger_constraints_clause")
+    return "the candidate's constraints were not given"
+
+
+def break_quantifier_drift_rule(root: Path) -> str:
+    """The rule's list gains a word the shared set does not hold (D6)."""
+    swap_once(root, "skills/job-underwriter/references/evidence-model.md", '"each of", ', '"each of", "most", ',
+              "break_quantifier_drift_rule")
+    return "QUANTIFIERS lacks ['most']"
+
+
+def break_quantifier_drift_grader(root: Path) -> str:
+    """A grader clause drops a word of the list."""
+    path = root / "skills/job-underwriter/evals/evals.json"
+    data = json.loads(path.read_text())
+    old = data["clauses"]["ledger_counts"]
+    data["clauses"]["ledger_counts"] = old.replace("'neither', ", "")
+    if data["clauses"]["ledger_counts"] == old:
+        raise SystemExit("break_quantifier_drift_grader has gone stale")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "lists quantifiers without ['neither']"
+
+
+def keep_ledger_only_adverb(root: Path) -> None:
+    """"only" qualifying one row, outside the sentence after the ledger, is no quantifier."""
+    swap_once(root, DOSSIER, "One entry runs the other way", "R4 is only adjacent. One entry runs the other way",
+              "keep_ledger_only_adverb")
+
+
+def keep_ledger_figure_with_unit(root: Path) -> None:
+    """The candidate's own figures are not counts of rows, beside a map word or not."""
+    swap_once(root, DOSSIER, "One entry runs the other way",
+              "The candidate's 9 years clear an 8+ requirement. One entry runs the other way",
+              "keep_ledger_figure_with_unit")
+
+
+# The answer-key check, read as runs of words rather than whole quotes (N6, F10, N9).
+
+RUBRIC = "skills/mock-interview/references/question-rubric.md"
+RUBRIC_EXAMPLE = '`[grounded] "Ran the small-grants round for three years"`'
+
+
+def break_answer_key_near_quote(root: Path) -> str:
+    """The mi 2 sentence with one word changed: an exact-substring test passed it."""
+    swap_once(root, RUBRIC, RUBRIC_EXAMPLE, '`[grounded] "ran the site\'s peak-season surge plan for two years"`',
+              "break_answer_key_near_quote")
+    return "quoted from this skill's own fixtures"
+
+
+def break_answer_key_single_quotes(root: Path) -> str:
+    swap_once(root, RUBRIC, RUBRIC_EXAMPLE, "`[grounded]` 'ran the site's peak-season surge plan two years running'",
+              "break_answer_key_single_quotes")
+    return "quoted from this skill's own fixtures"
+
+
+def break_answer_key_reframing(root: Path) -> str:
+    """The reframing audit's old ambiguity example, a near-quote of job-underwriter eval 3."""
+    path = root / "skills/job-underwriter/references/reframing-audit.md"
+    path.write_text(path.read_text() + '\n\nFor example, "growth lead, then Head of Growth, at two companies" '
+                                       'is one tenure or two.\n')
+    return "quoted from this skill's own fixtures"
+
+
+def break_answer_key_unquoted(root: Path) -> str:
+    """Eight words of a fixture's prompt pasted into rule prose with no quotation marks."""
+    path = root / RUBRIC
+    path.write_text(path.read_text() + "\n\nA candidate who cut mis-pick rate 40% by redesigning the pick path "
+                                       "is a good case.\n")
+    return "repeats this skill's own fixtures unquoted"
+
+
+def break_answer_key_canned_page(root: Path) -> str:
+    """A canned research page is shown to the model too (mi 7's values page)."""
+    swap_once(root, RUBRIC, RUBRIC_EXAMPLE,
+              '`[grounded] "when the calendar and the players disagree, the players win"`',
+              "break_answer_key_canned_page")
+    return "page https://saltmarshgames.com/values"
+
+
+def keep_answer_key_common_phrase(root: Path) -> None:
+    """A common phrase of rule prose shares too few words with any fixture to fail."""
+    path = root / RUBRIC
+    path.write_text(path.read_text() + '\n\nA question such as "how do you set priorities each week" is generic.\n')
+
+
+def keep_answer_key_contract(root: Path) -> None:
+    """The shared contract's own wording, which a dossier fixture repeats by design."""
+    path = root / "skills/mock-interview/references/dossier-handoff.md"
+    path.write_text(path.read_text() + '\n\nIts caveat reads "confirmed, limited inspectable proof — expect a probe".\n')
+
+
+# Fixture fields the harness reads (D5).
+
+JU = "skills/job-underwriter/evals/evals.json"
+MI = "skills/mock-interview/evals/evals.json"
+
+
+def mutate_case(root: Path, rel: str, case_id: int, change) -> None:
+    path = root / rel
+    data = json.loads(path.read_text())
+    change(next(c for c in data["evals"] if c["id"] == case_id))
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def break_canary_page_typo(root: Path) -> str:
+    """A canary whose page matches no page is never asked for: a check that passes in every run."""
+    mutate_case(root, JU, 4, lambda c: c["research"]["canaries"][0].update(page="https://brindlemoor.co.uk/abuot"))
+    return "the canary for target 1 names https://brindlemoor.co.uk/abuot"
+
+
+def break_canary_other_target(root: Path) -> str:
+    mutate_case(root, JU, 4, lambda c: c["research"]["canaries"][0].update(
+        page="https://pricewell.example/2026-uk-pricing-analytics-pay-survey"))
+    return "is not exactly one of this fixture's pages for target 1"
+
+
+def break_canary_no_page(root: Path) -> str:
+    mutate_case(root, MI, 7, lambda c: c["research"]["canaries"][0].pop("page"))
+    return "names no page"
+
+
+def break_canary_spelling(root: Path) -> str:
+    mutate_case(root, JU, 4, lambda c: c["research"]["canaries"][0].update(text=["4,000 employees"]))
+    return "no spelling of the canary for target 1 is in its page"
+
+
+def break_candidate_text_drift(root: Path) -> str:
+    mutate_case(root, MI, 2, lambda c: c["candidate_text"].__setitem__(0, c["candidate_text"][0] + " and more"))
+    return "is not in the prompt"
+
+
+def break_candidate_text_missing(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: c.pop("candidate_text"))
+    return "declares no candidate_text list"
+
+
+def break_term_collision(root: Path) -> str:
+    """RV3's shape: an n/a target's term matches another target's natural query."""
+    mutate_case(root, MI, 3, lambda c: c["research"]["targets"][3]["terms"].append("the interviewer"))
+    return "its terms match target 2's sample"
+
+
+def break_hunt_vacuous(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: c["research"]["targets"][3].update(terms=["zzz"]))
+    return "match none of its own hunt_samples"
+
+
+def break_sample_unaimed(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: c["research"]["targets"][2]["on_target_samples"].append("Stripe in 2026"))
+    return "is aimed at no term of it"
+
+
+def break_hunt_samples_missing(root: Path) -> str:
+    mutate_case(root, MI, 3, lambda c: c["research"]["targets"][3].pop("hunt_samples"))
+    return "has no hunt_samples"
+
+
+# Retired wording and rewritten rules (NEW-RV-C, RV14, NEW-RV-I, MI-7).
+
+def break_retired_returned_something(root: Path) -> str:
+    path = root / JU
+    data = json.loads(path.read_text())
+    old = data["clauses"]["accounting"]
+    data["clauses"]["accounting"] = old.replace("returned a result (an empty or unattributable one included)",
+                                                "returned something")
+    if data["clauses"]["accounting"] == old:
+        raise SystemExit("break_retired_returned_something has gone stale")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "\"returned something\" is the retired accounting wording"
+
+
+def break_retired_refused_only(root: Path) -> str:
+    swap_once(root, "skills/mock-interview/references/output-template.md", "if every call was refused or errored",
+              "if every call was refused", "break_retired_refused_only")
+    return "without \"or errored\" is the retired accounting wording"
+
+
+def break_labels_without_result(root: Path) -> str:
+    path = root / MI
+    data = json.loads(path.read_text())
+    old = data["clauses"]["accounting"]
+    data["clauses"]["accounting"] = old.replace("returned a result", "came back", 1)
+    if data["clauses"]["accounting"] == old:
+        raise SystemExit("break_labels_without_result has gone stale")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "defines the yes/unavailable labels without \"returned a result\""
+
+
+def break_l0_no_network(root: Path) -> str:
+    swap_once(root, "skills/mock-interview/references/research-checklist.md", "L0 sends no search",
+              "No network. L0 sends no search", "break_l0_no_network")
+    return "an L0 definition says \"no network\""
+
+
+def break_personas_premap(root: Path) -> str:
+    path = root / "skills/mock-interview/references/personas.md"
+    path.write_text(path.read_text().replace("### 1. The Data-Driven Prober",
+                                             "- Pre-map one story per stem before the round.\n\n### 1. The Data-Driven Prober", 1))
+    return "maps a story with no quoted sentence behind it"
+
+
+def break_personas_scope_line(root: Path) -> str:
+    path = root / "skills/mock-interview/references/personas.md"
+    text = path.read_text()
+    line = next(l for l in text.splitlines() if "quote-or-slot" in l)
+    path.write_text(text.replace(line + "\n", "", 1))
+    return "points its counter-strategies at the quote-or-slot rule"
+
+
+def keep_no_network_elsewhere(root: Path) -> None:
+    """"No network" outside an L0 definition is not the retired L0 wording."""
+    swap_once(root, "skills/mock-interview/references/personas.md", "## Relationship priors",
+              "An offline host has no network, which changes nothing here.\n\n## Relationship priors",
+              "keep_no_network_elsewhere")
+
+
+# Every declared enum names its column (MI-11).
+
+def break_enum_without_column(root: Path) -> str:
+    swap_once(root, "skills/job-underwriter/SKILL.md", ", severity=Severity", "", "break_enum_without_column")
+    return "enum_fields names 'severity' and enum_columns gives it no column"
+
+
+def break_enum_column_missing(root: Path) -> str:
+    swap_once(root, "skills/mock-interview/SKILL.md", "gap_type=Gap type", "gap_type=Gap kind", "break_enum_column_missing")
+    return "puts 'gap_type' in 'Gap kind', which is no column"
+
+
+def break_enum_column_stale(root: Path) -> str:
+    swap_once(root, "skills/resume-tailor/SKILL.md", "row_status=Status", "row_status=Status, stage=Status",
+              "break_enum_column_stale")
+    return "maps 'stage', which enum_fields does not declare"
+
+
+# The clause mechanism (D1).
+
+def break_clause_unknown(root: Path) -> str:
+    path = root / JU
+    data = json.loads(path.read_text())
+    data["evals"][0]["expectations"].append("{{no_such_clause}}")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "names no clause"
+
+
+def break_clause_unused(root: Path) -> str:
+    path = root / MI
+    data = json.loads(path.read_text())
+    data["clauses"]["orphan"] = "Text that grades nothing."
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "clause \"orphan\" is defined and never used"
+
+
+def break_clause_nested(root: Path) -> str:
+    """A clause inside a clause is not expanded, and would reach the grader as braces."""
+    path = root / JU
+    data = json.loads(path.read_text())
+    data["clauses"]["no_score"] += " {{closing}}"
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return "keeps an unexpanded clause reference"
+
+
 PASSES = [
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
     ("sections", "a bare section written \"of this spec\" beside another file's name", keep_self_reference_of_this_spec),
@@ -1318,6 +1685,11 @@ PASSES = [
     ("fit-ledger", "a requirement split into two rows", keep_ledger_split_rows),
     ("fit-ledger", "a severity in its full token beside a register ID", keep_ledger_severity_token),
     ("answer-keys", "a quote from another skill's fixture", keep_answer_key_other_skill),
+    ("fit-ledger", "\"only\" qualifying one row outside the sentence after the ledger", keep_ledger_only_adverb),
+    ("fit-ledger", "a figure with its unit beside a map word", keep_ledger_figure_with_unit),
+    ("answer-keys", "a common phrase of rule prose", keep_answer_key_common_phrase),
+    ("answer-keys", "the shared contract's own wording", keep_answer_key_contract),
+    ("wording", "\"no network\" outside an L0 definition", keep_no_network_elsewhere),
 ]
 
 
@@ -1537,6 +1909,51 @@ CASES: list[tuple[str, str, callable]] = [
     ("parameters", "the message as head subject before a nearer noun", break_close_head_subject),
     ("parameters", "a budget as \"N questions, counted across\"", break_budget_counted_across),
     ("parameters", "a budget \"on any turn\"", break_budget_on_any_turn),
+    ("fit-ledger", "\"four of the seven material requirements\" after the ledger", break_ledger_count_words_between),
+    ("fit-ledger", "\"four rows\" after the ledger", break_ledger_bare_count),
+    ("fit-ledger", "a second paragraph after the ledger", break_ledger_second_paragraph),
+    ("fit-ledger", "two sentences after the ledger", break_ledger_two_sentences),
+    ("fit-ledger", "\"both\" after the ledger", break_ledger_both_after),
+    ("fit-ledger", "a universal over a tier in the verdict line", break_ledger_universal_in_verdict),
+    ("fit-ledger", "\"all but\" in decision.summary", break_ledger_summary_all_but),
+    ("fit-ledger", "a bare count in decision.summary", break_ledger_summary_bare_count),
+    ("fit-ledger", "\"N of the M\" in decision.summary", break_ledger_summary_of_the),
+    ("fit-ledger", "a band without backticks", break_ledger_plain_band),
+    ("fit-ledger", "a fit group repeated on one line", break_ledger_fit_twice),
+    ("fit-ledger", "a severity the register does not carry", break_ledger_severity_mismatch),
+    ("fit-ledger", "a severity on an entry the register does not have", break_ledger_severity_unknown_id),
+    ("fit-ledger", "\"none found\" over a high register entry", break_ledger_none_found_over_high),
+    ("fit-ledger", "a met gate row given the wrong fit", break_ledger_gate_wrong_fit),
+    ("fit-ledger", "constraints not given and no closing clause", break_ledger_constraints_clause),
+    ("fit-ledger", "a quantifier the rule lists and the shared set lacks", break_quantifier_drift_rule),
+    ("fit-ledger", "a grader clause missing a quantifier of the list", break_quantifier_drift_grader),
+    ("answer-keys", "a fixture sentence with one word changed", break_answer_key_near_quote),
+    ("answer-keys", "a fixture sentence in single quotes", break_answer_key_single_quotes),
+    ("answer-keys", "the old reframing example, a near-quote", break_answer_key_reframing),
+    ("answer-keys", "a fixture run pasted unquoted", break_answer_key_unquoted),
+    ("answer-keys", "a canned page's sentence quoted", break_answer_key_canned_page),
+    ("fixtures", "a canary page with a typo", break_canary_page_typo),
+    ("fixtures", "a canary naming another target's page", break_canary_other_target),
+    ("fixtures", "a canned canary with no page", break_canary_no_page),
+    ("fixtures", "a canary none of whose spellings is on its page", break_canary_spelling),
+    ("fixtures", "a candidate_text entry not in the prompt", break_candidate_text_drift),
+    ("fixtures", "a quotes fixture with no candidate_text", break_candidate_text_missing),
+    ("fixtures", "an n/a target's term matching another target's query", break_term_collision),
+    ("fixtures", "an n/a target whose terms match none of its hunts", break_hunt_vacuous),
+    ("fixtures", "an on-target sample aimed at no term of its target", break_sample_unaimed),
+    ("fixtures", "an n/a target with no hunt_samples", break_hunt_samples_missing),
+    ("wording", "\"returned something\" back in a grader clause", break_retired_returned_something),
+    ("wording", "\"every call was refused\" without \"or errored\"", break_retired_refused_only),
+    ("wording", "a label definition without \"returned a result\"", break_labels_without_result),
+    ("wording", "\"No network\" back in the L0 definition", break_l0_no_network),
+    ("wording", "a story pre-mapped with no quote", break_personas_premap),
+    ("wording", "the personas scope line removed", break_personas_scope_line),
+    ("columns", "a declared enum with no column", break_enum_without_column),
+    ("columns", "an enum mapped to a column no worked table has", break_enum_column_missing),
+    ("columns", "an enum_columns entry for an undeclared field", break_enum_column_stale),
+    ("evals", "an expectation naming an unknown clause", break_clause_unknown),
+    ("evals", "a clause nothing uses", break_clause_unused),
+    ("evals", "a clause inside a clause", break_clause_nested),
 ]
 
 

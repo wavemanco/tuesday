@@ -31,7 +31,9 @@ output rather than the shared vocabulary:
   that answer is `user_confirmed_text`.
 - **`medium` is the intake ceiling.** Nothing reaches `high` on a first pass from
   unprobed material, however specific it sounds: `high` needs an inspectable
-  artifact, and intake prose is not one.
+  artifact, and intake prose is not one. The candidate's own stated constraint is
+  the exception `evidence-conventions.md` §2 names, and the constraint-row rule
+  below applies it.
 - **A provenance label attaches to the sentence it licenses, not to the section.**
   A heading that announces research, or a preamble saying what follows is
   inferred, leaves every line beneath it bare the moment one is quoted back,
@@ -105,9 +107,9 @@ Rules for building rows:
 - **Requirements come from the JD or from named inference, never from buzzword drift.** "Mentions Kafka once in a tools list" does not create a streaming-architecture requirement; if you infer a requirement, `requirement_source.type: inferred` and say why.
 - **`fit_status` and `gap_type` are decided per the taxonomy** in `references/gap-taxonomy-and-questions.md`, and they are two calls, not one. When fit is `direct` with solid evidence the CV already communicates, `gap_type: none`; when fit is `direct` but the CV buries the evidence, the gap is `presentation`. Every row carries a gap type, `none` included — it is a token in the vocabulary (`references/evidence-conventions.md` §3), not an empty cell.
 - **Every enum cell holds exactly one token from its set, and nothing else.** `priority`, `fit_status`, `confidence`, `gap_type`, and the register's `class` and `severity` are vocabularies, not prose: no slash, no hyphenated pair, no parenthetical, no second answer. `low–medium`, `none/low`, `split`, `mixed` and `discovery (sales piece)` have each been written into one of these cells, and the list keeps growing because each is a different way of declining to choose — two answers, or a qualifier smuggled into a slot with room for one. The qualifier is not unwelcome; it belongs in `reasoning`, where it can be read and where nothing downstream tries to parse it — **and `reasoning` is a rendered column of the evidence map, not a field that only surfaces in the JSON.** The column was missing for longer than anyone noticed, which is why the list of coined values above kept growing: the rule named a destination the writer could not see. If you are about to write a map without that column, add the column first. Hedging between two declines to make the call the row exists to make. The mapping governs what may be asserted on top of each band, so a hybrid licenses nothing coherently. When a claim genuinely sits between two, take the **lower** band and say why in `reasoning`: the lower band is the one whose assertions the evidence can actually carry, and the reasoning is where the nuance belongs. When one requirement holds two claims of different strength, the split is legitimate and the slash is not: it becomes **two rows** — R4a at `medium` for the adjacent work, R4b at `none` for the titled years — each with its own requirement text, band and next action. Written into one cell as "medium (adjacent) / none (titled)" it is still one cell holding two answers, and everything downstream that reads a band off this row now reads a string. Rows are free; the cell is the constraint.
-- **Every hard constraint the role's terms touch is a `hard_gate` row.** Each `kind: hard` entry in `candidate_constraints` the role's terms bear on — stated or silent — becomes a row: fit `hard_gate_fail` where the terms conflict, `unclear` where they are unstated, `direct` where they are met, and `satisfied_by_role` agreeing (no, unknown, yes). The register's mismatch entries stay, citing the row ("see R8"); they are never the only place a conflict lives, because the snapshot's hard-gates line reads the map, and a conflict filed only in the register is one it cannot see.
+- **Every hard constraint the role's terms touch is carried by one `hard_gate` row — one row per gate term, whichever side states it.** Each `kind: hard` entry in `candidate_constraints` the role's terms bear on, stated or silent, is carried by a row. Where the JD already has a hard-gate row for the same term — location, schedule, pay, authorization, travel — that row carries the constraint: its `requirement_source` stays `jd_quote`, the candidate's non-negotiable is its `candidate_claim`, its evidence cites the candidate's statement, and no second row is made; R1 in `references/dossier-template.md` and the `hard_gate_fail` example below are this form. Where the JD has no hard-gate row for the term — the posting is silent on it, or mentions it only in passing — the constraint becomes its own row, `requirement_source.type: inferred` with the text `candidate_constraints: …`, as R8 and R9 in the worked dossier show. Either way the row's fit is `hard_gate_fail` where the terms conflict, `unclear` where they are unstated, `direct` where they are met; its gap type is `hard_gate` on a failed or unclear row and `none` on a met one; and the constraint item's `satisfied_by_role` agrees (no, unknown, yes). On such a row `candidate_claim`, `evidence`, `verified` and `confidence` grade the candidate's own statement of the constraint, not whether the role meets it: a specific, user-confirmed constraint is `verified: true` at `high` (`evidence-conventions.md` §2), and an unconfirmed or vague one takes the band its evidence earns. Whether the role meets it lives in `fit_status`, `gap_type`, `satisfied_by_role` and `reasoning`, never in `confidence`. The register's mismatch entries stay, citing the row ("see R8"); they are never the only place a conflict lives, because the snapshot's hard-gates line reads the map, and a conflict filed only in the register is one it cannot see.
 - **The row is the unit, and a statement about a set of rows names them.** Once a JD responsibility becomes a row, or a requirement splits into R4a and R4b, the JD's own list and the map are two different sets, and a count that is right in one is wrong in the other. Measured snapshots went wrong in exactly that gap: "six of nine" counted R-numbers while its parenthesis listed rows, and "every must-have" read the JD's list while the map had tiered a responsibility `must_have`. So anything the response says about the map, anywhere in it, reads the map's rows and its Priority column — "must-have" means the `must_have` tier — names the IDs it covers, and carries no count, fraction or quantifier over the map or a tier of it: no "N of M", "every", "all", "each of", "only", "the one", "none of", "both", "neither", "the rest", or "no `must_have` row". Plain "no" and the token `none` are not quantifiers. One form is allowed, because it lists every row it covers: the snapshot's hard-gates line, "none failed (R1 `direct`, R9 `direct`)" (`references/risk-and-decision.md`). Naming loses nothing a count carried, and a list of IDs is the one form a reader can check against the table. This governs how the map is read, not how it is tiered; which tier a responsibility gets is still the row's own call.
-- **A cell restates the source claim; it never widens it.** The map is the spine — the plan, the handoff, and every draft line read from these rows, so a qualifier dropped here ("on custom builds" quietly becoming "across 30+ integrations") propagates into language the candidate says out loud. Carry the user's own qualifiers into the cell, and when a cell needs a broader claim to be true, that is a `next_action`, not a wording choice.
+- **A cell restates the source claim; it never widens it.** The map is the spine — the plan, the handoff, and every draft line read from these rows, so a qualifier dropped here ("for the arts fund" quietly becoming "across all four funds") propagates into language the candidate says out loud. Carry the user's own qualifiers into the cell, and when a cell needs a broader claim to be true, that is a `next_action`, not a wording choice.
 - **Contradictions lower confidence to `none` and say so in `reasoning`** — a CV claiming 5 years against a portfolio showing 2 is a contradiction to surface, not average.
 - **`reasoning` carries a world-claim, so it carries a `provenance` label.** This
   column was added to give a hedged confidence value somewhere to go, and it
@@ -149,18 +151,18 @@ A `direct` row at `high` confidence — claim, artifact, done:
 
 ```yaml
 requirement_id: R2
-requirement: "Expert SQL for product analytics"
+requirement: "Assessing applications against published criteria"
 priority: must_have
-requirement_source: { type: jd_quote, text: "expert SQL" }
+requirement_source: { type: jd_quote, text: "experience assessing applications against published criteria" }
 fit_status: direct
-candidate_claim: "Daily SQL on a warehouse for 6 years; wrote the team's query style guide"
+candidate_claim: "Lead assessor for a community fund's two annual rounds, 2022-2026"
 evidence:
   - source_type: cv
     reference: "CV, Experience"
-    quote_or_summary: "SQL daily on Snowflake; 40+ governed dashboards"
+    quote_or_summary: "Assessor, then lead assessor, community fund, 2022-2026"
   - source_type: link
-    reference: "github.com/example/queries (fetched)"
-    quote_or_summary: "Repository of analysis queries; non-trivial window functions throughout"
+    reference: "the fund's published panel report (fetched)"
+    quote_or_summary: "Names her as lead assessor for both rounds; prints the criteria and the scoring bands used"
 verified: true
 confidence: high
 gap_type: none
@@ -172,39 +174,39 @@ A `discovery` row born from a `memory_lead` — the lead prompts a question, not
 
 ```yaml
 requirement_id: R5
-requirement: "Has shipped an internal tool to real users"
+requirement: "Has written guidance applicants rely on"
 priority: important
-requirement_source: { type: jd_quote, text: "builds tools others rely on" }
+requirement_source: { type: jd_quote, text: "you will rewrite how first-time groups apply to us" }
 fit_status: unclear
 candidate_claim: null
 evidence:
   - source_type: memory_lead
     reference: "prior conversation"
-    quote_or_summary: "May have built a request-triage tool support agents adopted — unconfirmed"
+    quote_or_summary: "May have redrafted a fund's eligibility notes for first-time applicants — unconfirmed"
 verified: false
 confidence: low
 gap_type: discovery
 reasoning: "A lead exists but nothing is confirmed; the CV is silent. Low, not none, because there is a concrete thread to pull."
-next_action: "Ask: what was the tool, what part was theirs, who used it, and is there anything to look at?"
+next_action: "Ask: what did the redraft change, which part was theirs, did applicants use it, and is there a copy to look at?"
 ```
 
-A `hard_gate_fail` row — plain, prominent, unsolvable by wording:
+A `hard_gate_fail` row — plain, prominent, unsolvable by wording. It is also the merged form of the constraint-row rule above: the JD's own gate row carries the candidate's non-negotiable, and no second row is made for it:
 
 ```yaml
 requirement_id: R8
-requirement: "On-site five days a week"
+requirement: "Two nights a month away on project visits"
 priority: hard_gate
-requirement_source: { type: jd_quote, text: "on-site 5 days a week - no exceptions" }
+requirement_source: { type: jd_quote, text: "visits to funded projects mean two nights away each month; this is essential" }
 fit_status: hard_gate_fail
-candidate_claim: "Remote-only, stated as a non-negotiable"
+candidate_claim: "No overnight stays away from home, stated as a non-negotiable"
 evidence:
   - source_type: user_confirmed_text
     reference: "intake message"
-    quote_or_summary: "I'm remote-only - not relocating"
+    quote_or_summary: "Day trips are fine, but I can't stay away overnight"
 verified: true
 confidence: high
 gap_type: hard_gate
-reasoning: "The JD's requirement and the candidate's non-negotiable directly conflict. High confidence in the conflict itself."
+reasoning: "Confidence grades her statement of the limit, which is her own, specific and confirmed. The fit is a failed gate because the JD calls the overnight visits essential and her limit rules them out."
 next_action: "Surface in the decision snapshot; only the user or the employer changing terms resolves it."
 ```
 

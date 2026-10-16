@@ -73,8 +73,26 @@ def scoring_tokens(text: str, entity: set[str]) -> set[str]:
     return tokens(text) - STOPWORDS - entity
 
 
+SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*://", re.I)
+
+
+def norm_url(url: str) -> str:
+    """output_checks.norm_url, copied because this server runs under -I and cannot
+    import it: one URL identity for the room and the checks, so a page the checks
+    count as the one a canary or a user link names is the page the room serves.
+    test_harness.py holds the two to the same answers."""
+    text = str(url or "").strip().split("#", 1)[0]
+    text = SCHEME.sub("", text)
+    cut = min((i for i in (text.find("/"), text.find("?")) if i >= 0), default=len(text))
+    host, rest = text[:cut].lower(), text[cut:]
+    if host.startswith("www."):
+        host = host[4:]
+    text = host + rest
+    return text[:-1] if text.endswith("/") else text
+
+
 def same_url(a: str, b: str) -> bool:
-    return str(a).strip().rstrip("/") == str(b).strip().rstrip("/")
+    return norm_url(a) == norm_url(b)
 
 
 def search(corpus: dict, query: str) -> tuple[str, list[dict]]:

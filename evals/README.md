@@ -74,6 +74,14 @@ what the skill was meant to do — and grades the responses with graders that se
 only the response, the expectations, and the harness's own record of what
 research the run did.
 
+A rule several fixtures of one skill grade — the accounting labels, say — is
+written once, under the top-level `"clauses"` key of that skill's evals.json,
+and an expectation or `expected_output` includes it as `{{name}}`. Everything
+that reads a fixture (this runner, `ci/check_skills.py`, the self-tests) reads it
+through `fixture_clauses.load_cases`, so a grader is shown the expanded text and
+nothing else, and CI fails a reference to a clause the file does not define and
+a clause nothing uses. `fixture_clauses.py` says why.
+
 ```bash
 python evals/run_fixtures.py --out /tmp/clean-room --model claude-sonnet-5
 python evals/run_fixtures.py --skill job-underwriter --eval 3 --out /tmp/cr
@@ -171,11 +179,30 @@ installed skill is harness-invalid: it is not this skill's output.
 Every research expectation in this suite used to be graded from rooms where
 search was present and refused, so `unavailable` was the only label a run could
 earn truthfully and `yes` and `skipped` were never measured at all. A fixture now
-declares its research modes in an optional `research` block — the modes, the
-tier's budget, each declared target with the query terms that aim a call at it
-and the labels accepted for it per mode, the entity tokens that never score, and,
-for canned rooms, the pages and the canaries planted in them. A fixture without
-one runs denied, as every fixture always has.
+declares its research in an optional `research` block; a fixture without one runs
+denied, as every fixture always has.
+
+- `modes`; `budget`, the tier and its search and fetch caps; `entity_tokens`,
+  the words that never score; and `zero_calls` where the inputs answer every
+  target, so no research call should be sent.
+- `targets`, each with its number, the query `terms` that aim a call at it, and
+  the labels it `accept`s, for every mode or per mode. A call is aimed at a
+  target when its query or URL carries one of the terms, it fetched a page tagged
+  with the target, or in a canned room the server returned such a page
+  (`output_checks.aimed_at`). Each target also lists `on_target_samples`, queries
+  a correct run might send for it, and a target that accepts `n/a` or `skipped`
+  lists `hunt_samples`, queries that really are hunts for it; CI checks the terms
+  against both with `aimed_at` itself.
+- `user_links`: the links the user gave the skill to read (absent means none).
+  A URL the prompt names only as the source of text the user pasted is not one.
+- For canned rooms, `pages` (each with its `url`, `target`, `keywords` and text)
+  and `canaries`: a fact only one page carries, the spellings that prove it was
+  read, its `target`, and the `page` it sits on, which must be one of the
+  fixture's pages for that target.
+
+A fixture with the `quotes` check also declares `candidate_text`, top-level: the
+candidate's own words, against which the verbatim evidence column and the banks'
+Provenance are checked (`[]` when the candidate gave nothing quotable).
 
 - **denied** is the historical condition, now pinned: `--setting-sources project
   --strict-mcp-config`, with WebSearch and WebFetch present and refused. Never
@@ -217,8 +244,14 @@ The grader prompt states the room's actual research mode and carries a block
 headed "What the harness observed", in one of three states: not recorded for
 this run (do not infer whether research was attempted, and do not grade research
 counts); recorded, no calls made; or the calls themselves, each with its tool,
-query or URL, and whether it returned or was refused. Graders had been failing
-true claims of refused searches because nothing told them the searches happened.
+query or URL, and whether it returned (a search with the URLs it returned), was
+refused or errored. A fetch of a
+link the fixture declares in `research.user_links` is listed in a group of its
+own, out of the research count, because the tally line names it apart; the block
+sorts calls with `output_checks.is_user_link`, the classifier the checks use, so
+a grader and the checks compare the tally with the same numbers. Graders had been
+failing true claims of refused searches because nothing told them the searches
+happened.
 The block is ground truth for the response's claims about its own research and
 never a source of content the response lacks.
 
@@ -235,27 +268,79 @@ Some of what graders were asked to judge has a fixed form in the skills, and a
 fixed form can be read exactly. `output_checks.py` does so and writes
 `{stem}.checks.json` beside each response:
 
-- **Accounting**, for any fixture with a `research` block: the tally line, and
-  the accounting table read by each row's leading number. Each declared target
-  needs its row, a label from the vocabulary, a label the fixture accepts in this
-  mode, a call aimed at it behind a `yes`, none behind a `skipped` or `n/a`
-  (refused calls count), and in a canned room a refusal behind an `unavailable`.
-  The tally must match the recorded attempts and the tier's budget; a canary must
-  reach a canned `yes` and never appear in a denied room. Calls aimed at no
-  target are listed, never credited.
+- **Accounting**, for any fixture with a `research` block, judges the rule in
+  `conventions/interaction-grammar.md` §4 and nothing stricter. It reads the
+  tally line and the accounting table, each row by its leading number. Each
+  declared target needs its row, a label from the vocabulary, and a label the
+  fixture accepts in this mode. Against the record of calls: a `yes` needs a call
+  aimed at the target that returned (an error returns nothing); `skipped` and
+  `n/a` need no call aimed at it, refused ones included; in a canned room
+  `unavailable` needs at least one aimed call, every one refused or errored — or
+  no call aimed at it, the fixture's whole declared search budget sent, and every
+  search aimed at a lower-numbered target, which also satisfies the accept list.
+  A call aimed at no declared target needs an un-numbered `yes` row after the
+  numbered ones; one such row may cover several calls, since rows are not matched
+  to calls by their wording. An un-numbered row before or between the numbered
+  ones, or under any other label, is a format failure, and one in a run that
+  recorded no research call fails. The tally's search and fetch counts must equal
+  the recorded research attempts, refused ones included, within the budget the
+  fixture declares, and `zero_calls` fails on any research call. A fetch whose
+  URL equals a link in `research.user_links` after `output_checks.norm_url`
+  (scheme and host lowercased; the scheme, a leading `www.`, a `#fragment` and
+  one trailing `/` dropped; path and query kept) is reading an input, not
+  research: it is left out of those counts, of attribution and of `zero_calls`,
+  and counted instead against `; user links read N` on every form of the line,
+  `no searches` included. Nothing is inferred from the prompt, so a prefix, a
+  parent path or the home page of a declared link is research.
+- **Canaries**, for a fixture that plants them: in a denied room a canary must
+  never appear. In a canned room each canary must name its `page`, one of the
+  fixture's pages for its target; anything else fails as a fixture error, never
+  waived. A `yes` row's canary must then appear when the room returned that page
+  to some call. A page never returned is not asked for, and is noted; a run with
+  no research record leaves the canary unchecked.
 - **Fit ledger** (`fit_ledger`): job-underwriter's ledger must be an exact
   projection of the evidence map — every row once, under its own tier and fit,
-  each row below `direct` with the start of its Requirement, no numeral or
-  quantifier, and a confidence band only beside the one row it belongs to.
-- **Quotes** (`quotes`): every quotation of three words or more in
-  mock-interview's verbatim evidence column and in its banks' Provenance cells
-  must appear in the request, or in a canned room's pages.
+  each row below `direct` with its Requirement's own words — and the decision
+  snapshot is read by the rules in `skills/job-underwriter/references/risk-and-decision.md`
+  ("The decision snapshot") and `evidence-model.md` ("The row is the unit"). The
+  patterns and rule functions are `ci/ledger_rules.py`, the same ones CI runs on
+  the worked dossier, so the two checks of a rule cannot disagree. Checks:
+  `ledger_sentence` (no count, fraction or listed quantifier after the ledger,
+  and no second sentence), `snapshot_count` (no count, fraction or listed
+  quantifier over the map in the snapshot's prose), `snapshot_band` (a bare band
+  word, backticked or not, only as `R4 (\`medium\`)` and equal to that row's
+  Confidence; `RR2 (\`high\`)` or `RR2 (high)` is a severity written as a band,
+  and fails), `gates_line` and
+  `gates_form` (the `Hard gates:` slot, anchored at the start of its line; a
+  missing slot fails as format when the map has gate rows), and `severity` and
+  `severity_form` (every `RR4 (\`severity: high\`)` against the risk register's
+  Severity, and the severe-red-flags slot naming exactly its high entries). The
+  hard-gates line's closing "candidate constraints not given" clause is judged
+  only when the response's own JSON carries `candidate_constraints.status`; a
+  response with no risk register leaves `severity` unchecked.
+- **Quotes** (`quotes`): the verbatim evidence column and the banks' Provenance
+  cells hold the candidate's words, so every quotation in either, of any length,
+  must appear on word boundaries in the fixture's `candidate_text` — `[]` means
+  nothing the candidate gave is quotable, and a fixture without the key has that
+  check reported unchecked, never run against the prompt instead. A Provenance
+  quotation must also appear in the response's own evidence column, because the
+  template quotes it "exactly as it appears in the fit snapshot". Quotations of
+  three words or more in a Requirement column beside the verbatim one must appear
+  in the request or in a canned room's pages; that is existence, not attribution,
+  which stays with the graders. `evidence_form`, a format check, parses each
+  evidence cell whole against the grammar in mock-interview's
+  `references/output-template.md`: `none given`, or quotations each followed by a
+  dash and its origin (your CV, your message, the coach's notes, a dossier row),
+  with nothing else in the cell.
 
 Each finding is judgement or format and they are counted apart: a qualifier
 beside a status label and a `yes` with no search behind it are different defects
-with different fixes. A table that is not there is absent, one that cannot be
-read is unparseable, and neither is a pass. A check that needs the research
-record is not run on a run that has none. A check failure counts like a grader's,
+with different fixes. A third kind, `fixture`, marks a fixture that cannot be
+checked as written, such as a canary whose page is not one of its own; it fails
+the run so that it gets fixed, and is counted apart from both. A table that is
+not there is absent, one that cannot be read is unparseable, and neither is a
+pass. A check that needs the research record is listed as unchecked on a run that
+has none, never passed. A check failure counts like a grader's,
 keyed `chk:<check>:<target>`, and triggers the retry pass the same way.
 
 ### Exit codes

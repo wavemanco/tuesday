@@ -783,10 +783,13 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 harness={"status": status, "reasons": reasons})
     write_meta(out, stem, meta)
     init = graded.get("init") or {}
+    links = sum(1 for e in graded["research_log"]
+                if output_checks.is_user_link(e, case.get("research")))
     print(f"  ran {skill} eval {case['id']} [{mode}] (run {run}): {len(text)} chars"
           f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not graded['nudged'] else ' (needed a nudge to fire)'}"
-          f", {len(graded['research_log'])} research call(s), model {init.get('model')}"
+          f", {len(graded['research_log']) - links} research call(s)"
+          f"{f', {links} user link(s) read' if links else ''}, model {init.get('model')}"
           f"{'' if status == 'ok' else ' — HARNESS-INVALID: ' + '; '.join(reasons)}", flush=True)
     return meta
 
@@ -869,25 +872,51 @@ def parse_verdicts(text: str, n_expected) -> dict:
     return result
 
 
-def observed_block(meta: dict) -> str:
-    """The three states graders must be told apart: not recorded, none, and these."""
+def observed_block(meta: dict, research: dict | None = None) -> str:
+    """The three states graders must be told apart: not recorded, none, and these.
+
+    A search line names the URLs the room returned for it, so an expectation that
+    turns on which pages a run was shown (mock-interview eval 7's cheat sheet) can
+    be graded from the record rather than inferred from the response.
+
+    A fetch of a link the fixture declares the user gave to read is sorted out by
+    `output_checks.is_user_link`, the classifier the deterministic checks use, and
+    listed in its own group: it is reading an input, named on the tally line as
+    `user links read N` and never in its fetch count, so a grader comparing the
+    tally with this record compares it with the same numbers the checks do.
+    """
     if meta.get("research_log") is None:
         return ("Not recorded for this run: do not infer whether research was attempted, "
                 "and do not grade research counts.")
     log = meta["research_log"]
+    links = [e for e in log if output_checks.is_user_link(e, research)]
+    calls = [e for e in log if not output_checks.is_user_link(e, research)]
+
+    def line(e: dict) -> str:
+        asked = json.dumps(e.get("query_or_url"), ensure_ascii=False) \
+            if e.get("kind") == "search" else str(e.get("query_or_url"))
+        urls = [str(u) for u in e.get("urls_returned") or []]
+        returned = (f", {len(urls)} result(s)" + (f": {', '.join(urls[:10])}" if urls else "")
+                    + (f" and {len(urls) - 10} more" if len(urls) > 10 else "")) \
+            if e.get("kind") == "search" and e.get("outcome") == "returned" else ""
+        return f"- {e.get('kind')} via {e.get('tool')}: {asked} — {e.get('outcome')}{returned}"
+
     if not log:
         lines = ["Recorded: no search or fetch calls were made."]
     else:
-        searches = sum(1 for e in log if e.get("kind") == "search")
-        lines = [f"Recorded: {len(log)} call(s) — {searches} search(es), "
-                 f"{len(log) - searches} fetch(es), refused ones included:"]
-        for e in log:
-            asked = json.dumps(e.get("query_or_url"), ensure_ascii=False) \
-                if e.get("kind") == "search" else str(e.get("query_or_url"))
-            returned = f", {len(e.get('urls_returned') or [])} result(s)" \
-                if e.get("kind") == "search" and e.get("outcome") == "returned" else ""
-            lines.append(f"- {e.get('kind')} via {e.get('tool')}: {asked} — "
-                         f"{e.get('outcome')}{returned}")
+        if not calls:
+            lines = ["Recorded: no research search or fetch calls were made."]
+        else:
+            searches = sum(1 for e in calls if e.get("kind") == "search")
+            lines = [f"Recorded: {len(calls)} research call(s) — {searches} search(es), "
+                     f"{len(calls) - searches} fetch(es), refused ones included:"]
+            lines += [line(e) for e in calls]
+        if links:
+            lines.append(f"User links read: {len(links)} fetch(es) of a link the user gave to read "
+                         f"— reading an input, not research, so named on the tally line as "
+                         f"`user links read {len(links)}` and never in its fetch count, refused "
+                         f"ones included:")
+            lines += [line(e) for e in links]
     if meta.get("research_log_provenance"):
         lines.append("(Reconstructed from the run's session transcript.)")
     earlier = [inv for i, inv in enumerate(meta.get("invocations") or [])
@@ -910,7 +939,7 @@ def grader_prompt(case: dict, body: str, mode: str, meta: dict, numbers: list[in
         for n in numbers)
     return GRADER_PROMPT.format(
         research_mode=RESEARCH_MODE[mode], prompt=case["prompt"], response=body,
-        observed=observed_block(meta), expectations=expectations,
+        observed=observed_block(meta, case.get("research")), expectations=expectations,
         sites=SITES_INSTRUCTION if enumerate_ns & set(numbers) else "")
 
 
@@ -1295,9 +1324,12 @@ def main() -> int:
             rec = next((c for c in checks[key] if c.get("run") == run), None)
             if rec:
                 failed = [c for c in rec["checks"] if c["verdict"] == "FAIL"]
-                judged = sum(1 for c in failed if c.get("kind") != "format")
+                kinds = [c.get("kind", "judgement") for c in failed]
+                fixture = (f", {kinds.count('fixture')} fixture error"
+                           if "fixture" in kinds else "")
                 per_grader.append(f"checks {rec['status']}"
-                                  + (f" ({judged} judgement, {len(failed) - judged} format)"
+                                  + (f" ({kinds.count('judgement')} judgement, "
+                                     f"{kinds.count('format')} format{fixture})"
                                      if failed else ""))
             print(f"      run {run}: " + ", ".join(per_grader))
         for item in verdict["items"]:

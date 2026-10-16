@@ -12,7 +12,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 
 ## 2. Carrier format
 
-A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable among a user's uploads across sessions — with a concise human-readable report on top and the machine layer as one fenced ```json block at the bottom. Two layers, one artifact, no drift — the report is rendered *from* the JSON, never written separately.
+A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable among a user's uploads across sessions — with a concise human-readable report on top and the machine layer as one fenced ```json block at the bottom. Two layers, one artifact, no drift — every report line whose content a JSON field holds is rendered *from* that field, never written separately. A report part no JSON field holds is report-only: the emitting skill's dossier template names each such part, it is carried as the delivered output wrote it, no later skill reads it, and it never restates what the JSON holds — where it needs a fact the JSON carries, it points to the row or entry ("see R8") instead.
 
 ## 3. Versioning
 

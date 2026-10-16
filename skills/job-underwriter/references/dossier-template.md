@@ -5,11 +5,11 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 ## Emission rules
 
 - **Filename is exactly `tuesday-dossier.md`** — recognizable among a user's uploads months later.
-- **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered *from* the envelope, never written separately — two layers that can drift are two artifacts. One envelope entry may render in two places: a `gap_queue` row renders as a queue row *and* as a closing question, from the same `prompt` object. That is one source with two placements, which is not drift; two hand-written copies would be.
+- **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered from the envelope as `dossier-schema.md` §2 defines — two layers that can drift are two artifacts. One envelope entry may render in two places: a `gap_queue` row renders as a queue row *and* as a closing question, from the same `prompt` object. That is one source with two placements, which is not drift; two hand-written copies would be.
 - **Offered, never forced.** A one-line offer stands in every delivered assessment, first pass included, immediately before the upgrade menu; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
 - **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
-- **The research line and target table are the one part of the report the envelope does not hold.** Evidence status carries them as the delivered assessment wrote them; they describe what this engagement searched, not the role or the candidate, and no later skill reads them.
+- **Report-only parts, which no envelope field holds:** Evidence status's research line and target table; the upgrade menu; the Role reality rows `role_profile` has no field for (organization, working pattern, scope read, market calibration, contradictions); and the Why and Provenance cells of the application plan. They describe this engagement's research and reading of the role, not the candidate's evidence, and `dossier-schema.md` §2 binds them: carried as the delivered assessment wrote them, read by no later skill, and never a second copy of a fact the envelope holds. Every other line renders from the envelope.
 - **The fit ledger renders from `evidence_map`.** Its lines are `evidence_map[].requirement_id`, `priority` and `fit_status`, projected, with a few of `requirement`'s own words beside each row below `direct`, and `decision.summary` does not restate them. A summary that carries its own tally is a third copy of the map, and copies agree with each other more readily than with the map: this file's report line and its summary read "five of seven material requirements `direct`" from v0.1 onward, over a map that had four.
 - **`handoff_to_mock_interview` follows the canonical schema, `dossier-schema.md` §6, exactly** — those keys are a contract with another skill, not a suggestion. `uncertain_or_weak_areas` carries only `low`/`none`-confidence requirements; `medium`-confidence claims belong in `verified_candidate_evidence` with their caveat attached. `prohibited_claims` are absolute for every downstream consumer — list every claim this engagement established as un-assertable.
 
@@ -42,6 +42,8 @@ R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed bu
 - **Severe red flags:** none found.
 - **Conditions for go:** (1) scope and decision authority verify concrete in interviews — see risk register RR1; (2) compensation band confirmed at or above the £95k floor — R8, RR2; (3) the PSD2 bridge is positioned honestly as adjacent, never as direct compliance ownership.
 
+The hard-gates line names every gate row with its fit, whatever failed (`risk-and-decision.md` rule 4). Had the user needed sponsorship, R1 would be `hard_gate_fail`, the status `no_go` with that gate as its reason, and the line would open with the failure: ``- **Hard gates:** failed: R1 (UK work eligibility without sponsorship); unconfirmed: R8 (Base salary at or above £95k); met: R9 `direct` ``. Had the user stated no constraints at all, R8 and R9 would not exist, R1 would be `unclear`, and the line would carry the flag the input contract requires: ``- **Hard gates:** none failed; unconfirmed: R1 (UK work eligibility without sponsorship); candidate constraints not given — checks against them unknown``.
+
 ## Role reality
 
 | Element | What it is | Provenance |
@@ -72,8 +74,8 @@ to the writer as well as the reader.
 | R5 | Mentoring or leading PMs | important | unclear | low | discovery | CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk | `[grounded]` CV silence, question skipped | none — skipped by user; carried as minor risk |
 | R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | The evidence is strong — a linked case study shows the experiment pipeline — and the CV buries it in a tools list. The gap is in communication, not capability: the fix is repositioning, not new claims | `[grounded]` linked case study | CV edit E1 pending approval |
 | R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk rather than a blocker | `[grounded]` no evidence found after discovery | closure path named; minor risk given preferred priority |
-| R8 | Base salary at or above £95k (the candidate's hard floor) | hard_gate | unclear | low | hard_gate | The floor is the user's own and confirmed; the posting states no band, so whether the role clears it is unknown | `[grounded]` user-confirmed constraint; posting silent on pay | RR2's question, before investing in the loop |
-| R9 | No more than two office days a week, London (the candidate's hard constraint) | hard_gate | direct | high | none | The JD's hybrid London pattern, two office days, meets the user-confirmed constraint | `[grounded]` JD and user-confirmed constraint | none |
+| R8 | Base salary at or above £95k (the candidate's hard floor) | hard_gate | unclear | high | hard_gate | Confidence grades the floor, which is the user's own and confirmed. Fit is `unclear` because the posting states no band; RR2 closes it | `[grounded]` user-confirmed constraint; posting silent on pay | RR2's question, before investing in the loop |
+| R9 | No more than two office days a week, London (the candidate's hard constraint) | hard_gate | direct | high | none | Confidence grades the constraint, which is the user's own and confirmed. Fit is `direct` because the JD's hybrid London pattern, two office days, meets it | `[grounded]` JD and user-confirmed constraint | none |
 `Reasoning` is a column and not a paragraph underneath. It renders the row spec's
 `reasoning` field, which the JSON envelope has always carried and this table used
 to drop — and a table that drops the one free-text column leaves every qualifier
@@ -110,14 +112,14 @@ failure, same fix, one section apart and four months late.
 | # | Signal | Class | Severity | Source quote | Hypothesis | Provenance | Verification question | Status |
 |---|---|---|---|---|---|---|---|---|
 | RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Role may carry outcome accountability while decisions sit with the squad leads | `[inferred]` from the JD's squad count against its silence on decision rights | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
-| RR2 | Compensation unstated against a stated £95k+ floor (R8) | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | `[inferred]` from the market calibration against the stated floor | What band is budgeted for this role? | unresolved |
-| RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | `[grounded]` JD states both outcomes | — | noted |
+| RR2 | Compensation unstated against a stated £95k floor (R8) | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | `[inferred]` from the market calibration against the stated floor | What band is budgeted for this role? | unresolved |
+| RR3 | First-year outcomes explicitly stated in the JD | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | `[grounded]` JD states both outcomes | Who owns the reconciliation-exception metric today? | noted |
 
 The verification question is a column for the same reason. Rendered as a prose
 line beneath the table it survived only for the entries that arrived with a
 worked example attached — which meant the entries carrying the actual red flags,
 the ones a candidate most needs a question for, were the ones that lost it. Only
-`positive_signal` rows may leave the cell empty.
+`positive_signal` rows may leave the cell empty, and RR3 fills it anyway because the question is worth asking.
 
 `Hypothesis` is a column on the same argument, and it was missing here for the
 same reason `Reasoning` was missing from the evidence map: the JSON envelope has
@@ -143,7 +145,7 @@ where severity does not apply does not acquire an invented `n/a`, `none`, or a
 | W1 | A one-page sanitized partner-API case note | Raises R3 to high and is the natural artifact for the R4 bridge | `[grounded]` R3, R4 rows | pending your approval |
 | Q1 | Ask RR1 and RR2's verification questions verbatim in the loop | The register doubles as interview preparation | `[grounded]` register | pending your approval |
 | A1 | Confirm the compensation band with the recruiter before investing in the loop | Comp is unstated against a stated floor | `[grounded]` RR2 | pending your approval |
-| A2 | A referral into the team beats a cold application for this kind of role | How screening works at this size of company, not a fact about this employer | `[generic]` role-family pattern | pending your approval |
+| A2 | Look for a referral route into the team before applying cold | How screening works at this size of company, not a fact about this employer | `[generic]` role-family pattern | pending your approval |
 
 The plan is a table for the same reason role reality is. Written as prose it
 carries two things at once and loses both: strategy advice is language the
@@ -159,10 +161,10 @@ Verified: R1, R2, R3, R4, R6, R8, R9 claims (sources in envelope) — verified i
 
 Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1
 
-| L1 target | Status | What it moved, or would have |
+| Target | Status | What it moved, or would have |
 |---|---|---|
-| 1. Official site and careers page | yes | Role reality: the contradictions row — JD and careers page agree |
-| 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
+| 1. Official site and careers page | yes | Searched "Ferrowave payments" and "Ferrowave careers product manager"; fetched the careers page for this role. Role reality: the contradictions row — JD and careers page agree |
+| 2. Role-family sweep | yes | Searched "senior product manager payments platform salary London" and "payments platform product manager scope Series B". Market calibration `[generic]`; RR2's band comparison |
 | 3. Hiring manager's public footprint | n/a | No name was given, so there was no query to form. The upgrade menu names what a name would unlock |
 
 In a host with no search the same rows read `unavailable`, `unavailable`, `n/a`:
@@ -170,8 +172,12 @@ the first two naming what they would have moved, which the upgrade menu then
 offers, and the third unchanged, because `n/a` and `skipped` are decided from the
 inputs and not from the host.
 
-The target accounting specified in `SKILL.md` Step 2, rendered here: one row per
-declared L1 target, in that file's order. The dossier carries it because it
+Rows 1 and 2 name every search and fetch the tier line counts; the portfolio
+case study the user linked is the read it names as a user link. This run stopped
+at L1: an L2 run adds rows 4 and 5 below row 3, and a search sent outside every
+declared target adds an un-numbered `yes` row after them.
+
+That is the target accounting specified in `SKILL.md` Step 2. The dossier carries it because it
 renders the same analysis the delivered assessment does — **the spec lives in
 Step 2 and not in this file**, because this file is read only when a dossier is
 being emitted, and the accounting is owed by every assessment whether one is
@@ -185,7 +191,7 @@ unfilled row is the only version of that rule anyone can check.
 - An answer to G1 → R4's bridge strengthens or resolves.
 - Recruiter's comp band → R8 and RR2 close; decision likely simplifies to `go` or `no_go`.
 - The hiring manager's name → role reality's scope read, and which verified story the application plan leads with for that reader.
-- A deeper research pass on Ferrowave (funding, leadership churn, candidate reports) — say the word and it runs.
+- A deeper research pass on Ferrowave (funding, leadership churn, candidate reports; up to 5 more searches and 2 more fetches) — say the word and it runs.
 
 ```json
 {
@@ -261,7 +267,7 @@ unfilled row is the only version of that rule anyone can check.
         "requirement_id": "R2",
         "priority": "must_have",
         "requirement": "5+ years PM, 2+ on payments/fintech products",
-        "requirement_source": { "type": "jd_quote", "text": "5+ years in product management, at least 2 on payments or fintech" },
+        "requirement_source": { "type": "jd_quote", "text": "At least 5 years as a PM, 2 or more of them on payments or fintech" },
         "fit_status": "direct",
         "candidate_claim": "6 years PM at a marketplace company, the last 2 owning checkout and payments",
         "evidence": [
@@ -281,7 +287,7 @@ unfilled row is the only version of that rule anyone can check.
         "requirement": "Shipped APIs consumed by external developers",
         "requirement_source": { "type": "jd_quote", "text": "you have shipped APIs external developers rely on" },
         "fit_status": "direct",
-        "candidate_claim": "Owned partner-facing API v2; ~30 external integrators at launch",
+        "candidate_claim": "Owned partner API v2; ~30 external integrators at launch",
         "evidence": [
           { "source_type": "user_confirmed_text", "reference": "recovery turn 1", "quote_or_summary": "Led partner API v2: versioning policy, docs, migration of ~30 external integrators" }
         ],
@@ -368,9 +374,9 @@ unfilled row is the only version of that rule anyone can check.
           { "source_type": "user_confirmed_text", "reference": "intake message", "quote_or_summary": "£95k is my floor" }
         ],
         "verified": true,
-        "confidence": "low",
+        "confidence": "high",
         "gap_type": "hard_gate",
-        "reasoning": "The floor is the user's own and confirmed; the posting states no band, so whether the role clears it is unknown.",
+        "reasoning": "Confidence grades the floor, which is the user's own and confirmed. Fit is unclear because the posting states no band; RR2 closes it.",
         "provenance": "[grounded] user-confirmed constraint; posting silent on pay",
         "next_action": "RR2's question, before investing in the loop"
       },
@@ -387,7 +393,7 @@ unfilled row is the only version of that rule anyone can check.
         "verified": true,
         "confidence": "high",
         "gap_type": "none",
-        "reasoning": "The JD's hybrid London pattern, two office days, meets the user-confirmed constraint.",
+        "reasoning": "Confidence grades the constraint, which is the user's own and confirmed. Fit is direct because the JD's hybrid London pattern, two office days, meets it.",
         "provenance": "[grounded] JD and user-confirmed constraint",
         "next_action": "none"
       }
@@ -417,14 +423,14 @@ unfilled row is the only version of that rule anyone can check.
         "class": "unknown",
         "severity": null,
         "source_quote": "own the roadmap across acceptance, payouts, and reconciliation",
-        "hypothesis": "Role may carry outcome accountability while decisions sit with squad leads.",
+        "hypothesis": "Role may carry outcome accountability while decisions sit with the squad leads.",
         "provenance": "[inferred] from the JD's squad count against its silence on decision rights",
         "verification_question": "Which decisions does this role make alone, and which belong to the squad leads?",
         "decision_rule": "Proceed if authority is concrete and consistent across at least two interviewers.",
         "status": "unresolved"
       },
       {
-        "signal": "Compensation unstated against a stated 95k GBP floor",
+        "signal": "Compensation unstated against a stated £95k floor (R8)",
         "class": "risk_signal",
         "severity": "medium",
         "source_quote": "competitive package",
@@ -465,16 +471,19 @@ unfilled row is the only version of that rule anyone can check.
         "Who owns the reconciliation-exception metric today?"
       ],
       "research_actions": [
-        "Confirm the compensation band with the recruiter before the loop"
+        "Confirm the compensation band with the recruiter before investing in the loop",
+        "Look for a referral route into the team before applying cold [generic]"
       ]
     },
     "evidence_state": {
       "verified": [
         "UK work eligibility (user-confirmed)",
         "6 years PM, 2 on payments (CV + fetched case study)",
-        "Partner-facing API v2 with ~30 external integrators (user-confirmed; no artifact yet)",
+        "Partner API v2 with ~30 external integrators (user-confirmed; no artifact yet)",
         "Experiment pipeline and daily SQL (CV + fetched case study)",
-        "PCI-DSS scoping ownership, two audit cycles (user-confirmed)"
+        "PCI-DSS scoping ownership, two audit cycles (user-confirmed)",
+        "Base salary floor of £95k (user-confirmed)",
+        "At most two office days a week, London (user-confirmed)"
       ],
       "unverified_leads": [
         "Fraud-rules experiment mentioned in prior context - memory_lead, unconfirmed"

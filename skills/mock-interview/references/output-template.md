@@ -9,17 +9,17 @@ Deliver these sections in this order. The conditionality column is binding — a
 | 1 | Title block | Always | Role, company, interviewer name + relationship if known; one line on what changed if this is a regeneration |
 | 2 | How to use + type key | Always | Personas = how it's asked, types = what's scored; the five type tags with one-line meanings; "guidance is scaffolding, not a script" |
 | 3 | Prep triage | Prep time known | A prioritized schedule sized to the stated time: the few things done well, in order, each tied to a section or question ID — closing with an explicit "everything else is insurance" line. Never pad it to look busy |
-| 4 | Fit snapshot | JD, CV or stated background present (any) | The table worked below under **The fit snapshot**. Confidence holds exactly one of `high`, `medium`, `low`, `none`; provenance exactly one of `[grounded]`, `[inferred]`, `[generic]`; gap type exactly one of the six in `references/evidence-conventions.md` §3. No background at all — no CV, nothing about the candidate's past in the conversation or a dossier → the worksheet variant: the same columns, every evidence cell `none given`, confidence `none`, and the bridge column holding what strong evidence looks like plus an answer slot, F4's shape; where only some requirements have no quote, those rows take that shape and the snapshot stays a normal one. Where the requirements come from: the JD's own words, quoted; with no JD, the recruiter's or interviewer's own words, quoted, `[grounded]`; then a fetched representative JD, quoted with its source named, `[inferred]`; otherwise role-family requirements as plain unquoted prose, `[generic]`, with the representative-JD search in the upgrade menu. Only text that exists in the user's inputs or a fetched page goes inside quotation marks |
-| 5 | Graded deliverables | Recruiter/HR pre-declared a deliverable (POV, presentation, take-home) | One build section per declared deliverable: the grounded facts to build on — any about the candidate quoted verbatim, as the question banks require — 2–3 defensible theses each with a mandatory concession, differentiation strategy against the consensus answer (with the anti-pick where the role warrants saying no), and the requested close (e.g., customer benefit) if HR named one. In loop mode these are shared sections, like the values cheat sheet |
+| 4 | Fit snapshot | Always | The table worked below under **The fit snapshot**. Confidence holds exactly one of `high`, `medium`, `low`, `none`; provenance exactly one of `[grounded]`, `[inferred]`, `[generic]`; gap type exactly one of the six in `references/evidence-conventions.md` §3, chosen by the routing rule below the worked table. With no background at all — no CV, nothing about the candidate's past in the conversation or a dossier — it is the worksheet variant: the same columns, every evidence cell `none given`, confidence `none`, gap type `discovery`, and the bridge column holding what strong evidence looks like plus an answer slot, F3's shape; where only some requirements have no quote, those rows take that shape and the snapshot stays a normal one. Where the requirements come from: the JD's own words, quoted; with no JD, the recruiter's or interviewer's own words, quoted, `[grounded]`; then a fetched representative JD, quoted with its source named, `[inferred]`; otherwise role-family requirements as plain unquoted prose, `[generic]`, with the representative-JD search in the upgrade menu. Only text that exists in the user's inputs or a fetched page goes inside quotation marks |
+| 5 | Graded deliverables | Recruiter/HR pre-declared a deliverable (POV, presentation, take-home) | One build section per declared deliverable: the grounded facts to build on — any about the candidate given as the fit-snapshot row it draws on (F#) and a sentence quoted exactly from that row's evidence cell, per the pack-cell rule in `references/question-rubric.md` — 2–3 defensible theses each with a mandatory concession, differentiation strategy against the consensus answer (with the anti-pick where the role warrants saying no), and the requested close (e.g., customer benefit) if HR named one. In loop mode these are shared sections, like the values cheat sheet |
 | 6 | Grounding brief | L2 research ran, or an equivalent strategy brief was provided | Learn-the-vocabulary company section: current segmentation language, headline numbers, live leadership and strategy context, recent moves. The candidate should sound current, not archival; flag stale framings in provided documents without coaching the candidate to correct the interviewer |
-| 7 | Reading the interviewer | Real interviewer info exists | Career pattern, self-described style, 2–4 practical implications, the mirror opportunities (shared jumps, shared vocabulary) — a shared jump pairs the interviewer's public path with a quoted line from the candidate's material, never a summary of it. Public footprint only |
+| 7 | Reading the interviewer | Real interviewer info exists | Career pattern, self-described style, 2–4 practical implications, the mirror opportunities (shared jumps, shared vocabulary) — a shared jump pairs the interviewer's public path with a sentence quoted exactly from a named fit-snapshot row's evidence cell (F#), never a summary of it; where no row's evidence carries the candidate's side of the jump, it is not offered as one. Public footprint only |
 | 8 | Persona table | Always | Persona × how it shows up × likelihood **with the reasoning shown** × counter-strategy. A counter-strategy is a rehearsal method, not a claim: wherever it is applied to this candidate — a named story, an arc, a walkthrough — the quote-or-slot rule in `references/question-rubric.md` applies |
 | 9 | Question banks | Always | One sub-table per persona, ordered by weight, in the shape worked below under **Question banks**: Provenance comes before the guidance and carries every candidate sentence the guidance rests on. Provenance is its own column, never a tag trailing the rationale — as a suffix it is punctuation the writer drops, as a column it is a cell that renders empty |
-| 10 | Values / principles cheat sheet | Values-style round detected | Table: value (official name) × working meaning (paraphrased) × the candidate's mapped story — a verbatim quote with its origin where one of their sentences carries a story, otherwise a selection scaffold |
+| 10 | Values / principles cheat sheet | Values-style round detected | Table: value (official name) × working meaning (paraphrased) × the candidate's mapped story — the fit-snapshot row ID and a sentence quoted exactly from that row's evidence cell where one carries a story, otherwise a selection scaffold ending in its honest branch (`references/question-rubric.md`) |
 | 11 | Reverse questions | Always | ≥5, each with "why it lands"; ≥1 tied to the interviewer's path when a profile exists; 1 reciprocity question when peer |
 | 12 | Delivery coaching | Assessment provided | Table: assessed trait (the report's own framing) × where it helps in this loop × watch-out → counter-move, keyed to question IDs. Restate the ground rules: never mention the assessment in the interview; tuning, not content |
-| 13 | Prohibited claims | Always | What this pack will not coach, and why. From a dossier's `prohibited_claims` and `evidence_state.rejected_inferences` where one is present; **built locally from the fit snapshot otherwise** — claims the candidate's quoted material contradicts or says they lack, and inflated forms of what they did say: the claims a candidate reaches for under pressure. A requirement their material is merely silent on is not listed here; it is an answer slot in the banks. Present in every pack, not only when something was refused: otherwise the candidate cannot tell a pack that found nothing to inflate from one that inflated nothing. Built before the question banks, so the banks are written against it. The honest version of a listed claim is a quote from the candidate's material plus its plain limit; a listed claim never gets an answer slot, here or in the banks, because a slot that names it implies it |
-| 14 | Sources | Always | Provided documents; every search and fetch sent, by query, with the URLs it returned or "no results" or "nothing attributable". When a dossier was consumed, say so and name which sections it supplied. Plus the **target accounting** worked below — the `Research tier` line, which is the only place the tier is stated, then one row per declared target in `references/research-checklist.md`, each marked `yes`, `skipped`, `n/a` or `unavailable` |
+| 13 | Prohibited claims | Always | What this pack will not coach, and why: each entry with its basis and its honest form, in the shape worked below under **The prohibited list**. From a dossier's `prohibited_claims` and `evidence_state.rejected_inferences` where one is present; **built locally from the fit snapshot otherwise** — the claims a candidate reaches for under pressure. What may be listed, what is an answer slot instead, and the honest form of each kind of entry are defined once, in the prohibited-list rule of `references/question-rubric.md`. Present in every pack, not only when something was refused: otherwise the candidate cannot tell a pack that found nothing to inflate from one that inflated nothing. Built before the question banks, so the banks are written against it |
+| 14 | Sources | Always | Provided documents; every search and fetch sent, refused ones included, by query, with what came back: the URLs it returned, "no results" or "nothing attributable" — each of which is a returned result — or "refused" or "errored" for a call that returned nothing. The label each outcome gives its target is the target accounting's, below. When a dossier was consumed, say so and name which sections it supplied. Plus the **target accounting** worked below — the `Research tier` line, which is the only place the tier is stated, then one row per declared target in `references/research-checklist.md`, each marked `yes`, `skipped`, `n/a` or `unavailable` |
 | 15 | Upgrade menu | Always | Each missing input → what adding it unlocks, concretely ("interviewer's profile → personalized persona weights + a tailored reverse question"; "JD text → six `[inferred]` rows become `[grounded]`"). With no dossier present, one line on what one would add — never phrased as a prerequisite |
 
 Formatting: markdown tables; no pipe characters inside cells; question IDs letter-by-persona (A1, A2, B1…) so the drill and the coaching section can reference them; cells crisp — guidance speakable in 90–120 seconds, rationales 2–3 sentences.
@@ -36,12 +36,12 @@ table rendered, and what the writer copies is the shape on the page.
 
 | # | Requirement (source) | Evidence, verbatim | Confidence | Provenance | Gap type | Gap and bridge language |
 |---|---|---|---|---|---|---|
-| F1 | "own the grants pipeline from call to award" — JD | "Ran the small-grants round for three years" — your CV | medium | [grounded] | transferability | Ran the round, not the pipeline. Words: "For three years I ran the small-grants round." Answer slot: the JD asks you to own the pipeline, so expect a probe on whether any of the round's stages were yours to set. If some were, say which and how you decided, in your own words; if there was no such step, or it was not yours, say so plainly and stay with the round you ran |
-| F2 | "comfortable building reporting in spreadsheets or a grants database" — JD | "Built the applicant-tracking spreadsheet the team still uses" — your CV | high | [grounded] | none | No gap. Lead with the spreadsheet — it is the artifact, and artifacts beat adjectives |
+| F1 | "own the grants pipeline from call to award" — JD | "Ran the small-grants round for three years" — your CV | medium | [grounded] | transferability | Your material says the round, not the pipeline, and the words stay there: "For three years I ran the small-grants round." Answer slot: the JD's call-to-award line makes a probe on the round's stages likely. If any were yours to set, say which and how you decided, in your own words; if there was no such step, or it was not yours, say so plainly and stay with the round you ran |
+| F2 | "maintain conflict-of-interest declarations for assessment panels" — JD | "Kept the conflict-of-interest register for every assessment panel" — your CV | high | [grounded] | none | No gap. Lead with the register — it is the artifact, and artifacts beat adjectives |
 | F3 | "define and track outcome measures for funded projects" — JD | "Collected end-of-grant reports from every funded group" — your CV | low | [inferred] | discovery | Collecting reports is not defining measures, and the bridge should not be stretched. Answer slot: if any of those reports were scored or counted, say what was counted; if none were, say so, and say what you would measure first |
-| F4 | "3+ years managing a grants team" — JD | "Never had direct reports" — your message | none | [grounded] | capability | A titled-years gap wording cannot close, and the candidate has said so. Words: "I haven't had direct reports." Then only what F1's quote carries. Never a claim to the title, and nothing added to make the gap feel smaller |
+| F4 | "prepare grant spend for the annual external audit" — JD | "I've never been involved in an audit" — your message | none | [grounded] | capability | A gap wording cannot close, and the candidate has said so. Words: "I haven't been involved in an audit." Then how you would learn it, said as a plan and never as a past. Never a claim to audit work, and nothing added to make the gap feel smaller |
 
-Six rules the columns enforce, in the order they get broken:
+Seven rules the columns enforce, in the order they get broken:
 
 - **`Confidence`, `Provenance` and `Gap type` hold one token each.** `low-medium`
   and `[grounded, partial]` are both real failures from real runs, and both are
@@ -50,8 +50,9 @@ Six rules the columns enforce, in the order they get broken:
   the specifics", which is an instruction to supply them.
 - **`Evidence, verbatim` holds the candidate's own words and nothing else.** Each
   cell is either `none given`, or one or more of their sentences in double
-  quotation marks, each followed by a dash and where it came from — your CV, your
-  message, the coach's notes, a dossier row. No summary, no paraphrase, nothing
+  quotation marks, each followed by its own dash and where it came from, named as
+  exactly one of: your CV (a résumé is "your CV" too), your message, the coach's
+  notes, or a dossier row (`dossier R3`). No summary, no paraphrase, nothing
   appended to the quote. A summary in this column is the first place a pack
   invents: in a measured run it turned an amount the candidate said they had
   influenced into a target they had reported against, and the question banks then
@@ -68,6 +69,24 @@ Six rules the columns enforce, in the order they get broken:
   something the material is silent on, so its words are an answer slot. A plain
   acknowledgment the candidate never stated is as much an invention as a claim
   they never made.
+- **The gap type follows the evidence cell, not the writer's sense of the row.**
+  This is the one statement of the routing; `SKILL.md` points here.
+  - `none` only at `high` confidence, with a quote that reaches the requirement
+    (F2).
+  - `presentation` only when the evidence cell holds a quote that already reaches
+    the requirement in other terms. Its bridge rewords only that quote, adds no
+    practice, figure or event, and never tells the candidate to supply specifics.
+  - `transferability` when a quote carries adjacent work that does not reach the
+    requirement (F1). Its words are that quote at its own scope; any wider step is
+    an answer slot inside the quote's scope.
+  - `discovery` when the evidence may exist and the material does not show it:
+    the cell is `none given`, or its quote touches the requirement without showing
+    whether it reaches it (F3), and the candidate has stated no absence. Its words
+    are an answer slot. Silence is `discovery`, never `capability`.
+  - `capability` only when the candidate stated the absence, or a dossier records
+    it (F4). Its words come only from the stated negative or the dossier field.
+  - `hard_gate` when an eligibility, credential or constraint is not met, per
+    `references/evidence-conventions.md` §3, surfaced and never bridged.
 - **Bridge language is spoken aloud, so `reframing-audit.md` governs every clause
   of it** — six axes, and the incident-or-practice axis is the one that slips:
   F1 ran a round, and running a round does not mean setting its stages. That is
@@ -75,12 +94,19 @@ Six rules the columns enforce, in the order they get broken:
   integrations shipped in what order" beside evidence that said only that the
   candidate led them — the worked example added the practice the pack exists to
   stop adding, and packs copied it. Its next version sat in a fixture's own domain
-  and presupposed an event no quote carried; these rows use a domain no fixture
-  does, and CI now refuses a worked quotation that a fixture's prompt contains.
+  and presupposed an event no quote carried. These rows use a domain, and gap
+  shapes, that no fixture uses, so that copying them hands no fixture its answer.
 
 `Confidence` grades the candidate's evidence and `Provenance` grades what this
 skill wrote about it: F3 is `low` because the evidence is thin, and `[inferred]`
-because the bridge is this skill's derivation.
+because the bridge is this skill's derivation. On a gap row, Provenance grades the
+pack's statement of the gap, not a capability claim: F4's gap is one the candidate
+stated, so it is `[grounded]` on that quote, and a worksheet row's `none given`
+takes the label of its requirement's source — `[grounded]` for a supplied JD or the
+recruiter's or interviewer's words, `[inferred]` for a representative JD,
+`[generic]` for a role-family requirement. The "—" that
+`references/evidence-conventions.md` §5 gives `none` evidence means no capability
+claim is written from it, and these rows write none.
 
 With a dossier, the evidence cell quotes `evidence_map.evidence[].quote_or_summary`
 or `handoff_to_mock_interview.verified_candidate_evidence` exactly, with the
@@ -91,6 +117,18 @@ into the bridge as a stated limit. The map's `confidence` and `gap_type` are the
 same vocabulary as this table's; its `reasoning` is the underwriter's analysis,
 which a bridge may cite as a limit and never as something the candidate did.
 
+## The prohibited list
+
+Section 13, built from the snapshot above before a bank is written. Each entry
+names its basis, because the basis decides the honest form, under the
+prohibited-list rule in `references/question-rubric.md`:
+
+| Not coached | Basis | Honest form |
+|---|---|---|
+| Owned the grants pipeline | Inflated form of F1 | F1's quote at its own scope. The limit is the pack's observation, not words for the candidate: the material says the round, not the pipeline. A2's slot stays inside the round |
+| Defined outcome measures for funded projects | Inflated form of F3 | F3's quote at its own scope. A4's slot asks only what those reports counted |
+| Has prepared grant spend for audit | Negative the candidate stated, F4 | The plain acknowledgment F4 gives: "I haven't been involved in an audit." No slot |
+
 ## Question banks
 
 One sub-table per persona, in this shape. Provenance sits before the guidance
@@ -100,9 +138,9 @@ already exists.
 
 | # | Question | Type | Provenance | Answer guidance | Rationale |
 |---|---|---|---|---|---|
-| A1 | "Walk me through how you ran the small-grants round." | EXP | [grounded] "Ran the small-grants round for three years" | Story-mapped on F1: the round, and the three years. Pick one round you remember clearly; if none comes to mind, the rhythm of the three years is the answer. Answer slot: if any stage of the round was yours to set, say which and how you decided; if there was no such decision, or it was not yours, say so plainly and describe how you ran the round | F1 is the evidence for the pipeline requirement and the likeliest place to be probed; EXP because it tests what was actually the candidate's |
-| A2 | "What part of a grants pipeline have you owned yourself?" | JD | [grounded] "Ran the small-grants round for three years" | The highest-ROI rehearsal in this pack, and the hold is only what the quote carries: "For three years I ran the small-grants round." Answer slot: if any of the pipeline beyond the round was yours, say which part, in your own words; if none was, say so — the honest branch is a limit, not a confession. Hold through two follow-ups by returning to the round, never by adding to it | F1 meets the role's mandate here, so this objection arrives in some form; JD because it scores the stated requirement |
-| A3 | "How would you shorten the time from application to decision in your first quarter?" | CASE | [generic] | Structure it: what you would measure first, the two likeliest causes, what you would try and how you would know it worked. The question needs no claim about your past, so the guidance makes none | A live problem in the role's own territory; `[generic]` because it is a pattern for the problem, not a fact about this employer |
+| A1 | "Walk me through how you ran the small-grants round." | EXP | [grounded] "Ran the small-grants round for three years" | Story-mapped on F1: the round, and the three years, which are the beats the quote states; tell them in your own words. Answer slot: the JD's call-to-award line makes a probe on the round's stages likely. If any stage was yours to set, say which and how you decided; if there was no such decision, or it was not yours, say so plainly and describe how you ran the round | F1 is the evidence for the pipeline requirement and the likeliest place to be probed; EXP because it tests what was actually the candidate's |
+| A2 | "What part of a grants pipeline have you owned yourself?" | JD | [grounded] "Ran the small-grants round for three years" | The highest-ROI rehearsal in this pack, and the hold is only what the quote carries: "For three years I ran the small-grants round." Answer slot: if any stage of the round was yours to set, say which and how you decided, in your own words; if none was, say so plainly and describe how you ran the round — the honest branch is a limit, not a confession. Hold through two follow-ups by returning to the round, never by adding to it | F1 meets the role's mandate here, so this objection arrives in some form; JD because it scores the stated requirement |
+| A3 | "An assessor tells you on the morning of a panel that she knows one of the applicants. What do you do?" | CASE | [generic] | Structure it: what you would ask her first, what you would do about this application today, how the panel's decision stays sound, and what you would record. The question needs no claim about your past, so the guidance makes none | A live problem from the JD's conflict-of-interest line (F2's requirement), asked as a decision rather than a record; `[generic]` because it is a pattern for the problem, not a fact about this employer |
 | A4 | "The role tracks outcome measures for funded projects. What have you measured?" | EXP | [inferred] "Collected end-of-grant reports from every funded group" | Say what you collected and from whom, in those words. Answer slot: if any of it was scored or counted, say what and how; if none was, say so plainly and say what you would measure first. Never describe a measure you did not track | F3's thin bridge, rehearsed so the honest answer is ready before the probe arrives; the question's premise is the JD's, and the guidance does not adopt it |
 
 Rules this shape enforces:
@@ -111,15 +149,17 @@ Rules this shape enforces:
   rest on, each quoted exactly as it appears in the fit snapshot.** A row reference
   ("see F1"), "as above", or a paraphrase is not a quote. A row whose guidance makes
   no claim about the candidate, like A3, carries its label alone.
-- **Any clause in a pack cell that says what the candidate did, owned, decided or
-  was responsible for rests on one of its own row's quotes and says nothing the
-  quote does not, or it is an answer slot.** That holds whatever the label:
-  `[inferred]` names a derivation about the role or the fit, and never stands in
-  for the candidate's sentence.
-- **The Question is the interviewer's line** and presupposes only what a quoted
-  source raises — A4's premise is the JD's — never an event the candidate did not
-  describe; where it presupposes what the quotes do not carry, the guidance's slot
-  lets the premise be false.
+- **Any clause in a bank cell that says what the candidate did, owned, decided or
+  was responsible for rests on one of its own row's Provenance quotes and says
+  nothing the quote does not, or it is an answer slot.** That holds whatever the
+  label: `[inferred]` names a derivation about the role or the fit, and never
+  stands in for the candidate's sentence. Where the sentence must be on every
+  other surface is the pack-cell rule in `references/question-rubric.md`.
+- **The Question is the interviewer's line.** What it may presuppose is defined
+  once, in `references/question-rubric.md`. Here A1 is premised on F1's own quote;
+  A2 and A4 presuppose what the JD raises and the quotes do not carry, so each
+  holds a slot whose second branch lets the premise be false; A3 is a live problem
+  and presupposes nothing about the candidate's past.
 - **Rationale refers to the candidate's history only by fit-snapshot row ID** —
   "F1 is the evidence for…" — and never restates or extends it.
 - **An answer slot is not a question to the user.** It is addressed to the
@@ -138,7 +178,7 @@ unfilled row can.
 
 Research tier: L1 — searches 3 of 6, fetches 1 of 2
 
-| L1 target | Status | What it moved, or would have |
+| Target | Status | What it moved, or would have |
 |---|---|---|
 | 1. `{company} values` | yes | Values cheat sheet, section 10 — four principles by name |
 | 2. `{company} interview process {role family}` | yes | Loop structure; persona weights follow the named rounds |
@@ -146,11 +186,14 @@ Research tier: L1 — searches 3 of 6, fetches 1 of 2
 | 4. `{interviewer name} {company}` | n/a | No name was given, so there was no query to form; the interviewer read is absent and the upgrade menu says what a name would unlock |
 | 5. representative `{role title}` JD | skipped | The JD the user supplied fixes the fit snapshot and the JD-tagged questions |
 
+This is an L1 run; an L2 run adds rows 6 to 9 below these, in
+`references/research-checklist.md` order.
+
 The label follows what happened, facts first, per `interaction-grammar.md` §4. A
-target a search was sent for is `yes` if any call returned a result — an empty or
+target a call was sent for is `yes` if any call returned a result — an empty or
 unattributable one included, said as "not established" — and `unavailable` only
 if every call was refused or errored; it is never `skipped` or `n/a`, and if it
-moved nothing its `yes` row says so. A target no search was sent for is `n/a` if
+moved nothing its `yes` row says so. A target no call was sent for is `n/a` if
 the inputs cannot form its query — no name at all; a first name with a title and
 the company is a name — `skipped` if the inputs already fix every output it
 feeds, and otherwise `unavailable`: this host offers no search, the user chose L0
@@ -164,7 +207,10 @@ change, because the inputs decide them and the host does not. A search sent
 outside every declared target gets an un-numbered `yes` row after these, saying
 what it was and what it moved. A `yes` row's search appears among the queries the
 Sources section lists; an accounting reporting a search the pack shows no query
-for is the failure this table exists to make visible.
+for is the failure this table exists to make visible. So a `yes` row has at least
+one listed query for its target that returned URLs, "no results" or "nothing
+attributable", and an `unavailable` row whose target had calls sent has every one
+of them listed as "refused" or "errored".
 
 ## Loop mode
 

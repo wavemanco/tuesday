@@ -236,28 +236,110 @@ a drill turn ends with other things. Three eval expectations had contradicted
 their skill's declaration unnoticed.
 
 **A worked fit ledger is its own evidence map, projected.** `--only fit-ledger`
-reads job-underwriter's worked dossier: the decision snapshot's ledger, one line
-per Priority tier and its rows grouped by Fit, against the evidence-map table's
-#, Priority, Fit and Confidence columns and against the JSON envelope's
-`evidence_map`. Every row appears once, in enum order, each filed where the map
-files it; a row below `direct` is named in its Requirement's own words; a
-band in the snapshot sits beside one row and is that row's; and the envelope's
-`decision.summary` holds no "N of M". The ledger was a sentence from v0.1 —
-"five of seven material requirements are `direct`" over a map with four — and a
-dossier whose ledger cannot be parsed fails rather than skips, so a revert to that
-sentence is caught. What it does not read: any other prose about the map, in the
-dossier or anywhere else, and the ledgers that runs write, which the eval
-harness's own check reads instead.
+reads job-underwriter's worked dossier with the rule functions in
+`ci/ledger_rules.py`, which the eval harness calls on the output of runs, so the two
+checks of one rule cannot disagree. The snapshot is read through its last bulleted
+slot; the template's commentary after the slots is not read. The ledger — one line
+per Priority tier, its rows grouped by Fit, each Fit once per line — is read against
+the evidence-map table's #, Requirement, Priority, Fit and Confidence columns and the
+JSON envelope's `evidence_map`: every row once, in enum order, filed where the map
+files it, and a row below `direct` named only in words its Requirement cell uses. A
+band beside a row ID, backticked or not — R3 (`medium`), R3 (medium) — is that
+row's Confidence; a band beside a register ID is a severity written like a band and
+fails, and so does one attached to nothing. Everything between the ledger and the
+next slot is rule 2's one sentence: it fails as a second sentence, or with any "N
+of M" or fraction, a count of the kind below, or any word of evidence-model.md's
+quantifier list, bare "none", "no other" and "any other" included. The rest of the
+snapshot, and the envelope's `decision.summary`, fail on a count or a word of that
+list followed, in the same clause and with at most four words between, by a tier, a
+fit, "rows", "requirements", "gates" or "gaps" — "four of the seven material
+requirements", "four direct", "every must_have", "the only gap" — or on "all but";
+the summary fails on any "N of M" or fraction too. Not counted: an enumerator
+such as (2), a price, a decimal, a range, a quoted number, or a figure with its unit ("9 years", "three squads"); "only" qualifying one
+row ("only adjacent"); and bare "none", which the slots require. The **Hard gates:**
+slot is parsed as rule 4 states it and its failed, unconfirmed and met clauses
+compared with the map's `hard_gate` rows, the closing clause with the envelope's
+`candidate_constraints.status`; every `severity: x` beside a register ID is that
+entry's Severity, and **Severe red flags:** names exactly the `severity: high`
+entries or says "none found". There is one Research tier line, read with the
+harness's own pattern, its L1 budget SKILL.md's and no count above its budget. And
+the quantifier list in evidence-model.md ("The row is the unit") must be held whole
+by the shared set and quoted whole by every job-underwriter expectation that speaks
+of quantifiers.
+The ledger was a sentence from v0.1 — "five of seven material requirements are
+`direct`" over a map with four — and a dossier whose ledger cannot be parsed fails
+rather than skips. What it does not read: whether the tally's numerators are true
+(the target table records a status per target, not calls); a count or quantifier
+more than four words from its map word ("both R4 and R5 sit below `direct`" outside
+the sentence after the ledger), or about the map in words none of these; prose
+about the map outside the snapshot and the summary, such as the gap queue; and the
+ledgers runs write, which the harness reads with the same functions — though not
+their `decision.summary`.
 
-**A skill's installed text quotes none of its own fixtures.** `--only answer-keys`
-reads every double-quoted span of four words or more in a skill's `SKILL.md` body
-and references, and fails one that appears in that skill's own eval prompts. A
-clean room installs the references, so an example built from a fixture is an
-answer key beside the model; three were found at once, none chosen. What it does
-not read: unquoted prose, spans under four words, the frontmatter, `citations.md`,
-and other skills' fixtures, since a room never installs two skills. A worked
-example drawn from a fixture's domain without quoting it passes, which is why the
-worked examples now sit in a domain no fixture uses.
+**A skill's installed text shares no run of words with its own fixtures.**
+`--only answer-keys` reads each skill's `SKILL.md` body and references — the files a
+run is told to open — and compares them with everything a clean room shows the
+model of that skill's fixtures: every prompt, and every canned research page's
+title and text. A conventions mirror is read in each skill that carries it, against
+that skill's fixtures. A quoted span — in double, single or curly quotes, or a code
+span of more than one word — fails when three of its content words in a row (stop
+words dropped on both sides) are three in a row in a fixture; prose outside quotes,
+code spans and fenced code fails on six words in a row, stop words included. A
+clean room installs the references, so an example built from a fixture is an answer key beside the model:
+three were found at once, none chosen, and the exact-quote check that followed
+missed a near-quote, a single-quoted copy and two compressed ones. The windows were
+set by running the check on the clean tree and reading every hit: at three content
+words each quoted hit was fixture material, and unquoted prose had none at six.
+Wording a fixture repeats by design — the shared contract's own phrases — is listed
+in `ANSWER_KEY_CONTRACT` with its reason and masked; a phrase that is merely common
+is a reason to rewrite the example, never to list it. The matcher is seeded with a
+near-quote of each skill's first prompt and fails if it misses it. What it does not
+read: a fixture's domain or situation in other words — the same shape of gap with
+fewer than three content words in common passes, so a worked example's domain is
+left to review (job-underwriter's worked dossier, a platform PM in payments, shares
+a role family with a fixture, and only its wording is held apart); the README, `docs/`, the
+frontmatter and `citations.md`; and other skills' fixtures, since a room never
+installs two skills.
+
+**The fixture fields the harness reads are what it assumes.** `--only fixtures`
+reads every fixture through the harness's own functions in `evals/output_checks.py`.
+A canary names its `page` (required in a fixture with a canned mode), that page is
+exactly one of the fixture's pages for the canary's target, and one of its spellings
+is in that page's text — a canary whose page matches nothing is never asked for and
+passes every run. A fixture that runs the quotes check declares `candidate_text` as a
+list, and each entry is in the prompt. Every research target has
+`on_target_samples`, each aimed at the target by its own terms; a target that
+accepts `n/a` or `skipped` has `hunt_samples`, its terms match at least one of them,
+and they match no other target's on-target sample, so a correct `n/a` is not failed
+by a question about the process. What it does not read: whether the samples are
+the queries runs actually send.
+
+**Retired wordings stay retired.** `--only wording` reads every skill's `SKILL.md`,
+README and references, conventions/, `evals/README.md`, and every clause,
+expectation and expected output as the runner expands them. It fails "returned
+something" and "every call was refused" without "or errored", the accounting labels
+an errored call broke; an expectation or clause that defines the yes/unavailable
+labels without "returned a result" and "or errored"; an L0 definition — a paragraph
+or list item naming L0, or one under a heading that does — that says "no network";
+and, in mock-interview's personas.md, a story pre-mapped ("pre-map", "every … story
+ends with") in a block that says nothing of a quote, or the loss of the line under
+"The seven personas" that points to the quote-or-slot rule in question-rubric.md.
+It reads these phrases and nothing near them: a paraphrase of a retired wording
+passes.
+
+**Every declared enum has a column.** `--only columns` also reads each skill's
+`enum_columns` declaration beside `enum_fields`: it maps every declared enum to the
+column that holds it, by name, and that column is a header of a worked table — one
+with a separator row — in the skill's references. A declared enum with no mapping,
+a mapping to no such column, or a mapping for an undeclared field fails. The mapping
+is explicit because a header matched by resemblance would let an unrelated column
+answer for the field. What it does not read: whether the cells hold only the enum's
+tokens.
+
+**A clause is defined once and expanded once.** `--only evals` reads every evals.json
+through `evals/fixture_clauses.py`, as the runner does: an expectation naming a
+clause the file does not define, a clause nothing uses, and braces left in the
+expanded text — a clause inside a clause, a name the loader cannot read — fail.
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A

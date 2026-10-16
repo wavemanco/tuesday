@@ -74,7 +74,7 @@ carries a Provenance cell and those claims get labeled where they are made.
 and the second is the one that gets dropped. Say the gap plainly in one sentence —
 then say what closing it would take: a specific project, a certification, six
 months on a particular kind of work, a scoped-down target role. "You have never
-touched Kafka, and it is listed as a plus rather than a requirement" is half an
+run a capital-grants programme, and it is listed as a plus rather than a requirement" is half an
 answer; it tells the candidate where they stand and nothing about what to do,
 which is the half they came for. An absence with no closing path is an
 unfinished row even when the honest closing path is "not worth closing for this

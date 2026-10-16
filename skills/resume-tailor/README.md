@@ -25,7 +25,7 @@ New sessions pick it up automatically; it is also invokable directly as `/resume
 
 ## First prompt
 
-You don't need to name the skill — "tailor my CV for this role" with a JD and a resume matches its description and auto-triggers.
+You don't need to name the skill — "rework my resume for this posting" with a JD and a resume matches its description and auto-triggers.
 
 ```
 Tailor my resume for this role. [JD pasted or attached]

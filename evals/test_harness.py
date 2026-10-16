@@ -232,6 +232,25 @@ def drive_server(requests: list[dict], tmp: Path) -> tuple[list[dict], Path, Pat
     return replies, log, cwd
 
 
+def test_server_url_identity() -> None:
+    print("\nresearch server: one URL identity with the checks")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("research_server_copy", SERVER)
+    server = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server)
+    pairs = [("https://www.Kestrel.test/careers/", "kestrel.test/careers"),
+             ("http://kestrel.test/careers#roles", "https://kestrel.test/careers"),
+             ("https://kestrel.test/Careers", "https://kestrel.test/careers"),
+             ("https://kestrel.test/careers?id=2", "https://kestrel.test/careers?id=1"),
+             ("https://kestrel.test/careers", "https://kestrel.test/careers/eng"),
+             ("https://kestrel.test", "https://kestrel.test/"),
+             ("https://kestrel.test/a//", "https://kestrel.test/a")]
+    check("the room and the checks treat every URL pair alike",
+          [server.same_url(a, b) for a, b in pairs], [output_checks.same_url(a, b) for a, b in pairs])
+    check_true("and the pairs exercise both answers",
+               {output_checks.same_url(a, b) for a, b in pairs} == {True, False})
+
+
 def test_research_server() -> None:
     print("\nresearch server: deterministic, logged, and silent outside its log")
     def call(i, tool, **args):
@@ -628,7 +647,7 @@ def test_execute_nudge() -> None:
 # relative to the session scratchpad the sets were saved in; nothing reads them now.
 # scratchpad/final2/ju/job-underwriter-1.run0.md:78-82
 JU1_RUN0 = (
-    '| L1 target | Status | What it would have moved |\n'
+    '| Target | Status | What it would have moved |\n'
     '|---|---|---|\n'
     "| Company official site / careers page | unavailable (search tool not authorized this session) | RR3 resolution; role reality's org-context confidence |\n"
     "| Role-family sweep (title/scope/comp norms) | unavailable (same reason) | Role reality's market-calibration line; RR2's comp band |\n"
@@ -650,7 +669,7 @@ JU1_RUN2 = (
 MI5_RUN3 = (
     '**Research tier:** L1 attempted; web search was unavailable in this session (tool-access error), so the pack degrades to L0 for anything requiring live lookup. Target accounting:\n'
     '\n'
-    '| L1 target | Ran | What it moved, or could not have |\n'
+    '| Target | Ran | What it moved, or could not have |\n'
     '|---|---|---|\n'
     '| 1. `{company} values` | unavailable | Would have supplied a values/principles cheat sheet (dropped from this pack entirely — no values-round content exists here) |\n'
     "| 2. `{company} interview process` | n/a | Not needed — the recruiter's email supplied the exact loop structure directly and more reliably than search would have |\n"
@@ -662,7 +681,7 @@ MI5_RUN3 = (
 MI5_8BAD = (
     'Research tier: L1. Four searches and two fetches used, out of six and two.\n'
     '\n'
-    '| L1 target | Ran | What it moved, or could not have |\n'
+    '| Target | Ran | What it moved, or could not have |\n'
     '|---|---|---|\n'
     '| 1. Kelverton values | yes | Values in 4a and the two VAL questions |\n'
     "| 2. Kelverton interview process | yes | Only forum reports; the recruiter's email is more specific and took priority |\n"
@@ -714,8 +733,9 @@ def test_parse_accounting() -> None:
     check("the canned prototype's numbered rows are read (8bad1381)",
           {n: r["label"] for n, r in got["rows"].items()},
           {1: "yes", 2: "yes", 3: "yes", 4: "unavailable"})
-    check("its two 'Extra:' rows are format violations",
-          sum("Extra:" in p for _, p in got["format"]), 2)
+    check("its two 'Extra:' rows, bare `yes` after the numbered ones, are off-target rows",
+          ([e["target"][:6] for e in got["extra"]], sum("Extra:" in p for _, p in got["format"])),
+          (["Extra:", "Extra:"], 0))
     got = output_checks.parse_accounting(JU1_CANNED_PROBE)
     check("a numbered table with the target in column two is read, not absent (canned probe)",
           {n: r["label"] for n, r in got["rows"].items()}, {1: "yes", 2: "yes", 3: "n/a"})
@@ -752,25 +772,27 @@ RESEARCH = {
         {"n": 3, "name": "hiring manager", "terms": ["imogen"], "accept": ["n/a", "yes"]},
     ],
     "pages": CORPUS["pages"],
-    "canaries": [{"target": 1, "text": "came from an experimentation-platform team"}],
+    "canaries": [{"target": 1, "page": "https://kestrel.test/careers",
+                  "text": "came from an experimentation-platform team"}],
 }
 
 
 def accounting(labels: dict, tally: str = "Research tier: L1 — searches 2 of 5, fetches 0 of 2",
                extra: str = "") -> str:
     rows = "\n".join(f"| {n}. target | {label} | why |" for n, label in labels.items())
-    return f"{extra}\n\n{tally}\n\n| L1 target | Status | What it moved |\n|---|---|---|\n{rows}\n"
+    return f"{extra}\n\n{tally}\n\n| Target | Status | What it moved |\n|---|---|---|\n{rows}\n"
 
 
-def entry(query, outcome="returned", kind="search", targets=()):
+def entry(query, outcome="returned", kind="search", targets=(), urls=()):
     return {"tool": "mcp__web__search" if kind == "search" else "mcp__web__fetch", "kind": kind,
-            "query_or_url": query, "outcome": outcome, "urls_returned": [],
+            "query_or_url": query, "outcome": outcome, "urls_returned": list(urls),
             "targets": list(targets)}
 
 
 def test_check_accounting() -> None:
     print("\nchecks: each label is judged against the calls aimed at its target")
-    two = [entry("Kestrel careers", targets=[1]), entry("analyst salary", targets=[2])]
+    two = [entry("Kestrel careers", targets=[1], urls=["https://kestrel.test/careers"]),
+           entry("analyst salary", targets=[2])]
     canary = "It came from an experimentation-platform team."
     good = output_checks.check_accounting(
         accounting({1: "yes", 2: "yes", 3: "n/a"}, extra=canary), RESEARCH, "canned", two)
@@ -842,6 +864,11 @@ LEDGER_OK = """## Decision snapshot
 
 R4 has a credible bridge, and R3 (`medium`) waits on an artifact.
 
+**Opportunity ledger.** Authority is asserted and not evidenced (RR1).
+
+- **Hard gates:** none failed (R1 `direct`).
+- **Severe red flags:** none found.
+
 ## Evidence map
 
 | # | Requirement | Priority | Fit | Confidence | Gap |
@@ -853,6 +880,13 @@ R4 has a credible bridge, and R3 (`medium`) waits on an artifact.
 | R5 | Mentoring or leading PMs | important | unclear | low | discovery |
 | R6 | Data fluency: SQL, experimentation | important | direct | high | presentation |
 | R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability |
+
+## Risk register
+
+| # | Signal | Class | Severity | Status |
+|---|---|---|---|---|
+| RR1 | Authority asserted, not evidenced | unknown | — | unresolved |
+| RR2 | Compensation unstated | risk_signal | medium | unresolved |
 """
 
 
@@ -882,7 +916,8 @@ def test_fit_ledger() -> None:
     check("a band over no single row fails", ledger_fails(LEDGER_OK.replace(
         "R3 (`medium`) waits on an artifact", "confidence is `high` throughout")), ["snapshot_band"])
     severity = LEDGER_OK.replace("waits on an artifact.", "waits on an artifact; RR1 and RR2 are `low` severity.")
-    check("a risk severity is not a confidence band", ledger_fails(severity), [])
+    check("a severity written as a bare band word is read as a band, and fails (rule 5)",
+          ledger_fails(severity), ["snapshot_band"])
     headless = LEDGER_OK.replace("## Decision snapshot", "# Should you apply?")
     band = [c for c in output_checks.check_fit_ledger(headless)["checks"] if c["check"] == "snapshot_band"]
     check("with no snapshot heading the bands are read around the ledger (denied probe)",
@@ -891,13 +926,13 @@ def test_fit_ledger() -> None:
         "R3 (`medium`) waits", "R3 (`high`) waits")), ["snapshot_band"])
     check("a universal in the sentence after the ledger fails, true or not", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
-        "Every must-have but R4 is `direct`.")), ["ledger_sentence"])
+        "Every must-have but R4 is `direct`.")), ["ledger_sentence", "snapshot_count"])
     check("\"the only rows below\" fails there too (canned probe)", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
-        "R4 and R5 are the only rows below `direct`.")), ["ledger_sentence"])
+        "R4 and R5 are the only rows below `direct`.")), ["ledger_sentence", "snapshot_count"])
     check("a next slot directly after the ledger is no sentence to judge", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
-        "**Opportunity ledger.** Every register entry is `low` severity.")), [])
+        "**Opportunity ledger.** RR1 is asserted and not evidenced.")), [])
     check("a parenthetical in the Requirement's own words, reordered, passes (denied probe)",
           ledger_fails(LEDGER_OK.replace("(Mentoring or leading PMs)", "(PMs, mentoring or leading)")), [])
     check("a parenthetical using words the Requirement lacks fails, as format",
@@ -942,7 +977,7 @@ def snapshot(cell: str) -> str:
             f"| F1 | BI | {cell} | high | — |\n\n"
             "| # | Question | Type | Provenance | Answer guidance | Rationale |\n|---|---|---|---|---|---|\n"
             "| B1 | Tell me about dashboards | DATA | [grounded] \"Built the company's Looker "
-            "instance from scratch\" (your message) | Lead with it | F1 |\n")
+            "instance from scratch\" | Lead with it | F1 |\n")
 
 
 
@@ -958,6 +993,13 @@ def test_review_fixes() -> None:
                                          RESEARCH, "canned", errored)
     check("`unavailable` on a target whose only call errored passes",
           verdict_of(got, "unavailable_has_refusal", 1), "PASS")
+    # The grader reads the same rule in each skill's accounting clause; a clause that
+    # said "refused" alone gave the grader no label for this run (NEW-RV-C, RV14).
+    clauses = [json.loads((Path(__file__).resolve().parent.parent / "skills" / skill / "evals" / "evals.json")
+                          .read_text(encoding="utf-8"))["clauses"]["accounting"]
+               for skill in ("job-underwriter", "mock-interview")]
+    check("and the graders' accounting clauses say an errored call counts as refused, as this check does",
+          [("refused or errored" in c, "returned a result" in c) for c in clauses], [(True, True)] * 2)
     mixed = [entry("Kestrel careers", targets=[1]), entry("Kestrel about", "refused", targets=[1]),
              entry("analyst salary", targets=[2])]
     got = output_checks.check_accounting(accounting({1: "unavailable", 2: "yes", 3: "n/a"}),
@@ -965,26 +1007,26 @@ def test_review_fixes() -> None:
     check("`unavailable` with one call returned and one refused fails",
           verdict_of(got, "unavailable_has_refusal", 1), "FAIL")
 
-    prompt = "Here is my portfolio: https://example.org/folio — what do you think?"
-    with_link = [entry("Kestrel careers", targets=[1]), entry("analyst salary", targets=[2]),
-                 entry("https://example.org/folio", kind="fetch")]
+    linked = dict(RESEARCH, user_links=["https://example.org/folio"])
+    with_link = [entry("Kestrel careers", targets=[1], urls=["https://kestrel.test/careers"]),
+                 entry("analyst salary", targets=[2]), entry("https://example.org/folio", kind="fetch")]
     tally = "Research tier: L1 — searches 2 of 5, fetches 0 of 2; user links read 1"
     got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}, tally, canary),
-                                         RESEARCH, "canned", with_link, prompt)
-    check("a fetch of the user's own link is named on the tally line, not charged",
+                                         linked, "canned", with_link)
+    check("a fetch of a declared user link is named on the tally line, not charged",
           (verdict_of(got, "tally_fetches"), verdict_of(got, "tally_user_links")), ("PASS", "PASS"))
     got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}, tally, canary),
-                                         RESEARCH, "canned", with_link, "no links here")
-    check("a fetch the user never linked is research, whatever the tally calls it",
-          verdict_of(got, "tally_fetches"), "FAIL")
+                                         RESEARCH, "canned", with_link)
+    check("a fetch the fixture declares no user link for is research, whatever the tally calls it",
+          (verdict_of(got, "tally_fetches"), verdict_of(got, "tally_user_links")), ("FAIL", "FAIL"))
 
-    keyed = dict(RESEARCH, canaries=[{"target": 1, "page": "https://kestrel.example/about",
+    keyed = dict(RESEARCH, canaries=[{"target": 1, "page": "https://kestrel.test/about",
                                       "text": "came from an experimentation-platform team"}])
     unseen = [entry("Kestrel careers", targets=[1]), entry("analyst salary", targets=[2])]
     got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}), keyed, "canned", unseen)
     check("a canary whose page the room never returned is not asked for",
           verdict_of(got, "canary", 1), None)
-    shown = [dict(entry("Kestrel careers", targets=[1]), urls_returned=["https://kestrel.example/about"]),
+    shown = [dict(entry("Kestrel careers", targets=[1]), urls_returned=["https://kestrel.test/about"]),
              entry("analyst salary", targets=[2])]
     got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}), keyed, "canned", shown)
     check("a canary whose page was returned must surface", verdict_of(got, "canary", 1), "FAIL")
@@ -993,13 +1035,9 @@ def test_review_fixes() -> None:
         keyed, "canned", shown)
     check("a canary written with a non-breaking hyphen still counts", verdict_of(got, "canary", 1), "PASS")
 
-    severity = LEDGER_OK.replace("waits on an artifact.",
-                                 "waits on an artifact.\n\n- **Severe red flags:** RR1 (`severity: high`), RR2 (`high`).")
-    check("a register entry's severity is not a confidence band, in either spelling", ledger_fails(severity), [])
-    gated = LEDGER_OK.replace("waits on an artifact.", "waits on an artifact.\n\n- **Hard gates:** none failed.")
+    gated = LEDGER_OK.replace("- **Hard gates:** none failed (R1 `direct`).", "- **Hard gates:** none failed.")
     check("a hard-gates line that names no gate row fails", "gates_line" in ledger_fails(gated), True)
-    gated = LEDGER_OK.replace("waits on an artifact.", "waits on an artifact.\n\n- **Hard gates:** none failed (R1 `direct`).")
-    check("one that names every gate row passes", "gates_line" in ledger_fails(gated), False)
+    check("one that names every gate row passes", "gates_line" in ledger_fails(LEDGER_OK), False)
 
     pasted = "THE JD: 'Own the complaints process end to end.' ME: I built the complaints spreadsheet."
 
@@ -1017,9 +1055,12 @@ def test_review_fixes() -> None:
           ["evidence_form"])
     check("a quote with a summary appended fails",
           quote_fails('"I built the complaints spreadsheet" (your message), and ran the team'), ["evidence_form"])
-    check("the JD's words quoted as the candidate's pass the prompt alone",
-          quote_fails('"Own the complaints process end to end" — your message'), [])
-    check("and fail against what the candidate gave",
+    got = output_checks.check_quotes(snap('"Own the complaints process end to end" — your message'),
+                                     pasted, (), None)
+    check("with no candidate_text the evidence column is unchecked, never checked against the prompt",
+          ([c["verdict"] for c in got["checks"] if c["check"] == "quotes" and c["target"] == "fit_snapshot"],
+           "quotes" in got["unchecked"]), ([], True))
+    check("the JD's words quoted as the candidate's fail against what the candidate gave",
           quote_fails('"Own the complaints process end to end" — your message',
                       ["I built the complaints spreadsheet."]), ["quotes"])
     check("a requirement in quotation marks that nothing supplied fails",
@@ -1029,19 +1070,504 @@ def test_review_fixes() -> None:
 
 def test_quotes() -> None:
     print("\nchecks: a quotation in a verbatim cell is a quotation of something")
+    own = [PROMPT.split(": ", 1)[1]]
+
     def fails(cell: str) -> list[str]:
-        return [c["why"] for c in output_checks.check_quotes(snapshot(cell), PROMPT)["checks"]
+        return [c["why"] for c in output_checks.check_quotes(snapshot(cell), PROMPT, (), own)["checks"]
                 if c["verdict"] == "FAIL"]
     check("a verbatim quote passes, curly quotes and dashes unified",
           fails("“Built the company’s Looker instance from scratch – 40+ governed dashboards” "
-                "(your message)"), [])
+                "— your message"), [])
     check("a paraphrase in quotation marks fails",
-          len(fails('"Built and governed the Looker estate" (your message)')), 1)
+          len(fails('"Built and governed the Looker estate" — your message; '
+                    '"Built the company\'s Looker instance from scratch" — your message')), 1)
     check("each ellipsis fragment is checked, and a true pair passes",
-          fails('"6 years of product analytics ... the monthly metrics memo" (your message)'), [])
+          fails('"6 years of product analytics ... the monthly metrics memo" — your message; '
+                '"Built the company\'s Looker instance from scratch" — your message'), [])
     check("one invented fragment fails the span",
-          len(fails('"6 years of product analytics … led the analytics guild" (your message)')), 1)
-    check("a two-word quote is not checked", fails('"Looker instance" (your message)'), [])
+          len(fails('"6 years of product analytics … led the analytics guild" — your message; '
+                    '"Built the company\'s Looker instance from scratch" — your message')), 1)
+    check("a two-word quote in the evidence column is checked too, and a true one passes",
+          fails('"Looker instance" — your message; '
+                '"Built the company\'s Looker instance from scratch" — your message'), [])
+
+
+def test_evidence_cells() -> None:
+    print("\nchecks: an evidence cell is `none given` or quotes with their origins, and nothing else")
+    pasted = "THE JD: 'Own the complaints process end to end.' ME: I built the complaints spreadsheet."
+    own = ["I built the complaints spreadsheet."]
+
+    def snap(cell, provenance="[grounded]"):
+        return ("| # | Requirement (source) | Evidence, verbatim | Confidence | Bridge |\n|---|---|---|---|---|\n"
+                f"| F1 | \"Own the complaints process end to end\" — JD | {cell} | high | — |\n\n"
+                "| # | Question | Type | Provenance | Answer guidance | Rationale |\n|---|---|---|---|---|---|\n"
+                f"| A1 | q | EXP | {provenance} | g | F1 |\n")
+
+    def fails(cell, candidate=own, provenance="[grounded]", prompt=pasted):
+        return sorted(c["check"] for c in output_checks.check_quotes(
+            snap(cell, provenance), prompt, (), candidate)["checks"] if c["verdict"] == "FAIL")
+    quote = '"I built the complaints spreadsheet"'
+    check("a summary after the dash is not an origin",
+          fails(quote + " — your message, i.e. owned the complaints process end to end"), ["evidence_form"])
+    check("a summary in parentheses is not an origin",
+          fails(quote + " (owned complaints end to end for the org)"), ["evidence_form"])
+    check("free text after a dash fails", fails(quote + " - and then ran the whole team"), ["evidence_form"])
+    check("a quote with no origin fails", fails(quote), ["evidence_form"])
+    check("an origin outside the template's set fails", fails(quote + " — LinkedIn"), ["evidence_form"])
+    check("an origin in parentheses rather than after a dash fails (the template: 'followed by a dash')",
+          fails(quote + " (your message)"), ["evidence_form"])
+    check("one origin for two quotes fails: each quote is followed by its own",
+          fails(quote + ' and "complaints spreadsheet" — your message'), ["evidence_form"])
+    check("words between quotes fail", fails(quote + " and led the team — your message"), ["evidence_form"])
+    check("`none given` with words after it fails", fails("none given, but led a team"), ["evidence_form"])
+    check("two quotes, each with its origin, pass",
+          fails(quote + ' — your message; "complaints spreadsheet" — your CV'), [])
+    check("a dossier row is an origin", fails(quote + " — dossier R3"), [])
+    check("`None given.` with its period passes", fails("None given."), [])
+    check("`none given` in backticks passes", fails("`none given`"), [])
+    check("a fabricated two-word quote fails", fails('"owned quota" — your message'), ["quotes"])
+    check("a fabricated one-word quote fails", fails('"quota" — your message'), ["quotes"])
+    check("a genuine two-word quote passes", fails('"complaints spreadsheet" — your message'), [])
+    check("a quote is matched on word boundaries: \"built the complaint\" is not in \"…complaints\"",
+          fails('"built the complaint" — your message'), ["quotes"])
+
+    mi3 = fixture("mock-interview", 3)
+    worksheet = ("| # | Requirement (source) | Evidence, verbatim | Confidence | Bridge |\n|---|---|---|---|---|\n"
+                 "| F1 | Cross-functional operations planning | {cell} | none | Answer slot |\n\n"
+                 "| # | Question | Type | Provenance | Answer guidance | Rationale |\n|---|---|---|---|---|---|\n"
+                 "| A1 | q | EXP | [generic] | g | F1 |\n")
+
+    def mi3_quotes(cell, candidate):
+        return output_checks.check_quotes(worksheet.format(cell=cell), mi3["prompt"], (), candidate)
+
+    def mi3_fails(cell):
+        return sorted(c["check"] for c in mi3_quotes(cell, mi3["candidate_text"])["checks"] if c["verdict"] == "FAIL")
+    check("mi 3 (candidate_text []): a prompt sentence quoted as the candidate's fails",
+          mi3_fails('"final-round interview at Stripe" — your message'), ["quotes"])
+    check("mi 3: the worksheet's `none given` passes, with no JD and no CV", mi3_fails("none given"), [])
+    got = mi3_quotes('"final-round interview at Stripe" — your message', None)
+    check("a fixture with no candidate_text is reported unchecked, not passed",
+          ("quotes" in got["unchecked"],
+           [c["verdict"] for c in got["checks"] if c["check"] == "quotes" and c["target"] == "fit_snapshot"]),
+          (True, []))
+    from fixture_clauses import load_cases
+    undeclared = [f"{path.parent.parent.name} {case['id']}"
+                  for path in sorted((Path(__file__).resolve().parent.parent / "skills").glob("*/evals/evals.json"))
+                  for case in load_cases(path)
+                  if "quotes" in case.get("checks", []) and not isinstance(case.get("candidate_text"), list)]
+    check("every fixture with the quotes check declares candidate_text as a list (D5)", undeclared, [])
+    check("and a run of it is uncheckable, not ok", output_checks.run_checks(
+        {"checks": ["quotes"], "prompt": mi3["prompt"]}, "denied",
+        worksheet.format(cell='"final-round interview at Stripe" — your message'), None)["status"], "uncheckable")
+
+
+def test_provenance_pool() -> None:
+    print("\nchecks: Provenance quotes the candidate, as the fit snapshot does (mi 4)")
+    mi4 = fixture("mock-interview", 4)
+    evidence = ('"Wrote the internal integration playbook her team uses" — dossier; '
+                '"Ran quarterly roadmap-input sessions feeding client evidence to product" — dossier')
+
+    def pack(provenance):
+        return ("| # | Requirement (source) | Evidence, verbatim | Confidence | Bridge |\n|---|---|---|---|---|\n"
+                f"| F1 | \"Shipped API or platform products\" — dossier R2 | {evidence} | medium | — |\n\n"
+                "| # | Question | Type | Provenance | Answer guidance | Rationale |\n|---|---|---|---|---|---|\n"
+                f"| A1 | q | EXP | [grounded] \"{provenance}\" | g | F1 |\n")
+
+    def banks(provenance):
+        got = output_checks.run_checks(mi4, "denied", pack(provenance), None)
+        return [c["verdict"] for c in got["checks"] if c["check"] == "quotes" and c["target"] == "banks"]
+    check("the dossier's header prose in Provenance fails",
+          banks("Strong adjacent fit from seven years of integration leadership"), ["FAIL"])
+    check("a prohibited_claims string in Provenance fails",
+          banks("Having held a product manager title or role"), ["FAIL"])
+    check("a JD responsibility in Provenance fails",
+          banks("Own the roadmap for the partner-facing API platform"), ["FAIL"])
+    check("a verified claim cut before its confidence note, as the evidence column quotes it, passes",
+          banks("Wrote the internal integration playbook her team uses"), ["PASS"])
+    banks_only = pack("Wrote the internal integration playbook her team uses").split("\n\n", 1)[1]
+    got = output_checks.check_quotes(banks_only, mi4["prompt"], (), mi4["candidate_text"])["checks"]
+    check("with no fit snapshot table, that is one format failure, not one per Provenance cell",
+          sorted((c["target"], c["verdict"], c["kind"]) for c in got if c["check"] == "quotes"),
+          [("banks", "PASS", "judgement"), ("fit_snapshot", "FAIL", "format")])
+    check("a candidate sentence the fit snapshot does not quote fails: Provenance quotes it as it appears there",
+          banks("Led 30+ end-to-end client integrations of the vendor's REST APIs"), ["FAIL"])
+
+
+GATED_MAP = """
+## Evidence map
+
+| # | Requirement | Priority | Fit | Confidence |
+|---|---|---|---|---|
+| R1 | UK work eligibility without sponsorship | hard_gate | direct | high |
+| R2 | On-site five days a week | hard_gate | {r2} | high |
+| R3 | Base salary at or above £95k | hard_gate | {r3} | low |
+| R4 | Shipped APIs consumed by external developers | must_have | direct | medium |
+
+## Risk register
+
+| # | Signal | Class | Severity | Status |
+|---|---|---|---|---|
+| RR1 | Office attendance stated as five days | risk_signal | {rr1} | unresolved |
+| RR2 | Compensation unstated | risk_signal | medium | unresolved |
+"""
+
+
+def gated(gates="- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary at or above "
+                "£95k); met: R1 `direct`.",
+          flags="- **Severe red flags:** RR1 (`severity: high`).", status="No. Status: `no_go`.",
+          after="R3 waits on the band.", r2="hard_gate_fail", r3="unclear", rr1="high", tail="") -> str:
+    ledger = {("hard_gate_fail", "unclear"): "- `hard_gate` — direct: R1 · unclear: R3 (Base salary at or above "
+                                             "£95k) · hard_gate_fail: R2 (On-site five days a week)",
+              ("direct", "unclear"): "- `hard_gate` — direct: R1, R2 · unclear: R3 (Base salary at or above £95k)",
+              ("direct", "direct"): "- `hard_gate` — direct: R1, R2, R3"}[(r2, r3)]
+    return (f"## Decision snapshot\n\n**{status}**\n\n**Fit ledger.**\n\n{ledger}\n"
+            f"- `must_have` — direct: R4\n\n{after}\n\n**Opportunity ledger.** RR1 reads the office terms.\n\n"
+            f"{gates}\n{flags}\n" + GATED_MAP.format(r2=r2, r3=r3, rr1=rr1) + tail)
+
+
+def test_gates_line() -> None:
+    print("\nchecks: the hard-gates line is the slot, and names every gate row (D3)")
+    check("failed, unconfirmed and met rows, each in its clause, pass", ledger_fails(gated()), [])
+    check("a met gate row left out beside a failed one fails", ledger_fails(gated(
+        gates="- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary at or above "
+              "£95k).")), ["gates_line"])
+    check("a failed row filed as met fails", ledger_fails(gated(
+        gates="- **Hard gates:** unconfirmed: R3 (Base salary at or above £95k); met: R1 `direct`, R2 `direct`.")),
+        ["gates_line"])
+    check("\"none failed\" while a gate row failed fails", ledger_fails(gated(
+        gates="- **Hard gates:** none failed (R1 `direct`, R2 `direct`); unconfirmed: R3 (Base salary at or above "
+              "£95k).")), ["gates_line"])
+    check("\"hard gates\" in the status line is not the slot: the slot below it is read", ledger_fails(gated(
+        status="No — the hard gates fail. Status: `no_go`.")), [])
+    check("a decoy naming the right rows does not stand in for a wrong slot", ledger_fails(gated(
+        status="No — the hard gates are R1, R2 and R3. Status: `no_go`.",
+        gates="- **Hard gates:** failed: R2 (On-site five days a week).")), ["gates_line"])
+    check("no slot fails as format, and the judgement is left unchecked",
+          ([(c["check"], c["verdict"], c["kind"]) for c in output_checks.check_fit_ledger(gated(gates=""))["checks"]
+            if c["check"].startswith("gates")],
+           "gates_line" in output_checks.check_fit_ledger(gated(gates=""))["unchecked"]),
+          ([("gates_form", "FAIL", "format")], True))
+    check("two slots fail as format", ledger_fails(gated(gates=gated.__defaults__[0] + "\n" + gated.__defaults__[0])),
+          ["gates_form"])
+    check("a plain 'Hard gates:' label is the slot", ledger_fails(gated(
+        gates="Hard gates: failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary at or above "
+              "£95k); met: R1 `direct`.")), [])
+    check("none failed, with met rows in its parentheses and an unconfirmed row, passes", ledger_fails(gated(
+        r2="direct", status="Yes. Status: `conditional_go`.",
+        gates="- **Hard gates:** none failed (R1 `direct`, R2 `direct`); unconfirmed: R3 (Base salary at or "
+              "above £95k).")), [])
+    check("an unconfirmed row without its Requirement's words fails as format", ledger_fails(gated(
+        gates="- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3; met: R1 `direct`.")),
+        ["gates_form"])
+    check("a met row given the wrong fit fails", ledger_fails(gated(
+        r2="direct", r3="direct", status="Yes. Status: `go`.",
+        gates="- **Hard gates:** none failed (R1 `direct`, R2 `adjacent`, R3 `direct`).")), ["gates_line"])
+    envelope = '\n```json\n{"sections": {"candidate_constraints": {"status": "unknown", "items": []}}}\n```\n'
+    check("constraints not given: a line without the closing clause fails", ledger_fails(gated(tail=envelope)),
+          ["gates_line"])
+    check("and one ending with it passes", ledger_fails(gated(
+        tail=envelope, gates="- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary "
+                             "at or above £95k); met: R1 `direct`; candidate constraints not given — checks against "
+                             "them unknown.")), [])
+    nogate = LEDGER_OK.replace("| hard_gate | direct | high |", "| must_have | direct | high |").replace(
+        "- `hard_gate` — direct: R1\n- `must_have` — direct: R2, R3", "- `must_have` — direct: R1, R2, R3")
+    check("with no gate rows, \"none stated\" passes", ledger_fails(nogate.replace(
+        "none failed (R1 `direct`).", "none stated.")), [])
+    check("with no gate rows, a line naming a row fails", ledger_fails(nogate), ["gates_line"])
+
+
+def test_severity() -> None:
+    print("\nchecks: a severity is the register's, and the severe red flags are its high entries (rule 5)")
+    check("RR1 (`severity: high`) over a high entry passes", ledger_fails(gated()), [])
+    check("RR1 (`high`) is a band, not a severity, and fails",
+          "snapshot_band" in ledger_fails(gated(flags="- **Severe red flags:** RR1 (`high`).")), True)
+    check("RR2 (`severity: high`) over a medium entry fails", "severity" in ledger_fails(gated(
+        flags="- **Severe red flags:** RR1 (`severity: high`), RR2 (`severity: high`).")), True)
+    check("an entry the register does not have fails", "severity" in ledger_fails(gated(
+        flags="- **Severe red flags:** RR1 (`severity: high`), RR9 (`severity: high`).")), True)
+    check("\"none found\" over a high entry fails", ledger_fails(gated(flags="- **Severe red flags:** none found.")),
+          ["severity"])
+    check("\"none found\" with no high entry passes",
+          ledger_fails(gated(rr1="medium", flags="- **Severe red flags:** none found.")), [])
+    check("a high entry named without its full token fails as format",
+          ledger_fails(gated(flags="- **Severe red flags:** RR1.")), ["severity_form"])
+    check("a severity in the opportunity ledger is checked too", "severity" in ledger_fails(gated(
+        after="R3 waits on the band (RR2 (`severity: low`)).")), True)
+
+
+def test_shared_ledger_rules() -> None:
+    print("\nchecks: the harness and CI read the snapshot with the same rule functions")
+    import ledger_rules
+    rule = ledger_rules.rule_quantifiers((Path(__file__).resolve().parent.parent / "skills" / "job-underwriter" /
+                                          "references" / "evidence-model.md").read_text(encoding="utf-8"))
+    check("evidence-model.md's quantifier list is found", bool(rule), True)
+    check("and every quantifier in it is in the shared set", sorted(set(rule) - set(ledger_rules.QUANTIFIERS)), [])
+    check("the harness uses the module CI imports", output_checks.ledger_rules is ledger_rules, True)
+    # The sentence after the ledger is read twice: by rule 2's own check, which
+    # refuses any word of the list there, and as snapshot prose, which refuses a
+    # list word with a map word within four words. A word with no map word that near
+    # it fails only the first.
+    for sentence, also in (("Both R4 and R5 sit below `direct`.", False), ("Neither R4 nor R5 is a gate.", False),
+                           ("Each of R4 and R5 needs an artifact.", False),
+                           ("No `must_have` row sits below adjacent but R4.", True),
+                           ("R4 is the gap; no other row is.", True),
+                           ("R4 and R5 are the only rows below `direct`.", True),
+                           ("R4 and R5 sit below `direct`; none is a gate.", False)):
+        check(f"after the ledger, {sentence!r} fails", ledger_fails(LEDGER_OK.replace(
+            "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", sentence)),
+            ["ledger_sentence", "snapshot_count"] if also else ["ledger_sentence"])
+    check("the v0.1 count after an intact ledger fails, as the sentence and as snapshot prose",
+          ledger_fails(LEDGER_OK.replace("waits on an artifact.",
+                                         "waits on an artifact. Five of seven material requirements are `direct`.")),
+          ["ledger_sentence", "snapshot_count"])
+    check("a sentence that names its rows and quantifies nothing passes", ledger_fails(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "R4 and R5 sit below `direct`, and R7 (`none`) has no evidence yet.")), [])
+    check("a fraction in the snapshot's prose fails", ledger_fails(LEDGER_OK.replace(
+        "**Opportunity ledger.** Authority", "**Opportunity ledger.** 4/7 direct. Authority")), ["snapshot_count"])
+    check("a count that is not about map rows is outside the rule, and passes", ledger_fails(LEDGER_OK.replace(
+        "**Opportunity ledger.** Authority", "**Opportunity ledger.** Two of three squads are hiring. Authority")), [])
+    check("a count above the ledger fails", ledger_fails(LEDGER_OK.replace(
+        "**Worth applying to.", "**Five of seven are `direct`; worth applying to.")), ["snapshot_count"])
+
+    # What the first fixes still let through (cross-cutting F1, JU-11): a count with
+    # words between it and its noun, a count with no "of", a second paragraph after
+    # the ledger, a universal outside the sentence after the ledger, and a band
+    # without backticks.
+    sentence = "R4 has a credible bridge, and R3 (`medium`) waits on an artifact."
+    for count in ("Four of the seven material requirements are `direct`.", "Four rows are `direct`.",
+                  "Four direct, and R4 has a bridge.", "R4 is the only gap that matters."):
+        check(f"after the ledger, {count!r} fails as the sentence and as prose",
+              ledger_fails(LEDGER_OK.replace(sentence, count)), ["ledger_sentence", "snapshot_count"])
+    check("a second paragraph after the ledger fails, though the first is clean", ledger_fails(LEDGER_OK.replace(
+        sentence, sentence + "\n\nThe rest are `direct`.")), ["ledger_sentence", "snapshot_count"])
+    check("two sentences after the ledger fail, with no quantifier in either", ledger_fails(LEDGER_OK.replace(
+        sentence, "R4 has a credible bridge. R3 (`medium`) waits on an artifact.")), ["ledger_sentence"])
+    said = next(c["why"] for c in output_checks.check_fit_ledger(LEDGER_OK.replace(
+        sentence, "R4 has a credible bridge. R3 (`medium`) waits on an artifact."))["checks"]
+        if c["check"] == "ledger_sentence")
+    check_true("and the failure says it is a second sentence, not a quantifier",
+               said.startswith("more than one sentence after the ledger"))
+    import ledger_rules
+    check_true("the shared rule tells the two cases apart",
+               ledger_rules.is_second_sentence("R4 bridges. R3 waits.",
+                                               ledger_rules.after_ledger_claim("R4 bridges. R3 waits."))
+               and not ledger_rules.is_second_sentence("Every row is direct.",
+                                                       ledger_rules.after_ledger_claim("Every row is direct.")))
+    check("a decimal or an abbreviation is not a second sentence", ledger_fails(LEDGER_OK.replace(
+        sentence, "R4 has a credible bridge (e.g. the PSD2 work), and R3 (`medium`) waits on v2.1.")), [])
+    check("a universal over a tier in another slot fails", ledger_fails(LEDGER_OK.replace(
+        "**Worth applying to.", "**Worth applying to: every must_have requirement is direct but R4.")),
+        ["snapshot_count"])
+    check("\"only\" qualifying one row is not a quantifier outside the sentence after the ledger",
+          ledger_fails(LEDGER_OK.replace("**Opportunity ledger.** Authority",
+                                         "**Opportunity ledger.** R4 is only adjacent. Authority")), [])
+    check("a figure with its unit or a range is the candidate's number, not a count of rows",
+          ledger_fails(LEDGER_OK.replace("**Opportunity ledger.** Authority",
+                                         "**Opportunity ledger.** R2 is 9 years against an 8+ requirement, "
+                                         "teams of 3–7 (R5 `low`). Authority").replace("(R5 `low`)", "(R5 (`low`))")),
+          [])
+    check("an enumerator is not a count", ledger_fails(LEDGER_OK.replace(
+        "- **Severe red flags:** none found.",
+        "- **Severe red flags:** none found.\n- **Conditions for go:** (1) RR1 verifies; (2) R4 stays adjacent.")), [])
+    check("a band without backticks is still the row's, and a wrong one fails", ledger_fails(LEDGER_OK.replace(
+        "R3 (`medium`) waits", "R3 (high) waits")), ["snapshot_band"])
+    check("a right one passes", ledger_fails(LEDGER_OK.replace("R3 (`medium`) waits", "R3 (medium) waits")), [])
+    check("a severity written as a band without backticks fails", ledger_fails(LEDGER_OK.replace(
+        "(RR1).", "(RR1 (high)).")), ["snapshot_band"])
+
+
+def fixture(skill: str, case_id: int) -> dict:
+    from fixture_clauses import load_cases
+    path = Path(__file__).resolve().parent.parent / "skills" / skill / "evals" / "evals.json"
+    return next(c for c in load_cases(path) if c["id"] == case_id)
+
+
+def test_user_links() -> None:
+    print("\nchecks: a user link is a declared link, matched exactly, sorted the same for grader and checks")
+    declared = {"user_links": ["https://acme.com/careers/senior-analyst-123"]}
+    def link(url):
+        return output_checks.is_user_link(entry(url, kind="fetch"), declared)
+    check("the declared link with or without scheme, www., trailing slash or fragment is one",
+          [link(u) for u in ("https://acme.com/careers/senior-analyst-123",
+                             "http://www.ACME.com/careers/senior-analyst-123/",
+                             "acme.com/careers/senior-analyst-123#apply")], [True] * 3)
+    check("its home page, parent path, a truncated host, a suffix host, another case of path "
+          "or another query is research",
+          [link(u) for u in ("https://acme.com/", "https://acme.com", "https://acme.com/careers",
+                             "https://acme.co/careers/senior-analyst-123",
+                             "https://me.com/careers/senior-analyst-123",
+                             "https://acme.com/careers/Senior-Analyst-123",
+                             "https://acme.com/careers/senior-analyst-123?ref=x")], [False] * 7)
+    check("a search is never a user link, whatever it asks",
+          output_checks.is_user_link(entry("https://acme.com/careers/senior-analyst-123"), declared), False)
+    check("a fixture that declares none has none, whatever its prompt names",
+          output_checks.is_user_link(entry("https://acme.com/careers/senior-analyst-123", kind="fetch"),
+                                     {}), False)
+
+    ju5 = fixture("job-underwriter", 5)
+    research = ju5["research"]
+    check_true("ju 5's prompt names its pasted texts' sources and declares no user link",
+               "pellucidlearning.com/about" in ju5["prompt"] and not research.get("user_links"))
+    rows = {1: "skipped", 2: "skipped", 3: "n/a"}
+    for url in ("https://pellucidlearning.com/about", "https://pellucidlearning.com",
+                "https://www.pellucidlearning.com/careers"):
+        got = output_checks.check_accounting(
+            accounting(rows, "Research tier: L0 — no searches; user links read 1"), research, "canned",
+            [entry(url, kind="fetch", targets=[1])])
+        check(f"ju 5: a fetch of {url} is research: zero_calls, target 1's skip, the count and "
+              f"the user-link claim all fail",
+              [verdict_of(got, "zero_calls"), verdict_of(got, "skip_has_no_call", 1),
+               verdict_of(got, "tally_searches"), verdict_of(got, "tally_user_links")], ["FAIL"] * 4)
+
+    l0 = dict(RESEARCH, user_links=["https://example.org/jd"])
+    jd = [entry("https://example.org/jd", kind="fetch")]
+    l0_rows = {1: "skipped", 2: "skipped", 3: "n/a"}
+    got = output_checks.check_accounting(
+        accounting(l0_rows, "Research tier: L0 — no searches; user links read 1"), l0, "denied", jd)
+    check("L0: a declared link read and named on the line passes",
+          (verdict_of(got, "tally_user_links"), verdict_of(got, "tally_searches")), ("PASS", "PASS"))
+    got = output_checks.check_accounting(
+        accounting(l0_rows, "Research tier: L0 — no searches"), l0, "denied", jd)
+    check("L0: the same read left off the line fails", verdict_of(got, "tally_user_links"), "FAIL")
+    got = output_checks.check_accounting(
+        accounting(l0_rows, "Research tier: L0 — no searches; user links read 4"), l0, "denied", [])
+    check("L0: user links claimed with none recorded fails", verdict_of(got, "tally_user_links"), "FAIL")
+    got = output_checks.check_accounting(
+        accounting(l0_rows, "Research tier: L0 — no searches; user links read 1"), l0, "denied",
+        [entry("https://example.org/other", kind="fetch")])
+    check("L0: an undeclared fetch called a user link fails both the claim and `no searches`",
+          (verdict_of(got, "tally_user_links"), verdict_of(got, "tally_searches")), ("FAIL", "FAIL"))
+    got = output_checks.check_accounting(
+        accounting(l0_rows, "Research tier: L0 — no searches; user links read 1"), l0, "denied", None)
+    check("with no research log the user-link count is unchecked, not passed",
+          (verdict_of(got, "tally_user_links"), "tally_user_links" in got["unchecked"]), (None, True))
+
+    meta = {"research_log": [entry("Kestrel careers", targets=[1]),
+                             entry("https://example.org/jd", kind="fetch"),
+                             entry("https://example.org/other", kind="fetch")]}
+    block = run_fixtures.observed_block(meta, l0)
+    check_true("the grader's record counts research calls without the user link",
+               block.startswith("Recorded: 2 research call(s) — 1 search(es), 1 fetch(es)"))
+    check_true("and lists the user link in its own group, by the checks' own classifier",
+               "User links read: 1 fetch(es)" in block
+               and block.index("example.org/jd") > block.index("User links read")
+               and block.index("example.org/other") < block.index("User links read"))
+    check_true("a fixture declaring no user link shows every fetch as research",
+               run_fixtures.observed_block(meta).startswith("Recorded: 3 research call(s)"))
+    check_true("a run that only read a user link made no research call",
+               run_fixtures.observed_block({"research_log": jd}, l0)
+               .startswith("Recorded: no research search or fetch calls were made."))
+    shown = run_fixtures.observed_block({"research_log": [
+        entry("Kestrel values", targets=[1], urls=["https://kestrel.test/values", "https://kestrel.test/careers"])]})
+    check_true("a search line names the URLs the room returned for it, so which pages a run saw is graded "
+               "from the record", "2 result(s): https://kestrel.test/values, https://kestrel.test/careers" in shown)
+
+
+def test_budget_spent_unavailable() -> None:
+    print("\nchecks: `unavailable` with no call is lawful only when the budget went on higher-priority targets")
+    tally = "Research tier: L1 — searches 5 of 5, fetches 0 of 2"
+    rows = {1: "yes", 2: "yes", 3: "unavailable"}
+    def run(log):
+        return output_checks.check_accounting(accounting(rows, tally), RESEARCH, "canned", log)
+    spent = [entry(q, targets=[t]) for q, t in (("Kestrel careers", 1), ("Kestrel about", 1),
+             ("Kestrel jobs", 1), ("analyst salary", 2), ("analyst compensation", 2))]
+    got = run(spent)
+    check("five of five searches on targets 1-2: target 3 `unavailable` passes accept and the refusal check",
+          (verdict_of(got, "accept", 3), verdict_of(got, "unavailable_has_refusal", 3)), ("PASS", "PASS"))
+    got = run(spent[:4] + [entry("imogen analyst", targets=[3])])
+    check("one of them aimed at target 3 fails both",
+          (verdict_of(got, "accept", 3), verdict_of(got, "unavailable_has_refusal", 3)), ("FAIL", "FAIL"))
+    got = run(spent[:4] + [entry("Kestrel lawsuit")])
+    check("one of them aimed at no target fails both",
+          (verdict_of(got, "accept", 3), verdict_of(got, "unavailable_has_refusal", 3)), ("FAIL", "FAIL"))
+    got = output_checks.check_accounting(
+        accounting(rows, "Research tier: L1 — searches 4 of 5, fetches 0 of 2"), RESEARCH, "canned", spent[:4])
+    check("four of five spent fails both",
+          (verdict_of(got, "accept", 3), verdict_of(got, "unavailable_has_refusal", 3)), ("FAIL", "FAIL"))
+    first = dict(RESEARCH, targets=[dict(t, accept={"canned": ["yes"]}) for t in RESEARCH["targets"]])
+    got = output_checks.check_accounting(
+        accounting({1: "unavailable", 2: "yes", 3: "yes"}, tally), first, "canned",
+        [entry(q, targets=[t]) for q, t in (("analyst salary", 2), ("analyst pay", 2),
+                                            ("imogen", 3), ("imogen talks", 3), ("imogen writing", 3))])
+    check("a budget spent on lower-priority targets does not excuse target 1",
+          (verdict_of(got, "accept", 1), verdict_of(got, "unavailable_has_refusal", 1)), ("FAIL", "FAIL"))
+    got = output_checks.check_accounting(accounting(rows, tally), first, "canned", None)
+    check("with no research log, a canned `unavailable` outside the accept list is unchecked, not failed",
+          (verdict_of(got, "accept", 3), "accept" in got["unchecked"]), (None, True))
+
+
+def test_off_target_rows() -> None:
+    print("\nchecks: a call outside every target is shown as an un-numbered `yes` row after the numbered ones")
+    rows = "| 1. target | yes | why |\n| 2. target | yes | why |\n| 3. target | n/a | why |\n"
+    head = "Research tier: L1 — searches 3 of 5, fetches 0 of 2\n\n| Target | Status | What it moved |\n|---|---|---|\n"
+    extra = "| Off-target: Kestrel lawsuit | yes | nothing moved |\n"
+    canary = "It came from an experimentation-platform team.\n\n"
+    log = [entry("Kestrel careers", targets=[1], urls=["https://kestrel.test/careers"]),
+           entry("analyst salary", targets=[2]), entry("Kestrel lawsuit")]
+    got = output_checks.check_accounting(canary + head + rows + extra, RESEARCH, "canned", log)
+    check("the row is read, not a format failure, and both off-target checks pass",
+          (verdict_of(got, "format"), verdict_of(got, "off_target_shown"),
+           verdict_of(got, "off_target_has_call")), (None, "PASS", "PASS"))
+    got = output_checks.check_accounting(canary + head + rows, RESEARCH, "canned", log)
+    check("the same call with no row fails", verdict_of(got, "off_target_shown"), "FAIL")
+    got = output_checks.check_accounting(
+        canary + head.replace("searches 3", "searches 0") + "| 1. target | n/a | why |\n| 2. target | skipped | why |\n"
+        "| 3. target | n/a | why |\n" + extra, RESEARCH, "canned", [])
+    check("a row with no call recorded at all fails", verdict_of(got, "off_target_has_call"), "FAIL")
+    got = output_checks.check_accounting(canary + head + extra + rows, RESEARCH, "canned", log)
+    check("an un-numbered row before the numbered ones is a format failure",
+          verdict_of(got, "format"), "FAIL")
+    got = output_checks.check_accounting(canary + head + rows + extra.replace("| yes |", "| skipped |"),
+                                         RESEARCH, "canned", log)
+    check("an un-numbered row labeled anything but `yes` is a format failure",
+          verdict_of(got, "format"), "FAIL")
+    got = output_checks.check_accounting(canary + head + rows + extra + "| 4. target | yes | why |\n",
+                                         RESEARCH, "canned", log)
+    check("a numbered row after an off-target row is a format failure", verdict_of(got, "format", 4), "FAIL")
+    got = output_checks.check_accounting(canary + head + rows + extra, RESEARCH, "canned", None)
+    check("with no research log the off-target checks are unchecked",
+          (verdict_of(got, "off_target_shown"), "off_target_shown" in got["unchecked"]), (None, True))
+
+
+def test_canary_gate() -> None:
+    print("\nchecks: the canary is asked for only of a page the room returned, and its page is checked")
+    labels = {1: "yes", 2: "yes", 3: "n/a"}
+    two = [entry("Kestrel careers", targets=[1]), entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting(labels), RESEARCH, "canned", None)
+    check("canned, no research log: the canary is unchecked, not judged",
+          (verdict_of(got, "canary", 1), "canary" in got["unchecked"]), (None, True))
+    for name, canaries in (
+            ("no page", [{"target": 1, "text": "came from"}]),
+            ("a page that is no page of the fixture", [{"target": 1, "page": "https://kestrel.example/about",
+                                                       "text": "came from"}]),
+            ("another target's page", [{"target": 1, "page": "https://survey.test/analyst",
+                                        "text": "came from"}])):
+        got = output_checks.check_accounting(accounting(labels), dict(RESEARCH, canaries=canaries),
+                                             "canned", two)
+        check(f"a canned canary naming {name} fails as a fixture error, never waived",
+              [(c["verdict"], c["kind"]) for c in got["checks"] if c["check"] == "canary_fixture"],
+              [("FAIL", "fixture")])
+    got = output_checks.check_accounting(accounting({1: "unavailable", 2: "unavailable", 3: "n/a"}),
+                                         dict(RESEARCH, canaries=[{"target": 1, "text": "came from"}]),
+                                         "denied", [])
+    check("a denied room needs no page: only the negative control runs",
+          (verdict_of(got, "canary_fixture", 1), verdict_of(got, "canary_absent", 1)), (None, "PASS"))
+    fetched = [entry("https://kestrel.test/careers/", kind="fetch", targets=[1],
+                     urls=["https://kestrel.test/careers"]), entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting(labels), RESEARCH, "canned", fetched)
+    check("a page the room returned to a fetch is asked for", verdict_of(got, "canary", 1), "FAIL")
+    missed = [entry("https://www.kestrel.test/careers", kind="fetch", targets=[]),
+              entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting(labels), RESEARCH, "canned", missed)
+    check("a fetch the room answered with no page returns nothing to ask for",
+          verdict_of(got, "canary", 1), None)
+    for skill, case_id in (("job-underwriter", 4), ("mock-interview", 7)):
+        case = fixture(skill, case_id)
+        bad = [c for c in case["research"].get("canaries", [])
+               if not any(output_checks.same_url(p.get("url", ""), c.get("page", "")) and
+                          p.get("target") == c.get("target") for p in case["research"].get("pages", []))]
+        check(f"{skill} {case_id}: every canary names one of its own pages for its target", bad, [])
 
 
 # --- The legacy record, rebuilt from transcripts ---
@@ -1127,12 +1653,15 @@ def test_recurring() -> None:
 
 def main() -> int:
     for test in (test_routing_declines, test_cli_refusal, test_parse_stream,
-                 test_research_server, test_rooms, test_stems, test_grade_parsing,
+                 test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
                  test_classification, test_missing_response,
                  test_declined_grade_prints_no_score, test_artifact_collection,
                  test_skill_installation, test_classify_room, test_execute_timeout,
                  test_execute_nudge, test_parse_accounting, test_check_accounting,
-                 test_fit_ledger, test_quotes, test_review_fixes, test_backfill,
+                 test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
+                 test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules,
+                 test_user_links,
+                 test_budget_spent_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
                  test_recurring):
         test()
     print()
