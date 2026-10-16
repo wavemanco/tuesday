@@ -160,6 +160,11 @@ something the analysis cannot source.
 
 Verified: R1, R2, R3, R4, R6, R8, R9 claims (sources in envelope) — verified is about the claim, not the fit: R4 is verified adjacent experience and its fit stays `adjacent`. Unverified leads: a prior-context mention of a participatory-grantmaking pilot — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "awarded grants under delegated authority", initially inferred from "led the assessment panel" — corrected by user: the panel recommended, the committee decided; recorded so it is never re-derived.
 
+With no claim verified yet — which is every first response — the line reads
+`Verified: none yet.` and stops: the rows it does not name are simply
+unverified, and "all" or "everything" said of the claims is a quantifier over the
+map (`references/evidence-model.md`, "The row is the unit").
+
 Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1
 
 | Target | Status | What it moved, or would have |
