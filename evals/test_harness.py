@@ -1377,8 +1377,8 @@ def test_gates_line() -> None:
         {"checks": ["fit_ledger"], "candidate_constraints": "known"}, "denied", gated(), None),
         "candidate_constraints"), None)
     # decision.summary is read with map_claim, the one count reader CI, snapshot_count
-    # and the sentence after the ledger use (NP-6; round 5 N4): a ratio counts rows
-    # only when it ends its noun phrase or a map word follows.
+    # and the sentence after the ledger use (NP-6; round 5 N4), which reads a ratio as
+    # the comment above ledger_rules.MAP_WORDS says (round 6 C5-1).
     def summary(text):
         return gated(tail='\n```json\n{"sections": {"decision": {"status": "no_go", "summary": '
                           + json.dumps(text) + '}}}\n```\n')
@@ -1389,12 +1389,19 @@ def test_gates_line() -> None:
           verdict_of(output_checks.check_fit_ledger(summary("R2 fails the on-site gate; R3 waits on the band.")),
                      "summary_count"), "PASS")
     for text in ("Fit: 4 of 7 met.", "Conditional go: 4/7 direct.", "Go: four out of seven met.",
-                 "Conditional go: R8 is the open gate; no other gate is in doubt."):
+                 "Conditional go: R8 is the open gate; no other gate is in doubt.",
+                 # round 6 C5-1: a ratio ending its clause in a predicate no list once held
+                 "conditional_go: 5 of 7 covered; R4 is the stretch.", "Go: 6 of 7 satisfied, R4 open.",
+                 "Six of nine look solid.", "Fit: 5/7 strong.",
+                 # round 6 N1: a singular gate or "direct" before an unlisted word
+                 "Conditional go: every gate checks out.", "Go: two direct hits, R2 and R3."):
         check(f"a summary that counts the map fails summary_count: {text!r}",
               verdict_of(output_checks.check_fit_ledger(summary(text)), "summary_count"), "FAIL")
     for text in ("Conditional go: the 24/7 on-call rota (RR2) is unverified.",
                  "Pass: the role is one of two openings and pay is withheld (RR4).",
-                 "Go: the band covers 3 of 5 years of experience (RR3)."):
+                 "Go: the band covers 3 of 5 years of experience (RR3).",
+                 # round 6 C5-1: the candidate's own figures and a date
+                 "Go: he ranked 1 of 40 in the cohort (RR1).", "Go: the start date 3/15 is fixed (RR3)."):
         check(f"a ratio that counts something else passes summary_count, as it passes snapshot_count: {text!r}",
               (verdict_of(output_checks.check_fit_ledger(summary(text)), "summary_count"),
                ledger_rules.map_claim(text)), ("PASS", None))
@@ -1502,6 +1509,19 @@ def test_shared_ledger_rules() -> None:
           ledger_fails(LEDGER_OK.replace("waits on an artifact.",
                                          "waits on an artifact. Five of seven material requirements are `direct`.")),
           ["ledger_sentence", "snapshot_count"])
+    # round 6 C5-1: "N of M" fails after the ledger in every form, as the list says.
+    for sentence in ("R4 is the stretch, leaving four out of seven covered.", "R4 is the stretch; fit is 5/7 covered."):
+        check(f"after the ledger, {sentence!r} fails", (bool(ledger_rules.after_ledger_claim(sentence)), ledger_fails(
+            LEDGER_OK.replace("R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", sentence))),
+            (True, ["ledger_sentence", "snapshot_count"]))
+    # round 6 check NP-3: a date and "24/7" are not ratios after the ledger either,
+    # while a ratio that is one still fails there whatever it counts.
+    for sentence, fails in (("R4 has a credible bridge; interviews close 10/16/2026.", False),
+                            ("R4 waits on RR2, a 24/7 rota.", False),
+                            ("R4 and R5 sit below `direct`, 4/7 overall.", True),
+                            ("R4 is 2 of 3 on the panel.", True)):
+        check(f"after the ledger, {sentence!r} {'fails' if fails else 'passes'}",
+              bool(ledger_rules.after_ledger_claim(sentence)), fails)
     check("a sentence that names its rows and quantifies nothing passes", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
         "R4 and R5 sit below `direct`, and R7 (`none`) has no evidence yet.")), [])
@@ -1558,11 +1578,10 @@ def test_shared_ledger_rules() -> None:
     check("a severity written as a band without backticks fails", ledger_fails(LEDGER_OK.replace(
         "(RR1).", "(RR1 (high)).")), ["snapshot_band"])
 
-    # How the prose is read (ledger_rules, above MAP_WORDS): a year is no count, a
-    # fit or tier word that is ordinary English counts only as a token or at the end
-    # of its noun phrase, a row's named gate is no counted word, an article ends the
-    # reach, and a count inside a parenthesis does not reach out of it (NP-2). Each
-    # holds in CI and here, because both call map_claim.
+    # How the prose is read is stated once, above ledger_rules.MAP_WORDS: a year, an
+    # ordinary-English map word before one of its listed ordinary heads, a row's
+    # named gate, a word past an article and a count inside a parenthesis count no
+    # rows (NP-2; round 6 N1). Each holds in CI and here, because both call map_claim.
     for prose in ("Sound but under-specified, with two important unknowns: award authority (RR1) and the "
                   "contract basis (RR2).",
                   "(2) one direct conversation with the hiring manager — RR1.",
@@ -1579,7 +1598,32 @@ def test_shared_ledger_rules() -> None:
                   "Interviews close 10/16/2026 (RR3).",
                   "The role is one of two openings (RR4).",
                   "R2 shipped two direct-to-consumer launches.",
-                  "It would matter for a role like this one if the gates were not fatal (RR1)."):
+                  "It would matter for a role like this one if the gates were not fatal (RR1).",
+                  # round 6 C5-1: the candidate's own figures and dates, which a ratio's
+                  # clause-end test leaves alone
+                  "R2 is `direct`: he ranked 1 of 40 in the cohort.",
+                  "R4 is `adjacent`: he was 2 of 3 on the panel that set the rubric.",
+                  "R7 rests on a 4/5 from the last review (RR1).",
+                  "Start date 3/15 is fixed (RR3).",
+                  "He scored 9 out of 10 in the test (RR1).",
+                  "R2 is `direct`: he led 3 of 5 launches.",
+                  # round 6 N1: an ordinary head after a map word that is also English
+                  "One question, absent a reference, decides RR1.",
+                  "Two direct quotes back RR1.",
+                  # round 6 re-measure: phrasings saved runs carry, read as ordinary
+                  "SEO (R6) is one of seven bundled functions in the mandate.",
+                  "RR1 stands: 0 of 5 budgeted searches executed.",
+                  "Optional: one direct message to the poster (RR1).",
+                  "The role names two direct mentees (R7).",
+                  # round 6 check NP-1: register entries, actions and the candidate's own
+                  # facts are not map rows
+                  "Two important risks remain: RR1 and RR2.", "Two direct concerns: RR1 and RR2.",
+                  "She made two direct hires last year (R7).", "One direct email to the recruiter settles RR2.",
+                  "Two important red flags sit in the register.",
+                  # round 6 check NP-2: the candidate's own figures with an ordinary past tense
+                  "R1 is `direct`: of her pilots, 4 of 5 renewed.",
+                  "R2 is `direct`: of the launches she led, 3 of 4 shipped on time.",
+                  "R2 is `direct`: 3 of 4 launches shipped on time, and 3 of 4 shipped early."):
         check(f"ordinary prose passes: {prose!r}", (ledger_rules.map_claim(prose), ledger_fails(LEDGER_OK.replace(
             "**Opportunity ledger.** Authority", f"**Opportunity ledger.** {prose} Authority"))), (None, []))
     for prose in ("five must-haves", "Six of nine material requirements", "only two direct", "all read direct",
@@ -1588,16 +1632,26 @@ def test_shared_ledger_rules() -> None:
                   "both gates are met", "two soft spots are `important`", "the one preferred item",
                   "only the R4 gap is open", "two gaps in R4 and R5", "no important rows",
                   # round 5 N1: plural gates and gaps are map words wherever they stand,
-                  # and a predicate verb or a fit noun after a map word ends its phrase
+                  # and a singular gate or a fit word before a verb or a fit noun counts
                   "Two gates fail outright: R1 on location and R2 on pay", "Two gates fail", "Both gates fail",
                   "All gates hold", "Two gates block this: R1 and R2", "Every gate passes", "Neither gate fails",
                   "Five direct fits: R1, R2, R3, R6 and R9", "Two direct matches, R2 and R3", "Two gaps matter",
                   "Only two gaps matter",
-                  # round 5 N4: a ratio that ends its noun phrase, or with a map word after it
+                  # round 5 N4: a ratio that ends its clause, or with a map word after it
                   "Fit: 4 of 7 met", "Fit: 4 of 7", "4/7 direct", "four out of seven met",
                   # round 5 N5: "no other" and "any other" are quantifiers over the map anywhere
                   "R8 is the open gate; no other gate is in doubt", "R4 is the stretch; no other must-have is "
-                  "below direct", "any other requirement is direct"):
+                  "below direct", "any other requirement is direct",
+                  # round 6 N1: a singular gate or gap and the adjectives are map words
+                  # before any word that is not one of their listed ordinary heads
+                  "Every gate checks out", "Every gate checks out except R8", "Neither gate applies to Tomás",
+                  "Neither gate worries me", "Every gate gets a yes", "Two direct hits: R2 and R3",
+                  "Three direct strengths carry this: R1, R2 and R3", "Five important skills are open",
+                  # round 6 C5-1: a ratio ending its clause
+                  "5 of 7 covered", "Six of nine look solid", "5 of 7 solidly evidenced", "Fit sits at 6 of 7, with R4 open",
+                  "4 of 7 met by the CV", "R4 aside, a 5/7 fit", "Fit is a 5 of 7", "her 3 of 5 skills", "Fit: 5 of 7 check out",
+                  # round 6 check NP-2: a listed fit predicate still counts rows
+                  "Fit: R1 to R7, 5 of 7 confirmed by the CV"):
         check(f"a count or quantifier over the map still fails: {prose!r}",
               (bool(ledger_rules.map_claim(prose)), ledger_fails(LEDGER_OK.replace(
                   "**Opportunity ledger.** Authority", f"**Opportunity ledger.** RR2: {prose}. Authority"))),

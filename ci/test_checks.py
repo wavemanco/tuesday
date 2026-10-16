@@ -1519,6 +1519,77 @@ def keep_summary_ratio_of_other_noun(root: Path) -> None:
               "keep_summary_ratio_of_other_noun")
 
 
+# Round 6: a ratio counts rows when it ends its clause, read by its own test rather
+# than the map-word one (C5-1); a singular gate or gap and the adjectives are map
+# words except before a listed ordinary head (N1). Both directions are held here.
+
+def break_summary_ratio_predicate(root: Path) -> str:
+    """A ratio whose clause ends in a predicate the old follower list lacked."""
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+              '"summary": "Conditional go: 5 of 7 covered. Fit as evidence_map reads it,',
+              "break_summary_ratio_predicate")
+    return "decision.summary counts the map (\"5 of 7\")"
+
+
+def break_after_ledger_fraction(root: Path) -> str:
+    """After the ledger "N of M" fails in every form, "four out of seven" included."""
+    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
+              "R4 has a credible bridge with its limit named, leaving four out of seven covered,",
+              "break_after_ledger_fraction")
+    return "the sentence after the fit ledger says \"four out of seven\""
+
+
+def break_after_ledger_slash(root: Path) -> str:
+    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
+              "R4 has a credible bridge with its limit named, fit at 5/7 covered,", "break_after_ledger_slash")
+    return "the sentence after the fit ledger says \"5/7\""
+
+
+def break_ledger_gate_unlisted_verb(root: Path) -> str:
+    """A singular gate before a verb no list names is still the map's gate."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Every gate checks out. " + SNAPSHOT_PROSE,
+              "break_ledger_gate_unlisted_verb")
+    return "the snapshot counts or quantifies the map (\"Every gate\")"
+
+
+def break_ledger_direct_unlisted_noun(root: Path) -> str:
+    """"direct" before a noun that is not one of its ordinary heads is the fit."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Two direct hits: R2 and R3. " + SNAPSHOT_PROSE,
+              "break_ledger_direct_unlisted_noun")
+    return "the snapshot counts or quantifies the map (\"Two direct\")"
+
+
+def keep_ledger_candidate_ratio(root: Path) -> None:
+    """The candidate's own figures and a date are not counts of rows (C5-1)."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE,
+              "He ranked 1 of 40 in the cohort and was 2 of 3 on the panel; the start date 3/15 is fixed (RR1). "
+              + SNAPSHOT_PROSE, "keep_ledger_candidate_ratio")
+
+
+def break_years_stray_negation(root: Path) -> str:
+    """A negation that governs neither "hard gate" nor "years" exempts nothing (C5-2)."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", "hard gates (authorization, license, location, schedule, pay,",
+              "hard gates — never bridged — (authorization, license, location, schedule, pay, travel, years,",
+              "break_years_stray_negation")
+    return "years listed as a hard gate is the retired gate list"
+
+
+def break_years_negated_elsewhere(root: Path) -> str:
+    swap_once(root, EVIDENCE_MODEL, "\n- **The row is the unit",
+              "\n- Hard gates, never bridged, are authorization, licence, location, pay and years of experience.\n"
+              "- A hard gate isn't a fit question; list authorization, location, pay and years.\n"
+              "- **The row is the unit", "break_years_negated_elsewhere")
+    return "years listed as a hard gate is the retired gate list"
+
+
+def break_years_second_gate_list(root: Path) -> str:
+    """One negated "hard gate" does not cover a second, unnegated one in the sentence."""
+    swap_once(root, EVIDENCE_MODEL, "\n- **The row is the unit",
+              "\n- R1 is not a hard gate; hard gates are authorization, pay and years.\n"
+              "- **The row is the unit", "break_years_second_gate_list")
+    return "years listed as a hard gate is the retired gate list"
+
+
 def keep_ledger_nested_name(root: Path) -> None:
     """A ledger item's Requirement words may hold a parenthesis: one item grammar (FX-N4)."""
     swap_once(root, DOSSIER, "adjacent: R4 (Community energy knowledge)",
@@ -2082,6 +2153,7 @@ PASSES = [
     ("fit-ledger", "a ratio that counts something else in decision.summary", keep_summary_ratio_of_other_noun),
     ("fit-ledger", "a ledger name whose Requirement words hold a parenthesis", keep_ledger_nested_name),
     ("wording", "years named as not a hard gate", keep_years_negated_gate),
+    ("fit-ledger", "the candidate's own ratios and a date in the snapshot", keep_ledger_candidate_ratio),
     ("wording", "the two accounting grounds in the other order", keep_budget_grounds_reversed),
 ]
 
@@ -2283,7 +2355,12 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "plural gates with their predicate", break_ledger_plural_gates),
     ("fit-ledger", "a singular gate with its predicate", break_ledger_gate_predicate),
     ("fit-ledger", "a map word before a fit noun", break_ledger_fit_noun),
-    ("fit-ledger", "a ratio ending its noun phrase", break_ledger_ratio_alone),
+    ("fit-ledger", "a ratio ending its clause", break_ledger_ratio_alone),
+    ("fit-ledger", "a ratio ending its clause in decision.summary", break_summary_ratio_predicate),
+    ("fit-ledger", "\"four out of seven\" in the sentence after the ledger", break_after_ledger_fraction),
+    ("fit-ledger", "a slashed fraction in the sentence after the ledger", break_after_ledger_slash),
+    ("fit-ledger", "a singular gate before an unlisted verb", break_ledger_gate_unlisted_verb),
+    ("fit-ledger", "\"direct\" before an unlisted noun", break_ledger_direct_unlisted_noun),
     ("fit-ledger", "\"no other\" over the map outside the sentence after the ledger", break_ledger_no_other),
     ("fit-ledger", "a name that is not the row's requirement", break_ledger_name),
     ("fit-ledger", "a band the map does not carry", break_ledger_band),
@@ -2351,6 +2428,9 @@ CASES: list[tuple[str, str, callable]] = [
     ("wording", "failed gate rows named \"plainly\"", break_retired_gates_plainly),
     ("wording", "the hard-gates slot required only with gate rows", break_retired_slot_with_gates),
     ("wording", "years back in the hard-gate list", break_retired_years_gate),
+    ("wording", "years in a gate list beside a negation of something else", break_years_stray_negation),
+    ("wording", "years in gate sentences negating bridging or a fit question", break_years_negated_elsewhere),
+    ("wording", "a gate list after a negated hard gate in one sentence", break_years_second_gate_list),
     ("wording", "\"No network\" back in the L0 definition", break_l0_no_network),
     ("wording", "a story pre-mapped with no quote", break_personas_premap),
     ("wording", "the personas scope line removed", break_personas_scope_line),

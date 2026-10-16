@@ -2315,26 +2315,42 @@ def check_fixtures() -> None:
 
 class SentenceRule:
     """A retired claim read one sentence at a time, so the words of the claim do
-    not fail a sentence that states the rule that retired it. A sentence fails when
-    it matches `pattern`, unless it also matches `unless` anywhere, or `unless_before`
-    before the match's last word (a negation of the claim: "not a hard gate: 3+ years
-    …", "terms, never years"). A sentence ends at a full stop, as the phrase
-    patterns' own reach does."""
+    not fail a sentence that states the rule that retired it. The claim is `pattern`,
+    or `pattern` then `tail` later in the same sentence (within `reach` characters).
+    A sentence fails on the claim unless it matches `unless` anywhere, or `negation`
+    governs the claim: it stands right before the pattern, an article at most between
+    ("not a hard gate: 3+ years …"), or before the tail with nothing between that
+    ends a list item — no comma, semicolon, colon, parenthesis, dash, "and" or "or"
+    ("terms, never years"). A negation anywhere else in the sentence negates
+    something else ("hard gates, never bridged, are … years") and exempts nothing.
+    Every pairing of the pattern with a later tail is read, so one negated pairing
+    does not cover another. A sentence ends at a full stop, as the phrase patterns'
+    own reach does."""
 
-    def __init__(self, pattern: str, unless: str | None = None, unless_before: str | None = None):
+    def __init__(self, pattern: str, unless: str | None = None, tail: str | None = None,
+                 negation: str | None = None, reach: int = 160):
         self.pattern = re.compile(pattern, re.I)
         self.unless = re.compile(unless, re.I) if unless else None
-        self.unless_before = re.compile(unless_before, re.I) if unless_before else None
+        self.tail = re.compile(tail, re.I) if tail else None
+        self.reach = reach
+        self.head_negated = re.compile(r"(?:" + negation + r")\s+(?:(?:an?|the|any)\s+)?$", re.I) if negation else None
+        self.tail_negated = (re.compile(r"(?:" + negation + r")(?:(?!\b(?:and|or)\b)[^,;:()\[\]—–.]){0,40}$", re.I)
+                             if negation else None)
 
     def search(self, text: str) -> re.Match | None:
         for sentence in re.split(r"(?<=\.)\s+|\n\s*\n", text):
-            hit = self.pattern.search(sentence)
-            if not hit or (self.unless and self.unless.search(sentence)):
+            if self.unless and self.unless.search(sentence):
                 continue
-            last = hit.end() - len(re.search(r"\w+$", hit.group(0)).group(0))
-            if self.unless_before and self.unless_before.search(sentence[:last]):
-                continue
-            return hit
+            for head in self.pattern.finditer(sentence):
+                if self.head_negated and self.head_negated.search(sentence[:head.start()]):
+                    continue
+                if self.tail is None:
+                    return head
+                stop = sentence.find(".", head.end())
+                window = sentence[:min(head.end() + self.reach, len(sentence) if stop < 0 else stop)]
+                for tail in self.tail.finditer(window, head.end()):
+                    if not (self.tail_negated and self.tail_negated.search(sentence[:tail.start()])):
+                        return tail
         return None
 
 
@@ -2366,9 +2382,9 @@ RETIRED = [
     (re.compile(r"\bmissing (?:hard-gates |Hard gates )?slot\b[^.]{0,40}\b(?:only )?when the map has gate rows\b", re.I),
      "a hard-gates slot required only with gate rows is the retired rule — it is in every snapshot "
      "(risk-and-decision.md rule 4)"),
-    (SentenceRule(r"\bhard gates?\b[^.]{0,160}\byears(?:/level)?\b", unless_before=NEGATION),
+    (SentenceRule(r"\bhard gates?\b", tail=r"\byears(?:/level)?\b", negation=NEGATION),
      "years listed as a hard gate is the retired gate list — a gate is a term, not experience "
-     "(evidence-model.md, \"A gate is met, not established, or failed\")"),
+     "(evidence-conventions.md §3, \"A gate is a term, not experience\")"),
 ]
 LABELS_DEFINED = re.compile(r"(?=.*\byes\b)(?=.*\bunavailable\b)(?=.*\bcalls?\b)", re.I | re.S)
 

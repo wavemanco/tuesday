@@ -32,7 +32,7 @@ Corollary: skills compose in any order, or not at all. The dossier contract (see
 - **L0** — provided documents only: chosen by the user, or forced because the host offers no search. L0 sends no search and no fetch of the skill's choosing. A link the user gave you to read is a provided document, read when the host can fetch it and named on the tally line; a host that cannot fetch says so and uses only what was pasted. Everything else labeled `[generic]`.
 - **L1** — default: a small budgeted set of targeted searches (each skill defines its targets and caps). Official sources first; freshness rules per fact class; model memory is never a source for values, processes, or current facts.
 - **L2** — deep research: offered exactly once, cost stated, run only on consent; the offer rides an already-needed message or lands in the upgrade menu.
-- **Not-attributable rule:** results that can't be attributed to the specific entity (name collisions, no web presence) are treated as not-established — said plainly, archetype fallback named, missing facts listed in the upgrade menu.
+- **Not-attributable rule:** results that can't be attributed to the specific entity (name collisions, no web presence) are treated as not-established — said plainly, nothing used from them, missing facts listed in the upgrade menu. What stands in for each such fact is the skill's own fallback for it, named in the output; a skill states that fallback once, beside the rule for the fact it replaces, and an unattributable result triggers no other.
 
 **Depth is bounded by what the answer can change.** A search that cannot change
 something the skill will actually emit — a row, a band, a gap type, a question
@@ -119,8 +119,9 @@ where it came from.
 **This governs what a search may go looking for, not what a skill may reason
 from.** A reading stated in the output — that a posting's silence on
 compensation is itself worth a question, that a titled-years requirement is
-likely screened literally — is reasoning over material already in hand, and it
-carries a provenance label like any other derived claim. What is banned is
+likely screened literally, a risk to name and not a gate
+(`evidence-conventions.md` §3) — is reasoning over material already in hand, and
+it carries a provenance label like any other derived claim. What is banned is
 sending a search after someone's preferences and returning with a
 sourced-looking answer. Reasoning from what you have and researching what nobody
 published are different acts; only the second is out of bounds.

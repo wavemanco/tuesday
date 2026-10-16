@@ -80,7 +80,9 @@ Per material requirement, fit status is one of: `direct`, `adjacent`, `unclear`,
 | `discovery` | Evidence may exist; current inputs are inconclusive | Ask one targeted, example-rich question; suggest exact artifacts |
 | `transferability` | No direct match, but credible adjacent work | Make the transferable case *and its limits*; consider a work sample |
 | `capability` | No credible direct or adjacent evidence | Name a realistic closure path, or carry as material risk |
-| `hard_gate` | Eligibility, credential, or constraint not met, or not yet established — a gate the inputs do not settle is still `hard_gate`, never `discovery` | Surface prominently; the one question allowed asks whether the gate is met, never for a workaround; wording cannot solve it and no skill may imply otherwise |
+| `hard_gate` | Eligibility, credential, or constraint — a term, as defined below the table — not met, or not yet established; a gate the inputs do not settle is still `hard_gate`, never `discovery` | Surface prominently; the one question allowed asks whether the gate is met, never for a workaround; wording cannot solve it and no skill may imply otherwise |
+
+**A gate is a term, not experience.** A requirement is a gate when it is a term the candidate meets or does not: authorization, licence, location, schedule, pay, travel, a credential, a legal constraint. A length-of-experience requirement ("3+ years X", even marked "required") is not a gate: it keeps the tier the posting gives it and is graded on fit status and gap type like any other requirement, because work near it is evidence, not a near miss. It is a gate only when the posting ties it to a legal or credential bar, and is then read as that credential. This is the one statement of which requirements are gates; each skill's gate rule points here.
 
 The taxonomy exists because "missing from the CV" is four different situations wearing one costume, and only one of them is a real capability problem.
 

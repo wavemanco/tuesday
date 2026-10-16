@@ -52,26 +52,39 @@ FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b|\b" + _NUMBER + r"\s+out\s+of\b", re.I
 # requirements, a fit, or the rows below `direct` as "gaps". How the prose is read,
 # stated once here for every check that reads it:
 #
-# - Some map words are also ordinary English: "two important unknowns", "one direct
-#   conversation", "two direct reports", "absent a reference", "a gap analysis". Each
-#   of these — important, preferred, direct, absent and singular gate and gap — is a
-#   map word only as a token (in backticks, `important`), where it ends its noun
-#   phrase ("only two direct.", "five important", "the one gap"), or where a word in
-#   _NP_END follows it: a linking verb or preposition ("both gate rows are met"), a
-#   requirement noun ("two direct rows", "the one preferred item"), a fit noun ("five
-#   direct fits", "two direct matches") or a verb a gate, gap or fit takes as its
-#   predicate ("every gate passes", "neither gate fails", "4 of 7 met"). Followed by
-#   any other word it is that word's adjective, and the count is about that word. A
-#   hyphen that joins a word ("direct-to-consumer", "on-call") does not end a noun
-#   phrase. The words that are never ordinary English — must-have, hard gate,
-#   requirement, row, adjacent, unclear, hard_gate_fail, and the plurals gates and
-#   gaps — are map words wherever they stand ("two gates fail outright").
-# - "N of M" and a fraction ("4/7", "four out of seven") are a count over the map when
-#   they end their noun phrase ("Fit: 4 of 7.", "4 of 7 met") or a map word follows in
-#   reach ("4/7 direct", "five of seven material requirements"). Followed by any other
-#   noun they count that noun ("one of two openings", "24/7 on-call", "3 of 5 years").
-#   One whose first number exceeds its second ("24/7", "2024/25") counts no rows.
-#   That is RATIO, read through map_claim with everything else here.
+# - Some map words are also ordinary English: important, preferred, direct, absent
+#   and singular gate and gap. Each is a map word wherever it stands, except before
+#   one of its ordinary heads, a closed list (_ORDINARY_HEADS): "a gap analysis", "a
+#   gap year", "two direct reports", "one direct conversation", "two important
+#   unknowns", and "absent" before a determiner, where it is a preposition ("absent a
+#   reference"); or as the first word of a "-to-" compound ("direct-to-consumer").
+#   Because the list is closed, a word not on it leaves the map word a map word:
+#   "every gate checks out", "neither gate applies", "two direct hits", "five
+#   important skills" all count. A token in backticks (`important`) is a map word
+#   before anything. The words that are never ordinary English — must-have, hard
+#   gate, requirement, row, adjacent, unclear, hard_gate_fail, and the plurals gates
+#   and gaps — are map words wherever they stand ("two gates fail outright").
+# - "N of M" and a fraction ("4/7", "four out of seven") are a count over the map in
+#   three cases. A map word follows in reach (MAP_COUNT: "4/7 direct", "five of seven
+#   material requirements"). A requirement or fit noun follows, which it counts whatever
+#   stands before it ("5 of 7 skills", "a 5/7 fit"; _RATIO_NOUN). Or the ratio ends its
+#   clause (_RATIO_ENDS) — end of text or punctuation ("Fit: 4 of 7.", "6 of 7, with R4
+#   open"), a linking or auxiliary verb ("Six of nine look solid"), a verb a fit or a
+#   gate takes ("5 of 7 hold"), or a past participle or listed predicate adjective with
+#   no noun after it for it to modify ("5 of 7 covered", "4 of 7 met by the CV", "5/7
+#   strong."; not "one of seven bundled functions"), an adverb in -ly allowed before any
+#   of these ("5 of 7 solidly evidenced") — and the words before it do not mark it as a
+#   figure (_RATIO_FIGURE): a possessive ("her 3 of 5"), a ranking verb ("ranked 1 of
+#   40", "scored 4/5"), or, written with a slash, a date word ("Start date 3/15 is
+#   fixed", "from 3/15"). An article marks nothing ("Fit is a 5 of 7." counts). Followed
+#   by anything else — another noun ("one of two openings", "3 of 5 years", "3 of 5
+#   launches"), a preposition or an article ("ranked 1 of 40 in the cohort", "2 of 3 on
+#   the panel") — it is a figure, which the rule leaves alone; so is one whose first
+#   number exceeds its second ("24/7", "2024/25"). That is RATIO, read through map_claim
+#   with everything else here. In the one sentence after the ledger every ratio RATIO
+#   reads, first number no larger than its second, fails wherever it stands and
+#   whatever it counts (after_ledger_claim); a date and "24/7" are not ratios there
+#   either.
 # - A year is not a count: "February 2027" never counts rows (_COUNT).
 # - A count does not reach a singular map noun named by a row ID: "round 2 of the
 #   interviews, and the R8 gate" names R8's gate and counts nothing (MAP_COUNT only; a
@@ -81,26 +94,30 @@ FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b|\b" + _NUMBER + r"\s+out\s+of\b", re.I
 #   linking verb stands between ("two have a gap", "only R4 has a gap" still count).
 # - A count inside a parenthesis does not reach a map word outside it: "(mentor two
 #   juniors) is `unclear`" counts juniors (_search).
-_NP_END = (r"(?=\s*(?:-(?!\w)|[^\w\s-]|\Z|(?:and|or|but|nor|is|are|was|were|be|been|sit|sits|remain|remains|read|reads|"
-           r"stand|stands|has|have|had|would|will|can|may|might|must|should|in|on|at|to|for|of|with|from|under|"
-           r"below|above|across|among|against|than|a|an|the|that|which|this|left|remaining|open|outstanding|"
-           r"here|there|now|ones?|" + ROW_ID + r"|rows?|requirements?|tiers?|items?|skills?|qualifications?|"
-           r"criteri(?:on|a)|dut(?:y|ies)|responsibilit(?:y|ies)|asks?|terms?|conditions?|"
-           # the fit nouns, and the verbs a gate, gap or fit takes as its predicate
-           r"fits?|match(?:es)?|met|meets?|fail(?:s|ed)?|pass(?:es|ed)?|holds?|held|blocks?|blocked|"
-           r"clears?|cleared|matters?|closes?|closed|stays?)\b(?!-\w)))")
+_ORDINARY_HEADS = {
+    "compound": r"analys[ie]s|years?|agents?|fees?",
+    "adjective": (r"reports?|mentees?|conversations?|contacts?|messages?|lines?|managers?|quotes?|questions?|"
+                  r"unknowns?|caveats?|evidence|experience|"
+                  # the register's, the upgrade menu's and the candidate's own nouns: a
+                  # count of these counts entries, actions or facts, never map rows
+                  r"risks?|concerns?|signals?|red\s+flags?|flags?|points?|emails?|calls?|hires?|roles?|"
+                  r"locations?|sales|competitors?"),
+    "preposition": r"an?|the|any|such|further|more|other|some|his|her|their|its",
+}
 
 
-def _map_word(words: str) -> str:
-    """`words` read as map words, the ordinary-English ones only as a token or where
-    they end their noun phrase."""
-    return r"(?:(?<=`)" + words + r"\b|" + words + r"\b" + _NP_END + r")"
+def _map_word(word: str, heads: str) -> str:
+    """`word` read as a map word: as a token in backticks, or anywhere but before one
+    of its ordinary heads or as the first word of a "-to-" compound."""
+    return (r"(?:(?<=`)" + word + r"\b|" + word + r"\b(?!-to-)(?!(?:\s+|-)(?:"
+            + _ORDINARY_HEADS[heads] + r")\b))")
 
 
 TIER_WORDS = (r"(?:hard[_ -]?gates?|must[_ -]?haves?|requirements?|rows?|gates|"
-              + _map_word(r"(?:important|preferred|gate)") + r")")
-FIT_WORDS = r"(?:adjacent|unclear|hard[_ -]?gate[_ -]?fails?|" + _map_word(r"(?:direct|absent)") + r")"
-MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|gaps|" + _map_word(r"gap") + r")"
+              + _map_word(r"(?:important|preferred)", "adjective") + r"|" + _map_word("gate", "compound") + r")")
+FIT_WORDS = (r"(?:adjacent|unclear|hard[_ -]?gate[_ -]?fails?|" + _map_word("direct", "adjective") + r"|"
+             + _map_word("absent", "preposition") + r")")
+MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|gaps|" + _map_word("gap", "compound") + r")"
 # A singular map noun right after a row ID is that row's name, not a counted word.
 _NAMED = "".join(rf"(?<!R{d}{x} )(?<!R{d}{x}` )" for d in (r"\d", r"\d\d") for x in ("", "[a-z]"))
 _COUNTED_MAP_WORDS = r"(?:" + _NAMED + r"|(?!(?:gate|gap|requirement|row)\b))" + MAP_WORDS
@@ -144,6 +161,8 @@ QUANTIFIERS = ("N of M", "every", "all", "each of", "only", "the one", "none of"
 
 def _phrase(phrase: str) -> str:
     if phrase == "N of M":
+        # The list's "N of M" as words; the slash and "out of" forms are read through
+        # RATIO in after_ledger_claim, which knows a date and "24/7" are not ratios.
         return COUNTED.pattern
     if phrase == "no `must_have` row":
         # Any tier or rows, in any spelling: "no must-have", "no `hard_gate` row".
@@ -233,10 +252,43 @@ def _search(pattern: re.Pattern, text: str) -> re.Match | None:
 
 
 # "N of M", "N out of M" and "4/7" (not a date's "10/16/2026", not a decimal). They
-# count the map only as the comment above MAP_WORDS says: ending their noun phrase, or
-# with a map word in reach, which MAP_COUNT reads.
-RATIO = re.compile(r"(?:\b(" + _NUMBER + r")\s+(?:out\s+)?of\s+(" + _NUMBER + r")\b|(?<![\d/.,])\b(\d+)\s*/\s*(\d+)\b"
-                   r"(?!\s*/\s*\d|[.,]\d))" + _NP_END, re.I)
+# count the map only as the comment above MAP_WORDS says: ending their clause
+# (_RATIO_ENDS) and not marked as a figure (_RATIO_FIGURE), or with a map word in
+# reach, which MAP_COUNT reads.
+RATIO = re.compile(r"\b(" + _NUMBER + r")\s+(?:out\s+)?of\s+(" + _NUMBER + r")\b|(?<![\d/.,])\b(\d+)\s*/\s*(\d+)\b"
+                   r"(?!\s*/\s*\d|[.,]\d)", re.I)
+# What may follow a ratio that ends its clause. A participle or a predicate adjective
+# ends it only where the clause goes on after it with no noun for it to modify: "5
+# of 7 covered, R4 open", "4 of 7 met by the CV", but not "one of seven bundled
+# functions" or "0 of 5 budgeted searches", where it is the noun's adjective.
+_PUNCT_END = r"\s*(?:-(?!\w)|[^\w\s-]|\Z)"
+_CLAUSE_GOES_ON = (r"(?:" + _PUNCT_END + r"|\s+(?:\w+ly|by|in|on|at|to|for|from|with|under|against|across|through|"
+                   r"per|via|as|than|and|or|but|nor|while|since|because|if|unless|though|although|yet|so|a|an|the|"
+                   r"now|already|still|outright|overall|too|here|there|today|again|enough|" + ROW_ID + r")\b)")
+_RATIO_ENDS = re.compile(
+    _PUNCT_END + r"|\s+(?:\w+ly\s+)?(?:"
+    # a linking or auxiliary verb, or a conjunction that ends the clause
+    r"(?:is|are|was|were|be|been|being|look|looks|seem|seems|remain|remains|stand|stands|stay|stays|sit|sits|"
+    r"read|reads|have|has|had|would|will|can|could|may|might|must|should|do|does|did|and|or|but|nor|"
+    # a verb a fit or a gate takes
+    r"meets?|fail|fails|pass|passes|holds?|blocks?|clears?|matters?|closes?|carry|carries|survives?|lacks?|"
+    r"needs?|check|apply|applies|land|lands)\b(?!-\w)"
+    # a past participle or a predicate adjective, with the clause going on after it
+    # (a listed set: an arbitrary past tense — "4 of 5 renewed", "3 of 4 shipped" — is
+    # the candidate's own figure, which the rule leaves alone)
+    r"|(?:met|unmet|covered|confirmed|satisfied|evidenced|cleared|established|supported|demonstrated|"
+    r"addressed|matched|verified|held|shown|proven|known|seen|left|done|given|open|outstanding|remaining|strong|solid|"
+    r"clear|weak|thin|sound|firm|fine|good)\b(?!-\w)" + _CLAUSE_GOES_ON + r")", re.I)
+# A requirement or fit noun after a ratio is what it counts ("5 of 7 skills", "a 5/7
+# fit"), whatever stands before it.
+_RATIO_NOUN = re.compile(r"\s+(?:ones?|rows?|requirements?|tiers?|items?|skills?|qualifications?|criteri(?:on|a)|"
+                         r"dut(?:y|ies)|responsibilit(?:y|ies)|asks?|terms?|conditions?|fits?|match(?:es)?)\b(?!-\w)",
+                         re.I)
+_RATIO_FIGURE = re.compile(
+    r"\b(?:his|her|their|my|its|ranked|ranks|ranking|placed|finished|came|scored|scores|rated|graded)\s+$", re.I)
+_DATE_WORD = re.compile(
+    r"\b(?:date|dated|on|by|from|until|till|through|before|after|since|starts?|starting|started|begins?|"
+    r"beginning|began|due|deadline|closes?|closing|closed|ends?|ending|ended|effective)\s+$", re.I)
 
 
 def _number(word: str) -> int:
@@ -244,13 +296,27 @@ def _number(word: str) -> int:
 
 
 def _ratio(text: str) -> re.Match | None:
-    """The first RATIO that could count rows: its first number no larger than its
-    second."""
+    """The first RATIO that counts rows by itself: its first number no larger than
+    its second, ending its clause, and not marked as a figure by the words before it."""
     for hit in RATIO.finditer(text):
-        n, m = (hit.group(1), hit.group(2)) if hit.group(1) else (hit.group(3), hit.group(4))
-        if _number(n) <= _number(m):
+        slashed = hit.group(3) is not None
+        n, m = (hit.group(3), hit.group(4)) if slashed else (hit.group(1), hit.group(2))
+        before = text[max(0, hit.start() - 40):hit.start()]
+        if _number(n) > _number(m):
+            continue
+        if _RATIO_NOUN.match(text, hit.end()) or (
+                _RATIO_ENDS.match(text, hit.end()) and not _RATIO_FIGURE.search(before)
+                and not (slashed and _DATE_WORD.search(before))):
             return hit
     return None
+
+
+def _any_ratio(text: str) -> re.Match | None:
+    """Every ratio RATIO reads, its first number no larger than its second, wherever it
+    stands and whatever it counts: what the sentence after the ledger may not hold. A
+    date ("10/16/2026") and "24/7" are not ratios here either."""
+    return next((h for h in RATIO.finditer(text)
+                 if _number(h.group(3) or h.group(1)) <= _number(h.group(4) or h.group(2))), None)
 
 
 def map_claim(text: str) -> re.Match | None:
@@ -260,7 +326,9 @@ def map_claim(text: str) -> re.Match | None:
     ratio that counts rows (RATIO), a count with a map word in reach (MAP_COUNT), or a
     word of the list with a map word in reach (MAP_UNIVERSAL). Counts that are not
     about map rows — the candidate's own figures, "two of three squads", "24/7
-    on-call", the Research tier line — are outside the rule, and bare "none" stays out
+    on-call", the Research tier line — are outside this function's rule, though in the
+    sentence after the ledger "N of M" fails in any form (after_ledger_claim), and
+    bare "none" stays out
     because the slots require "none failed" and "none found". How the words are read
     is stated once, above MAP_WORDS."""
     return _ratio(text) or _search(MAP_COUNT, text) or _search(MAP_UNIVERSAL, text)
@@ -271,10 +339,11 @@ SECOND_SENTENCE = re.compile(r"(?s)(?<=\S)\s.*")
 
 def after_ledger_claim(text: str) -> re.Match | None:
     """What rule 2 forbids after the ledger: a count or fraction over the map, read as
-    map_claim reads it everywhere; any word of the list, "N of M" included, wherever
-    it stands ("at most one sentence … says nothing about the rows it does not
-    name"); or a second sentence. For a second sentence the match is that sentence."""
-    hit = map_claim(text) or AFTER_LEDGER_UNIVERSAL.search(text)
+    map_claim reads it everywhere; any word of the list wherever it stands, "N of M"
+    in any form included — "4 of 7", "4/7", "four out of seven" ("at most one
+    sentence … says nothing about the rows it does not name"); or a second sentence.
+    For a second sentence the match is that sentence."""
+    hit = map_claim(text) or _any_ratio(text) or AFTER_LEDGER_UNIVERSAL.search(text)
     if hit:
         return hit
     parts = sentences(text)

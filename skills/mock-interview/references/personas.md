@@ -8,7 +8,7 @@ Weighting is a shown judgment, not a hidden score. Work in three passes and disp
 
 1. **Relationship priors** (table below) set the starting weights.
 2. **Interviewer signals** adjust them when a profile exists (rules below).
-3. **Company archetype** adjusts them when research reveals the loop structure (see `research-checklist.md` — e.g., a documented values round makes Values/Behavioral guaranteed *somewhere* in the loop even if not in this session).
+3. **The loop** adjusts them as `research-checklist.md` Loop detection decides: the rounds a loop source names where one establishes the loop, the fallback archetype's tilt where none does. A values-style round a loop source documents makes Values/Behavioral guaranteed *somewhere* in the loop even if not in this session.
 
 Depth follows weight: the top persona gets 4–5 questions, mid-weight personas 3, low-weight 2. Every pack still touches all plausible personas — the candidate should never meet a style for the first time live.
 

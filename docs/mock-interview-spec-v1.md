@@ -45,7 +45,7 @@ the first response, from whatever inputs exist.
 |---|---|---|---|
 | 1 | **Fit snapshot** | Always | JD requirement × the candidate's evidence, quoted verbatim × gap-and-bridge language. With a dossier, the underwriter's `evidence_map` supplies the grading and its evidence quotes supply the cells |
 | 2 | **Interviewer read** | Only with real interviewer information | Career pattern, self-described style, what lands with them and why |
-| 3 | **Persona weights** | Always | Relationship priors adjusted by interviewer signals and company archetype, reasoning shown |
+| 3 | **Persona weights** | Always | Relationship priors adjusted by interviewer signals and by the loop — the rounds a loop source names, or the fallback archetype where none establishes the loop (the skill's research checklist defines both) — reasoning shown |
 | 4 | **Question banks** | Always | Per persona, under the rubric's coverage rules. Roughly 18–26 questions, depth following persona weight |
 | 5 | **Values cheat sheet** | Only when a values-style round is detected, as the research checklist defines it, and the published values are in hand | Each published value mapped to a story one of the candidate's quoted sentences carries (the fit-snapshot row named and its evidence cell quoted exactly), or a selection scaffold ending in its honest branch where none does. Where research could not establish the values, the section is dropped, and the pack says so and labels the values bank generic |
 | 6 | **Reverse questions** | Always | With a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists |

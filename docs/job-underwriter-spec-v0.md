@@ -118,7 +118,7 @@ Extract and normalize:
 - Job title, organization, location, employment type.
 - Stated responsibilities.
 - Must-have, preferred, and implied requirements.
-- Hard gates: terms the candidate meets or does not — authorization, license, location, clearance, schedule, pay, travel, credentials, legal constraints. A length-of-experience requirement is not a gate, unless the posting ties it to a legal or credential bar; it keeps the posting's tier (the rule is `skills/job-underwriter/references/evidence-model.md`, "A gate is met, not established, or failed").
+- Hard gates: terms the candidate meets or does not, never a length of experience. Which requirements are gates is defined once, in `conventions/evidence-conventions.md` §3; how a gate row's fit is read is `skills/job-underwriter/references/evidence-model.md`, "A gate is met, not established, or failed".
 - Expected outcomes in the first 90 days and first year, if stated or carefully inferred.
 - Scope signals: team size, ownership, budget, decision rights, reporting line, customer/problem domain, company stage.
 - JD unknowns, contradictions, risk signals, and red flags.

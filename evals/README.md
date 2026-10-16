@@ -342,10 +342,9 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   ("The decision snapshot") and `evidence-model.md` ("The row is the unit"). The
   patterns and rule functions are `ci/ledger_rules.py`, the same ones CI runs on
   the worked dossier, so the two checks of a rule cannot disagree; how they read
-  prose — a year is no count, a fit or tier word that is also ordinary English
-  ("two important unknowns") is a map word only as a token or where its noun
-  phrase ends, and "N of M" or a fraction counts rows only where it ends its noun
-  phrase or a map word follows — is stated once there, above `MAP_WORDS`. A
+  prose — what is a count, which words are map words (a fit or tier word that is
+  also ordinary English included), how far a count reaches, and when "N of M" or a
+  fraction counts rows — is stated once there, above `MAP_WORDS`. A
   ledger row's parenthetical and a failed or unconfirmed gate row's are judged by
   one naming rule, `ledger_rules.names_requirement`, on one item grammar,
   `ledger_rules.ITEM_WORDS`. One count reader, `ledger_rules.map_claim`, reads

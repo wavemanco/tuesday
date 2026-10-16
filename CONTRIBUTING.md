@@ -342,8 +342,10 @@ the search budget was fully spent" in a sentence that names neither L0 nor decli
 research, the sole ground for a no-call `unavailable`; `user links read` counted with
 "refused ones included"; failed gate rows named "plainly"; a missing hard-gates slot
 failing only "when the map has gate rows"; and "years" within a sentence after "hard
-gate(s)" with no negation ("not", "never", "except", "rather than", "instead of",
-"n't") before it — a gate list, not the rule that retired years from it. It also
+gate(s)", unless a negation governs "hard gate" or "years" itself ("not a hard
+gate", "terms, never years") — the rule that retired years from the list; a negation
+of anything else in the sentence ("hard gates, never bridged, are … years") exempts
+nothing (`SentenceRule` in `ci/check_skills.py` states the reading). It also
 fails an expectation or clause that defines the yes/unavailable labels without
 "returned a result" and "or errored"; an L0 definition — a paragraph
 or list item naming L0, or one under a heading that does — that says "no network";
