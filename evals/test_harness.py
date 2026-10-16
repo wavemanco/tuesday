@@ -1269,11 +1269,50 @@ def test_gates_line() -> None:
         tail=envelope, gates="- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary "
                              "at or above £95k); met: R1 `direct`; candidate constraints not given — checks against "
                              "them unknown.")), [])
+    flagged = ("- **Hard gates:** failed: R2 (On-site five days a week); unconfirmed: R3 (Base salary at or above "
+               "£95k); met: R1 `direct`; candidate constraints not given — checks against them unknown.")
+
+    def gate_verdict(text, declared):
+        return verdict_of(output_checks.check_fit_ledger(text, declared), "gates_line")
+    check("a fixture declaring constraints unknown: the line without the clause fails, with it passes",
+          (gate_verdict(gated(), "unknown"), gate_verdict(gated(gates=flagged), "unknown")), ("FAIL", "PASS"))
+    check("a fixture declaring constraints known: the clause fails, its absence passes",
+          (gate_verdict(gated(gates=flagged), "known"), gate_verdict(gated(), "known")), ("FAIL", "PASS"))
+    check("the fixture's declaration settles it over the response's own envelope",
+          gate_verdict(gated(tail=envelope), "known"), "PASS")
+    check("run_checks hands the fixture's declaration to the ledger check",
+          verdict_of(output_checks.run_checks({"checks": ["fit_ledger"], "candidate_constraints": "unknown"},
+                                              "denied", gated(), None), "gates_line"), "FAIL")
+    for case_id, status in ((1, "unknown"), (2, "unknown"), (3, "known"), (4, "unknown"), (5, "unknown")):
+        case = fixture("job-underwriter", case_id)
+        clause = "the line must end with its 'candidate constraints not given' clause" if status == "unknown" \
+            else "must not carry the 'candidate constraints not given' clause"
+        check_true(f"job-underwriter {case_id}: declares constraints {status}, and its hard-gates expectation "
+                   f"says so", case.get("candidate_constraints") == status
+                   and any(clause in e for e in case["expectations"] if "'- **Hard gates:** …'" in e))
     nogate = LEDGER_OK.replace("| hard_gate | direct | high |", "| must_have | direct | high |").replace(
         "- `hard_gate` — direct: R1\n- `must_have` — direct: R2, R3", "- `must_have` — direct: R1, R2, R3")
     check("with no gate rows, \"none stated\" passes", ledger_fails(nogate.replace(
         "none failed (R1 `direct`).", "none stated.")), [])
     check("with no gate rows, a line naming a row fails", ledger_fails(nogate), ["gates_line"])
+    # A gate is met, not established, or failed (evidence-model.md): a gate row at
+    # `adjacent` or `absent` is a map error the line would file as met, however
+    # consistently the map, the ledger and the line agree on it.
+    met_go = dict(r2="direct", r3="direct", status="Yes. Status: `go`.")
+    for fit in ("adjacent", "absent"):
+        off = gated(**met_go, gates=f"- **Hard gates:** none failed (R1 `direct`, R2 `{fit}`, R3 `direct`).").replace(
+            "| R2 | On-site five days a week | hard_gate | direct |", f"| R2 | On-site five days a week | hard_gate | {fit} |"
+        ).replace("- `hard_gate` — direct: R1, R2, R3",
+                  f"- `hard_gate` — direct: R1, R3 · {fit}: R2 (On-site five days a week)")
+        check(f"a gate row at `{fit}`, agreed by map, ledger and line, fails", ledger_fails(off), ["gates_line"])
+        check("and the finding names the gate rule", "R2 is a hard_gate row at" in next(
+            c["why"] for c in output_checks.check_fit_ledger(off)["checks"] if c["check"] == "gates_line"), True)
+    off_gate = gated(**met_go, gates="- **Hard gates:** none failed (R1 `direct`, R2 `direct`, R3 `direct`).").replace(
+        "| R4 | Shipped APIs consumed by external developers | must_have | direct |",
+        "| R4 | Shipped APIs consumed by external developers | must_have | hard_gate_fail |").replace(
+        "- `must_have` — direct: R4", "- `must_have` — hard_gate_fail: R4 (Shipped APIs)")
+    check("hard_gate_fail on a must_have row fails: only a gate row fails as a gate",
+          ledger_fails(off_gate), ["gates_line"])
 
 
 def test_severity() -> None:
@@ -1497,6 +1536,56 @@ def test_budget_spent_unavailable() -> None:
           (verdict_of(got, "accept", 3), "accept" in got["unchecked"]), (None, True))
 
 
+def test_declined_unavailable() -> None:
+    print("\nchecks: `unavailable` with no call is lawful when the user declined research or chose L0")
+    first = [dict(t, accept={"canned": ["yes"]}) for t in RESEARCH["targets"]]
+    declined = dict(RESEARCH, targets=first, declined=True, user_links=["https://example.org/jd"])
+    rows = {1: "unavailable", 2: "unavailable", 3: "unavailable"}
+    l0 = "Research tier: L0 — no searches"
+
+    def run(fixture, log, tally=l0):
+        return output_checks.check_accounting(accounting(rows, tally), fixture, "canned", log)
+
+    def verdicts(got):
+        return [verdict_of(got, c, n) for n in (1, 2, 3) for c in ("accept", "unavailable_has_refusal")]
+
+    got = run(declined, [])
+    check("declined, no call sent: every `unavailable` passes accept and the refusal check, "
+          "and the L0 line and zero calls pass",
+          (verdicts(got), verdict_of(got, "tally_l0"), verdict_of(got, "zero_calls")),
+          (["PASS"] * 6, "PASS", "PASS"))
+    got = run(declined, [entry("https://example.org/jd", kind="fetch")],
+              "Research tier: L0 — no searches; user links read 1")
+    check("declined, only a declared user link read: still lawful, and zero calls passes",
+          (verdicts(got), verdict_of(got, "tally_l0"), verdict_of(got, "zero_calls")),
+          (["PASS"] * 6, "PASS", "PASS"))
+    got = run(declined, [entry("analyst salary", outcome="refused", targets=[2])])
+    check("declined, one refused search sent: zero calls fails",
+          verdict_of(got, "zero_calls"), "FAIL")
+    got = run(declined, [entry("analyst salary", targets=[2])],
+              "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("declined, a search sent and returned: target 2's `unavailable`, the L0 line and zero calls fail",
+          (verdict_of(got, "accept", 2), verdict_of(got, "unavailable_has_refusal", 2),
+           verdict_of(got, "tally_l0"), verdict_of(got, "zero_calls")), ("FAIL",) * 4)
+    got = run(declined, [entry("https://example.org/other", kind="fetch")])
+    check("declined, a fetch of an undeclared link fails zero calls",
+          verdict_of(got, "zero_calls"), "FAIL")
+    got = run(declined, [], "Research tier: L1 — searches 0 of 5, fetches 0 of 2")
+    check("declined, a budgeted line with nothing spent still fails the L0 line",
+          verdict_of(got, "tally_l0"), "FAIL")
+    got = run(declined, None)
+    check("declined with no research log: accept is unchecked, not passed",
+          (verdict_of(got, "accept", 1), "accept" in got["unchecked"],
+           "zero_calls" in got["unchecked"]), (None, True, True))
+
+    undeclared = dict(declined, declined=False)
+    got = run(undeclared, [], "Research tier: L1 — searches 0 of 5, fetches 0 of 2")
+    check("not declined and the budget unspent, no call sent: every `unavailable` fails both",
+          verdicts(got), ["FAIL"] * 6)
+    check("and no L0 line or zero calls is asked of it",
+          (verdict_of(got, "tally_l0"), verdict_of(got, "zero_calls")), (None, None))
+
+
 def test_off_target_rows() -> None:
     print("\nchecks: a call outside every target is shown as an un-numbered `yes` row after the numbered ones")
     rows = "| 1. target | yes | why |\n| 2. target | yes | why |\n| 3. target | n/a | why |\n"
@@ -1661,7 +1750,7 @@ def main() -> int:
                  test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules,
                  test_user_links,
-                 test_budget_spent_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
+                 test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
                  test_recurring):
         test()
     print()

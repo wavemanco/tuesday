@@ -195,6 +195,8 @@ denied, as every fixture always has.
   against both with `aimed_at` itself.
 - `user_links`: the links the user gave the skill to read (absent means none).
   A URL the prompt names only as the source of text the user pasted is not one.
+- `declined`: `true` when the user's prompt declines research or chooses L0
+  (absent means false). It is the fixture's word, never inferred from the run.
 - For canned rooms, `pages` (each with its `url`, `target`, `keywords` and text)
   and `canaries`: a fact only one page carries, the spellings that prove it was
   read, its `target`, and the `page` it sits on, which must be one of the
@@ -202,7 +204,10 @@ denied, as every fixture always has.
 
 A fixture with the `quotes` check also declares `candidate_text`, top-level: the
 candidate's own words, against which the verbatim evidence column and the banks'
-Provenance are checked (`[]` when the candidate gave nothing quotable).
+Provenance are checked (`[]` when the candidate gave nothing quotable). A
+fixture with the `fit_ledger` check declares `candidate_constraints`, top-level:
+`"known"` when the prompt states the candidate's own constraints or
+non-negotiables, `"unknown"` when it does not.
 
 - **denied** is the historical condition, now pinned: `--setting-sources project
   --strict-mcp-config`, with WebSearch and WebFetch present and refused. Never
@@ -278,6 +283,11 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   `unavailable` needs at least one aimed call, every one refused or errored — or
   no call aimed at it, the fixture's whole declared search budget sent, and every
   search aimed at a lower-numbered target, which also satisfies the accept list.
+  Where the fixture declares `research.declined`, `unavailable` with no call
+  aimed at the target is lawful in any room and also satisfies the accept list;
+  the tally must read `L0 — no searches` (`tally_l0`), and `zero_calls` applies.
+  Of interaction-grammar.md §4's three grounds for `unavailable` with no call
+  sent, these are the two a canned room can meet; it always offers search.
   A call aimed at no declared target needs an un-numbered `yes` row after the
   numbered ones; one such row may cover several calls, since rows are not matched
   to calls by their wording. An un-numbered row before or between the numbered
@@ -312,12 +322,17 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   Confidence; `RR2 (\`high\`)` or `RR2 (high)` is a severity written as a band,
   and fails), `gates_line` and
   `gates_form` (the `Hard gates:` slot, anchored at the start of its line; a
-  missing slot fails as format when the map has gate rows), and `severity` and
+  missing slot fails as format when the map has gate rows; a `hard_gate` row at any
+  fit but `direct`, `unclear` or `hard_gate_fail`, or `hard_gate_fail` on a row that
+  is not a gate, fails `gates_line` however the line reads, per `evidence-model.md`
+  "A gate is met, not established, or failed"), and `severity` and
   `severity_form` (every `RR4 (\`severity: high\`)` against the risk register's
   Severity, and the severe-red-flags slot naming exactly its high entries). The
   hard-gates line's closing "candidate constraints not given" clause is judged
-  only when the response's own JSON carries `candidate_constraints.status`; a
-  response with no risk register leaves `severity` unchecked.
+  against the fixture's `candidate_constraints`, or, where a fixture declares
+  none, the response's own JSON `candidate_constraints.status`, and not at all
+  when neither says; a response with no risk register leaves `severity`
+  unchecked.
 - **Quotes** (`quotes`): the verbatim evidence column and the banks' Provenance
   cells hold the candidate's words, so every quotation in either, of any length,
   must appear on word boundaries in the fixture's `candidate_text` — `[]` means

@@ -25,7 +25,7 @@ New sessions pick it up automatically; it is also invokable directly as `/job-un
 
 ## First prompt
 
-You don't need to name the skill — "should I apply to this?" with a JD matches its description and auto-triggers. The ideal first prompt front-loads what the skill would otherwise ask:
+You don't need to name the skill — "is this one worth applying for?" with a JD matches its description and auto-triggers. The ideal first prompt front-loads what the skill would otherwise ask:
 
 ```
 Should I apply to this? [JD pasted or attached]

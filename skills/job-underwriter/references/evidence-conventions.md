@@ -118,7 +118,7 @@ Three overrides that beat every label:
   Three legitimate uses this rule does not touch, named because an earlier draft of it forbade all three:
 
   - **A register entry whose hypothesis is itself a pattern.** The standing failed-attribution entry ships as `[generic] pattern for companies of this size, not a claim about this one`, and it caps the decision at `conditional_go`. It is read by a decision and it is honest — the label and the sentence agree that no entity claim is being made.
-  - **A reasoning cell that reaches past its row.** The skill that owns an evidence map requires `[generic]` exactly there — "enterprise SE roles usually touch pre-sales" — and names the pull to write `[inferred]` instead as the thing to resist.
+  - **A reasoning cell that reaches past its row.** The skill that owns an evidence map requires `[generic]` exactly there — "funders of this size usually split assessment from grant management" — and names the pull to write `[inferred]` instead as the thing to resist.
   - **An honestly degraded section.** A pack whose research could not run labels its banks `[generic]` and says so. The ladder depends on it, and a smaller honest pack beats a full-looking fabricated one.
 
   **There is no CI check for this, and the absence is deliberate.** Every mechanical version drafted — no `[generic]` in a row about the candidate, none in the evidence map, none in a table a decision reads — rejects at least one of the three uses above. A check that would reject correct work is worse than no check, and a suite with this many real mechanisms can afford to say where one does not exist. The rule is gradeable instead: an eval can ask whether a named claim about this person or this company rests on nothing but a pattern.

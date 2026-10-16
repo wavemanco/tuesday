@@ -296,8 +296,8 @@ is a reason to rewrite the example, never to list it. The matcher is seeded with
 near-quote of each skill's first prompt and fails if it misses it. What it does not
 read: a fixture's domain or situation in other words — the same shape of gap with
 fewer than three content words in common passes, so a worked example's domain is
-left to review (job-underwriter's worked dossier, a platform PM in payments, shares
-a role family with a fixture, and only its wording is held apart); the README, `docs/`, the
+left to review (job-underwriter's worked dossier, like the other skills' worked
+examples, sits in a grants-programme domain that no fixture uses); the README, `docs/`, the
 frontmatter and `citations.md`; and other skills' fixtures, since a room never
 installs two skills.
 

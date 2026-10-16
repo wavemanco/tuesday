@@ -1126,20 +1126,20 @@ DOSSIER = "skills/job-underwriter/references/dossier-template.md"
 
 
 def break_ledger_fit_cell(root: Path) -> str:
-    swap_once(root, DOSSIER, "| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent |",
-              "| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | direct |", "break_ledger_fit_cell")
+    swap_once(root, DOSSIER, "| R4 | Community energy knowledge: generation, grid connection, share offers | must_have | adjacent |",
+              "| R4 | Community energy knowledge: generation, grid connection, share offers | must_have | direct |", "break_ledger_fit_cell")
     return "fit ledger files R4 as must_have/adjacent; the map says must_have/direct"
 
 
 def break_ledger_priority_cell(root: Path) -> str:
-    swap_once(root, DOSSIER, "| R6 | Data fluency: SQL, experimentation | important |",
-              "| R6 | Data fluency: SQL, experimentation | must_have |", "break_ledger_priority_cell")
+    swap_once(root, DOSSIER, "| R6 | Grants data: grant-management database, portfolio reporting | important |",
+              "| R6 | Grants data: grant-management database, portfolio reporting | must_have |", "break_ledger_priority_cell")
     return "fit ledger files R6 as important/direct; the map says must_have/direct"
 
 
 def break_ledger_drops_last_row(root: Path) -> str:
     """s1r1's shape: the row added last is the one the summary leaves out."""
-    swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Ledger / reconciliation systems)\n", "",
+    swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Social investment experience)\n", "",
               "break_ledger_drops_last_row")
     return "fit ledger omits R7"
 
@@ -1179,7 +1179,7 @@ def break_ledger_summary_count(root: Path) -> str:
 
 
 def break_ledger_name(root: Path) -> str:
-    swap_once(root, DOSSIER, "adjacent: R4 (Regulatory exposure)", "adjacent: R4 (Regulation)", "break_ledger_name")
+    swap_once(root, DOSSIER, "adjacent: R4 (Community energy knowledge)", "adjacent: R4 (Energy policy)", "break_ledger_name")
     return "in words its Requirement cell does not use"
 
 
@@ -1195,7 +1195,7 @@ def keep_ledger_split_rows(root: Path) -> None:
     text = path.read_text()
     row = next(line for line in text.splitlines() if line.startswith("| R4 |"))
     text = text.replace(row, row.replace("| R4 |", "| R4a |") + "\n" + row.replace("| R4 |", "| R4b |").replace("| adjacent |", "| absent |"))
-    text = text.replace("adjacent: R4 (Regulatory exposure)", "adjacent: R4a (Regulatory exposure) · absent: R4b (Regulatory exposure)")
+    text = text.replace("adjacent: R4 (Community energy knowledge)", "adjacent: R4a (Community energy knowledge) · absent: R4b (Community energy knowledge)")
     blocks = text.split("```json\n")
     head, rest = blocks[-1].split("\n```", 1)
     data = json.loads(head)
@@ -1229,8 +1229,8 @@ def break_ledger_summary_universal(root: Path) -> str:
 
 
 def break_ledger_tier_twice(root: Path) -> str:
-    swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Ledger / reconciliation systems)\n",
-              "- `preferred` — absent: R7 (Ledger / reconciliation systems)\n- `preferred` — absent: R7 (Ledger)\n",
+    swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Social investment experience)\n",
+              "- `preferred` — absent: R7 (Social investment experience)\n- `preferred` — absent: R7 (Social investment)\n",
               "break_ledger_tier_twice")
     return "has more than one ledger line"
 
@@ -1261,14 +1261,14 @@ def break_ledger_tally_twice(root: Path) -> str:
 
 
 def break_ledger_stopword_name(root: Path) -> str:
-    swap_once(root, DOSSIER, "unclear: R5 (Mentoring or leading PMs)", "unclear: R5 (the)", "break_ledger_stopword_name")
+    swap_once(root, DOSSIER, "unclear: R5 (Line-managing grants officers)", "unclear: R5 (the)", "break_ledger_stopword_name")
     return "in words its Requirement cell does not use"
 
 
 def keep_ledger_severity_token(root: Path) -> None:
     """A severity in its full token beside a register ID is not a confidence band."""
-    swap_once(root, DOSSIER, "the compensation band is unstated against the candidate's £95k floor (RR2).",
-              "the compensation band is unstated against the candidate's £95k floor (RR2 (`severity: medium`)).",
+    swap_once(root, DOSSIER, "the contract basis is unstated against the candidate's permanent-only constraint (RR2).",
+              "the contract basis is unstated against the candidate's permanent-only constraint (RR2 (`severity: medium`)).",
               "keep_ledger_severity_token")
 
 
@@ -1357,8 +1357,8 @@ def break_ledger_plain_band(root: Path) -> str:
 
 
 def break_ledger_fit_twice(root: Path) -> str:
-    swap_once(root, DOSSIER, "- `must_have` — direct: R2, R3 · adjacent: R4 (Regulatory exposure)",
-              "- `must_have` — direct: R2 · direct: R3 · adjacent: R4 (Regulatory exposure)", "break_ledger_fit_twice")
+    swap_once(root, DOSSIER, "- `must_have` — direct: R2, R3 · adjacent: R4 (Community energy knowledge)",
+              "- `must_have` — direct: R2 · direct: R3 · adjacent: R4 (Community energy knowledge)", "break_ledger_fit_twice")
     return "fit direct appears twice under must_have"
 
 
@@ -1377,8 +1377,8 @@ def break_ledger_severity_unknown_id(root: Path) -> str:
 
 def break_ledger_none_found_over_high(root: Path) -> str:
     """The register gains a high entry; the snapshot still says none found."""
-    swap_once(root, DOSSIER, "| RR1 | Authority over three squads asserted, not evidenced | unknown | — |",
-              "| RR1 | Authority over three squads asserted, not evidenced | unknown | high |",
+    swap_once(root, DOSSIER, "| RR1 | Authority over awards asserted, not evidenced | unknown | — |",
+              "| RR1 | Authority over awards asserted, not evidenced | unknown | high |",
               "break_ledger_none_found_over_high")
     return "says \"none found\" while the register has"
 
@@ -1387,6 +1387,57 @@ def break_ledger_gate_wrong_fit(root: Path) -> str:
     swap_once(root, DOSSIER, "none failed (R1 `direct`, R9 `direct`)", "none failed (R1 `direct`, R9 `adjacent`)",
               "break_ledger_gate_wrong_fit")
     return "the hard-gates line gives R9 `adjacent`; the map says direct"
+
+
+def _refit_row(root: Path, rid: str, old_fit: str, new_fit: str, ledger_old: str, ledger_new: str,
+               gates_old: str | None = None, gates_new: str | None = None) -> None:
+    """Move one row to another fit everywhere the worked dossier states it — the map's
+    Fit cell, the envelope's fit_status, the ledger and, for a gate, the hard-gates
+    line — so the only rule left broken is the one the mutation names."""
+    path = root / DOSSIER
+    text = path.read_text()
+    row = next(line for line in text.splitlines() if line.startswith(f"| {rid} |"))
+    if f"| {old_fit} |" not in row:
+        raise SystemExit(f"_refit_row: {rid} is not {old_fit} — it has gone stale")
+    text = text.replace(row, row.replace(f"| {old_fit} |", f"| {new_fit} |", 1))
+    key = f'"requirement_id": "{rid}",'
+    head, _, tail = text.partition(key)  # the evidence_map entry comes first
+    if f'"fit_status": "{old_fit}"' not in tail.split("},\n      {")[0]:
+        raise SystemExit(f"_refit_row: the envelope's {rid} is not {old_fit} — it has gone stale")
+    text = head + key + tail.replace(f'"fit_status": "{old_fit}"', f'"fit_status": "{new_fit}"', 1)
+    for old, new in ((ledger_old, ledger_new), (gates_old, gates_new)):
+        if old is None:
+            continue
+        if text.count(old) != 1:
+            raise SystemExit(f"_refit_row expected one {old!r} — it has gone stale")
+        text = text.replace(old, new)
+    path.write_text(text)
+
+
+def break_ledger_gate_adjacent(root: Path) -> str:
+    """A gate row at `adjacent`, consistent everywhere: rule 4's line would file it as met."""
+    _refit_row(root, "R9", "direct", "adjacent",
+               "- `hard_gate` — direct: R1, R9 · unclear: R8",
+               "- `hard_gate` — direct: R1 · adjacent: R9 (Start date no earlier than February 2027) · unclear: R8",
+               "none failed (R1 `direct`, R9 `direct`)", "none failed (R1 `direct`, R9 `adjacent`)")
+    return "R9 is a hard_gate row at `adjacent`"
+
+
+def break_ledger_gate_absent(root: Path) -> str:
+    """A gate row at `absent`: a gate nothing settles is unclear, one the candidate lacks is failed."""
+    _refit_row(root, "R9", "direct", "absent",
+               "- `hard_gate` — direct: R1, R9 · unclear: R8 (Permanent contract, not fixed-term)",
+               "- `hard_gate` — direct: R1 · unclear: R8 (Permanent contract, not fixed-term) · "
+               "absent: R9 (Start date no earlier than February 2027)",
+               "none failed (R1 `direct`, R9 `direct`)", "none failed (R1 `direct`, R9 `absent`)")
+    return "R9 is a hard_gate row at `absent`"
+
+
+def break_ledger_fail_off_gate(root: Path) -> str:
+    """`hard_gate_fail` on a must_have row: a failed gate the hard-gates line never reads."""
+    _refit_row(root, "R4", "adjacent", "hard_gate_fail",
+               "adjacent: R4 (Community energy knowledge)", "hard_gate_fail: R4 (Community energy knowledge)")
+    return "R4 is a must_have row at `hard_gate_fail`"
 
 
 def break_ledger_constraints_clause(root: Path) -> str:
@@ -1924,6 +1975,9 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "a severity on an entry the register does not have", break_ledger_severity_unknown_id),
     ("fit-ledger", "\"none found\" over a high register entry", break_ledger_none_found_over_high),
     ("fit-ledger", "a met gate row given the wrong fit", break_ledger_gate_wrong_fit),
+    ("fit-ledger", "a gate row at adjacent, filed as met", break_ledger_gate_adjacent),
+    ("fit-ledger", "a gate row at absent, filed as met", break_ledger_gate_absent),
+    ("fit-ledger", "hard_gate_fail on a row that is not a gate", break_ledger_fail_off_gate),
     ("fit-ledger", "constraints not given and no closing clause", break_ledger_constraints_clause),
     ("fit-ledger", "a quantifier the rule lists and the shared set lacks", break_quantifier_drift_rule),
     ("fit-ledger", "a grader clause missing a quantifier of the list", break_quantifier_drift_grader),

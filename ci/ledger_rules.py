@@ -14,6 +14,8 @@ What is a rule here, and where it is written:
 - no count, fraction or quantifier over the map — job-underwriter
   references/evidence-model.md, "The row is the unit" (its quoted list is the rule;
   QUANTIFIERS must contain every phrase in it, and rule_quantifiers() reads it);
+- which fits a gate row may take — references/evidence-model.md, "A gate is met, not
+  established, or failed" (gate_fit_problems, run with the hard-gates line);
 - the sentence after the ledger, the bands, the hard-gates line and the severe red
   flags — references/risk-and-decision.md, "The decision snapshot", items 2, 4, 5.
 
@@ -362,8 +364,40 @@ def _gate_items(text: str) -> list[tuple[str, str | None, str | None]] | None:
     return items
 
 
+# A gate is binary (job-underwriter references/evidence-model.md, "A gate is met, not
+# established, or failed"): a `hard_gate` row's fit is `direct`, `unclear` or
+# `hard_gate_fail`, and `hard_gate_fail` is a gate row's fit only. Rule 4's line files
+# every gate row that is neither failed nor unclear as met, so a gate row at `adjacent`
+# or `absent` would read as met, and a failed non-gate row would not be on the line.
+GATE_FITS = ("direct", "unclear", "hard_gate_fail")
+
+
+def gate_fit_problems(rows: dict[str, dict]) -> list[tuple[str, str]]:
+    """Every map row whose fit the gate rule forbids, as ("judgement", problem) pairs.
+
+    `rows` maps each evidence-map row ID to {"priority", "fit", ...}."""
+    problems = []
+    for rid, row in rows.items():
+        priority, fit = _token(row.get("priority", "")), _token(row.get("fit", ""))
+        if priority == "hard_gate" and fit not in GATE_FITS:
+            problems.append(("judgement", f"{rid} is a hard_gate row at `{fit or 'no fit'}`; a gate row's fit is "
+                                          f"direct, unclear or hard_gate_fail (evidence-model.md, \"A gate is met, "
+                                          f"not established, or failed\"), and the hard-gates line would file it "
+                                          f"as met"))
+        elif fit == "hard_gate_fail" and priority != "hard_gate":
+            problems.append(("judgement", f"{rid} is a {priority or 'priority-less'} row at `hard_gate_fail`; only a "
+                                          f"hard_gate row fails as a gate, and the hard-gates line does not read it"))
+    return problems
+
+
 def gates_line_problems(snapshot: str, rows: dict[str, dict],
                         constraints_unknown: bool | None = None) -> list[tuple[str, str]]:
+    """The map's gate fits (gate_fit_problems), then the snapshot's hard-gates line."""
+    return gate_fit_problems(rows) + _gates_line(snapshot, rows, constraints_unknown)
+
+
+def _gates_line(snapshot: str, rows: dict[str, dict],
+                constraints_unknown: bool | None = None) -> list[tuple[str, str]]:
     """The snapshot's `- **Hard gates:**` slot against the map's `hard_gate` rows.
 
     `rows` maps each evidence-map row ID to {"priority", "fit", "requirement"}.

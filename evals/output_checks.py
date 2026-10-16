@@ -385,6 +385,9 @@ def check_accounting(response: str, research: dict, mode: str,
 
     searches_sent = [e for e in log if e.get("kind") == "search"]
     cap = (research.get("budget") or {}).get("searches")
+    # §4's other ground for `unavailable` with no call sent: the user chose L0 or
+    # declined research. The fixture says so (`research.declined`), never the run.
+    declined = bool(research.get("declined"))
 
     def budget_went_above(n: int) -> list[int] | None:
         """The lower-numbered targets the whole search budget went on, or None.
@@ -424,22 +427,30 @@ def check_accounting(response: str, research: dict, mode: str,
         spent_why = (f"the whole search budget ({len(searches_sent)} of {cap}) went on "
                      f"target(s) {', '.join(map(str, spent))} first, and no call was aimed "
                      f"at target {n}") if spent else ""
+        refused_by_user = (label == "unavailable" and declined and have_log and not aimed.get(n))
+        if refused_by_user:
+            spent_why = (f"the user declined research or chose L0 (this fixture declares "
+                         f"`research.declined`), and no call was aimed at target {n}")
         if allowed:
             if label in allowed:
                 checks.append(finding("accept", n, True,
                                       f"{label!r} in a {mode} room; this fixture accepts "
                                       f"{' or '.join(allowed)}"))
-            elif spent:
+            elif spent or refused_by_user:
                 checks.append(finding("accept", n, True,
-                                      f"`unavailable` in a canned room, which this fixture "
-                                      f"accepts only on budget grounds: {spent_why}"))
-            elif label == "unavailable" and mode == "canned" and cap and not have_log:
-                # Lawful if the budget went on higher-priority targets first, which
-                # only the record of calls can show.
+                                      f"`unavailable` in a {mode} room, which this fixture "
+                                      f"accepts only on {'budget' if spent else 'these'} "
+                                      f"grounds: {spent_why}"))
+            elif label == "unavailable" and not have_log and (
+                    declined or (mode == "canned" and cap)):
+                # Lawful if the user declined research or the budget went on
+                # higher-priority targets first, and no call was aimed at this
+                # target: only the record of calls can show that.
                 unchecked_once("accept")
-                info.append(f"accept for target {n}: `unavailable` in a canned room is lawful "
-                            f"only if the search budget went on higher-priority targets "
-                            f"first, and no research log was recorded; not checked")
+                info.append(f"accept for target {n}: `unavailable` outside this fixture's accept "
+                            f"list is lawful only with no call aimed at the target"
+                            f"{' (the user declined research)' if declined else ' and the search budget spent on higher-priority targets first'}"
+                            f", and no research log was recorded; not checked")
             else:
                 checks.append(finding("accept", n, False,
                                       f"{label!r} in a {mode} room; this fixture accepts "
@@ -461,11 +472,13 @@ def check_accounting(response: str, research: dict, mode: str,
         elif label == "unavailable" and mode == "canned":
             every_refused = bool(calls) and len(refused) == len(calls)
             checks.append(finding(
-                "unavailable_has_refusal", n, every_refused or bool(spent),
-                spent_why if spent and not every_refused else
+                "unavailable_has_refusal", n, every_refused or bool(spent) or refused_by_user,
+                spent_why if (spent or refused_by_user) and not every_refused else
                 f"search was offered in this room, so `unavailable` needs every call aimed at "
-                f"target {n} refused or errored, or — with none aimed at it — the whole search "
-                f"budget spent on lower-numbered targets ({len(searches_sent)} of "
+                f"target {n} refused or errored, or — with none aimed at it — the user's "
+                f"declining research (this fixture does "
+                f"{'' if declined else 'not '}declare it) or the whole search budget spent on "
+                f"lower-numbered targets ({len(searches_sent)} of "
                 f"{cap if cap else 'no declared'} searches sent); calls aimed at it: {listing}"))
 
     extras = table.get("extra", [])
@@ -497,9 +510,11 @@ def check_accounting(response: str, research: dict, mode: str,
 
     searches = len(searches_sent)
     fetches = sum(1 for e in log if e.get("kind") == "fetch")
-    if research.get("zero_calls") and have_log:
+    if (research.get("zero_calls") or declined) and have_log:
+        ground = ("the user declined research or chose L0" if declined else
+                  "the inputs answer every target")
         checks.append(finding("zero_calls", "all", not log,
-                              f"the inputs answer every target, so no research call should be "
+                              f"{ground}, so no research call should be "
                               f"sent; {searches} search and {fetches} fetch attempt(s) recorded "
                               f"(a declared user link is reading an input and not counted here)"))
 
@@ -519,6 +534,12 @@ def check_accounting(response: str, research: dict, mode: str,
                                   f"the tally names {tally.get('user_links', 0)} user link(s) read; "
                                   f"{len(links)} fetch(es) of a link the fixture declares the user "
                                   f"gave to read recorded, refused ones included"))
+        if declined:
+            # The user's choice sets the tier: L0, and nothing spent.
+            checks.append(finding("tally_l0", "all", tally["tier"] == "L0" and tally["no_searches"],
+                                  f"the user declined research or chose L0, so the line reads "
+                                  f"`Research tier: L0 — no searches`; it reads "
+                                  f"{tally['tier']}{' — no searches' if tally['no_searches'] else ' with a budget'}"))
         if tally["no_searches"]:
             if have_log:
                 checks.append(finding("tally_searches", "all", searches == 0 and fetches == 0,
@@ -728,10 +749,15 @@ def snapshot_section(text: str) -> str | None:
 JSON_BLOCK = re.compile(r"```json[ \t]*\n(.*?)\n[ \t]*```", re.S)
 
 
-def constraints_unknown(response: str) -> bool | None:
-    """candidate_constraints.status == "unknown", read from the response's own JSON
-    envelope; None when the response carries none, and then the hard-gates line's
-    closing clause is not judged (the fixture does not declare it)."""
+def constraints_unknown(response: str, declared: str | None = None) -> bool | None:
+    """candidate_constraints.status == "unknown".
+
+    Whether the candidate gave constraints is a fact about the prompt, so a fixture
+    that declares `candidate_constraints` ("known" or "unknown") settles it. Without
+    one it is read from the response's own JSON envelope; None when neither says,
+    and then the hard-gates line's closing clause is not judged."""
+    if declared in ("known", "unknown"):
+        return declared == "unknown"
     for block in reversed(JSON_BLOCK.findall(response)):
         try:
             data = json.loads(block)
@@ -763,7 +789,7 @@ def rule_findings(problems: list[tuple[str, str]], judged: str, form: str, what:
     return out
 
 
-def check_fit_ledger(response: str) -> dict:
+def check_fit_ledger(response: str, constraints: str | None = None) -> dict:
     """The fit ledger is an exact projection of the evidence map, and counts nothing.
 
     The ledger replaced a sentence — "five of seven requirements are `direct`" —
@@ -906,10 +932,11 @@ def check_fit_ledger(response: str) -> dict:
                           f"the snapshot counts the map: {count.group(0)!r}" if count
                           else "no count, fraction or listed quantifier over the map in the snapshot's prose"))
 
-    unknown = constraints_unknown(response)
+    unknown = constraints_unknown(response, constraints)
     if unknown is None:
-        info.append("hard-gates line: the response carries no candidate_constraints.status, so its "
-                    "closing \"candidate constraints not given\" clause is not judged")
+        info.append("hard-gates line: neither the fixture nor the response declares "
+                    "candidate_constraints.status, so its closing \"candidate constraints not given\" "
+                    "clause is not judged")
     checks += rule_findings(ledger_rules.gates_line_problems(section, rows, unknown),
                             "gates_line", "gates_form",
                             "the hard-gates line agrees with the map's hard_gate rows", unchecked)
@@ -1097,7 +1124,7 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     if research:
         parts.append(check_accounting(response, research, mode, research_log))
     if "fit_ledger" in wanted:
-        parts.append(check_fit_ledger(response))
+        parts.append(check_fit_ledger(response, case.get("candidate_constraints")))
     if "quotes" in wanted:
         corpus = [p.get("text", "") for p in (research or {}).get("pages", [])] \
             if mode == "canned" else []

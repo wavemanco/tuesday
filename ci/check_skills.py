@@ -1705,7 +1705,7 @@ def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | Non
             if g.group(1) in fits_seen:
                 problems.append(f"fit {g.group(1)} appears twice under {m.group(1)}")
             fits_seen.add(g.group(1))
-            for item in g.group(2).split(", "):
+            for item in ledger_rules.split_top(g.group(2), (", ",)):
                 i = LEDGER_ITEM.match(item.strip())
                 if not i:
                     problems.append(f"unparseable item {item.strip()!r} (one ID, no ranges)")

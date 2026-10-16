@@ -170,8 +170,8 @@ A parameter was drafted here and withdrawn: `entity_rows`, naming tables whose
 every row was about the candidate or the employer, so that CI could reject a
 `[generic]` cell in them. It shipped for exactly one commit and was wrong.
 The skill owning the evidence map requires `[generic]` in a row's Provenance cell
-whenever its Reasoning reaches past the row — "enterprise SE roles usually touch
-pre-sales" — and names the pull to write `[inferred]` instead as the thing to
+whenever its Reasoning reaches past the row — "funders of this size usually split
+assessment from grant management" — and names the pull to write `[inferred]` instead as the thing to
 resist. The check would have rejected that row, and three worked examples besides.
 
 **A check that rejects correct work is worse than no check.** The honest position

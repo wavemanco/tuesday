@@ -30,7 +30,7 @@
         "Any section beyond the assessment itself arrives as a clearly labeled offer rather than being woven in silently — where the decision snapshot, evidence map, role-reality/opportunity analysis, risk register, questions, application plan, dossier offer, and upgrade menu are all expected parts of the assessment and need no such label",
         "Where research ran, role reality carries a market calibration line placing the role against role-family norms, labeled [generic] and with its basis named, and it is never presented as this employer's actual offer",
         "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, and it constrains the decision (an unverified employer keeps the status at conditional_go or below) rather than being noted only as a research caveat",
-        "{{ledger_counts}}. {{hard_gates_line}}",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Arjun states no constraints or non-negotiables of his own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
         "{{accounting}} Here nothing in the request answers the first two targets, so they cannot be skipped, and no hiring manager was named, so the third is n/a. {{accounting_counts}}",
         "{{generic_scope}}"
       ],
@@ -144,6 +144,7 @@
           }
         ]
       },
+      "candidate_constraints": "unknown",
       "checks": [
         "fit_ledger"
       ]
@@ -165,8 +166,10 @@
         "Opportunity quality is assessed on its own ledger (unknowns or risk signals about the role are recorded, or the role is affirmatively noted as well-specified) rather than the JD being taken purely at face value",
         "The response offers a tuesday-dossier.md rather than forcing one, and its upgrade menu names what each missing input would unlock. The response closes with the dossier offer, then the upgrade menu, then the questions — the menu and the questions are the last two sections, with no recap or summary beneath them",
         "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, not only as a research caveat",
-        "No event, outcome, or stake Nadia did not describe is supplied to make her story land — nothing asserts that an integration failed, a client escalated, or a project was at risk unless she said so — and any number carried into proposed language stays attached to the noun it came from (\"requirements documents across 30+ integrations\" is a count of integrations, never \"30+ requirements documents\")"
+        "No event, outcome, or stake Nadia did not describe is supplied to make her story land — nothing asserts that an integration failed, a client escalated, or a project was at risk unless she said so — and any number carried into proposed language stays attached to the noun it came from (\"requirements documents across 30+ integrations\" is a count of integrations, never \"30+ requirements documents\")",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Nadia states no constraints or non-negotiables of her own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause"
       ],
+      "candidate_constraints": "unknown",
       "checks": [
         "fit_ledger"
       ]
@@ -178,7 +181,7 @@
       "files": [],
       "expectations": [
         "Candidate fit and opportunity quality are explicitly separated: the response acknowledges strong fit on the growth-leadership requirements AND independently assesses the opportunity as problematic — neither judgment is averaged into or hidden by the other",
-        "The two failed hard constraints — compensation ($70–85k offered vs a stated $150k floor) and location (on-site Austin five days vs stated remote-only) — surface in the decision snapshot itself as failed hard gates, prominently, not buried mid-report or softened by the strong fit elsewhere. {{hard_gates_line}}",
+        "The two failed hard constraints — compensation ($70–85k offered vs a stated $150k floor) and location (on-site Austin five days vs stated remote-only) — surface in the decision snapshot itself as failed hard gates, prominently, not buried mid-report or softened by the strong fit elsewhere. {{hard_gates_line}}. Here Tomás states his constraints, so the candidate's constraints were given and the line must not carry the 'candidate constraints not given' clause",
         "At least three red flags are identified with the posting's own language quoted, drawn from: responsibility without resources ('own all revenue' + 'team of one'), bundled specializations (paid, SEO, lifecycle, brand, PR, partnerships, and sales ops in one role), always-on expectations ('evenings and weekends when it matters'), seniority-compensation mismatch (8+ years leadership at $70–85k), absent/evolving success metrics on a demanding mandate, and the tension between 'Series A' and 'profitable since day one' — each with a severity and a verification question the candidate could ask live",
         "The decision is no_go — or hold_pending_answers only if it names exactly which facts would have to change (the employer's terms or the candidate's own constraints) — and is never go or conditional_go on the strength of fit",
         "{{no_score}}",
@@ -191,7 +194,8 @@
         "Where a role-family sweep ran, the stated compensation is calibrated against its norms with the band labeled [generic] and its basis named, feeding the seniority-compensation mismatch finding rather than replacing it; where the sweep could not run, the response says so and rests the mismatch on the posting's own terms rather than producing a market band from memory",
         "Any text drafted for Tomás to send — an outreach note, a message to the recruiter, interview framing — traces clause by clause to his own sentences, including logical form: he stated two hard constraints conjunctively ($150k floor AND remote-only), so nothing may soften that into a disjunction ('if either is negotiable') or into a preference. Where his wording is ambiguous, the reading that claims less is the one used, and any self-certification that the text traces to his sentences is accurate rather than asserted",
         "{{accounting}} Here nothing in the request answers the first two targets, so they cannot be skipped — the hard gates fix the decision, but not the market calibration line or the band comparison the sweep feeds, so a sweep row skipped on the strength of the gates fails — and no hiring manager was named, so the third is n/a. {{accounting_counts}}",
-        "{{generic_scope}}"
+        "{{generic_scope}}",
+        "{{ledger_counts}}"
       ],
       "research": {
         "modes": [
@@ -293,6 +297,7 @@
           }
         ]
       },
+      "candidate_constraints": "known",
       "checks": [
         "fit_ledger"
       ]
@@ -311,7 +316,7 @@
         "Where Odile Varga's public profile was read, it is used only as public professional footprint — her roles and her published talk, named by its title — and it feeds role reality's scope read or the application plan's positioning with its source named; where it was not read, nothing about her is asserted beyond her name and title",
         "Where the company's own pages could not be read, the risk register carries the standing failed-attribution entry with a verification question and the decision stays at conditional_go or below; where they were read, no such entry is needed",
         "The evidence map covers each material stated requirement (4+ years pricing analytics, SQL and Python, GLM experience, presenting to underwriting or actuarial leads, insurance experience) with a fit status from direct/adjacent/unclear/absent/hard_gate_fail and a gap type from none/presentation/discovery/transferability/capability/hard_gate",
-        "{{ledger_counts}}. {{hard_gates_line}}",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Renata states no constraints or non-negotiables of her own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
         "{{no_score}}",
         "{{closing}}",
         "{{generic_scope}}"
@@ -554,6 +559,7 @@
           }
         ]
       },
+      "candidate_constraints": "unknown",
       "checks": [
         "fit_ledger"
       ]
@@ -569,7 +575,7 @@
         "Role reality states Pellucid's stage, size and product from the pasted About text and treats the posting as live and matching the JD, citing the pasted pages; no failed-attribution standing entry appears, and the decision is not capped for an unverified employer",
         "The market calibration line rests on the pasted Datawright report by name, labeled as a role-family pattern rather than Pellucid's own pay, and the posting's own $148,000–$166,000 is compared against it",
         "The evidence map covers each material stated requirement (5+ years data engineering, SQL and Python, dbt and a cloud warehouse, orchestration, data quality testing) with conventions fit statuses and gap types. The cloud-warehouse row may be direct on the Snowflake evidence, or BigQuery may be carried as an implied requirement at adjacent; either way the response says somewhere that the team's warehouse is BigQuery, that Ines has never used it, and that Snowflake is the transferable basis, with the limit or ramp stated, and BigQuery is never presented as direct experience",
-        "{{ledger_counts}}. {{hard_gates_line}}",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Ines states no constraints or non-negotiables of her own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
         "{{no_score}}",
         "{{closing}}",
         "Nothing proposed for Ines to say, write or send claims BigQuery experience or widens 'about 180 models' beyond what she said, and any proposed language is marked as pending her approval"
@@ -742,6 +748,7 @@
           }
         ]
       },
+      "candidate_constraints": "unknown",
       "checks": [
         "fit_ledger"
       ]
