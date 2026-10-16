@@ -120,6 +120,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import output_checks  # noqa: E402
+from fixture_clauses import load_cases  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
@@ -1145,8 +1146,7 @@ def classify(results: list[dict], checks_results: list[dict], runs: list[int],
 
 def cases_for(skill: str, only: list[int], cases_file: str | None = None) -> list[dict]:
     path = Path(cases_file) if cases_file else REPO / "skills" / skill / "evals" / "evals.json"
-    spec = json.loads(path.read_text())
-    cases = spec["evals"] if isinstance(spec, dict) else spec
+    cases = load_cases(path)
     return [c for c in cases if not only or c["id"] in only]
 
 

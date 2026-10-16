@@ -32,6 +32,8 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "evals"))
+from fixture_clauses import ClauseError, expand_spec, unused_clauses  # noqa: E402
 SKILLS_DIR = REPO / "skills"
 DIST = REPO / "dist"
 CONVENTIONS = REPO / "conventions"
@@ -292,7 +294,13 @@ def check_evals() -> None:
 
         if data.get("skill_name") != skill.name:
             fail(group, f"{skill.name}: evals skill_name is '{data.get('skill_name')}'")
-        cases = data.get("evals")
+        try:
+            cases = expand_spec(data)
+        except ClauseError as exc:
+            fail(group, f"{skill.name}: {exc}")
+            continue
+        for name in unused_clauses(data):
+            fail(group, f"{skill.name}: clause \"{name}\" is defined and never used — text a reader would trust that grades nothing")
         if not isinstance(cases, list) or not cases:
             fail(group, f"{skill.name}: evals must be a non-empty list")
             continue
@@ -367,10 +375,9 @@ def load_evals(path: Path) -> list[dict] | None:
     others now skip it rather than hide every other failure.
     """
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        cases = expand_spec(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return None
-    cases = data.get("evals") if isinstance(data, dict) else data
     return cases if isinstance(cases, list) else None
 
 
