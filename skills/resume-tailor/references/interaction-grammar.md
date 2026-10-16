@@ -42,12 +42,33 @@ is stated because the tiers describe *how much* and not *what for*: L1's cap is 
 ceiling, not a target, and a skill that spends it on questions whose answers
 change nothing has followed the letter and missed the point. Name the output a
 search could change before running it; if there is none, skip it — **and account
-for the skip where the output already reports its research**: one row per
-declared target, marked `yes`; `skipped`, with the output it could not have
-moved; `n/a`, when the target's input never arrived; or `unavailable`, when it
-could not run — no search in this host, or the tier declined — with what it
-would have moved, which the upgrade menu then offers. A skip is a judgement and
-an unavailable search is a circumstance, and the table exists to keep them apart.
+for every declared target where the output already reports its research**: one
+row each, starting with the number the skill declares it under, with one label in
+its Status cell and the reason beside it. The label follows what happened, facts
+first:
+
+- A search was sent for the target: `yes` if any call returned anything, no
+  results and nothing attributable included — the row then says "not
+  established"; `unavailable` only if every call was refused.
+- No search was sent: `n/a` if the inputs cannot form its query, because no name
+  at all was given — a first name with a title and the company is a name;
+  `skipped` if the inputs already fix every output it feeds, naming them;
+  otherwise `unavailable` — no search in this host, or the tier declined — with
+  what it would have moved, which the upgrade menu then offers.
+
+An input fixes an output only when its content is in hand: a pasted page or
+survey can, and a report that the user checked something cannot, because that is
+a claim the search could still verify. A target a search was sent for is never
+`skipped` or `n/a`: if it moved nothing, its `yes` row says so, and that row is
+the visible form of a wasted search. A skip is a judgement and an unavailable
+search is a circumstance, and the table exists to keep them apart — which is why
+the inputs decide between them and the host does not. A target the inputs answer
+reads `skipped` whether or not this host could have searched for it.
+
+Directly above the table, one line states what was spent — `Research tier: L1 —
+searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches` — counting
+every call sent, refused ones included, against the skill's own budget. No other
+sentence restates it.
 
 The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
 gives: compliance here depends on noticing an absence, and a search that ran

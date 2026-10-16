@@ -71,7 +71,7 @@ job-underwriter/
 │   ├── dossier-schema.md               # mirror of conventions/ — the shared dossier's schema
 │   └── citations.md                    # mirror of conventions/ — sources behind the outside claims, verbatim
 └── evals/
-    └── evals.json                      # 3 test fixtures with verifiable expectations
+    └── evals.json                      # 5 test fixtures with verifiable expectations
 ```
 
 `evals/` holds development fixtures and is excluded from the installable `.skill` package. `README.md` rides along inside the package but is inert at runtime — Claude only loads files that `SKILL.md` points to.

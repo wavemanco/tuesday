@@ -1597,6 +1597,148 @@ def check_readmes() -> None:
         ok(group, f"all {checked} README inventory entries match their folders")
 
 
+PRIORITY_ORDER = ["hard_gate", "must_have", "important", "preferred"]
+FIT_ORDER = ["direct", "adjacent", "unclear", "absent", "hard_gate_fail"]
+BANDS = ("high", "medium", "low", "none")
+ROW_ID = r"R\d+[a-z]?"
+LEDGER_LINE = re.compile(r"^- `?(" + "|".join(PRIORITY_ORDER) + r")`? — (.+)$")
+LEDGER_GROUP = re.compile(r"^(" + "|".join(FIT_ORDER) + r"): (.+)$")
+LEDGER_ITEM = re.compile(r"^(" + ROW_ID + r")(?: \(([^()]+)\))?$")
+COUNTED = re.compile(r"\b(?:\d+|" + "|".join(COUNT_WORDS) + r")\s+of\s+(?:\d+|" + "|".join(COUNT_WORDS) + r")\b", re.I)
+WORKED_DOSSIER = "skills/job-underwriter/references/dossier-template.md"
+
+
+def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | None]], list[str]]:
+    """(priority, fit, id, name) per item of the snapshot's ledger, and what failed to parse."""
+    lines = snapshot.splitlines()
+    try:
+        start = next(i for i, line in enumerate(lines) if line.strip() == "**Fit ledger.**")
+    except StopIteration:
+        return [], ["no **Fit ledger.** line"]
+    items, problems = [], []
+    body = lines[start + 1:]
+    while body and not body[0].strip():
+        body = body[1:]
+    for line in body:
+        if not line.startswith("- "):
+            break
+        m = LEDGER_LINE.match(line.strip())
+        if not m:
+            problems.append(f"unparseable ledger line: {line.strip()!r}")
+            continue
+        for group in m.group(2).split(" · "):
+            g = LEDGER_GROUP.match(group.strip())
+            if not g:
+                problems.append(f"unparseable group {group.strip()!r}")
+                continue
+            for item in g.group(2).split(", "):
+                i = LEDGER_ITEM.match(item.strip())
+                if not i:
+                    problems.append(f"unparseable item {item.strip()!r} (one ID, no ranges)")
+                    continue
+                items.append((m.group(1), g.group(1), i.group(1), i.group(2)))
+    if not items and not problems:
+        problems.append("**Fit ledger.** is followed by no ledger lines")
+    return items, problems
+
+
+def check_fit_ledger() -> None:
+    """The worked dossier's fit ledger is its own evidence map, projected.
+
+    It was a sentence from v0.1: "five of seven material requirements are
+    `direct` (R1–R3, R6, and the eligibility gate)", above a map with four, the
+    gate counted once by ID and again by name. The JSON summary repeated it, the
+    two copies agreed with each other, and measured runs copied the form — then
+    got their own counts wrong the same way. Nothing read the sentence against the
+    table it summarised, because nothing could: a count in prose has no fixed
+    shape. The ledger is now a projection with a grammar, so it can be read
+    exactly, and this check reads it against both the table and the envelope. A
+    worked dossier whose ledger cannot be parsed fails rather than skips, so a
+    revert to prose is caught, not excused.
+    """
+    group = "fit-ledger"
+    path = REPO / WORKED_DOSSIER
+    text = path.read_text(encoding="utf-8")
+    snap = re.search(r"^## Decision snapshot\s*$(.*?)(?=^## )", text, re.MULTILINE | re.DOTALL)
+    table_sec = re.search(r"^## Evidence map\s*$(.*?)(?=^## )", text, re.MULTILINE | re.DOTALL)
+    if not snap or not table_sec:
+        fail(group, f"{WORKED_DOSSIER}: no Decision snapshot or Evidence map section")
+        return
+    items, problems = parse_fit_ledger(snap.group(1))
+    for problem in problems:
+        fail(group, f"{WORKED_DOSSIER}: fit ledger: {problem}")
+    if not items:
+        return
+
+    rows = [line for line in table_sec.group(1).splitlines() if line.startswith("|")]
+    header = [c.strip().strip("`").lower() for c in rows[0].strip().strip("|").split("|")] if rows else []
+    try:
+        cid, creq, cpri, cfit, cconf = (header.index(k) for k in ("#", "requirement", "priority", "fit", "confidence"))
+    except ValueError:
+        fail(group, f"{WORKED_DOSSIER}: the evidence map has no #, Requirement, Priority, Fit and Confidence columns")
+        return
+    table = {}
+    for line in rows[2:]:
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        table[cells[cid]] = {"requirement": cells[creq], "priority": cells[cpri].strip("`"),
+                             "fit": cells[cfit].strip("`"), "confidence": cells[cconf].strip("`")}
+    blocks = re.findall(r"```json\n(.*?)\n```", text, re.DOTALL)
+    try:
+        envelope = json.loads(blocks[-1])["sections"]["evidence_map"]
+        env = {r["requirement_id"]: r for r in envelope}
+    except (IndexError, KeyError, TypeError, ValueError):
+        fail(group, f"{WORKED_DOSSIER}: no evidence_map in the last json block")
+        return
+
+    seen: dict[str, int] = {}
+    order = [(PRIORITY_ORDER.index(p), FIT_ORDER.index(f)) for p, f, _, _ in items]
+    if order != sorted(order):
+        fail(group, f"{WORKED_DOSSIER}: fit ledger is not in enum order (priority, then fit)")
+    for priority, fit, rid, name in items:
+        seen[rid] = seen.get(rid, 0) + 1
+        row = table.get(rid)
+        if row is None:
+            fail(group, f"{WORKED_DOSSIER}: fit ledger names {rid}, which the evidence map does not have")
+            continue
+        if (priority, fit) != (row["priority"], row["fit"]):
+            fail(group, f"{WORKED_DOSSIER}: fit ledger files {rid} as {priority}/{fit}; the map says {row['priority']}/{row['fit']}")
+        e = env.get(rid)
+        if e is None or (priority, fit) != (e.get("priority"), e.get("fit_status")):
+            got = "missing" if e is None else f"{e.get('priority')}/{e.get('fit_status')}"
+            fail(group, f"{WORKED_DOSSIER}: fit ledger files {rid} as {priority}/{fit}; the envelope says {got}")
+        if fit != "direct":
+            if not name:
+                fail(group, f"{WORKED_DOSSIER}: fit ledger's {rid} is below direct and carries no name")
+            elif not row["requirement"].lower().startswith(name.lower()):
+                fail(group, f"{WORKED_DOSSIER}: fit ledger names {rid} \"{name}\", which does not begin its Requirement cell")
+    for rid, n in seen.items():
+        if n > 1:
+            fail(group, f"{WORKED_DOSSIER}: fit ledger lists {rid} {n} times")
+    for rid in sorted(set(table) - set(seen)):
+        fail(group, f"{WORKED_DOSSIER}: fit ledger omits {rid}, which the evidence map has")
+    for rid in sorted(set(env) - set(table)):
+        fail(group, f"{WORKED_DOSSIER}: the envelope's evidence_map has {rid} and the table does not")
+
+    for m in re.finditer(r"`(" + "|".join(BANDS) + r")`", snap.group(1)):
+        before = snap.group(1)[:m.start()]
+        attached = re.search(r"\b(" + ROW_ID + r") \($", before)
+        if not attached:
+            fail(group, f"{WORKED_DOSSIER}: snapshot states `{m.group(1)}` without attaching it to one row")
+        elif table.get(attached.group(1), {}).get("confidence") != m.group(1):
+            fail(group, f"{WORKED_DOSSIER}: snapshot gives {attached.group(1)} `{m.group(1)}`; the map says "
+                        f"{table.get(attached.group(1), {}).get('confidence')}")
+
+    try:
+        summary = json.loads(blocks[-1])["sections"]["decision"]["summary"]
+    except (KeyError, TypeError, ValueError):
+        summary = ""
+    counted = COUNTED.search(summary)
+    if counted:
+        fail(group, f"{WORKED_DOSSIER}: decision.summary counts the map (\"{counted.group(0)}\") instead of leaving it to evidence_map")
+    if not any(f.startswith(f"[{group}]") for f in failures):
+        ok(group, f"worked dossier: fit ledger matches the evidence map and the envelope, {len(items)} rows")
+
+
 def check_ledger() -> None:
     """The Tracked-work ledger is the project's memory; it must not contradict itself.
 
@@ -1654,6 +1796,7 @@ GROUPS = {
     "sections": check_sections,
     "counts": check_counts,
     "readmes": check_readmes,
+    "fit-ledger": check_fit_ledger,
     "ledger": check_ledger,
     "parameters": check_parameters,
     "package": check_package,

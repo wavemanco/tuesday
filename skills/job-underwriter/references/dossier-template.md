@@ -9,6 +9,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 - **Offered, never forced.** A one-line offer stands in every delivered assessment, first pass included, immediately before the upgrade menu; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
 - **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
+- **The fit ledger renders from `evidence_map`.** Its lines are `evidence_map[].requirement_id`, `priority` and `fit_status`, projected, and `decision.summary` does not restate them. A summary that carries its own tally is a third copy of the map, and copies agree with each other more readily than with the map: this file's report line and its summary read "five of seven material requirements `direct`" from v0.1 onward, over a map that had four.
 - **`handoff_to_mock_interview` follows the canonical schema, `dossier-schema.md` §6, exactly** — those keys are a contract with another skill, not a suggestion. `uncertain_or_weak_areas` carries only `low`/`none`-confidence requirements; `medium`-confidence claims belong in `verified_candidate_evidence` with their caveat attached. `prohibited_claims` are absolute for every downstream consumer — list every claim this engagement established as un-assertable.
 
 ## Worked example
@@ -25,11 +26,18 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 
 **Worth applying to — with three conditions. Status: `conditional_go`.**
 
-**Fit ledger.** Five of seven material requirements are `direct` (R1–R3, R6, and the eligibility gate), including both payments-domain must-haves; the one adjacent area is regulatory exposure (R4), which has a credible bridge with its limit named.
+**Fit ledger.**
+
+- `hard_gate` — direct: R1
+- `must_have` — direct: R2, R3 · adjacent: R4 (Regulatory exposure)
+- `important` — direct: R6 · unclear: R5 (Mentoring or leading PMs)
+- `preferred` — absent: R7 (Ledger / reconciliation systems)
+
+R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on an artifact.
 
 **Opportunity ledger.** Sound but under-specified: authority over the three squads is asserted and not evidenced (RR1), and the compensation band is unstated against the candidate's £95k floor (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
 
-- **Hard gates:** none failed. UK work eligibility confirmed.
+- **Hard gates:** none failed (R1 `direct`).
 - **Severe red flags:** none found.
 - **Conditions for go:** (1) scope and decision authority verify concrete in interviews — see risk register RR1; (2) compensation band confirmed at or above the £95k floor — RR2; (3) the PSD2 bridge is positioned honestly as adjacent, never as direct compliance ownership.
 
@@ -42,7 +50,7 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 | First-year outcomes | Launch payout scheduling; halve reconciliation exceptions | `[grounded]` JD states both |
 | Working pattern | Hybrid London, two office days | `[grounded]` JD |
 | Scope read | A normally-scoped Series B platform seat — three squads and two named outcomes is ordinary for the title, not unusually broad | `[inferred]` from squad count against the stated outcomes |
-| Market calibration | £90–110k for this title at this seniority | `[generic]` role-family sweep, 3 searches, this month |
+| Market calibration | £90–110k for this title at this seniority | `[generic]` role-family sweep, this month |
 | Unknowns | Decision authority versus the three squad leads; compensation band; who owns pricing | — |
 | Contradictions | None between the JD and the careers page | `[grounded]` careers page fetched |
 
@@ -77,7 +85,7 @@ R6 are the rows that would have hedged. Note also that R6 is `direct` fit with a
 
 | # | Gap (req) | Type | What I currently see | Why it matters | Experience that may count | Useful evidence | Provenance |
 |---|---|---|---|---|---|---|---|
-| G1 | Regulatory exposure (R4, must_have) | transferability | Confirmed PCI-DSS scoping ownership on checkout; nothing touching PSD2, open banking, or scheme relationships directly | The one must-have not at `direct`; a stronger bridge narrows the objection most likely to be raised | Integration work against bank APIs or open-banking sandboxes; a chargeback or dispute-flow project; scheme-rules research that shaped a roadmap call | A sanitized scoping doc, an architecture note, a roadmap excerpt | `[inferred]` bridge derived from the audit scope she described; `[generic]` that this is the likeliest objection |
+| G1 | Regulatory exposure (R4, must_have) | transferability | Confirmed PCI-DSS scoping ownership on checkout; nothing touching PSD2, open banking, or scheme relationships directly | R4 is a `must_have` row at `adjacent`; a stronger bridge narrows the objection most likely to be raised | Integration work against bank APIs or open-banking sandboxes; a chargeback or dispute-flow project; scheme-rules research that shaped a roadmap call | A sanitized scoping doc, an architecture note, a roadmap excerpt | `[inferred]` bridge derived from the audit scope she described; `[generic]` that this is the likeliest objection |
 
 **The queue holds no questions, and that is the point.** Every row here has a
 question worth asking, and until now the row carried it — a `Question:` line in a
@@ -146,11 +154,18 @@ something the analysis cannot source.
 
 Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior-context mention of a fraud-rules experiment — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "leads PMs", initially inferred from "led cross-functional squad" — corrected by user: no direct reports; recorded so it is never re-derived.
 
-| L1 target | Ran | What it moved, or could not have |
+Research tier: L1 — searches 4 of 5, fetches 1 of 2
+
+| L1 target | Status | What it moved, or would have |
 |---|---|---|
-| 1. Official site and careers page | yes | Role reality: the contradictions row — JD and careers page agree |
+| 1. Official site and careers page | yes | Role reality: the organization row, and the contradictions row — JD and careers page agree |
 | 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
-| 3. Hiring manager's public footprint | n/a | No name was given, so there was nothing to look up. The upgrade menu names what a name would unlock |
+| 3. Hiring manager's public footprint | n/a | No name was given, so there was no query to form. The upgrade menu names what a name would unlock |
+
+In a host with no search the same rows read `unavailable`, `unavailable`, `n/a`:
+the first two naming what they would have moved, which the upgrade menu then
+offers, and the third unchanged, because `n/a` and `skipped` are decided from the
+inputs and not from the host.
 
 The target accounting specified in `SKILL.md` Step 2, rendered here: one row per
 declared L1 target, in that file's order. The dossier carries it because it
@@ -164,8 +179,9 @@ unfilled row is the only version of that rule anyone can check.
 ## Upgrade menu
 
 - Partner-API case note or any inspectable artifact → R3 to `high`, work sample half-done.
-- An answer to G1 → the last must-have bridge strengthens or resolves.
+- An answer to G1 → R4's bridge strengthens or resolves.
 - Recruiter's comp band → RR2 closes; decision likely simplifies to `go` or `no_go`.
+- The hiring manager's name → role reality's scope read, and which verified story the application plan leads with for that reader.
 - A deeper research pass on Ferrowave (funding, leadership churn, candidate reports) — say the word and it runs.
 
 ```json
@@ -180,7 +196,7 @@ unfilled row is the only version of that rule anyone can check.
   "sections": {
     "decision": {
       "status": "conditional_go",
-      "summary": "Strong fit (five of seven material requirements direct, credible bridge on regulatory exposure); sound but under-specified opportunity (authority and compensation unverified). Conditions: RR1 and RR2 verify acceptably; PSD2 bridge positioned as adjacent, never as direct ownership.",
+      "summary": "Fit as evidence_map reads it, with R4 (must_have, adjacent) carrying a credible bridge, its limit named; sound but under-specified opportunity (RR1 authority and RR2 compensation unverified). Conditions: RR1 and RR2 verify acceptably; PSD2 bridge positioned as adjacent, never as direct ownership.",
       "hard_gates": [],
       "severe_red_flags": []
     },
@@ -344,7 +360,7 @@ unfilled row is the only version of that rule anyone can check.
         "provenance": "[inferred] bridge derived from the audit scope she described; [generic] that this is the likeliest interview objection",
         "prompt": {
           "what_i_currently_see": "Confirmed PCI-DSS scoping ownership; nothing touching PSD2, open banking, or scheme relationships directly.",
-          "why_this_matters": "The one must-have not at direct; a stronger bridge narrows the likeliest interview objection.",
+          "why_this_matters": "R4 is a must_have row at adjacent; a stronger bridge narrows the likeliest interview objection.",
           "experience_that_may_count": [
             "Integration work against bank APIs or open-banking sandboxes",
             "A chargeback or dispute-flow project",

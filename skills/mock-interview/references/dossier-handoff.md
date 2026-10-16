@@ -14,7 +14,7 @@ What this skill reads, and what each section replaces:
 |---|---|
 | `handoff_to_mock_interview` | The five rules below — the core of the handoff |
 | `role_profile` | The JD equivalent: requirements with priority, inferred outcomes, unknowns. A dossier with this section satisfies the JD input tier |
-| `evidence_map` | Per-requirement candidate evidence with confidence and gap type — the fit snapshot's raw material |
+| `evidence_map` | Per-requirement candidate evidence with confidence and gap type — the fit snapshot's grading, and its evidence quotes the snapshot's evidence cells. `reasoning` is the underwriter's analysis: a bridge may cite it as a limit, never as something the candidate did |
 | `verified_candidate_evidence` | The CV equivalent for elicitation purposes: user-confirmed claims, already graded. A dossier carrying it satisfies the CV input tier |
 | `risk_register` | Unresolved opportunity risks; feeds reverse questions alongside `opportunity_risks_to_validate` |
 | `decision` | Context only. A `no_go` is not this skill's business to relitigate — if the candidate is prepping anyway, prep them |
@@ -33,12 +33,13 @@ These are what a handoff actually buys. Each replaces guesswork with something t
    - `clarify` — the evidence may exist but wasn't established. Coach a question-shaped answer: what the candidate did do, plus an honest "here's what I'd want to confirm about how you define it."
    - `bridge` — adjacent evidence exists. Coach the transferable case **with its limit named**, exactly as the underwriter framed it. A bridge that drops the limit becomes the inflation the suite forbids.
    - `acknowledge_gap` — no credible evidence. Coach the plain acknowledgment plus a ramp plan. Never coach a bridge here; the underwriter already looked and found nothing, and inventing one live is how a candidate gets caught.
+   - An answer slot (`references/question-rubric.md`) follows the same strategy: allowed on a `clarify` area, inside the named limit on a `bridge` area, and never on an `acknowledge_gap` area — a slot asking "if you did this, say how" about what the underwriter found absent reopens the bridge this rule closes.
 
 3. **`likely_interviewer_objections` names the highest-ROI rehearsal.** The rubric normally asks you to infer the most predictable objection from the fit snapshot. When the underwriter named it, use theirs — it was derived from evidence the candidate confirmed, not from a document read cold. Give it the deepest rehearsal in the pack and say in the pack that the underwriter named it.
 
 4. **Risks and employer questions seed the reverse-question bank.** `opportunity_risks_to_validate` and `questions_for_employer` arrive interview-ready. Carry them into the reverse-question section with their "why it lands" written from the risk's own hypothesis — these questions do double duty: they read as diligence, and they answer something the candidate genuinely needs to know before accepting.
 
-5. **`prohibited_claims` are hard guardrails on every guidance cell.** Absolute, and they beat every other label in this skill. No question's guidance, no values-story mapping, no reverse question, and no drill feedback may assert a prohibited claim, soften it, or coach an answer that implies it. When a question's natural answer would brush one, coach the honest alternative and say why the line exists — a candidate who understands the boundary holds it under follow-up pressure.
+5. **`prohibited_claims` are hard guardrails on every guidance cell.** Absolute, and they beat every other label in this skill. No question's guidance, no values-story mapping, no reverse question, no answer slot, and no drill feedback may assert a prohibited claim, soften it, or coach an answer that implies it — and a slot that names one implies it. When a question's natural answer would brush one, coach the honest alternative and say why the line exists — a candidate who understands the boundary holds it under follow-up pressure.
 
 Say in the pack's Sources section that a dossier was consumed and which sections it supplied, so the candidate can see which parts of the pack rest on their own confirmed evidence versus the pack's inference.
 

@@ -35,7 +35,7 @@ If the user declines or doesn't answer, proceed down the degradation ladder. Nev
 
 ### Step 2 — Research at the consented tier
 
-Read `references/research-checklist.md`. Three tiers: **L0** (provided docs only), **L1** (default: at most 6 searches and 2 page fetches, spent only where a result could change the pack — official values, documented loop structure, one recent-strategy sweep, interviewer public footprint if named), **L2** (deep research: strategy brief, interviewer talks and writing, role-family loop reports — offered once, with the time cost stated, and run only on consent).
+Read `references/research-checklist.md`. Three tiers: **L0** (provided docs only), **L1** (default: at most 6 searches and 2 page fetches, spent only where a result could change the pack — official values, documented loop structure, one recent-strategy sweep, interviewer public footprint if named, a representative JD when none was supplied), **L2** (deep research: strategy brief, interviewer talks and writing, role-family loop reports — offered once, with the time cost stated, and run only on consent).
 
 Company values, loop structure, and current strategy must come from research or provided docs, not from model memory — these are exactly the facts that drift.
 
@@ -43,13 +43,13 @@ Company values, loop structure, and current strategy must come from research or 
 
 Read `references/personas.md` and `references/question-rubric.md` before writing any question, and `references/reframing-audit.md` before writing any guidance cell — every one of them is a sentence the candidate will speak aloud. Build in this order, because each layer feeds the next:
 
-1. **Fit snapshot** — JD requirement × candidate evidence × gap-and-bridge language. The gaps found here become the Skeptic and Pressure banks' best material. With a dossier in hand, the underwriter's `evidence_map` supplies these rows already graded — its confidence bands and gap types are the vocabulary this skill uses too, per the mirror in `references/evidence-conventions.md`.
-2. **Interviewer read** — only when real interviewer information exists. Career pattern, self-described style, what will land with them and why.
-3. **Persona weights** — relationship priors adjusted by interviewer signals and company archetype, with the reasoning shown.
-4. **Question banks** — per persona, under the coverage rules in the rubric. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
-5. **Values / principles cheat sheet** — only when a values-style round is detected; map each published value to a specific candidate story.
-6. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in.
-7. **Prohibited claims** — the claims this pack will not coach, and why. With a dossier, `prohibited_claims` arrives from the underwriter and binds every guidance cell. **Without one, build it locally** from the fit snapshot's gaps: the claims a candidate might reach for under pressure that their material does not support. The temptations are identical either way, and both sibling skills maintain such a list — a pack that carries one only when a dossier happens to be present is protected by luck.
+1. **Fit snapshot** — JD requirement × the candidate's evidence, quoted verbatim × gap-and-bridge language. The quotes are the pool everything after this draws on: whatever the pack later says about the candidate's past is one of these sentences, or it is an answer slot (`references/question-rubric.md`). The gaps found here become the Skeptic and Pressure banks' best material. With a dossier in hand, the underwriter's `evidence_map` supplies the grading — its confidence bands and gap types are the vocabulary this skill uses too, per the mirror in `references/evidence-conventions.md` — and its evidence quotes supply the cells, never its restated claims.
+2. **Prohibited claims** — the claims this pack will not coach, and why, built here so the banks are written against them. With a dossier, `prohibited_claims` arrives from the underwriter and binds every guidance cell. **Without one, build it locally** from the fit snapshot's gaps: the claims a candidate might reach for under pressure that their material does not support. The temptations are identical either way, and both sibling skills maintain such a list — a pack that carries one only when a dossier happens to be present is protected by luck. It still renders near the end of the pack; it is built second because a list written after the banks can only describe what they already did.
+3. **Interviewer read** — only when real interviewer information exists. Career pattern, self-described style, what will land with them and why.
+4. **Persona weights** — relationship priors adjusted by interviewer signals and company archetype, with the reasoning shown.
+5. **Question banks** — per persona, under the coverage rules in the rubric. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
+6. **Values / principles cheat sheet** — only when a values-style round is detected; map each published value to a story one of the candidate's quoted sentences carries, or give a selection scaffold where none does.
+7. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in.
 8. **Delivery coaching** — only when an assessment was provided; see guardrails.
 
 ### Step 4 — Deliver
@@ -60,7 +60,7 @@ Two one-line offers ride the delivery, neither of them pushed: the drill (below)
 
 ### Step 5 — Iterate
 
-When new inputs arrive, regenerate only the affected sections and say what changed and why. Late structural facts (relationship, round type) justify restructuring — reweight personas, add or replace banks. Enhancers add sections. Recompute, don't patch inconsistently: a pack that says "hiring manager" in one section and "peer" in another is worse than either.
+When new inputs arrive, regenerate only the affected sections and say what changed and why. A fact the candidate states outside a drill — an answer to an answer slot included — is new material: quote it into the fit snapshot and regenerate the rows that draw on it. Late structural facts (relationship, round type) justify restructuring — reweight personas, add or replace banks. Enhancers add sections. Recompute, don't patch inconsistently: a pack that says "hiring manager" in one section and "peer" in another is worse than either.
 
 ## Output discipline
 
@@ -73,14 +73,14 @@ question_budget: 3
 enum_fields: confidence, gap_type, question_type
 closing_order: upgrade menu, drill and dossier offers, questions
 qualifier_fields: gap-and-bridge language
-provenance_sections: The fit snapshot
+provenance_sections: The fit snapshot, Question banks
 sibling_mentions: 1
 ```
 
 `provenance` is not declared an enum: a Provenance cell leads with exactly one
-label, and in the question banks the candidate's own quoted sentence follows it
-wherever guidance coaches a claim about their experience. In the fit snapshot the
-label stands alone.
+label, and in the question banks the candidate's own quoted sentences follow it —
+every one the guidance's claims about their experience rest on. In the fit
+snapshot the quotes sit in the evidence column and the label stands alone.
 
 The drill and dossier offers sit inside the closing run because they are things
 the candidate acts on, not commentary on the pack — one line each, neither pushed.
@@ -97,7 +97,7 @@ The sections this skill's spec defines are *n* — owed to the user, delivered c
 
 - **Session** (default): one pack for one upcoming conversation.
 - **Loop**: multiple scheduled rounds → shared fit snapshot plus per-round mini-packs with per-round persona weights. Spec in `references/output-template.md`.
-- **Drill**: after any pack, offer one live rehearsal — Claude adopts a persona and runs the question with reactive follow-ups, then gives feedback against **that question's own guidance cell**: the beats it named, the weakest-assumption move, the hold-then-concede structure. That cell is the rubric, which is why the pack is written before the drill and why a drill on a question whose guidance was generic can only give generic feedback. Spec in `references/output-template.md`. The pack is preparation; the drill is transfer.
+- **Drill**: after any pack, offer one live rehearsal — Claude adopts a persona and runs the question with reactive follow-ups, then gives feedback against **that question's own guidance cell**: the beats it named, the weakest-assumption move, the hold-then-concede structure — and an answer slot, met by either honest branch, never by the practice it names. That cell is the rubric, which is why the pack is written before the drill and why a drill on a question whose guidance was generic can only give generic feedback. Spec in `references/output-template.md`. The pack is preparation; the drill is transfer.
 
 ## Input contract and degradation ladder
 
@@ -105,7 +105,7 @@ The sections this skill's spec defines are *n* — owed to the user, delivered c
 |---|---|---|---|
 | Company + role title | Gate | Can't run — the only hard requirement | At invocation |
 | Full JD text | Core | Research a representative JD for the title; label JD-derived questions `[inferred]` | Ask once in Step 1; proceed if not supplied |
-| Candidate CV / background | Core | Fit snapshot becomes a self-assessment worksheet; guidance becomes story-*selection* scaffolds ("pick a time you held a position under pressure…") instead of story-mapped answers | Ask once in Step 1; proceed if declined |
+| Candidate CV / background | Core | Fit snapshot becomes a self-assessment worksheet; guidance becomes story-*selection* scaffolds ("pick a time you held a position under pressure…") instead of story-mapped answers — as it does, CV or not, for any question none of the candidate's sentences carries | Ask once in Step 1; proceed if declined |
 | Round type + relationship to interviewer | Structural | Full-loop pack with flat persona weights — noticeably weaker; say so | Always worth the Step 1 question: cheap, un-researchable, shapes the skeleton |
 | Interviewer identity / profile | Enhancer | Drop the interviewer read; personas fall back to round-type priors; reverse questions go role-generic | Never demand; research public footprint if a name is given; list in upgrade menu |
 | Company research / strategy brief | Enhancer | Generated by the research module at the consented tier | Never ask — make |
@@ -119,7 +119,7 @@ Degrade by dropping or genericizing sections and labeling provenance — never b
 ## Guardrails
 
 - **Truthful attribution.** The pack coaches candidates to defend real claims precisely and shrink inflated ones gracefully — "how much of that was actually you" questions exist to rehearse honesty under pressure, because interviewers ask them and candor is scored. Never draft answers that overstate the candidate's role or invent accomplishments. The suite's full never-do list is the truthfulness core in `references/evidence-conventions.md` §6 — it binds every cell of this pack.
-- **`prohibited_claims` are absolute.** When a dossier lists a claim as prohibited, no guidance, story mapping, reverse question, or drill feedback may assert it, soften it, or imply it — that override beats every provenance label and every persona's counter-strategy.
+- **`prohibited_claims` are absolute.** When a dossier lists a claim as prohibited, no guidance, story mapping, reverse question, answer slot, or drill feedback may assert it, soften it, or imply it — that override beats every provenance label and every persona's counter-strategy. A list built locally binds the same surfaces.
 - **Interviewer research** is public professional footprint only: roles, career pattern, published talks and writing, self-descriptions. No contact-detail hunting, nothing about personal life, no personality inference beyond what they've published about themselves. When a fact about the interviewer is uncertain, drop it rather than hedge it — the candidate may repeat it live.
 - **Assessments** are delivery tuning, not content: reflect only what the document itself says, in its own framing; never extend it into diagnosis or personality typing; never suggest the candidate mention it in the interview; the answers stay the same, the packaging adapts.
 - **Candidate-side only.** If an employer wants to use this to screen candidates, that's a different job with different obligations — decline the skill and help them design a structured interview directly instead. This skill's guidance is deliberately asymmetric coaching.

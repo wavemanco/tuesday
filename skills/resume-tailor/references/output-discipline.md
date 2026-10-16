@@ -132,8 +132,11 @@ user's attention on a skill they did not ask for.
 
 **Invariant.** Free prose in a delivered output asserts nothing about the world.
 It may quote a source, and it may read the analysis the reader can already see —
-"five of seven requirements are `direct`" is a reading, and deleting the analysis
-deletes the sentence. Anything that would still assert something with the analysis
+a line naming which rows of the map are `direct` is a reading, and deleting the
+analysis deletes the sentence. A reading names what it reads: this example used
+to be "five of seven requirements are `direct`", copied from a worked dossier
+whose map had four, and a count is the one kind of reading that can be wrong
+while looking finished. Anything that would still assert something with the analysis
 gone is a world-claim: about the employer, the market, the candidate's history, or
 how hiring works. Those live in a row, in a structure with a Provenance cell.
 

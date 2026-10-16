@@ -635,9 +635,9 @@ def break_readme_tree_phantom(root: Path) -> str:
 
 def break_readme_fixture_count(root: Path) -> str:
     """mock-interview's README described four fixtures while evals.json held six."""
-    swap_once(root, "skills/mock-interview/README.md", "# 6 test fixtures", "# 4 test fixtures",
+    swap_once(root, "skills/mock-interview/README.md", "# 8 test fixtures", "# 4 test fixtures",
               "break_readme_fixture_count")
-    return '"4 test fixtures" — evals.json has 6'
+    return '"4 test fixtures" — evals.json has 8'
 
 
 def break_fenced_restatement(root: Path) -> str:
@@ -871,8 +871,8 @@ def break_readme_wrong_folder(root: Path) -> str:
 
 
 def break_readme_fixture_noun(root: Path) -> str:
-    swap_once(root, "skills/mock-interview/README.md", "# 6 test fixtures", "# 4 test cases", "break_readme_fixture_noun")
-    return '"4 test cases" — evals.json has 6'
+    swap_once(root, "skills/mock-interview/README.md", "# 8 test fixtures", "# 4 test cases", "break_readme_fixture_noun")
+    return '"4 test cases" — evals.json has 8'
 
 
 
@@ -1119,6 +1119,94 @@ def keep_topic_sub_budget(root: Path) -> None:
               "Ask at most three questions, at most one question about the interviewer,", "keep_topic_sub_budget")
 
 
+# The worked dossier's fit ledger, read against its own map. Each mutation is a
+# way the old prose sentence was, or could have been, wrong without anyone seeing.
+
+DOSSIER = "skills/job-underwriter/references/dossier-template.md"
+
+
+def break_ledger_fit_cell(root: Path) -> str:
+    swap_once(root, DOSSIER, "| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | adjacent |",
+              "| R4 | Regulatory exposure: PSD2 / open banking / card schemes | must_have | direct |", "break_ledger_fit_cell")
+    return "fit ledger files R4 as must_have/adjacent; the map says must_have/direct"
+
+
+def break_ledger_priority_cell(root: Path) -> str:
+    swap_once(root, DOSSIER, "| R6 | Data fluency: SQL, experimentation | important |",
+              "| R6 | Data fluency: SQL, experimentation | must_have |", "break_ledger_priority_cell")
+    return "fit ledger files R6 as important/direct; the map says must_have/direct"
+
+
+def break_ledger_drops_last_row(root: Path) -> str:
+    """s1r1's shape: the row added last is the one the summary leaves out."""
+    swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Ledger / reconciliation systems)\n", "",
+              "break_ledger_drops_last_row")
+    return "fit ledger omits R7"
+
+
+def break_ledger_duplicate_row(root: Path) -> str:
+    swap_once(root, DOSSIER, "- `important` — direct: R6 ·", "- `important` — direct: R6, R2 ·",
+              "break_ledger_duplicate_row")
+    return "fit ledger lists R2 2 times"
+
+
+def break_ledger_envelope(root: Path) -> str:
+    path = root / DOSSIER
+    text = path.read_text()
+    old = '"requirement_id": "R4",\n        "priority": "must_have",'
+    if text.count(old) != 1:
+        raise SystemExit("break_ledger_envelope has gone stale")
+    head, tail = text.split(old)
+    tail = tail.replace('"fit_status": "adjacent"', '"fit_status": "direct"', 1)
+    path.write_text(head + old + tail)
+    return "the envelope says must_have/direct"
+
+
+def break_ledger_back_to_prose(root: Path) -> str:
+    """The v0.1 sentence itself. It must fail, not skip."""
+    path = root / DOSSIER
+    text = path.read_text()
+    start = text.index("**Fit ledger.**")
+    end = text.index("R4 has a credible bridge")
+    path.write_text(text[:start] + "**Fit ledger.** Five of seven material requirements are `direct` (R1–R3, R6, and the eligibility gate). " + text[end:])
+    return "fit ledger: "
+
+
+def break_ledger_summary_count(root: Path) -> str:
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+              '"summary": "Strong fit (five of seven material requirements direct),', "break_ledger_summary_count")
+    return "decision.summary counts the map"
+
+
+def break_ledger_name(root: Path) -> str:
+    swap_once(root, DOSSIER, "adjacent: R4 (Regulatory exposure)", "adjacent: R4 (Regulation)", "break_ledger_name")
+    return "which does not begin its Requirement cell"
+
+
+def break_ledger_band(root: Path) -> str:
+    """s3r4's shape: a band in the snapshot the map does not carry."""
+    swap_once(root, DOSSIER, "R3 (`medium`)", "R3 (`high`)", "break_ledger_band")
+    return "snapshot gives R3 `high`; the map says medium"
+
+
+def keep_ledger_split_rows(root: Path) -> None:
+    """A requirement split into two rows is two rows, in the ledger as in the map."""
+    path = root / DOSSIER
+    text = path.read_text()
+    row = next(line for line in text.splitlines() if line.startswith("| R4 |"))
+    text = text.replace(row, row.replace("| R4 |", "| R4a |") + "\n" + row.replace("| R4 |", "| R4b |").replace("| adjacent |", "| absent |"))
+    text = text.replace("adjacent: R4 (Regulatory exposure)", "adjacent: R4a (Regulatory exposure) · absent: R4b (Regulatory exposure)")
+    blocks = text.split("```json\n")
+    head, rest = blocks[-1].split("\n```", 1)
+    data = json.loads(head)
+    emap = data["sections"]["evidence_map"]
+    i = next(k for k, r in enumerate(emap) if r["requirement_id"] == "R4")
+    a, b = dict(emap[i]), dict(emap[i])
+    a["requirement_id"], b["requirement_id"], b["fit_status"] = "R4a", "R4b", "absent"
+    emap[i:i + 1] = [a, b]
+    blocks[-1] = json.dumps(data, indent=2, ensure_ascii=False) + "\n```" + rest
+    path.write_text("```json\n".join(blocks))
+
 PASSES = [
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
     ("sections", "a bare section written \"of this spec\" beside another file's name", keep_self_reference_of_this_spec),
@@ -1148,6 +1236,7 @@ PASSES = [
     ("parameters", "a drill turn ending with feedback", keep_drill_turn),
     ("parameters", "a hard wrap before bold", keep_wrap_before_bold),
     ("readmes", "\"cases\" of something other than fixtures", keep_cases_of_something_else),
+    ("fit-ledger", "a requirement split into two rows", keep_ledger_split_rows),
 ]
 
 
@@ -1338,6 +1427,15 @@ CASES: list[tuple[str, str, callable]] = [
     ("parameters", "a budget restated in the skill README", break_budget_readme),
     ("readmes", "a file drawn in the wrong folder", break_readme_wrong_folder),
     ("readmes", "a fixture count under another noun", break_readme_fixture_noun),
+    ("fit-ledger", "a Fit cell the ledger disagrees with", break_ledger_fit_cell),
+    ("fit-ledger", "a Priority cell the ledger disagrees with", break_ledger_priority_cell),
+    ("fit-ledger", "the last row left out of the ledger", break_ledger_drops_last_row),
+    ("fit-ledger", "a row listed twice", break_ledger_duplicate_row),
+    ("fit-ledger", "the envelope disagreeing with the ledger", break_ledger_envelope),
+    ("fit-ledger", "the v0.1 count sentence back in place", break_ledger_back_to_prose),
+    ("fit-ledger", "a count back in decision.summary", break_ledger_summary_count),
+    ("fit-ledger", "a name that is not the row's requirement", break_ledger_name),
+    ("fit-ledger", "a band the map does not carry", break_ledger_band),
     ("citations", "an entry's words with a different figure", break_misquoted_figure),
     ("citations", "a quotation lifted from after its source's hedge", break_hedge_dropped_from_quote),
     ("citations", "a paraphrase in curly single quotes", break_single_quoted_paraphrase),

@@ -14,6 +14,9 @@ Budget: **at most 6 searches and 2 page fetches.** Targets, in priority order:
 2. **`{company} interview process {role family}`** → loop structure: named rounds, whether a dedicated values/behavioral round exists, case formats. Prefer sources under ~18 months old; candidate-guide sites are acceptable here, labeled per the source-quality rules.
 3. **`{company} strategy`** or recent-news sweep → one pass, sources under ~6 months: current priorities, recent big moves, the competitive frame. Feeds CO questions.
 4. **`{interviewer name} {company}`** → only when a name was given. Public professional footprint: role, career pattern, talks, posts, self-descriptions. Nothing else — see SKILL.md guardrails.
+5. **representative `{role title}` JD** → only when no JD was supplied: one search for a current posting of this title at a comparable company, so the fit snapshot and JD-tagged questions rest on something; label what it supplies `[inferred]`. With a JD supplied, this target is `skipped`.
+
+Searches outside these targets do not run at L1. A question none of them covers is either an L2 item or an upgrade-menu line.
 
 Freshness rules: values are stable (official page wins, fetch once); loop structure is semi-stable (prefer recent, note the source's age if older); strategy is perishable (under 6 months or label it).
 

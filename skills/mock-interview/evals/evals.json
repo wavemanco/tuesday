@@ -12,12 +12,18 @@
         "The output is a markdown pack containing persona-organized question-bank tables with columns covering the question, a type tag, answer guidance, and a rationale",
         "A Peer Evaluator persona appears with elevated likelihood explicitly justified by the stated peer relationship, and its bank includes at least one seam/boundary question and one credit-sharing or reciprocity question",
         "A Data-Driven Prober persona is weighted up with reasoning that cites Dan's 'data-driven' self-description, and at least one question asks Priya to defend the ~$400M ARR claim including her personal attribution",
-        "The fit snapshot maps the stated JD requirements to Priya's evidence and treats quota-setting/sales-ops as an explicit gap with bridge language, and at least one Skeptic or Pressure question rehearses that exact objection",
+        "The fit snapshot maps the stated JD requirements to Priya's evidence and treats quota-setting/sales-ops as an explicit gap with bridge language, and at least one Skeptic or Pressure question rehearses that exact objection — bridge guidance here may be the limit said plainly with adjacent material the candidate's own words carry, or with an instruction for the answer that presupposes nothing; an affirmative claim none of the candidate's sentences carries is not bridge guidance",
         "At least one case or company question is grounded in the supplied research note (Compass launch, profitability push, or the bundling threat) rather than generic strategy",
         "Every question row carries a provenance label ([grounded], [inferred], or [generic]) in its own Provenance column",
         "The pack ends with an upgrade menu listing concrete missing inputs (e.g., full JD text, full CV document, Dan's full profile) and what each unlocks",
         "Where the company's published values or documented interview process could not be established — whether research came back non-attributable or could not run at all — the pack says so and says which, rather than silently omitting the values section or filling it from memory",
-        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it"
+      ],
+      "enumerate": [
+        11
+      ],
+      "checks": [
+        "quotes"
       ]
     },
     {
@@ -27,14 +33,20 @@
       "files": [],
       "expectations": [
         "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
-        "Any clarifying questions ride with the delivered pack rather than preceding it — at most three, covering round type/relationship to the interviewer and research-depth consent — and the pack is complete despite the interviewer's identity remaining unknown, with that assumption stated",
+        "Any clarifying questions ride with the delivered pack rather than preceding it — at most three, covering round type/relationship to the interviewer and research-depth consent — and the pack is complete despite the interviewer's identity remaining unknown, with that assumption stated. An instruction inside a pack cell addressed to the candidate's interview answer, carrying no question mark and asking for no reply here, is not a question to the user",
         "No 'Reading the interviewer' section appears in the pack, and no facts about any specific interviewer are invented",
         "Reverse questions are role-generic (about the team, the sites, success criteria) with no fabricated references to a named interviewer",
-        "Each stated JD requirement (multi-site operations, on-time/cost metrics, team of 12, Power BI, Lean/Six Sigma) has at least one JD-tagged question, and the 3-supervisors-to-12 and Power BI gaps each get a Skeptic or Pressure question with bridge guidance",
+        "Each stated JD requirement (multi-site operations, on-time/cost metrics, team of 12, Power BI, Lean/Six Sigma) has at least one JD-tagged question, and the 3-supervisors-to-12 and Power BI gaps each get a Skeptic or Pressure question with bridge guidance — bridge guidance here may be the limit said plainly with adjacent material the candidate's own words carry, or with an instruction for the answer that presupposes nothing; an affirmative claim none of the candidate's sentences carries is not bridge guidance",
         "The 40% mis-pick claim gets a defend-the-number EXP question whose guidance includes naming the weakest assumption and precise personal attribution",
         "The upgrade menu lists interviewer identity/profile and company research among the unlocks",
         "The pack explicitly states that the company's published values and interview process could not be established from attributable sources, and names the archetype its loop assumptions fall back to",
-        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it"
+      ],
+      "enumerate": [
+        9
+      ],
+      "checks": [
+        "quotes"
       ]
     },
     {
@@ -44,16 +56,111 @@
       "files": [],
       "expectations": [
         "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
-        "At most three clarifying questions appear (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and they accompany a pack that is already complete rather than gating it",
+        "At most three clarifying questions appear (covering round detail/relationship, an offer to paste the JD and CV, and research-depth consent), and they accompany a pack that is already complete rather than gating it. An instruction inside a pack cell addressed to the candidate's interview answer, carrying no question mark and asking for no reply here, is not a question to the user",
         "Nothing about Stripe's operating principles or interview process is answered from model memory: either research runs and the Sources section cites what it found, or the response says plainly that research was unavailable and treats those facts as unestablished",
         "JD-derived questions carry a provenance label and the pack says what they were built from — [inferred] from a researched representative JD where research ran, [generic] from the role-family pattern where it did not — never presented as Stripe-specific without a source",
         "With no CV provided, the fit snapshot appears as a self-assessment worksheet variant with story-selection scaffolds instead of story-mapped guidance",
         "A values/behavioral bank exists, and either maps its questions to the company's actual published principles by name where research found them, or states that the principles could not be confirmed and labels the bank generic rather than inventing named values",
         "The pack ends with an upgrade menu, and no section fabricates a specific interviewer, team, or unverified company fact",
         "The pack runs as a single blended session-mode pack rather than fabricating a per-session schedule, and offers per-session packs in the upgrade menu for when the schedule is known; it does not assert Stripe's final-round format unless research established it, in which case it names the source",
-        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it",
-        "The Sources section carries the target accounting: one row per L1 target — values, interview process, strategy or recent news, and the interviewer — marked yes, skipped, n/a or unavailable. A skipped row names what the search could not have moved; a target that could not run because no search was available, or research was declined, is marked unavailable and never skipped or no. A target marked yes corresponds to a source listed in Sources: the accounting never reports research the pack shows no trace of",
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it",
+        "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and it is never skipped or n/a; a target no call was sent for is n/a only when no name at all could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here no JD, values, process or strategy material was supplied, so those four targets cannot be skipped, and no interviewer was named, so that target is n/a. The Research tier line's counts agree with the calls the harness observed, and the accounting never reports research the pack shows no trace of",
         "No row labelled [generic] contains a clause asserting something about Stripe specifically — its principles by name, its loop, its strategy, its interviewers; such a clause is either absent or sits in a row labelled [grounded] or [inferred] with its source named"
+      ],
+      "enumerate": [
+        9
+      ],
+      "research": {
+        "modes": [
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 6,
+          "fetches": 2
+        },
+        "entity_tokens": [
+          "stripe",
+          "product",
+          "operations",
+          "manager"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "values",
+            "terms": [
+              "values",
+              "principles",
+              "culture",
+              "mission"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "interview process",
+            "terms": [
+              "interview",
+              "process",
+              "loop",
+              "rounds",
+              "glassdoor",
+              "hiring"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "strategy or recent news",
+            "terms": [
+              "strategy",
+              "news",
+              "priorities",
+              "launch",
+              "funding",
+              "competitors",
+              "roadmap",
+              "announced"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          },
+          {
+            "n": 4,
+            "name": "interviewer",
+            "terms": [
+              "linkedin",
+              "interviewer"
+            ],
+            "accept": [
+              "n/a"
+            ]
+          },
+          {
+            "n": 5,
+            "name": "representative JD",
+            "terms": [
+              "description",
+              "jd",
+              "posting",
+              "responsibilities",
+              "requirements",
+              "listing"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          }
+        ]
+      },
+      "checks": [
+        "quotes"
       ]
     },
     {
@@ -68,12 +175,18 @@
         "The roadmap-input-sessions claim, flagged medium confidence in the dossier, is coached with its verification caveat named — the guidance tells the candidate to volunteer the limit of inspectable proof rather than leaving it for a prober to extract",
         "The R1 area whose allowed_interview_strategy is 'bridge' is coached as a transferable case with its limit explicitly named, and the area whose strategy is 'acknowledge_gap' (owning a roadmap and prioritization authority) is coached as a plain acknowledgment plus a ramp plan with no invented bridge or adjacent-evidence claim",
         "The dossier's likely_interviewer_objections item (never held the PM title or owned a roadmap) is named as the pack's highest-ROI rehearsal and gets the deepest treatment, and the pack attributes it to the dossier rather than presenting it as the pack's own inference",
-        "No prohibited claim is asserted, softened, or implied anywhere in the pack: no guidance, story mapping, or reverse question has the candidate claim she held a PM title, owned a roadmap, or set prioritization for an engineering squad",
+        "No prohibited claim is asserted, softened, or implied anywhere in the pack: no guidance, story mapping, or reverse question has the candidate claim she held a PM title, owned a roadmap, or set prioritization for an engineering squad; an instruction such as 'if you set the squad's priorities, say how' names a prohibited claim and so implies it",
         "Both opportunity_risks_to_validate items and both questions_for_employer appear in the reverse-question bank (in substance, not necessarily verbatim), each with a 'why it lands' line",
         "The Sources section states that a tuesday-dossier.md was consumed and names which sections it supplied",
         "The pack ends with an upgrade menu and offers, in one line and without pressure, to emit or update the dossier with a pack_feedback section — it does not emit one unprompted and does not make the offer a condition of anything",
         "The pack does not relitigate the underwriter's conditional_go decision or tell the candidate whether to apply, and nothing in the pack treats the dossier as having been required for the pack to be built",
-        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it"
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it"
+      ],
+      "enumerate": [
+        12
+      ],
+      "checks": [
+        "quotes"
       ]
     },
     {
@@ -85,19 +198,118 @@
         "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
         "A dedicated build section exists for the pre-declared POV deliverable — questions alone do not satisfy it, because an announced deliverable is a graded deliverable",
         "The POV section offers 2-3 defensible theses, and each carries an explicit concession rather than being argued as unqualified",
-        "The POV section names a differentiation strategy against the supplied market report rather than reciting it, on the reasoning that a document circulated internally is equally available to the panel and to rival candidates — and where the role warrants saying no, an anti-pick appears",
+        "The POV section names a differentiation strategy against the market report the recruiter attached (its content is not in the request) rather than reciting it, on the reasoning that a document circulated internally is equally available to the panel and to rival candidates — and where the role warrants saying no, an anti-pick appears",
         "The recruiter's named close is honoured: the POV lands on what the direction means for the train operating companies themselves, not only for Kelverton",
         "A prep triage section appears, sized to the stated four hours, ordering the few things worth doing well and tying each to a pack section or question ID, and closing with an explicit line that everything else is insurance",
         "The prep triage is not padded to fill the time — items the candidate should skip are named as skippable rather than dressed up as work",
         "Persona weights reflect a two-person panel with the stated roles: the future manager and a commercial director whose stated behaviour is to push on commercials, with the reasoning shown rather than asserted",
-        "The never-carried-a-quota gap and the never-sold-into-rail gap each get a Skeptic or Pressure question with bridge guidance, and the influenced-revenue figure gets a defend-the-number EXP question that coaches precise attribution",
+        "The never-carried-a-quota gap and the never-sold-into-rail gap each get a Skeptic or Pressure question with bridge guidance, and the influenced-revenue figure gets a defend-the-number EXP question that coaches precise attribution — bridge guidance here may be the limit said plainly with adjacent material the candidate's own words carry, or with an instruction for the answer that presupposes nothing; an affirmative claim none of the candidate's sentences carries is not bridge guidance",
         "The transport-consulting background is used as a genuine adjacency (operator-side domain knowledge) with its limit named, and is never presented as rail sales experience",
         "Every question row carries a provenance label in its own Provenance column, and claims about Kelverton that research could not attribute are labeled or dropped rather than asserted",
         "Any section beyond the skill's own spec arrives as a clearly labeled offer with one line on what it would add, rather than being woven into the pack unannounced",
         "The pack ends with an upgrade menu, and the dossier or pack_feedback offer appears as a single unpressured line rather than a precondition",
-        "No guidance cell coaches language the candidate's own material does not support: nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, or supplies an event they never described — and where the pack suggests specific words to say, those words trace to something the candidate actually told it",
-        "The Sources section carries the target accounting: one row per L1 target — values, interview process, strategy or recent news, and the interviewer — marked yes, skipped, n/a or unavailable. A skipped row names what the search could not have moved; a target that could not run because no search was available, or research was declined, is marked unavailable and never skipped or no. A target marked yes corresponds to a source listed in Sources: the accounting never reports research the pack shows no trace of",
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it",
+        "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and it is never skipped or n/a; a target no call was sent for is n/a only when no name at all could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here the values and representative-JD targets cannot be skipped (neither was supplied); the strategy target cannot be skipped, because the market report's content is not in the request; the interview-process target may be skipped or unavailable, since the recruiter's email answers much of it, but never n/a; and the interviewer target is not n/a, because Deepa and Ross were named. The Research tier line's counts agree with the calls the harness observed, and the accounting never reports research the pack shows no trace of",
         "No row labelled [generic] contains a clause asserting something about Kelverton Rail specifically — its principles by name, its loop, its strategy, its interviewers; such a clause is either absent or sits in a row labelled [grounded] or [inferred] with its source named"
+      ],
+      "enumerate": [
+        14
+      ],
+      "research": {
+        "modes": [
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 6,
+          "fetches": 2
+        },
+        "entity_tokens": [
+          "kelverton",
+          "rail",
+          "senior",
+          "partnerships",
+          "manager"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "values",
+            "terms": [
+              "values",
+              "principles",
+              "culture",
+              "mission"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "interview process",
+            "terms": [
+              "interview",
+              "process",
+              "loop",
+              "rounds",
+              "glassdoor",
+              "hiring"
+            ],
+            "accept": [
+              "skipped",
+              "unavailable"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "strategy or recent news",
+            "terms": [
+              "strategy",
+              "news",
+              "priorities",
+              "launch",
+              "funding",
+              "competitors",
+              "roadmap",
+              "announced",
+              "report"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          },
+          {
+            "n": 4,
+            "name": "interviewer",
+            "terms": [
+              "deepa",
+              "ross",
+              "linkedin"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          },
+          {
+            "n": 5,
+            "name": "representative JD",
+            "terms": [
+              "description",
+              "jd",
+              "posting",
+              "responsibilities",
+              "requirements",
+              "listing"
+            ],
+            "accept": [
+              "unavailable"
+            ]
+          }
+        ]
+      },
+      "checks": [
+        "quotes"
       ]
     },
     {
@@ -112,11 +324,396 @@
         "The values round is treated as a values-style round: either a values cheat sheet appears mapped to principles research established, or the response states plainly that Larkfield's published values could not be confirmed and labels that bank generic rather than inventing named values",
         "The peer panel is weighted for peers rather than for a manager — at least one reciprocity or peer-evaluator element appears that the hiring-manager round does not carry",
         "The 'never managed managers' and 'never owned a hardware-adjacent roadmap' gaps are surfaced as the pack's highest-ROI rehearsal material rather than omitted, and are handled as gaps rather than coached into claims Yusuf did not make",
-        "Every question row carries a provenance label in its own column, and where guidance coaches a claim about Yusuf's experience the cell also carries his own quoted sentence",
-        "No guidance cell coaches language Yusuf's own material does not support: 'ran our hiring loop, about 40 interviews last year' is not promoted into owning hiring strategy, and 'team lead of 6' is not promoted into managing managers",
+        "Every question row carries a provenance label in its own column, and where guidance coaches a claim about Yusuf's experience the cell also carries his own quoted sentences — every one the claim rests on",
+        "No guidance cell coaches language Yusuf's own material does not support: 'ran our hiring loop, about 40 interviews last year' is not promoted into owning hiring strategy, and 'team lead of 6' is not promoted into managing managers — and, as for any candidate, no cell attributes to him a practice, method or responsibility the role usually involves that his material does not state: an instruction that presupposes one asserts it, while a selection scaffold or a two-branch instruction that presupposes nothing in either branch does not. Every cell that speaks about his past is checked — guidance, bridges, holds, rationale and the fit snapshot's evidence cells — not a sample",
         "A prohibited-claims section appears naming what the pack will not coach and why — built from the fit snapshot's gaps, since no dossier is present",
-        "Vocabulary matches the conventions: each confidence cell holds exactly one of high/medium/low/none, and every Provenance cell leads with exactly one of [grounded]/[inferred]/[generic] — never a compound such as [grounded, partial] — with a question-bank cell free to follow its label with the candidate's quoted sentence",
-        "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions"
+        "Vocabulary matches the conventions: each confidence cell holds exactly one of high/medium/low/none, and every Provenance cell leads with exactly one of [grounded]/[inferred]/[generic] — never a compound such as [grounded, partial] — with a question-bank cell free to follow its label with the candidate's quoted sentences",
+        "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions. An instruction inside a pack cell addressed to the candidate's interview answer, carrying no question mark and asking for no reply here, is not a question to the user"
+      ],
+      "enumerate": [
+        8
+      ],
+      "checks": [
+        "quotes"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Interview prep please — I have a 60-minute interview on Friday for Live Operations Producer at Saltmarsh Games (mobile game studio, about 350 people). My interviewer is Tobias Wrenfield, Head of Live Operations. THE JD: 'Live Operations Producer — Saltmarsh Games. Plan and run the live-events calendar for two of our mobile titles; coordinate design, art, engineering and community teams on each update; own the post-event review and the KPIs it reports; manage the release checklist with QA. Requirements: 3+ years producing live-service games or apps; experience running a content calendar; comfortable with player-retention metrics; clear written communication.' MY BACKGROUND (call me Femi): 4 years as an associate producer at a puzzle-game studio. I ran the weekly content-drop calendar for our main title for the last two years. Wrote the release checklist our QA team still uses. Presented the monthly retention numbers to the studio head. Never led a team, and never worked on a game with in-app purchases.",
+      "expected_output": "A complete prep pack whose research accounting matches what the room allowed: with search available, values, loop, strategy and the named interviewer are researched and used — the published value names, the documented loop, a strategy-grounded CO question, an interviewer read from the public talk — and the representative-JD target is skipped because the JD was supplied; with no search available, those four read unavailable, none of their facts appear, and the upgrade menu offers the research.",
+      "files": [],
+      "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
+        "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and it is never skipped or n/a; a target no call was sent for is n/a only when no name at all could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here the JD was supplied, so the representative-JD target is skipped; every other target could change the pack and the interviewer was named, so none of the other four is skipped or n/a. The Research tier line's counts agree with the calls the harness observed, and the accounting never reports research the pack shows no trace of",
+        "Where the values page was read, the values cheat sheet uses Saltmarsh's published value names exactly as the page gives them and Sources cites the page; where it could not be read, the pack says the values could not be established and labels any values bank [generic], and no value name appears that a page did not supply",
+        "Where the interviewing page was read, persona weights and the banks follow its named steps, with the source named; where it was not, the pack says the loop is unestablished and names the archetype its weights fall back to",
+        "Where the news page was read, at least one CO or CASE question is grounded in what it announced, with the source named; where it was not, the CO questions are labeled [generic] and the upgrade menu says what research would add",
+        "A section reading the interviewer appears only where Tobias Wrenfield's public talk was actually read, and draws only on that source; otherwise nothing about him appears beyond his name and title",
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it",
+        "Every question row carries a provenance label ([grounded], [inferred], or [generic]) in its own Provenance column, placed before the answer guidance",
+        "The Sources section lists every page the research returned and only those, and nothing about Saltmarsh is asserted from model memory",
+        "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then any questions, with nothing after them"
+      ],
+      "research": {
+        "modes": [
+          "canned",
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 6,
+          "fetches": 2
+        },
+        "entity_tokens": [
+          "saltmarsh",
+          "games",
+          "live",
+          "operations",
+          "producer",
+          "mobile",
+          "studio"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "values",
+            "terms": [
+              "values",
+              "principles",
+              "culture",
+              "mission"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            }
+          },
+          {
+            "n": 2,
+            "name": "interview process",
+            "terms": [
+              "interview",
+              "process",
+              "loop",
+              "rounds",
+              "glassdoor",
+              "hiring"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            }
+          },
+          {
+            "n": 3,
+            "name": "strategy or recent news",
+            "terms": [
+              "strategy",
+              "news",
+              "priorities",
+              "launch",
+              "funding",
+              "competitors",
+              "roadmap",
+              "announced"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            }
+          },
+          {
+            "n": 4,
+            "name": "interviewer",
+            "terms": [
+              "tobias",
+              "wrenfield",
+              "linkedin"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            }
+          },
+          {
+            "n": 5,
+            "name": "representative JD",
+            "terms": [
+              "description",
+              "jd",
+              "posting",
+              "responsibilities",
+              "requirements",
+              "listing"
+            ],
+            "accept": [
+              "skipped"
+            ]
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://saltmarshgames.com/values",
+            "title": "How we work at Saltmarsh",
+            "target": 1,
+            "keywords": [
+              "values",
+              "principles",
+              "culture",
+              "how",
+              "we",
+              "work"
+            ],
+            "text": "Saltmarsh's three values are Players Before Plans, Ship the Patch Not the Promise, and Leave the Build Greener. Players Before Plans: when the calendar and the players disagree, the players win. Ship the Patch Not the Promise: we announce what is built, not what is hoped. Leave the Build Greener: every release leaves the codebase and the checklist better than it found them."
+          },
+          {
+            "url": "https://saltmarshgames.com/careers/interviewing",
+            "title": "Interviewing at Saltmarsh",
+            "target": 2,
+            "keywords": [
+              "interview",
+              "interviewing",
+              "process",
+              "loop",
+              "rounds",
+              "hiring",
+              "steps",
+              "candidates"
+            ],
+            "text": "Every Saltmarsh loop includes a 40-minute live-incident tabletop with the hiring manager, after a recruiter call and before a values conversation with two future teammates. The tabletop is a simulated outage on a live event; there is no take-home."
+          },
+          {
+            "url": "https://saltmarshgames.com/news/project-larkspur",
+            "title": "Announcing Project Larkspur",
+            "target": 3,
+            "keywords": [
+              "news",
+              "strategy",
+              "announced",
+              "announcement",
+              "launch",
+              "plans",
+              "roadmap",
+              "season",
+              "pass",
+              "priorities"
+            ],
+            "text": "August 2026: Project Larkspur moves Tidepool Tactics and Lantern Row to a season-pass model with one shared events calendar from January 2027, and retires per-title event teams in favour of a single live-ops group."
+          },
+          {
+            "url": "https://talks.gdconf.example/2026/patch-notes-are-a-promise",
+            "title": "Tobias Wrenfield: Patch Notes Are a Promise (GDC 2026)",
+            "target": 4,
+            "keywords": [
+              "tobias",
+              "wrenfield",
+              "talk",
+              "gdc",
+              "speaker",
+              "linkedin",
+              "profile"
+            ],
+            "text": "Patch Notes Are a Promise, a GDC 2026 talk by Tobias Wrenfield, Head of Live Operations at Saltmarsh Games, previously a QA lead at a console studio. His argument: a live team is judged by how often its patch notes describe what actually shipped."
+          }
+        ],
+        "canaries": [
+          {
+            "target": 1,
+            "text": "Players Before Plans"
+          },
+          {
+            "target": 2,
+            "text": "live-incident tabletop"
+          },
+          {
+            "target": 3,
+            "text": "Project Larkspur"
+          },
+          {
+            "target": 4,
+            "text": "Patch Notes Are a Promise"
+          }
+        ]
+      },
+      "checks": [
+        "quotes"
+      ],
+      "enumerate": [
+        7
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Help me prep for my interviews at Ashgrove Credit Union — I've gathered everything I could find so you don't need to look anything up. THE JD: 'Member Experience Lead — Ashgrove Credit Union (member-owned, about 900 staff). Own the member complaints process end to end across branches and the contact centre; report monthly on complaint volumes and resolution times; coach branch supervisors on escalations; work with digital teams on self-service journeys. Requirements: 4+ years in financial-services customer operations; experience handling regulated complaints; confident presenting to senior leaders; comfortable with Excel reporting.' THEIR VALUES, copied this morning (12 October 2026) from ashgrovecu.org/about/values: 'Members First, Always — we decide from the member's side of the counter. Plain Words — if a member needs it explained twice, we wrote it wrong. Neighbours, Not Numbers — every branch is part of its town. Own the Fix — whoever finds the problem keeps hold of it until it is solved.' THE RECRUITER'S EMAIL about the process: 'Three rounds on 21 October: 30 minutes with me; 45 minutes with the Head of Member Services, who would be your manager, mostly behavioural; then 60 minutes with a panel of two branch managers, including a 20-minute case on a complaint escalation. The panel is also the values round — they score against the four values.' THEIR STRATEGY, from the 2026 strategy brief Ashgrove published in June 2026, which the recruiter sent me: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027; the main competitive pressure is app-only banks. Interviewers beyond their roles haven't been assigned yet. MY BACKGROUND (call me Dara): 6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.",
+      "expected_output": "A complete prep pack built entirely from what the candidate pasted: the four published values by name in the cheat sheet, persona weights following the recruiter's three rounds with the panel as the values round, CO questions grounded in the pasted strategy brief, and a research accounting that reads skipped for values, process, strategy and the representative JD — each naming the outputs the pasted material already fixes — and n/a for the interviewer, with no search sent whether or not this room could search.",
+      "files": [],
+      "expectations": [
+        "The first response delivers a complete prep pack in the same message as any questions — it never opens with clarifying questions alone, an intake checklist alone, or a consent request alone. Where an input is missing, the pack is built anyway on a stated assumption and the questions are framed as what would restructure it",
+        "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and it is never skipped or n/a; a target no call was sent for is n/a only when no name at all could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here the request's own content fixes every target but the interviewer: values, interview process, strategy and the representative JD read skipped, each naming the pack outputs the pasted material already fixes, and the interviewer reads n/a because none was named. No search or fetch is sent for any target, whatever this room offers. The Research tier line's counts agree with the calls the harness observed, and the accounting never reports research the pack shows no trace of",
+        "The values cheat sheet uses the four pasted value names exactly — Members First, Always; Plain Words; Neighbours, Not Numbers; Own the Fix — each mapped to a story one of Dara's quoted sentences carries, or to a selection scaffold where none does",
+        "Persona weights follow the recruiter's three rounds, the panel round is treated as the values round, and its 20-minute complaint-escalation case gets its own rehearsal",
+        "At least one CO question is grounded in the pasted strategy brief — digital channels, branch consolidation, small-business lending or app-only competitors — with the brief named as its source",
+        "No cell that speaks about the candidate's past coaches language their own material does not support — answer guidance, bridge and hold language, rationale, the values cheat sheet, any deliverable build, and the fit snapshot's evidence cells all count, and every one is checked rather than a sample. Nothing promotes participation into ownership, widens scope, changes the kind of work, inverts which side of a relationship they stood on, weakens the logic of what they said, supplies an event they never described, or attributes to them a practice, method or responsibility the role usually involves that their material does not state. An instruction or scripted line that presupposes such a practice ('adapt your actual X', 'the same way you already X') asserts it, and a hedge or conditional elsewhere in the same cell does not neutralise it; a selection scaffold, or a two-branch instruction ('if you did this, say how; if not, say so') that presupposes nothing in either branch, is not a supplied claim. Where the pack suggests specific words to say, those words trace to something the candidate actually told it",
+        "Every question row carries a provenance label ([grounded], [inferred], or [generic]) in its own Provenance column, placed before the answer guidance",
+        "The Sources section names the pasted JD, values page, recruiter email and strategy brief as the pack's sources, and lists no web research",
+        "The pack — in the saved file where one was written — ends with the upgrade menu; and the message presenting it ends with the drill and dossier offers, then any questions, with nothing after them"
+      ],
+      "research": {
+        "modes": [
+          "canned",
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 6,
+          "fetches": 2
+        },
+        "zero_calls": true,
+        "entity_tokens": [
+          "ashgrove",
+          "credit",
+          "union",
+          "member",
+          "experience",
+          "lead"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "values",
+            "terms": [
+              "values",
+              "principles",
+              "culture",
+              "mission"
+            ],
+            "accept": [
+              "skipped"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "interview process",
+            "terms": [
+              "interview",
+              "process",
+              "loop",
+              "rounds",
+              "glassdoor",
+              "hiring"
+            ],
+            "accept": [
+              "skipped"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "strategy or recent news",
+            "terms": [
+              "strategy",
+              "news",
+              "priorities",
+              "launch",
+              "funding",
+              "competitors",
+              "roadmap",
+              "announced"
+            ],
+            "accept": [
+              "skipped"
+            ]
+          },
+          {
+            "n": 4,
+            "name": "interviewer",
+            "terms": [
+              "linkedin",
+              "interviewer"
+            ],
+            "accept": [
+              "n/a"
+            ]
+          },
+          {
+            "n": 5,
+            "name": "representative JD",
+            "terms": [
+              "description",
+              "jd",
+              "posting",
+              "responsibilities",
+              "requirements",
+              "listing"
+            ],
+            "accept": [
+              "skipped"
+            ]
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://ashgrovecu.org/about/values",
+            "title": "Our values — Ashgrove Credit Union",
+            "target": 1,
+            "keywords": [
+              "values",
+              "principles",
+              "culture",
+              "mission"
+            ],
+            "text": "Members First, Always — we decide from the member's side of the counter. Plain Words — if a member needs it explained twice, we wrote it wrong. Neighbours, Not Numbers — every branch is part of its town. Own the Fix — whoever finds the problem keeps hold of it until it is solved."
+          },
+          {
+            "url": "https://ashgrovecu.org/careers/how-we-hire",
+            "title": "How we hire — Ashgrove Credit Union",
+            "target": 2,
+            "keywords": [
+              "interview",
+              "process",
+              "hiring",
+              "rounds",
+              "loop",
+              "hire"
+            ],
+            "text": "Most roles have three rounds: a recruiter call, a conversation with the hiring manager, and a panel that includes a short case and scores against our four values."
+          },
+          {
+            "url": "https://ashgrovecu.org/news/strategy-2026",
+            "title": "Ashgrove strategy brief 2026",
+            "target": 3,
+            "keywords": [
+              "strategy",
+              "news",
+              "priorities",
+              "brief",
+              "plans",
+              "announced"
+            ],
+            "text": "June 2026: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027. Main competitive pressure: app-only banks."
+          }
+        ]
+      },
+      "checks": [
+        "quotes"
+      ],
+      "enumerate": [
+        6
       ]
     }
   ]

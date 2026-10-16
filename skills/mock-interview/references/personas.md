@@ -49,7 +49,7 @@ Apply only public professional signals — profile language, career pattern, pub
 ### 2. The Pressure / Stress Interviewer
 - **Looks like:** interrupts, plays devil's advocate, time-boxes answers, questions motives. Testing composure, not content.
 - **Actually scoring:** whether the candidate holds a position without becoming defensive, and concedes uncertainty without folding.
-- **Counter-strategy:** pause before answering; restate the question; anchor in data; hold a challenged position through two follow-ups before conceding anything real.
+- **Counter-strategy:** pause before answering; restate the question; anchor in what you actually stated; hold a challenged position through two follow-ups before conceding anything real.
 - **Stems:** "Sixty seconds: why you over an internal candidate?" / "That result — how much of it was actually you?"
 
 ### 3. The Values / Behavioral Interviewer
@@ -67,7 +67,7 @@ Apply only public professional signals — profile language, career pattern, pub
 ### 5. The Skeptic
 - **Looks like:** quiet, persistent probing of the gaps — the background mismatch, the missing competency, the "why leave, why here, why now."
 - **Actually scoring:** motivation consistency and honest self-assessment; whether the candidate's story survives cross-examination.
-- **Counter-strategy:** rehearse the single most predictable objection until it's boring; adjacent-evidence bridges plus a concrete ramp plan; calibrated candor over bluffing a competency the interviewer personally owns.
+- **Counter-strategy:** rehearse the single most predictable objection until it's boring; bridges built only from adjacent evidence the candidate actually stated — where none was, the limit said plainly — plus a concrete ramp plan; calibrated candor over bluffing a competency the interviewer personally owns.
 - **Stems:** "Which part of this JD would you be weakest at on day one?" / "You've never done X — how will you handle the X in this role?"
 
 ### 6. The Conversational / Rapport Builder

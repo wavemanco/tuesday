@@ -57,7 +57,7 @@ The ones that needed a slot all failed the test above:
 | Provenance labels going missing | 4 | Its own column, in three sections |
 | Register entries losing verification questions | 1, then deterministic | A column; only `positive_signal` rows may leave it empty |
 | Application-plan advice unlabelled and unmarked | 1, then deterministic | A table with Provenance and Status |
-| Guidance promoting "ran" into "built" | 1, then deterministic in every run | The Provenance cell carries the candidate's quoted sentence beside the label |
+| Guidance promoting "ran" into "built" | 1, then deterministic in every run | The Provenance cell carries the candidate's quoted sentence beside the label. It stopped the promotion it was built for and certified the row's topic, not each clause: practices the role implies kept arriving beside a genuine quote, which the verbatim evidence column and the answer slot now address |
 | Banks not covered against the JD's own list | 1, then deterministic | A requirement-coverage table with question IDs and "none, and why" |
 
 Each of those asked a writer to spot something absent, or to compare two things
@@ -228,6 +228,20 @@ in its order. It skips negated sentences, budgets for one topic, objects that
 name no call to action, and subjects other than the response: a pack, a cell or
 a drill turn ends with other things. Three eval expectations had contradicted
 their skill's declaration unnoticed.
+
+**A worked fit ledger is its own evidence map, projected.** `--only fit-ledger`
+reads job-underwriter's worked dossier: the decision snapshot's ledger, one line
+per Priority tier and its rows grouped by Fit, against the evidence-map table's
+#, Priority, Fit and Confidence columns and against the JSON envelope's
+`evidence_map`. Every row appears once, in enum order, each filed where the map
+files it; a row below `direct` carries the first words of its Requirement; a
+band in the snapshot sits beside one row and is that row's; and the envelope's
+`decision.summary` holds no "N of M". The ledger was a sentence from v0.1 —
+"five of seven material requirements are `direct`" over a map with four — and a
+dossier whose ledger cannot be parsed fails rather than skips, so a revert to that
+sentence is caught. What it does not read: any other prose about the map, in the
+dossier or anywhere else, and the ledgers that runs write, which the eval
+harness's own check reads instead.
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A

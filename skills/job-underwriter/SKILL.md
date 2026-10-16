@@ -28,6 +28,7 @@ Read `references/evidence-conventions.md` for the vocabulary and `references/evi
 3. **Evidence map** — one row per material requirement, per the shape in `references/evidence-model.md`. This map is the skill's spine; everything downstream reads from it.
 4. **Opportunity ledger** — unknowns, risk signals, red flags, and positive signals, per `references/risk-and-decision.md`. Assess the role on its own merits regardless of how well the candidate fits it.
 5. **Provisional decision** — `go`, `conditional_go`, `hold_pending_answers`, or `no_go`, with the rationale showing both ledgers.
+6. **The snapshot, read off the finished map** — its fit ledger from the map's #, Priority and Fit columns in table order, and any confidence band from the Confidence column of the one row it sits beside. The snapshot is delivered first and built last: written from memory of the map rather than from the map, it is where a row added late goes missing and a band goes stale.
 
 The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the one-line dossier offer, the upgrade menu, and at most three orientation questions closing the message, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. **The gap recovery queue holds no questions** — its rows say what each gap is and what would close it, and the question each row implies is asked in the closing block, tagged with its row id. A `Question:` line inside the queue puts questions fourth of nine sections and gives the message two question sites, and both of those are rules this skill already carries. Research consent (Step 2) rides with the questions; it never drives.
 
@@ -38,26 +39,36 @@ Two lines are standing parts of every delivered assessment, first pass included:
 Three tiers; the trade is the user's to make. Model memory is never a source for company facts, market values, or anything current — those are exactly the facts that drift.
 
 - **L0** — provided documents only: chosen by the user, or forced because this host offers no search. Everything not traceable to the documents is labeled `[generic]`, and the upgrade menu says what research would have added.
-- **L1** — default. Budget: at most 5 targeted searches and 2 page fetches. Targets in priority order: (1) the company's official site and careers page — does the entity exist as described (stage, size, product), and is the posting live and consistent with what was provided; (2) one role-family sweep — market-normal scope, title, and compensation for this seniority, feeding the mismatch checks in the risk register; (3) the hiring manager's public professional footprint, only when a name was given — roles, career pattern, published talks and writing; nothing personal, no contact-detail hunting.
+- **L1** — default. Budget: at most 5 targeted searches and 2 page fetches. Targets in priority order: (1) the company's official site and careers page — does the entity exist as described (stage, size, product), and is the posting live and consistent with what was provided — feeding role reality's organization and contradictions rows and the failed-attribution entry in the risk register; (2) one role-family sweep — market-normal scope, title, and compensation for this seniority — feeding the market calibration line and the mismatch checks in the risk register; (3) the hiring manager's public professional footprint, only when a name was given — roles, career pattern, published talks and writing; nothing personal, no contact-detail hunting — feeding role reality's scope read and the application plan's positioning — which verified story to lead with for this reader.
 - **L2** — an expanded search budget within the same targets: deeper company diligence (funding and leadership churn, hiring patterns, public candidate and employee reports — forum-sourced claims labeled `[inferred]`, never higher), plus a recent-news sweep. Offer it exactly once, with the cost stated, and run it only on consent; the offer rides an already-needed message or lands in the upgrade menu. Never re-offer after a decline.
 
 **Not-attributable rule:** results that can't be attributed to this specific entity — name collisions, stealth companies, no web presence — are treated as not-established. Say so plainly, fall back to role-family patterns labeled `[generic]`, and list the missing facts in the upgrade menu. Borrowing a same-named company's facts is worse than having none.
 
-**Budget accounting is stated once and stays true.** Where the run reports what it spent against the tier's budget, that count matches the searches actually listed. A tally that disagrees with its own list makes the whole research section unfalsifiable — the reader cannot tell which of the two is the mistake.
+**Budget accounting is one line, and it stays true.** Directly above the accounting table: `Research tier: L1 — searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches` — counting every call sent, refused ones included. No other sentence restates it: no "attempted", no second tally in the prose. A count stated twice can disagree with itself, and then the reader cannot tell which of the two is the mistake.
 
 **Every declared target is accounted for, in evidence status.** One row per L1
-target above, in the order listed, marked `yes`, `skipped`, `n/a` or
-`unavailable`. `skipped` is a target that could have run and was judged unable to
-move anything, and its row names the output it could not have moved. `n/a` is a
-target whose input never arrived (no hiring manager was named). `unavailable` is
-a target that could not run — this host offers no search, or the user declined
-the tier — and its row names what it would have moved. Folding a skip into either
-of the others hides it, and the skip is the case the rule exists for. L2 targets
-join the table when L2 ran and are absent when it did not, since an unoffered
-tier has no skips. A wasted search and a correctly-skipped one produce
-identical prose, so an unfilled row is the only form of this rule a reader or a
-grader can check. Worked table in `references/dossier-template.md` — the dossier
-carries the same table because it renders the same analysis.
+target above, starting with its number, in the order listed — three columns:
+the target, a Status cell holding exactly one of `yes`, `skipped`, `n/a` or
+`unavailable`, and the reason. The label follows what happened, facts first. A
+target a search was sent for is `yes` if any call returned anything — no results
+and nothing attributable included, which the row says as "not established" — and
+`unavailable` only if every call was refused. A target no search was sent for is
+`n/a` if the inputs cannot form its query (no hiring manager was named);
+`skipped` if the inputs already fix every output it feeds, named in the row; and
+otherwise `unavailable` — this host offers no search, or the user declined the
+tier — naming what it would have moved. An input fixes an output only when its
+content is in hand: a pasted careers page can, and "I checked their site" cannot,
+because that is a claim the search could still verify. A target a search was
+sent for is never `skipped` or `n/a`; if it moved nothing, its `yes` row says so.
+The inputs decide between a skip and an unavailable search, not the host: a
+target the inputs answer reads `skipped` whether or not search was available.
+Folding a skip into either of the others hides it, and the skip is the case the
+rule exists for. L2 targets join the table when L2 ran, numbered after these, and
+are absent when it did not, since an unoffered tier has no skips. A wasted search
+and a correctly-skipped one produce identical prose, so an unfilled row is the
+only form of this rule a reader or a grader can check. Worked table in
+`references/dossier-template.md` — the dossier carries the same table because it
+renders the same analysis.
 
 Failed attribution is also a finding about the opportunity, not only a limit on research: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
 
@@ -121,7 +132,7 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 
 ## Guardrails
 
-- **Truthfulness core** (binding, from the suite's evidence conventions): never add an unverified claim to a CV, cover letter, outreach note, or work sample; never convert a `memory_lead` into asserted experience; never inflate a prototype into production experience, or participation into leadership; never invent metrics, team sizes, customer counts, revenue, dates, credentials, or titles; never fabricate facts about a company or process — when uncertain, drop the fact rather than hedge it. Inflation hides in single words, along six axes: scope ("team" never silently becomes "org-wide"), verb ("ran" never becomes "established"), kind of activity ("collected" never becomes "synthesized"), relationship (a vendor-side implementer never becomes "the customer of the product"), logical form (two constraints joined by *and* never become *either*), and incident (an event the candidate never described is never supplied to make a story land). Run the reframing audit in `references/reframing-audit.md` — the suite's canonical audit, mirrored verbatim here — over everything proposed for the candidate to say, write, or send — resume lines, positioning advice, outreach, interview framing — because drift migrates to whichever surface is unwatched, and strategy prose is the easiest place for it to pass as insight.
+- **Truthfulness core** (binding, from the suite's evidence conventions): never add an unverified claim to a CV, cover letter, outreach note, or work sample; never convert a `memory_lead` into asserted experience; never inflate a prototype into production experience, or participation into leadership; never invent metrics, team sizes, customer counts, revenue, dates, credentials, or titles; never fabricate facts about a company or process — when uncertain, drop the fact rather than hedge it. Inflation hides in single words, along six axes: scope ("team" never silently becomes "org-wide"), verb ("ran" never becomes "established"), kind of activity ("collected" never becomes "synthesized"), relationship (a vendor-side implementer never becomes "the customer of the product"), logical form (two constraints joined by *and* never become *either*), and incident or practice (an event the candidate never described is never supplied to make a story land, and an activity the role usually involves is never attributed to them because it usually goes with what they did). Run the reframing audit in `references/reframing-audit.md` — the suite's canonical audit, mirrored verbatim here — over everything proposed for the candidate to say, write, or send — resume lines, positioning advice, outreach, interview framing — because drift migrates to whichever surface is unwatched, and strategy prose is the easiest place for it to pass as insight.
 - **Never a single numeric fit score.** Fit is confidence bands plus reasons, per requirement. An "85% match" hides exactly the hard problems this skill exists to surface.
 - **Hard-gate failures stay visible.** No aggregate framing, positive tone, or strong fit elsewhere may bury a `hard_gate` finding — it appears in the decision snapshot, always. Wording cannot solve a hard gate and no output may imply it can.
 - **`prohibited_claims` are absolute.** Once a claim is listed as prohibited in the dossier, no output may assert it, soften it, or imply it — whatever any other label says.

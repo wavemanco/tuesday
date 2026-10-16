@@ -85,7 +85,7 @@ mock-interview/
 │   ├── dossier-schema.md         # mirror of conventions/ — the shared dossier's schema
 │   └── citations.md              # mirror of conventions/ — sources behind the outside claims, verbatim
 ├── evals/
-│   └── evals.json                # 6 test fixtures with verifiable expectations
+│   └── evals.json                # 8 test fixtures with verifiable expectations
 └── docs/
     └── workflow.html             # interactive install + first-use walkthrough (this repo only)
 ```
