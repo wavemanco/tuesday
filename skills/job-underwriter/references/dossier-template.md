@@ -9,7 +9,8 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 - **Offered, never forced.** A one-line offer stands in every delivered assessment, first pass included, immediately before the upgrade menu; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
 - **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
-- **The fit ledger renders from `evidence_map`.** Its lines are `evidence_map[].requirement_id`, `priority` and `fit_status`, projected, and `decision.summary` does not restate them. A summary that carries its own tally is a third copy of the map, and copies agree with each other more readily than with the map: this file's report line and its summary read "five of seven material requirements `direct`" from v0.1 onward, over a map that had four.
+- **The research line and target table are the one part of the report the envelope does not hold.** Evidence status carries them as the delivered assessment wrote them; they describe what this engagement searched, not the role or the candidate, and no later skill reads them.
+- **The fit ledger renders from `evidence_map`.** Its lines are `evidence_map[].requirement_id`, `priority` and `fit_status`, projected, with a few of `requirement`'s own words beside each row below `direct`, and `decision.summary` does not restate them. A summary that carries its own tally is a third copy of the map, and copies agree with each other more readily than with the map: this file's report line and its summary read "five of seven material requirements `direct`" from v0.1 onward, over a map that had four.
 - **`handoff_to_mock_interview` follows the canonical schema, `dossier-schema.md` §6, exactly** — those keys are a contract with another skill, not a suggestion. `uncertain_or_weak_areas` carries only `low`/`none`-confidence requirements; `medium`-confidence claims belong in `verified_candidate_evidence` with their caveat attached. `prohibited_claims` are absolute for every downstream consumer — list every claim this engagement established as un-assertable.
 
 ## Worked example
@@ -24,11 +25,11 @@ Everything below the rule is one complete `tuesday-dossier.md`, emitted mid-enga
 
 ## Decision snapshot
 
-**Worth applying to — with three conditions. Status: `conditional_go`.**
+**Worth applying to — on the conditions below. Status: `conditional_go`.**
 
 **Fit ledger.**
 
-- `hard_gate` — direct: R1
+- `hard_gate` — direct: R1, R9 · unclear: R8 (Base salary at or above £95k)
 - `must_have` — direct: R2, R3 · adjacent: R4 (Regulatory exposure)
 - `important` — direct: R6 · unclear: R5 (Mentoring or leading PMs)
 - `preferred` — absent: R7 (Ledger / reconciliation systems)
@@ -37,9 +38,9 @@ R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed bu
 
 **Opportunity ledger.** Sound but under-specified: authority over the three squads is asserted and not evidenced (RR1), and the compensation band is unstated against the candidate's £95k floor (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
 
-- **Hard gates:** none failed (R1 `direct`).
+- **Hard gates:** none failed (R1 `direct`, R9 `direct`); unconfirmed: R8 (Base salary at or above £95k).
 - **Severe red flags:** none found.
-- **Conditions for go:** (1) scope and decision authority verify concrete in interviews — see risk register RR1; (2) compensation band confirmed at or above the £95k floor — RR2; (3) the PSD2 bridge is positioned honestly as adjacent, never as direct compliance ownership.
+- **Conditions for go:** (1) scope and decision authority verify concrete in interviews — see risk register RR1; (2) compensation band confirmed at or above the £95k floor — R8, RR2; (3) the PSD2 bridge is positioned honestly as adjacent, never as direct compliance ownership.
 
 ## Role reality
 
@@ -71,6 +72,8 @@ to the writer as well as the reader.
 | R5 | Mentoring or leading PMs | important | unclear | low | discovery | CV silent; the one question asked was skipped. Per policy it is not re-asked; carried as a minor risk | `[grounded]` CV silence, question skipped | none — skipped by user; carried as minor risk |
 | R6 | Data fluency: SQL, experimentation | important | direct | high | presentation | The evidence is strong — a linked case study shows the experiment pipeline — and the CV buries it in a tools list. The gap is in communication, not capability: the fix is repositioning, not new claims | `[grounded]` linked case study | CV edit E1 pending approval |
 | R7 | Ledger / reconciliation systems experience | preferred | absent | none | capability | No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk rather than a blocker | `[grounded]` no evidence found after discovery | closure path named; minor risk given preferred priority |
+| R8 | Base salary at or above £95k (the candidate's hard floor) | hard_gate | unclear | low | hard_gate | The floor is the user's own and confirmed; the posting states no band, so whether the role clears it is unknown | `[grounded]` user-confirmed constraint; posting silent on pay | RR2's question, before investing in the loop |
+| R9 | No more than two office days a week, London (the candidate's hard constraint) | hard_gate | direct | high | none | The JD's hybrid London pattern, two office days, meets the user-confirmed constraint | `[grounded]` JD and user-confirmed constraint | none |
 `Reasoning` is a column and not a paragraph underneath. It renders the row spec's
 `reasoning` field, which the JSON envelope has always carried and this table used
 to drop — and a table that drops the one free-text column leaves every qualifier
@@ -107,7 +110,7 @@ failure, same fix, one section apart and four months late.
 | # | Signal | Class | Severity | Source quote | Hypothesis | Provenance | Verification question | Status |
 |---|---|---|---|---|---|---|---|---|
 | RR1 | Authority over three squads asserted, not evidenced | unknown | — | "own the roadmap across acceptance, payouts, and reconciliation" | Role may carry outcome accountability while decisions sit with the squad leads | `[inferred]` from the JD's squad count against its silence on decision rights | Which decisions does this role make alone, and which belong to the squad leads? | unresolved |
-| RR2 | Compensation unstated against a stated £95k+ floor | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | `[inferred]` from the market calibration against the stated floor | What band is budgeted for this role? | unresolved |
+| RR2 | Compensation unstated against a stated £95k+ floor (R8) | risk_signal | medium | "competitive package" | Band may sit below the candidate's hard floor | `[inferred]` from the market calibration against the stated floor | What band is budgeted for this role? | unresolved |
 | RR3 | First-year outcomes explicitly stated | positive_signal | — | "halve reconciliation exceptions in year one" | Role scope is genuinely defined; success is measurable | `[grounded]` JD states both outcomes | — | noted |
 
 The verification question is a column for the same reason. Rendered as a prose
@@ -152,13 +155,13 @@ something the analysis cannot source.
 
 ## Evidence status
 
-Verified: R1, R2, R3, R6 claims (sources in envelope). Unverified leads: a prior-context mention of a fraud-rules experiment — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "leads PMs", initially inferred from "led cross-functional squad" — corrected by user: no direct reports; recorded so it is never re-derived.
+Verified: R1, R2, R3, R4, R6, R8, R9 claims (sources in envelope) — verified is about the claim, not the fit: R4 is verified adjacent experience and its fit stays `adjacent`. Unverified leads: a prior-context mention of a fraud-rules experiment — unconfirmed, prompts a question only if it ever matters. Rejected inferences: "leads PMs", initially inferred from "led cross-functional squad" — corrected by user: no direct reports; recorded so it is never re-derived.
 
-Research tier: L1 — searches 4 of 5, fetches 1 of 2
+Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1
 
 | L1 target | Status | What it moved, or would have |
 |---|---|---|
-| 1. Official site and careers page | yes | Role reality: the organization row, and the contradictions row — JD and careers page agree |
+| 1. Official site and careers page | yes | Role reality: the contradictions row — JD and careers page agree |
 | 2. Role-family sweep | yes | Market calibration `[generic]`; RR2's band comparison |
 | 3. Hiring manager's public footprint | n/a | No name was given, so there was no query to form. The upgrade menu names what a name would unlock |
 
@@ -180,7 +183,7 @@ unfilled row is the only version of that rule anyone can check.
 
 - Partner-API case note or any inspectable artifact → R3 to `high`, work sample half-done.
 - An answer to G1 → R4's bridge strengthens or resolves.
-- Recruiter's comp band → RR2 closes; decision likely simplifies to `go` or `no_go`.
+- Recruiter's comp band → R8 and RR2 close; decision likely simplifies to `go` or `no_go`.
 - The hiring manager's name → role reality's scope read, and which verified story the application plan leads with for that reader.
 - A deeper research pass on Ferrowave (funding, leadership churn, candidate reports) — say the word and it runs.
 
@@ -215,7 +218,9 @@ unfilled row is the only version of that rule anyone can check.
         { "id": "R4", "text": "Regulatory exposure: PSD2, open banking, or card-scheme compliance", "priority": "must_have" },
         { "id": "R5", "text": "Mentoring or leading PMs", "priority": "important" },
         { "id": "R6", "text": "Data fluency: SQL, experimentation", "priority": "important" },
-        { "id": "R7", "text": "Ledger or reconciliation systems experience", "priority": "preferred" }
+        { "id": "R7", "text": "Ledger or reconciliation systems experience", "priority": "preferred" },
+        { "id": "R8", "text": "Base salary at or above £95k (candidate's hard floor)", "priority": "hard_gate" },
+        { "id": "R9", "text": "No more than two office days a week, London (candidate's hard constraint)", "priority": "hard_gate" }
       ],
       "inferred_outcomes": [
         "Year-one success is judged on payout scheduling shipping and the reconciliation-exception metric [grounded - stated in JD]"
@@ -351,6 +356,40 @@ unfilled row is the only version of that rule anyone can check.
         "reasoning": "No direct or adjacent evidence after discovery. Preferred-priority, so a minor risk, not a blocker.",
         "provenance": "[grounded] no direct or adjacent evidence found after discovery",
         "next_action": "Closure path if desired: the reconciliation squad's domain is learnable on the job; a systems-design write-up would pre-empt the objection"
+      },
+      {
+        "requirement_id": "R8",
+        "priority": "hard_gate",
+        "requirement": "Base salary at or above £95k (the candidate's hard floor)",
+        "requirement_source": { "type": "inferred", "text": "candidate_constraints: base salary at or above 95000 GBP, kind hard" },
+        "fit_status": "unclear",
+        "candidate_claim": "Will not accept a base below £95k",
+        "evidence": [
+          { "source_type": "user_confirmed_text", "reference": "intake message", "quote_or_summary": "£95k is my floor" }
+        ],
+        "verified": true,
+        "confidence": "low",
+        "gap_type": "hard_gate",
+        "reasoning": "The floor is the user's own and confirmed; the posting states no band, so whether the role clears it is unknown.",
+        "provenance": "[grounded] user-confirmed constraint; posting silent on pay",
+        "next_action": "RR2's question, before investing in the loop"
+      },
+      {
+        "requirement_id": "R9",
+        "priority": "hard_gate",
+        "requirement": "No more than two office days a week, London (the candidate's hard constraint)",
+        "requirement_source": { "type": "inferred", "text": "candidate_constraints: no more than 2 office days per week, London, kind hard" },
+        "fit_status": "direct",
+        "candidate_claim": "Will work at most two office days a week in London",
+        "evidence": [
+          { "source_type": "user_confirmed_text", "reference": "intake message", "quote_or_summary": "two office days max" }
+        ],
+        "verified": true,
+        "confidence": "high",
+        "gap_type": "none",
+        "reasoning": "The JD's hybrid London pattern, two office days, meets the user-confirmed constraint.",
+        "provenance": "[grounded] JD and user-confirmed constraint",
+        "next_action": "none"
       }
     ],
     "gap_queue": [

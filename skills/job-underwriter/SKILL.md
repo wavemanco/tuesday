@@ -23,12 +23,12 @@ Special cases:
 
 Read `references/evidence-conventions.md` for the vocabulary and `references/evidence-model.md` for the row shape before building the map, and `references/risk-and-decision.md` before writing the risk register or the decision. Build in this order, because each layer feeds the next:
 
-1. **Role profile** — title, organization, stated responsibilities; must-have, preferred, and implied requirements; hard gates (authorization, license, location, schedule, credentials, years, legal constraints — including conflicts with the candidate's stated non-negotiables); scope signals; first-90-days and first-year outcomes when stated or carefully inferred (labeled `[inferred]` with the derivation named); unknowns and contradictions. Never infer a requirement merely because a related buzzword appears. Where research reached the role-family sweep, close role reality with a **market calibration** line: where this title, seniority, and scope sit against role-family norms, labeled `[generic]` — it is a pattern, not a claim about this employer. Stated compensation gets calibrated against that band — the band is `[generic]`, the posting's own figure is `[grounded]` from the JD, and the comparison goes in the mismatch entry in the risk register — for unstated compensation, the band against the candidate's floor, as RR2 in `references/dossier-template.md` shows; unstated compensation gets the band plus the observation that the posting withholds it, which is itself worth a question.
+1. **Role profile** — title, organization, stated responsibilities; must-have, preferred, and implied requirements; hard gates (authorization, license, location, schedule, credentials, years, legal constraints — including the candidate's stated non-negotiables, each of which the role's terms touch becomes a `hard_gate` row in the map); scope signals; first-90-days and first-year outcomes when stated or carefully inferred (labeled `[inferred]` with the derivation named); unknowns and contradictions. Never infer a requirement merely because a related buzzword appears. Where research reached the role-family sweep, close role reality with a **market calibration** line: where this title, seniority, and scope sit against role-family norms, labeled `[generic]` — it is a pattern, not a claim about this employer. Stated compensation gets calibrated against that band — the band is `[generic]`, the posting's own figure is `[grounded]` from the JD, and the comparison goes in the mismatch entry in the risk register — for unstated compensation, the band against the candidate's floor, as RR2 in `references/dossier-template.md` shows; unstated compensation gets the band plus the observation that the posting withholds it, which is itself worth a question.
 2. **Candidate evidence inventory** — from each source, claims attributable to the candidate: the claim, source quote, source type, project, period, stated ownership, scope, outcome, verifiability.
 3. **Evidence map** — one row per material requirement, per the shape in `references/evidence-model.md`. This map is the skill's spine; everything downstream reads from it.
 4. **Opportunity ledger** — unknowns, risk signals, red flags, and positive signals, per `references/risk-and-decision.md`. Assess the role on its own merits regardless of how well the candidate fits it.
 5. **Provisional decision** — `go`, `conditional_go`, `hold_pending_answers`, or `no_go`, with the rationale showing both ledgers.
-6. **The snapshot, read off the finished map** — its fit ledger from the map's #, Priority and Fit columns in table order, and any confidence band from the Confidence column of the one row it sits beside. The snapshot is delivered first and built last: written from memory of the map rather than from the map, it is where a row added late goes missing and a band goes stale.
+6. **The snapshot, read off the finished map** — its fit ledger projected from the map's #, Priority, Fit and Requirement columns into the shape of slot 2 in `references/risk-and-decision.md` (one line per Priority tier in enum order, each grouped by Fit in enum order, every row exactly once), its hard-gates line from the `hard_gate` rows, and any confidence band from the Confidence column of the one row it sits beside. The snapshot is delivered first and built last: written from memory of the map rather than from the map, it is where a row added late goes missing and a band goes stale.
 
 The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the one-line dossier offer, the upgrade menu, and at most three orientation questions closing the message, selected by the heuristic in `references/gap-taxonomy-and-questions.md`. **The gap recovery queue holds no questions** — its rows say what each gap is and what would close it, and the question each row implies is asked in the closing block, tagged with its row id. A `Question:` line inside the queue puts questions fourth of nine sections and gives the message two question sites, and both of those are rules this skill already carries. Research consent (Step 2) rides with the questions; it never drives.
 
@@ -40,35 +40,39 @@ Three tiers; the trade is the user's to make. Model memory is never a source for
 
 - **L0** — provided documents only: chosen by the user, or forced because this host offers no search. Everything not traceable to the documents is labeled `[generic]`, and the upgrade menu says what research would have added.
 - **L1** — default. Budget: at most 5 targeted searches and 2 page fetches. Targets in priority order: (1) the company's official site and careers page — does the entity exist as described (stage, size, product), and is the posting live and consistent with what was provided — feeding role reality's organization and contradictions rows and the failed-attribution entry in the risk register; (2) one role-family sweep — market-normal scope, title, and compensation for this seniority — feeding the market calibration line and the mismatch checks in the risk register; (3) the hiring manager's public professional footprint, only when a name was given — roles, career pattern, published talks and writing; nothing personal, no contact-detail hunting — feeding role reality's scope read and the application plan's positioning — which verified story to lead with for this reader.
-- **L2** — an expanded search budget within the same targets: deeper company diligence (funding and leadership churn, hiring patterns, public candidate and employee reports — forum-sourced claims labeled `[inferred]`, never higher), plus a recent-news sweep. Offer it exactly once, with the cost stated, and run it only on consent; the offer rides an already-needed message or lands in the upgrade menu. Never re-offer after a decline.
+- **L2** — two further targets, numbered after L1's, with at most 5 further searches and 2 further fetches: (4) deeper company diligence — funding and leadership churn, hiring patterns, public candidate and employee reports, forum-sourced claims labeled `[inferred]`, never higher — feeding the risk register; (5) a recent-news sweep, feeding the risk register and the opportunity ledger. Offer it exactly once, with the cost stated, and run it only on consent; the offer rides an already-needed message or lands in the upgrade menu. Never re-offer after a decline.
 
 **Not-attributable rule:** results that can't be attributed to this specific entity — name collisions, stealth companies, no web presence — are treated as not-established. Say so plainly, fall back to role-family patterns labeled `[generic]`, and list the missing facts in the upgrade menu. Borrowing a same-named company's facts is worse than having none.
 
-**Budget accounting is one line, and it stays true.** Directly above the accounting table: `Research tier: L1 — searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches` — counting every call sent, refused ones included. No other sentence restates it: no "attempted", no second tally in the prose. A count stated twice can disagree with itself, and then the reader cannot tell which of the two is the mistake.
+**Budget accounting is one line, and it stays true.** Directly above the accounting table: `Research tier: L1 — searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches`, or at L2 `Research tier: L2 — searches 6 of 10, fetches 2 of 4`, the caps added together. It counts every call this skill chose to send in the engagement, refused ones included. Reading a link the user supplied — a linked JD, a portfolio — is reading an input, named on the same line (`; user links read 1`) and not charged to the budget; only a URL that appears in the user's own message counts as one. No other sentence restates the line: no "attempted", no second tally in the prose. A count stated twice can disagree with itself, and then the reader cannot tell which of the two is the mistake.
 
-**Every declared target is accounted for, in evidence status.** One row per L1
-target above, starting with its number, in the order listed — three columns:
-the target, a Status cell holding exactly one of `yes`, `skipped`, `n/a` or
-`unavailable`, and the reason. The label follows what happened, facts first. A
-target a search was sent for is `yes` if any call returned anything — no results
-and nothing attributable included, which the row says as "not established" — and
-`unavailable` only if every call was refused. A target no search was sent for is
-`n/a` if the inputs cannot form its query (no hiring manager was named);
-`skipped` if the inputs already fix every output it feeds, named in the row; and
-otherwise `unavailable` — this host offers no search, or the user declined the
-tier — naming what it would have moved. An input fixes an output only when its
-content is in hand: a pasted careers page can, and "I checked their site" cannot,
-because that is a claim the search could still verify. A target a search was
-sent for is never `skipped` or `n/a`; if it moved nothing, its `yes` row says so.
-The inputs decide between a skip and an unavailable search, not the host: a
-target the inputs answer reads `skipped` whether or not search was available.
+**Every declared target is accounted for, in evidence status.** One row per
+declared target — L1's three, then L2's two when L2 ran, numbered in that order —
+three columns: the target, a Status cell holding exactly one of `yes`, `skipped`,
+`n/a` or `unavailable`, and the reason. Searches go only to declared targets; a
+question none of them covers is an upgrade-menu line. The label follows what
+happened, facts first. A target a search was sent for is `yes` if any call
+returned a result — an empty or unattributable one included, which the row says
+as "not established" — and `unavailable` only if every call was refused or
+errored. A target no search was sent for is `n/a` if the inputs cannot form its
+query (no hiring manager was named); `skipped` if the inputs already fix every
+output it feeds, named in the row — the only ground for skipping a search; and
+otherwise `unavailable` — this host offers no search, the user chose L0 or
+declined research, or the budget went on higher-priority targets first — naming
+what it would have moved. A judgement that a search was not worth running is
+never `unavailable`. An input fixes an output only when its content is in hand: a
+pasted careers page can, and "I checked their site" cannot, because that is a
+claim the search could still verify. A target a search was sent for is never
+`skipped` or `n/a`; if it moved nothing, its `yes` row says so, and the row names
+the query or page it rests on. The inputs decide between a skip and an
+unavailable search, not the host: a target the inputs answer reads `skipped`
+whether or not search was available. A search sent outside every declared target
+gets an un-numbered `yes` row after these, saying what it was and what it moved.
 Folding a skip into either of the others hides it, and the skip is the case the
-rule exists for. L2 targets join the table when L2 ran, numbered after these, and
-are absent when it did not, since an unoffered tier has no skips. A wasted search
-and a correctly-skipped one produce identical prose, so an unfilled row is the
-only form of this rule a reader or a grader can check. Worked table in
-`references/dossier-template.md` — the dossier carries the same table because it
-renders the same analysis.
+rule exists for. A wasted search and a correctly-skipped one produce identical
+prose, so an unfilled row is the only form of this rule a reader or a grader can
+check. Worked table in `references/dossier-template.md` — the dossier carries the
+same table because it renders the same analysis.
 
 Failed attribution is also a finding about the opportunity, not only a limit on research: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
 

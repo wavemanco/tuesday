@@ -181,7 +181,8 @@ def parse_accounting(text: str) -> dict:
 
 TALLY = re.compile(
     r"research tier\s*:\s*(l\d)\s*[-–—]\s*(?:searches\s+(\d+)\s+of\s+(\d+)\s*,\s*"
-    r"fetches\s+(\d+)\s+of\s+(\d+)|(no searches))\s*\.?\s*$", re.I)
+    r"fetches\s+(\d+)\s+of\s+(\d+)|(no searches))"
+    r"(?:\s*;\s*user links read\s+(\d+))?\s*\.?\s*$", re.I)
 TALLY_CANDIDATE = re.compile(r"research tier\s*:", re.I)
 
 
@@ -202,14 +203,16 @@ def parse_tally(text: str) -> dict:
                 loose.append(f"{source}: {plain[:120]}")
                 continue
             tier = match.group(1).upper()
+            links = int(match.group(7)) if match.group(7) else 0
             if match.group(6):
-                found.append((source, {"tier": tier, "no_searches": True}))
+                found.append((source, {"tier": tier, "no_searches": True, "user_links": links}))
             else:
                 found.append((source, {"tier": tier, "no_searches": False,
                                        "searches": int(match.group(2)),
                                        "searches_budget": int(match.group(3)),
                                        "fetches": int(match.group(4)),
-                                       "fetches_budget": int(match.group(5))}))
+                                       "fetches_budget": int(match.group(5)),
+                                       "user_links": links}))
     if not found:
         return {"outcome": "unparseable" if loose else "absent", "lines": loose}
     tally = dict(found[0][1])
@@ -255,13 +258,26 @@ def normalise_ws(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
+def unify_dashes(text: str) -> str:
+    return text.translate(DASH_FORMS)
+
+
+DASH_FORMS = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
+
+
+def user_link(url: str, prompt: str) -> bool:
+    """A URL counts as the user's own only when their message contains it."""
+    bare = re.sub(r"^https?://(www\.)?", "", url.strip().rstrip("/").lower())
+    return bool(bare) and bare in prompt.lower()
+
+
 def canary_in(spelling: str, text: str) -> bool:
     """A canary as a whole token run: "143" is not found inside "1430"."""
     return bool(spelling) and re.search(r"(?<![\w])" + re.escape(spelling) + r"(?![\w])", text) is not None
 
 
 def check_accounting(response: str, research: dict, mode: str,
-                     research_log: list | None) -> dict:
+                     research_log: list | None, prompt: str = "") -> dict:
     """Judge the accounting against what the harness recorded. Returns findings.
 
     Attribution is per target, because a run-level check passed the failure the
@@ -275,7 +291,13 @@ def check_accounting(response: str, research: dict, mode: str,
     targets = research.get("targets", [])
     pages = research.get("pages", [])
     have_log = research_log is not None
-    log = research_log or []
+    # Reading a link the user supplied is reading an input, not research: it is
+    # named on the tally line and never charged to the budget. Only a URL that
+    # appears in the user's own message counts as one, so a run cannot relabel a
+    # research fetch as a user link.
+    links = [e for e in (research_log or []) if e.get("kind") == "fetch"
+             and user_link(str(e.get("query_or_url") or ""), prompt)]
+    log = [e for e in (research_log or []) if e not in links]
 
     for n, problem in table["format"]:
         checks.append(finding("format", n if n is not None else "all", False, problem, "format"))
@@ -314,20 +336,20 @@ def check_accounting(response: str, research: dict, mode: str,
         if not have_log:
             continue
         calls = aimed[n]
-        sent = [e for e in calls if e.get("outcome") != "refused"]
+        sent = [e for e in calls if e.get("outcome") == "returned"]
         refused = [e for e in calls if e.get("outcome") in ("refused", "error")]
         listing = "; ".join(f"{e.get('tool')} {str(e.get('query_or_url'))[:60]!r} "
                             f"{e.get('outcome')}" for e in calls) or "none"
         if label == "yes":
             checks.append(finding("yes_has_call", n, bool(sent),
-                                  f"`yes` needs a call aimed at target {n} that was not "
-                                  f"refused; calls aimed at it: {listing}"))
+                                  f"`yes` needs a call aimed at target {n} that returned a "
+                                  f"result — an error returns nothing; calls aimed at it: {listing}"))
         elif label in ("skipped", "n/a"):
             checks.append(finding("skip_has_no_call", n, not calls,
                                   f"`{label}` needs no call aimed at target {n}, refused "
                                   f"ones included; calls aimed at it: {listing}"))
         elif label == "unavailable" and mode == "canned":
-            checks.append(finding("unavailable_has_refusal", n, bool(refused),
+            checks.append(finding("unavailable_has_refusal", n, bool(calls) and len(refused) == len(calls),
                                   f"search was offered in this room, so `unavailable` needs a "
                                   f"refused or errored call aimed at target {n}; calls aimed "
                                   f"at it: {listing}"))
@@ -358,6 +380,9 @@ def check_accounting(response: str, research: dict, mode: str,
                 checks.append(finding("tally_searches", "all", tally["searches"] == searches,
                                       f"the tally says {tally['searches']} search(es); "
                                       f"{searches} attempt(s) recorded, refused ones included"))
+                checks.append(finding("tally_user_links", "all", tally.get("user_links", 0) == len(links),
+                                      f"the tally names {tally.get('user_links', 0)} user link(s) read; "
+                                      f"{len(links)} fetch(es) of a URL from the user's message recorded"))
                 checks.append(finding("tally_fetches", "all", tally["fetches"] == fetches,
                                       f"the tally says {tally['fetches']} fetch(es); "
                                       f"{fetches} attempt(s) recorded, refused ones included"))
@@ -386,7 +411,17 @@ def check_accounting(response: str, research: dict, mode: str,
         # One fact may be written several ways — "143 employees", "143 staff" — and
         # a probe run rounded a survey's "$147,300" to "~$147K". A canary lists the
         # spellings that still prove the page was read; any one of them counts.
-        present = any(canary_in(normalise_ws(s), said) for s in spellings if s.strip())
+        present = any(canary_in(normalise_ws(unify_dashes(s)), unify_dashes(said)) for s in spellings if s.strip())
+        page = canary.get("page")
+        if mode == "canned" and page and have_log and not any(
+                any(same_url(page, u) for u in (e.get("urls_returned") or []))
+                or (e.get("kind") == "fetch" and same_url(page, str(e.get("query_or_url") or "")))
+                for e in log if e.get("outcome") == "returned"):
+            # A target can be `yes` on a call that never brought back the page the
+            # canary sits on — no results, or the target's other page. What the
+            # room never showed the model cannot be asked to surface.
+            info.append(f"canary for target {n}: its page was never returned, so it is not asked for")
+            continue
         if mode == "denied":
             checks.append(finding("canary_absent", n, not present,
                                   f"no search can return in this room, so the canary for "
@@ -418,8 +453,8 @@ QUANTIFIER = re.compile(r"\b(every|all|only|none|both)\b", re.I)
 ID_RE = re.compile(r"\bR\d+[a-z]?\b")
 # A risk severity shares the band words — "all `low` severity" in the opportunity
 # ledger — and is not a confidence band, so that one exact form is set aside.
-BAND_TOKEN = re.compile(r"`(high|medium|low|none)`(?!\s+severity\b)")
-BAND_ATTACHED = re.compile(r"\b(R\d+[a-z]?)\s*\(\s*`(high|medium|low|none)`\s*\)")
+BAND_TOKEN = re.compile(r"(?<!severity: )`(high|medium|low|none)`(?!\s+severity\b)")
+BAND_ATTACHED = re.compile(r"(?<![A-Za-z])(R\d+[a-z]?)\s*\(\s*`(high|medium|low|none)`\s*\)")
 
 
 def split_top(text: str, separators: tuple[str, ...]) -> list[str]:
@@ -723,6 +758,8 @@ def check_fit_ledger(response: str) -> dict:
         attached = {m.start(2) - 1: m for m in BAND_ATTACHED.finditer(section)}
         band_problems = []
         for token in BAND_TOKEN.finditer(section):
+            if re.search(r"(?<![A-Za-z])RR\d+\s*\(\s*$", section[:token.start()]):
+                continue                     # a register entry's severity, not a band
             hit = attached.get(token.start())
             if hit is None:
                 band_problems.append(f"`{token.group(1)}` is not attached to one row ID")
@@ -734,6 +771,13 @@ def check_fit_ledger(response: str) -> dict:
             elif not have or have.group(0) != band:
                 band_problems.append(f"{rid} (`{band}`), map says "
                                      f"`{rows[rid].get('confidence', '')}`")
+        gates = re.search(r"hard gates\s*:?\**\s*:?(.*)$", section, re.I | re.M)
+        gate_rows = {r for r, row in rows.items() if row["priority"] == "hard_gate"}
+        if gates and gate_rows:
+            named = set(re.findall(r"(?<![A-Za-z])(R\d+[a-z]?)\b", gates.group(1)))
+            checks.append(finding("gates_line", "all", named == gate_rows,
+                                  f"the hard-gates line names {sorted(named) or 'no row'}; the "
+                                  f"map's hard_gate rows are {sorted(gate_rows)}"))
         checks.append(finding("snapshot_band", "all", not band_problems,
                               "; ".join(band_problems) or "every band sits beside its row and "
                                                           "matches its Confidence"))
@@ -759,7 +803,8 @@ def quoted_spans(cell: str) -> list[str]:
     return [m.group(1) for m in re.finditer(r'"([^"\n]+)"', plain)]
 
 
-def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = ()) -> dict:
+def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (),
+                 candidate_text: list[str] | None = None) -> dict:
     """Every quotation in the verbatim cells is a quotation of something.
 
     The fit snapshot's evidence column and the banks' Provenance cells exist so a
@@ -769,9 +814,13 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     enough to read as the candidate's.
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
+    # The evidence column is the candidate's words and nothing else. Checked only
+    # against the prompt, a quoted JD line or a values page passed as the
+    # candidate's own — an employer's practice attributed to them, certified.
+    own = normalise_quote("\n".join(candidate_text)) if candidate_text else haystack
     checks, info = [], []
-    counted = {"fit_snapshot": [0, 0], "banks": [0, 0]}         # spans, failures
-    seen = {"fit_snapshot": False, "banks": False}
+    counted = {"fit_snapshot": [0, 0], "banks": [0, 0], "requirements": [0, 0]}   # spans, failures
+    seen = {"fit_snapshot": False, "banks": False, "requirements": False}
     for source, body in split_response(response):
         for table in md_tables(body):
             names = header_names(table)
@@ -781,12 +830,30 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 columns.append(("fit_snapshot", verbatim))
             if any("provenance" in h for h in names) and any("answer guidance" in h for h in names):
                 columns.append(("banks", next(i for i, h in enumerate(names) if "provenance" in h)))
+            requirement = next((i for i, h in enumerate(names) if "requirement" in h), None)
+            if verbatim is not None and requirement is not None:
+                columns.append(("requirements", requirement))
             for section, col in columns:
                 seen[section] = True
+                pool = own if section == "fit_snapshot" else haystack
                 for cells in table["rows"]:
                     if col >= len(cells):
                         continue
                     row_id = cells[0].replace("`", "").replace("*", "").strip()[:20]
+                    if section == "fit_snapshot":
+                        cell = cells[col].translate(DQUOTES).strip()
+                        rest = re.sub(r'"[^"\n]+"', "", cell)
+                        # What may follow a quote is where it came from — "— your CV" or
+                        # "(your message)" — and nothing else.
+                        rest = re.sub(r"\([^()\n]{0,60}\)", "", rest)
+                        rest = re.sub(r"[-—–]\s*[^;\"\n]{0,60}", "", rest).strip(" ;,.")
+                        if normalise_quote(cell).strip("`") != "none given" and (
+                                not quoted_spans(cell) or re.search(r"[a-z]{3,}", rest, re.I)):
+                            checks.append(finding(
+                                "evidence_form", section, False,
+                                f"{source} row {row_id}: an evidence cell holds neither `none given` "
+                                f"nor only quoted words with their origin: {cells[col].strip()[:100]!r}",
+                                "format"))
                     for span in quoted_spans(cells[col]):
                         whole = normalise_quote(span).strip(EDGE)
                         if len(whole.split()) < 3:
@@ -794,17 +861,20 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                         counted[section][0] += 1
                         bad = [frag for frag in (f.strip(EDGE) for f in
                                                  re.split(r"\.\.\.|…", normalise_quote(span)))
-                               if len(frag.split()) >= 3 and frag not in haystack]
+                               if len(frag.split()) >= 3 and frag not in pool]
                         if bad:
                             counted[section][1] += 1
                             checks.append(finding(
                                 "quotes", section, False,
                                 f"{source} row {row_id}: \"{span.strip()[:120]}\" — "
-                                f"\"{bad[0][:80]}\" is not in the request"
-                                f"{' or the pages' if corpus_texts else ''}"))
+                                f"\"{bad[0][:80]}\" is not in "
+                                f"{'what the candidate gave' if section == 'fit_snapshot' and candidate_text else 'the request' + (' or the pages' if corpus_texts else '')}"))
     for section, (spans, failures) in counted.items():
-        label = "fit snapshot (a column named 'verbatim')" if section == "fit_snapshot" \
-            else "question banks (Provenance beside Answer guidance)"
+        label = {"fit_snapshot": "fit snapshot (a column named 'verbatim')",
+                 "banks": "question banks (Provenance beside Answer guidance)",
+                 "requirements": "requirement column beside the verbatim one"}[section]
+        if not seen[section] and section == "requirements":
+            continue
         if not seen[section]:
             checks.append(finding("quotes", section, False, f"no {label} table", "format"))
         elif not failures:
@@ -827,13 +897,13 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     wanted = case.get("checks", [])
     parts = []
     if research:
-        parts.append(check_accounting(response, research, mode, research_log))
+        parts.append(check_accounting(response, research, mode, research_log, case.get("prompt", "")))
     if "fit_ledger" in wanted:
         parts.append(check_fit_ledger(response))
     if "quotes" in wanted:
         corpus = [p.get("text", "") for p in (research or {}).get("pages", [])] \
             if mode == "canned" else []
-        parts.append(check_quotes(response, case.get("prompt", ""), corpus))
+        parts.append(check_quotes(response, case.get("prompt", ""), corpus, case.get("candidate_text")))
     for part in parts:
         checks += part["checks"]
         info += part["info"]

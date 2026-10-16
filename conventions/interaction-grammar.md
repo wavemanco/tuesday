@@ -35,21 +35,28 @@ bank, a persona weight, a guidance cell, a recommendation — does not run,
 whatever budget is left. This is what the tiers were always implementing, and it
 is stated because the tiers describe *how much* and not *what for*: L1's cap is a
 ceiling, not a target, and a skill that spends it on questions whose answers
-change nothing has followed the letter and missed the point. Name the output a
-search could change before running it; if there is none, skip it — **and account
-for every declared target where the output already reports its research**: one
-row each, starting with the number the skill declares it under, with one label in
-its Status cell and the reason beside it. The label follows what happened, facts
-first:
+change nothing has followed the letter and missed the point. A search goes only
+to a target the skill declares for the tier that is running; a question none of
+them covers is an L2 item or an upgrade-menu line, never an extra search. Name
+the output a search could change before running it — and a search can change
+nothing only when the inputs already fix every output its target feeds, which is
+the one ground for skipping it — **and account for every declared target where
+the output already reports its research**: one row each, starting with the
+number the skill declares it under, with one label in its Status cell and the
+reason beside it. The label follows what happened, facts first:
 
-- A search was sent for the target: `yes` if any call returned anything, no
-  results and nothing attributable included — the row then says "not
-  established"; `unavailable` only if every call was refused.
+- A search was sent for the target: `yes` if any call returned a result — an
+  empty one and an unattributable one included, which the row says as "not
+  established"; `unavailable` only if every call was refused or errored, because
+  an error returns nothing.
 - No search was sent: `n/a` if the inputs cannot form its query, because no name
   at all was given — a first name with a title and the company is a name;
   `skipped` if the inputs already fix every output it feeds, naming them;
-  otherwise `unavailable` — no search in this host, or the tier declined — with
-  what it would have moved, which the upgrade menu then offers.
+  otherwise `unavailable` — this host offers no search, the user chose L0 or
+  declined research, or the budget went on higher-priority targets first —
+  naming what it would have moved, which the upgrade menu then offers. A
+  judgement that a search was not worth running is never `unavailable`: it is
+  `skipped`, on the ground above, or the search runs.
 
 An input fixes an output only when its content is in hand: a pasted page or
 survey can, and a report that the user checked something cannot, because that is
@@ -58,12 +65,20 @@ a claim the search could still verify. A target a search was sent for is never
 the visible form of a wasted search. A skip is a judgement and an unavailable
 search is a circumstance, and the table exists to keep them apart — which is why
 the inputs decide between them and the host does not. A target the inputs answer
-reads `skipped` whether or not this host could have searched for it.
+reads `skipped` whether or not this host could have searched for it. A call sent
+outside every declared target breaks the rule above, and it is still counted and
+still shown: it gets an un-numbered row after the numbered ones, labeled `yes`,
+saying what it was and what it moved.
 
 Directly above the table, one line states what was spent — `Research tier: L1 —
 searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches` — counting
-every call sent, refused ones included, against the skill's own budget. No other
-sentence restates it.
+every call the skill chose to send in this engagement, refused ones included,
+against the skill's own budget for the tier reached; at L2 the same line reads
+`Research tier: L2 — searches N of B, fetches M of F`, with the L1 and L2 caps
+added together and counted once. Reading a link the user supplied is reading an
+input, not research: it is named on the same line — `; user links read 1` —
+and never charged to the budget, and only a URL that appears in the user's own
+message counts as one. No other sentence restates the line.
 
 The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
 gives: compliance here depends on noticing an absence, and a search that ran

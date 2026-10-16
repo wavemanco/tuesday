@@ -945,6 +945,88 @@ def snapshot(cell: str) -> str:
             "instance from scratch\" (your message) | Lead with it | F1 |\n")
 
 
+
+def test_review_fixes() -> None:
+    print("\nchecks: what the second review of the fixes found")
+    canary = "It came from an experimentation-platform team."
+    errored = [entry("Kestrel careers", "error", targets=[1]), entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}, extra=canary),
+                                         RESEARCH, "canned", errored)
+    check("`yes` on a target whose only call errored fails: an error returns nothing",
+          verdict_of(got, "yes_has_call", 1), "FAIL")
+    got = output_checks.check_accounting(accounting({1: "unavailable", 2: "yes", 3: "n/a"}),
+                                         RESEARCH, "canned", errored)
+    check("`unavailable` on a target whose only call errored passes",
+          verdict_of(got, "unavailable_has_refusal", 1), "PASS")
+    mixed = [entry("Kestrel careers", targets=[1]), entry("Kestrel about", "refused", targets=[1]),
+             entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting({1: "unavailable", 2: "yes", 3: "n/a"}),
+                                         RESEARCH, "canned", mixed)
+    check("`unavailable` with one call returned and one refused fails",
+          verdict_of(got, "unavailable_has_refusal", 1), "FAIL")
+
+    prompt = "Here is my portfolio: https://example.org/folio — what do you think?"
+    with_link = [entry("Kestrel careers", targets=[1]), entry("analyst salary", targets=[2]),
+                 entry("https://example.org/folio", kind="fetch")]
+    tally = "Research tier: L1 — searches 2 of 5, fetches 0 of 2; user links read 1"
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}, tally, canary),
+                                         RESEARCH, "canned", with_link, prompt)
+    check("a fetch of the user's own link is named on the tally line, not charged",
+          (verdict_of(got, "tally_fetches"), verdict_of(got, "tally_user_links")), ("PASS", "PASS"))
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}, tally, canary),
+                                         RESEARCH, "canned", with_link, "no links here")
+    check("a fetch the user never linked is research, whatever the tally calls it",
+          verdict_of(got, "tally_fetches"), "FAIL")
+
+    keyed = dict(RESEARCH, canaries=[{"target": 1, "page": "https://kestrel.example/about",
+                                      "text": "came from an experimentation-platform team"}])
+    unseen = [entry("Kestrel careers", targets=[1]), entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}), keyed, "canned", unseen)
+    check("a canary whose page the room never returned is not asked for",
+          verdict_of(got, "canary", 1), None)
+    shown = [dict(entry("Kestrel careers", targets=[1]), urls_returned=["https://kestrel.example/about"]),
+             entry("analyst salary", targets=[2])]
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "yes", 3: "n/a"}), keyed, "canned", shown)
+    check("a canary whose page was returned must surface", verdict_of(got, "canary", 1), "FAIL")
+    got = output_checks.check_accounting(
+        accounting({1: "yes", 2: "yes", 3: "n/a"}, extra="it came from an experimentation‑platform team"),
+        keyed, "canned", shown)
+    check("a canary written with a non-breaking hyphen still counts", verdict_of(got, "canary", 1), "PASS")
+
+    severity = LEDGER_OK.replace("waits on an artifact.",
+                                 "waits on an artifact.\n\n- **Severe red flags:** RR1 (`severity: high`), RR2 (`high`).")
+    check("a register entry's severity is not a confidence band, in either spelling", ledger_fails(severity), [])
+    gated = LEDGER_OK.replace("waits on an artifact.", "waits on an artifact.\n\n- **Hard gates:** none failed.")
+    check("a hard-gates line that names no gate row fails", "gates_line" in ledger_fails(gated), True)
+    gated = LEDGER_OK.replace("waits on an artifact.", "waits on an artifact.\n\n- **Hard gates:** none failed (R1 `direct`).")
+    check("one that names every gate row passes", "gates_line" in ledger_fails(gated), False)
+
+    pasted = "THE JD: 'Own the complaints process end to end.' ME: I built the complaints spreadsheet."
+
+    def snap(cell):
+        return ("| # | Requirement (source) | Evidence, verbatim | Confidence | Bridge |\n|---|---|---|---|---|\n"
+                f"| F1 | \"Own the complaints process end to end\" — JD | {cell} | high | — |\n\n"
+                "| # | Question | Type | Provenance | Answer guidance | Rationale |\n|---|---|---|---|---|---|\n"
+                "| A1 | q | EXP | [grounded] | g | F1 |\n")
+
+    def quote_fails(cell, own=None, prompt=pasted):
+        return sorted(c["check"] for c in output_checks.check_quotes(snap(cell), prompt, (), own)["checks"]
+                      if c["verdict"] == "FAIL")
+    check("`none given` is a lawful evidence cell", quote_fails("`none given`"), [])
+    check("an unquoted summary in the evidence column fails", quote_fails("Built a complaints tracker"),
+          ["evidence_form"])
+    check("a quote with a summary appended fails",
+          quote_fails('"I built the complaints spreadsheet" (your message), and ran the team'), ["evidence_form"])
+    check("the JD's words quoted as the candidate's pass the prompt alone",
+          quote_fails('"Own the complaints process end to end" — your message'), [])
+    check("and fail against what the candidate gave",
+          quote_fails('"Own the complaints process end to end" — your message',
+                      ["I built the complaints spreadsheet."]), ["quotes"])
+    check("a requirement in quotation marks that nothing supplied fails",
+          quote_fails('"I built the complaints spreadsheet" — your message',
+                      prompt="ME: I built the complaints spreadsheet."), ["quotes"])
+
+
 def test_quotes() -> None:
     print("\nchecks: a quotation in a verbatim cell is a quotation of something")
     def fails(cell: str) -> list[str]:
@@ -1050,7 +1132,8 @@ def main() -> int:
                  test_declined_grade_prints_no_score, test_artifact_collection,
                  test_skill_installation, test_classify_room, test_execute_timeout,
                  test_execute_nudge, test_parse_accounting, test_check_accounting,
-                 test_fit_ledger, test_quotes, test_backfill, test_recurring):
+                 test_fit_ledger, test_quotes, test_review_fixes, test_backfill,
+                 test_recurring):
         test()
     print()
     if FAILURES:

@@ -26,14 +26,14 @@ Freshness rules: values are stable (official page wins, fetch once); loop struct
 
 Offer exactly once — in the Step 1 message when one is being sent anyway, otherwise as an upgrade-menu line in the delivered pack — with the cost stated ("a deeper research pass adds several minutes — want it?"). Never auto-run it; never re-offer after a decline. What it buys, and why it matters: historically, the strongest pack content — the strategy cases, the "why do you beat competitor X in 60 seconds" drills — comes from a company strategy brief. When the user can't supply one, this tier is its substitute; without it, CO and CASE questions go generic and are labeled as such.
 
-The L2 menu:
+The L2 targets, numbered after L1's, with a budget of **at most 6 further searches and 2 further fetches**:
 
-- **Company strategy brief**: financials trajectory, stated strategic priorities, M&A pattern, competitive set and where it's losing ground. This feeds the differentiator bank.
-- **Interviewer public footprint, deep**: conference talks, blog posts, podcast appearances — their recurring themes become likely questions and strong reverse-question material.
-- **Role-family loop reports**: candidate guides and forum reports for this company + role family. Forum-sourced claims are labeled `[inferred]`, always.
-- **Recent org context**: leadership changes, reorgs, layoffs or hiring waves that shape what this role is really for.
+6. **Company strategy brief**: financials trajectory, stated strategic priorities, M&A pattern, competitive set and where it's losing ground. This feeds the differentiator bank.
+7. **Interviewer public footprint, deep**: conference talks, blog posts, podcast appearances — their recurring themes become likely questions and strong reverse-question material.
+8. **Role-family loop reports**: candidate guides and forum reports for this company + role family. Forum-sourced claims are labeled `[inferred]`, always.
+9. **Recent org context**: leadership changes, reorgs, layoffs or hiring waves that shape what this role is really for.
 
-In claude.ai, the platform's deep-research feature is the natural way to produce the strategy brief; elsewhere, run an expanded search budget within the same targets.
+In claude.ai, the platform's deep-research feature is the natural way to produce the strategy brief; elsewhere, run these four targets within the L2 budget, and account for them in the same table, numbered 6 to 9.
 
 ## Loop detection → archetype fallback
 

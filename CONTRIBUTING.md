@@ -249,6 +249,16 @@ sentence is caught. What it does not read: any other prose about the map, in the
 dossier or anywhere else, and the ledgers that runs write, which the eval
 harness's own check reads instead.
 
+**A skill's installed text quotes none of its own fixtures.** `--only answer-keys`
+reads every double-quoted span of four words or more in a skill's `SKILL.md` body
+and references, and fails one that appears in that skill's own eval prompts. A
+clean room installs the references, so an example built from a fixture is an
+answer key beside the model; three were found at once, none chosen. What it does
+not read: unquoted prose, spans under four words, the frontmatter, `citations.md`,
+and other skills' fixtures, since a room never installs two skills. A worked
+example drawn from a fixture's domain without quoting it passes, which is why the
+worked examples now sit in a domain no fixture uses.
+
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A
 ledger entry restating a rule becomes a second copy of it, and this ledger once
@@ -259,7 +269,7 @@ and the copy did not.
 `ci/test_checks.py` used to run one group on the clean repo and then print "clean
 repo passes", and a mutation of a group already failing proves nothing about the
 mutation. Each mutation is a defect a check must refuse. Each must-pass case is
-correct text in a form an earlier version refused — a label that is this file's
+correct text in a form an earlier version refused, or for a new group a correct form its check must not refuse — a label that is this file's
 own heading, a statute's §, stacked markers, a negated sentence — because a check
 that refuses correct work teaches authors to distort prose or switch it off, and
 that fails the self-test the same way an evasion does. Three reviews of these

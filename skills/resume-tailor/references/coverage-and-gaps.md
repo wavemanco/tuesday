@@ -120,14 +120,14 @@ Carried in every delivery, not only when something was refused. It holds:
 ```text
 Not written, and why:
 
-- "Product management experience" — you have never held the title and the JD makes
+- "Programme management experience" — you have never held the title and the JD makes
   it a must-have. Adjacent work is in E1 and E3; the gap is named in the coverage
   map rather than papered over.
-- "Owned the partner platform roadmap" — you coordinated on custom builds. Owning a
-  roadmap is a different job and an interviewer will know within one question.
-- "Partner integrations" — the posting's word is "partner"; yours is "client". You
-  worked at the vendor. The word change would move which side of the table you sat
-  on.
+- "Owned the grants pipeline" — you ran one round of it. Owning a pipeline is a
+  different job and an interviewer will know within one question.
+- "Partnered with community groups" — the posting's word is "partner"; yours is
+  "coordinated". You administered their awards, and the word change would move
+  which side of the table you sat on.
 ```
 
 That last entry matters more than it looks. It is a single word, it is the

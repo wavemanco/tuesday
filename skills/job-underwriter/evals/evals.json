@@ -20,12 +20,9 @@
         "Any section beyond the assessment itself arrives as a clearly labeled offer rather than being woven in silently — where the decision snapshot, evidence map, role-reality/opportunity analysis, risk register, questions, application plan, dossier offer, and upgrade menu are all expected parts of the assessment and need no such label",
         "Where research ran, role reality carries a market calibration line placing the role against role-family norms, labeled [generic] and with its basis named, and it is never presented as this employer's actual offer",
         "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, and it constrains the decision (an unverified employer keeps the status at conditional_go or below) rather than being noted only as a research caveat",
-        "Every count, total, fraction or universal ('every', 'all', 'only', 'the one') the response states about the evidence map — in the decision snapshot, the summary, the gap queue or the upgrade menu — agrees with the map read by its rows and its Priority column, so 'must-have' means the must_have tier and a split row counts as two rows; a confidence band the snapshot attaches to a row is that row's Confidence; and the hard-gates and severe-red-flags lines agree with the map's hard_gate_fail rows and the register's high-severity entries, 'none failed' or 'none found' passing when true",
-        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here nothing in the request answers the first two targets, so they cannot be skipped, and no hiring manager was named, so the third is n/a. The Research tier line's counts agree with the calls the harness observed, and no row reports research the response shows no trace of",
+        "Anywhere in the response outside the fit ledger — the snapshot, the summary, the gap queue, the upgrade menu — a statement about a set of evidence-map rows names the row IDs it covers. Any number, total, fraction ('N of M') or set quantifier ('every', 'all', 'each of', 'only', 'the one', 'none of', 'both', 'neither', 'the rest') over the map or a tier of it fails, even when it is accurate. The IDs named for a set are exactly the rows with that Priority and Fit — 'must-have' means the must_have tier, and a split row is two rows — and a confidence band the snapshot attaches to a row is that row's Confidence. The hard-gates line names every hard_gate row, each hard_gate_fail one plainly, and 'none failed' passes when no gate row failed and the line names the gate rows it read; the severe-red-flags line lists every high-severity register entry or says 'none found', and passes when true. Counts that are not about map rows — the candidate's own figures, the Research tier line, items in a list the response itself shows — are out of scope",
+        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here nothing in the request answers the first two targets, so they cannot be skipped, and no hiring manager was named, so the third is n/a. Every yes row names the query or page it rests on, and the Research tier line's counts agree with the calls the harness observed",
         "No clause asserting something about Harborlight Health specifically — its team, stage, product, pay or practices — rests on a [generic] label: a [generic] row or cell states a role-family pattern, and any clause in it naming this employer or this candidate carries its own [grounded] or [inferred] basis. The standing failed-attribution risk entry, which labels a pattern and says it is not a claim about this company, is correct and does not fail this"
-      ],
-      "enumerate": [
-        14
       ],
       "research": {
         "modes": [
@@ -94,9 +91,8 @@
             "n": 3,
             "name": "hiring manager's public footprint",
             "terms": [
-              "hiring",
-              "manager",
-              "linkedin"
+              "hiring manager",
+              "linkedin.com/in"
             ],
             "accept": [
               "n/a"
@@ -150,7 +146,7 @@
         "If the response classifies signals, it uses the conventions classes (unknown, risk signal, red flag, positive signal) and severities (low/medium/high) rather than invented synonyms",
         "Where a role-family sweep ran, the stated compensation is calibrated against its norms with the band labeled [generic] and its basis named, feeding the seniority-compensation mismatch finding rather than replacing it; where the sweep could not run, the response says so and rests the mismatch on the posting's own terms rather than producing a market band from memory",
         "Any text drafted for Tomás to send — an outreach note, a message to the recruiter, interview framing — traces clause by clause to his own sentences, including logical form: he stated two hard constraints conjunctively ($150k floor AND remote-only), so nothing may soften that into a disjunction ('if either is negotiable') or into a preference. Where his wording is ambiguous, the reading that claims less is the one used, and any self-certification that the text traces to his sentences is accurate rather than asserted",
-        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here nothing in the request answers the first two targets, so they cannot be skipped — the hard gates fix the decision, but not the market calibration line or the band comparison the sweep feeds, so a sweep row skipped on the strength of the gates fails — and no hiring manager was named, so the third is n/a. The Research tier line's counts agree with the calls the harness observed, and no row reports research the response shows no trace of",
+        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here nothing in the request answers the first two targets, so they cannot be skipped — the hard gates fix the decision, but not the market calibration line or the band comparison the sweep feeds, so a sweep row skipped on the strength of the gates fails — and no hiring manager was named, so the third is n/a. Every yes row names the query or page it rests on, and the Research tier line's counts agree with the calls the harness observed",
         "No clause asserting something about Novaline specifically — its team, stage, product, pay or practices — rests on a [generic] label: a [generic] row or cell states a role-family pattern, and any clause in it naming this employer or this candidate carries its own [grounded] or [inferred] basis. The standing failed-attribution risk entry, which labels a pattern and says it is not a claim about this company, is correct and does not fail this"
       ],
       "research": {
@@ -218,9 +214,8 @@
             "n": 3,
             "name": "hiring manager's public footprint",
             "terms": [
-              "hiring",
-              "manager",
-              "linkedin"
+              "hiring manager",
+              "linkedin.com/in"
             ],
             "accept": [
               "n/a"
@@ -234,22 +229,22 @@
     },
     {
       "id": 4,
-      "prompt": "Should I go for this one? THE JD: 'Senior Pricing Analyst — Brindlemoor (insurtech). Own pricing analytics for our pet-insurance product: build and monitor rating models, design and read price tests, and turn the results into recommendations for underwriting and product. Requirements: 4+ years pricing or actuarial analytics; strong SQL and Python; GLM experience; experience presenting to underwriting or actuarial leads; insurance experience a plus. Hybrid working.' The hiring manager is Odile Varga, Director of Pricing. MY BACKGROUND (call me Renata): 5 years pricing analytics at a UK motor insurer, the last 2 as senior analyst. Built and maintained the GLM rating model for our young-driver book. Ran 14 price tests last year with the underwriting team. SQL and Python daily. I present the quarterly pricing review to the head of underwriting. Never worked on pet insurance, and I've never managed anyone.",
-      "expected_output": "A full first-pass underwriting whose research matches what the room allowed. With search available: the employer's own pages establish its stage and size, the careers page's office requirement surfaces as a contradiction with the JD's 'Hybrid working', the pay survey's figure grounds a [generic] market calibration line, the hiring manager's public profile feeds the scope read or positioning, and every target reads yes. With no search available: every target reads unavailable, none of those facts appear, the failed-attribution entry stands, and the upgrade menu offers the research.",
+      "prompt": "Should I go for this one? THE JD: 'Senior Pricing Analyst — Brindlemoor (insurtech). Own pricing analytics for our pet-insurance product: build and monitor rating models, design and read price tests, and turn the results into recommendations for underwriting and product. Requirements: 4+ years pricing or actuarial analytics; strong SQL and Python; GLM experience; experience presenting to underwriting or actuarial leads; insurance experience a plus. Fully remote (UK).' The hiring manager is Odile Varga, Director of Pricing. MY BACKGROUND (call me Renata): 5 years pricing analytics at a UK motor insurer, the last 2 as senior analyst. Built and maintained the GLM rating model for our young-driver book. Ran 14 price tests last year with the underwriting team. SQL and Python daily. I present the quarterly pricing review to the head of underwriting. Never worked on pet insurance, and I've never managed anyone.",
+      "expected_output": "A full first-pass underwriting whose research matches what the room allowed. With search available: the employer's own pages establish its stage and size, the careers page's office requirement surfaces as a contradiction with the JD's 'Fully remote (UK)', the pay survey's figure grounds a [generic] market calibration line, the hiring manager's public profile feeds the scope read or positioning, and every target reads yes. With no search available: every target reads unavailable, none of those facts appear, the failed-attribution entry stands, and the upgrade menu offers the research.",
       "files": [],
       "expectations": [
         "The first response contains a full first-pass assessment (a decision snapshot, a requirement-by-requirement evidence map, and opportunity-side analysis) in the same message as any questions — it does not open with questions alone or a consent request alone",
-        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here no input answers any target and the hiring manager was named, so no row is skipped or n/a. The Research tier line's counts agree with the calls the harness observed, and no row reports research the response shows no trace of",
+        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here no input answers any target and the hiring manager was named, so no row is skipped or n/a. Every yes row names the query or page it rests on, and the Research tier line's counts agree with the calls the harness observed",
         "Role reality states Brindlemoor's stage and size from the company's own pages where they were read, naming the source; where they could not be read it says the employer is not established, and nothing about Brindlemoor's size, stage, location or funding is asserted from memory",
-        "Where the careers page was read, its Leeds-office requirement against the JD's 'Hybrid working' surfaces as a contradiction and as a risk-register entry with a verification question; where it was not read, no office requirement is asserted",
+        "Where the careers page was read, its Leeds-office requirement, four days a week, against the JD's 'Fully remote (UK)' surfaces as a contradiction in role reality and as a risk-register entry with a verification question; where it was not read, no office requirement is asserted",
         "Where the role-family sweep returned the pay survey, the market calibration line cites its figure, labeled [generic] with the survey named as its basis, and it is never presented as Brindlemoor's own pay; where the sweep could not run, the response says so and gives no band from memory",
-        "Where Odile Varga's public profile was read, it is used only as public professional footprint — her roles and her published talk — and it feeds role reality's scope read or the application plan's positioning with its source named; where it was not read, nothing about her is asserted beyond her name and title",
+        "Where Odile Varga's public profile was read, it is used only as public professional footprint — her roles and her published talk, named by its title — and it feeds role reality's scope read or the application plan's positioning with its source named; where it was not read, nothing about her is asserted beyond her name and title",
         "Where the company's own pages could not be read, the risk register carries the standing failed-attribution entry with a verification question and the decision stays at conditional_go or below; where they were read, no such entry is needed",
         "The evidence map covers each material stated requirement (4+ years pricing analytics, SQL and Python, GLM experience, presenting to underwriting or actuarial leads, insurance experience) with a fit status from direct/adjacent/unclear/absent/hard_gate_fail and a gap type from none/presentation/discovery/transferability/capability/hard_gate",
-        "Every count, total, fraction or universal ('every', 'all', 'only', 'the one') the response states about the evidence map — in the decision snapshot, the summary, the gap queue or the upgrade menu — agrees with the map read by its rows and its Priority column, so 'must-have' means the must_have tier and a split row counts as two rows; a confidence band the snapshot attaches to a row is that row's Confidence; and the hard-gates and severe-red-flags lines agree with the map's hard_gate_fail rows and the register's high-severity entries, 'none failed' or 'none found' passing when true",
+        "Anywhere in the response outside the fit ledger — the snapshot, the summary, the gap queue, the upgrade menu — a statement about a set of evidence-map rows names the row IDs it covers. Any number, total, fraction ('N of M') or set quantifier ('every', 'all', 'each of', 'only', 'the one', 'none of', 'both', 'neither', 'the rest') over the map or a tier of it fails, even when it is accurate. The IDs named for a set are exactly the rows with that Priority and Fit — 'must-have' means the must_have tier, and a split row is two rows — and a confidence band the snapshot attaches to a row is that row's Confidence. The hard-gates line names every hard_gate row, each hard_gate_fail one plainly, and 'none failed' passes when no gate row failed and the line names the gate rows it read; the severe-red-flags line lists every high-severity register entry or says 'none found', and passes when true. Counts that are not about map rows — the candidate's own figures, the Research tier line, items in a list the response itself shows — are out of scope",
         "No single numeric fit score or percentage appears",
         "The response offers a tuesday-dossier.md rather than forcing one, and closes with the dossier offer, then the upgrade menu, then any questions, with nothing beneath them",
-        "No clause asserting something about Brindlemoor specifically — its team, stage, product, pay or practices — rests on a [generic] label; a [generic] row or cell states a role-family pattern, and any clause in it naming this employer or this candidate carries its own [grounded] or [inferred] basis"
+        "No clause asserting something about Brindlemoor specifically — its team, stage, product, pay or practices — rests on a [generic] label: a [generic] row or cell states a role-family pattern, and any clause in it naming this employer or this candidate carries its own [grounded] or [inferred] basis. The standing failed-attribution risk entry, which labels a pattern and says it is not a claim about this company, is correct and does not fail this"
       ],
       "research": {
         "modes": [
@@ -330,8 +325,7 @@
             "name": "hiring manager's public footprint",
             "terms": [
               "odile",
-              "varga",
-              "linkedin"
+              "varga"
             ],
             "accept": {
               "canned": [
@@ -401,18 +395,22 @@
             "title": "Odile Varga — Director of Pricing, Brindlemoor",
             "target": 3,
             "keywords": [
-              "odile",
-              "varga",
+              "director",
+              "forum",
               "linkedin",
+              "odile",
               "profile",
-              "director"
+              "speaker",
+              "talk",
+              "varga"
             ],
-            "text": "Odile Varga, Director of Pricing at Brindlemoor. Previously head of pricing analytics at Calloway Re for six years. Spoke at the 2025 Insurance Pricing Forum on monitoring rating models in small books."
+            "text": "Odile Varga, Director of Pricing at Brindlemoor. Spoke at the 2025 Insurance Pricing Forum: \"Small Books, Loud Errors\", on monitoring rating models in small books. Previously head of pricing analytics at Calloway Re for six years."
           }
         ],
         "canaries": [
           {
             "target": 1,
+            "page": "https://brindlemoor.co.uk/about",
             "text": [
               "143 employees",
               "143 staff",
@@ -423,7 +421,17 @@
             ]
           },
           {
+            "target": 1,
+            "page": "https://brindlemoor.co.uk/careers/senior-pricing-analyst",
+            "text": [
+              "four days a week",
+              "4 days a week",
+              "four office days"
+            ]
+          },
+          {
             "target": 2,
+            "page": "https://pricewell.example/2026-uk-pricing-analytics-pay-survey",
             "text": [
               "Pricewell",
               "58,400",
@@ -433,7 +441,10 @@
           },
           {
             "target": 3,
+            "page": "https://www.linkedin.example/in/odile-varga",
             "text": [
+              "Small Books, Loud Errors",
+              "Small Books Loud Errors",
               "Calloway Re"
             ]
           }
@@ -441,23 +452,20 @@
       },
       "checks": [
         "fit_ledger"
-      ],
-      "enumerate": [
-        9
       ]
     },
     {
       "id": 5,
-      "prompt": "Before I apply — is this worth it? I've done the homework already. THE JD, copied at 09:12 today from pellucidlearning.com/careers/senior-data-engineer, where the posting shows 'Accepting applications': 'Senior Data Engineer — Pellucid Learning. Build and run the pipelines behind our tutoring platform's reporting: ingestion from our app and CRM, a dbt-modelled warehouse in BigQuery, and the data contracts our analysts depend on. Requirements: 5+ years data engineering; strong SQL and Python; dbt and a cloud warehouse; orchestration with Airflow or similar; experience with data quality testing. Salary $148,000–$166,000 plus equity. Remote (US) or our Denver office.' THE COMPANY, copied at 09:10 from pellucidlearning.com/about: 'Pellucid Learning runs live online tutoring for K-12 schools in 31 US states. Founded 2016, Denver. 264 employees. Series C ($52M, February 2026).' THE MARKET, from the pay report my recruiter sent: Datawright 2026 Data Engineering Pay Report, US, n=2,310 — Senior Data Engineer at Series B–D companies: base median $151,000, interquartile range $139,000–$163,500; 'Senior' typically means 5–8 years; typical scope is ownership of one domain's pipelines with no direct reports. The posting names no hiring manager. MY BACKGROUND (call me Ines): 6 years of data engineering at a B2B payroll company. Built our dbt project on Snowflake — about 180 models. Airflow for orchestration, and I set up our Great Expectations test suite. Python and SQL daily. Never used BigQuery.",
+      "prompt": "Before I apply — is this worth it? THE JD, copied at 09:12 today from pellucidlearning.com/careers/senior-data-engineer, where the posting shows 'Accepting applications': 'Senior Data Engineer — Pellucid Learning. Build and run the pipelines behind our tutoring platform's reporting: ingestion from our app and CRM, a dbt-modelled warehouse in BigQuery, and the data contracts our analysts depend on. Requirements: 5+ years data engineering; strong SQL and Python; dbt and a cloud warehouse; orchestration with Airflow or similar; experience with data quality testing. Salary $148,000–$166,000 plus equity. Remote (US) or our Denver office.' THE COMPANY, copied at 09:10 from pellucidlearning.com/about: 'Pellucid Learning runs live online tutoring for K-12 schools in 31 US states. Founded 2016, Denver. 264 employees. Series C ($52M, February 2026).' THE MARKET, from the pay report my recruiter sent: Datawright 2026 Data Engineering Pay Report, US, n=2,310 — Senior Data Engineer at Series B–D companies: base median $151,000, interquartile range $139,000–$163,500; 'Senior' typically means 5–8 years; typical scope is ownership of one domain's pipelines with no direct reports. The posting names no hiring manager. MY BACKGROUND (call me Ines): 6 years of data engineering at a B2B payroll company. Built our dbt project on Snowflake — about 180 models. Airflow for orchestration, and I set up our Great Expectations test suite. Python and SQL daily. Never used BigQuery.",
       "expected_output": "A full first-pass underwriting built from what the candidate pasted: the company's own pages establish the employer and the live posting, the pasted pay report grounds the market calibration line against the posting's own range, and the research accounting reads skipped, skipped, n/a — each skip naming the outputs the pasted material already fixes — with no search sent, whether or not this room could search.",
       "files": [],
       "expectations": [
         "The first response contains a full first-pass assessment (a decision snapshot, a requirement-by-requirement evidence map, and opportunity-side analysis) in the same message as any questions — it does not open with questions alone or a consent request alone",
-        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here the request supplies the company's own pages and a pay report that together fix every output the first two targets feed, and names no hiring manager: the rows read skipped, skipped, n/a, each skipped row naming the outputs the pasted material already fixes, and no search or fetch is sent, whatever this room offers. The Research tier line's counts agree with the calls the harness observed, and no row reports research the response shows no trace of",
+        "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned something and unavailable if every call was refused, and never skipped or n/a; a target no call was sent for is n/a only when no name could form its query, skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved. Here the request supplies the company's own pages and a pay report that together fix every output the first two targets feed, and names no hiring manager: the rows read skipped, skipped, n/a, each skipped row naming the outputs the pasted material already fixes, and no search or fetch is sent, whatever this room offers. Every yes row names the query or page it rests on, and the Research tier line's counts agree with the calls the harness observed",
         "Role reality states Pellucid's stage, size and product from the pasted About text and treats the posting as live and matching the JD, citing the pasted pages; no failed-attribution standing entry appears, and the decision is not capped for an unverified employer",
         "The market calibration line rests on the pasted Datawright report by name, labeled as a role-family pattern rather than Pellucid's own pay, and the posting's own $148,000–$166,000 is compared against it",
-        "The evidence map covers each material stated requirement (5+ years data engineering, SQL and Python, dbt and a cloud warehouse, orchestration, data quality testing) with conventions fit statuses and gap types, and BigQuery is treated as adjacent to Snowflake with its limit named, never as direct experience",
-        "Every count, total, fraction or universal ('every', 'all', 'only', 'the one') the response states about the evidence map — in the decision snapshot, the summary, the gap queue or the upgrade menu — agrees with the map read by its rows and its Priority column, so 'must-have' means the must_have tier and a split row counts as two rows; a confidence band the snapshot attaches to a row is that row's Confidence; and the hard-gates and severe-red-flags lines agree with the map's hard_gate_fail rows and the register's high-severity entries, 'none failed' or 'none found' passing when true",
+        "The evidence map covers each material stated requirement (5+ years data engineering, SQL and Python, dbt and a cloud warehouse, orchestration, data quality testing) with conventions fit statuses and gap types. The cloud-warehouse row may be direct on the Snowflake evidence, or BigQuery may be carried as an implied requirement at adjacent; either way the response says somewhere that the team's warehouse is BigQuery, that Ines has never used it, and that Snowflake is the transferable basis, with the limit or ramp stated, and BigQuery is never presented as direct experience",
+        "Anywhere in the response outside the fit ledger — the snapshot, the summary, the gap queue, the upgrade menu — a statement about a set of evidence-map rows names the row IDs it covers. Any number, total, fraction ('N of M') or set quantifier ('every', 'all', 'each of', 'only', 'the one', 'none of', 'both', 'neither', 'the rest') over the map or a tier of it fails, even when it is accurate. The IDs named for a set are exactly the rows with that Priority and Fit — 'must-have' means the must_have tier, and a split row is two rows — and a confidence band the snapshot attaches to a row is that row's Confidence. The hard-gates line names every hard_gate row, each hard_gate_fail one plainly, and 'none failed' passes when no gate row failed and the line names the gate rows it read; the severe-red-flags line lists every high-severity register entry or says 'none found', and passes when true. Counts that are not about map rows — the candidate's own figures, the Research tier line, items in a list the response itself shows — are out of scope",
         "No single numeric fit score or percentage appears",
         "The response offers a tuesday-dossier.md rather than forcing one, and closes with the dossier offer, then the upgrade menu, then any questions, with nothing beneath them",
         "Nothing proposed for Ines to say, write or send claims BigQuery experience or widens 'about 180 models' beyond what she said, and any proposed language is marked as pending her approval"
@@ -531,9 +539,8 @@
             "n": 3,
             "name": "hiring manager's public footprint",
             "terms": [
-              "hiring",
-              "manager",
-              "linkedin"
+              "hiring manager",
+              "linkedin.com/in"
             ],
             "accept": [
               "n/a"
@@ -594,9 +601,6 @@
       },
       "checks": [
         "fit_ledger"
-      ],
-      "enumerate": [
-        6
       ]
     }
   ]

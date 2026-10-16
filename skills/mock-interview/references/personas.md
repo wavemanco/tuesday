@@ -40,6 +40,8 @@ Apply only public professional signals — profile language, career pattern, pub
 
 ## The seven personas
 
+A counter-strategy is a rehearsal method, not a claim. Wherever a pack applies one to this candidate — a named story, an arc, a walkthrough, a held position — the quote-or-slot rule in `references/question-rubric.md` applies to it like any other cell.
+
 ### 1. The Data-Driven Prober
 - **Looks like:** reads the CV line by line; asks for inputs, denominators, validation; follow-ups go two levels deeper than the answer.
 - **Actually scoring:** whether headline numbers survive scrutiny; whether the candidate knows their own assumptions.
@@ -55,7 +57,7 @@ Apply only public professional signals — profile language, career pattern, pub
 ### 3. The Values / Behavioral Interviewer
 - **Looks like:** scenario probes mapped to the company's published values or principles; expects STAR-shaped stories; often from outside the function.
 - **Actually scoring:** whether past behavior demonstrates the specific published values — not generic virtue.
-- **Counter-strategy:** pre-map one story per published value; "we" for context, "I" for contribution; every harmony story ends with the hard truth actually landing.
+- **Counter-strategy:** map a story to each published value where one of the candidate's quoted sentences carries one, and a selection scaffold where none does; "we" for context, "I" for contribution; choose harmony stories in which the hard truth actually landed, and where the material shows none, say so rather than supplying the ending.
 - **Stems:** "Tell me about a time you delivered an unpopular truth to leadership." / "When did you put a customer ahead of an internal metric?"
 
 ### 4. The Case / Strategist

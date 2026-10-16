@@ -43,7 +43,7 @@ The bare minimum also works — "Help me prep, final round at Stripe for Product
 | Tier | Inputs | If missing |
 |---|---|---|
 | Required | Company + role title | The skill can't run |
-| Sharpens | JD text, your CV | Representative-JD research; self-assessment fit worksheet |
+| Sharpens | JD text, your CV or background | Representative-JD research; a self-assessment fit worksheet when you give no background at all |
 | Optional | Interviewer profile, round schedule, a research note, a working-style assessment | Sections drop or genericize — never fabricate |
 | Optional, high-leverage | A `tuesday-dossier.md` from job-underwriter | The pack is built from your raw inputs as always; without it the likeliest objection is inferred rather than evidence-derived |
 

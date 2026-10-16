@@ -1207,6 +1207,85 @@ def keep_ledger_split_rows(root: Path) -> None:
     blocks[-1] = json.dumps(data, indent=2, ensure_ascii=False) + "\n```" + rest
     path.write_text("```json\n".join(blocks))
 
+
+def break_ledger_count_beside(root: Path) -> str:
+    """The v0.1 sentence put back next to an intact ledger, not instead of it."""
+    swap_once(root, DOSSIER, "**Fit ledger.**\n\n- `hard_gate`",
+              "Five of seven material requirements are `direct`.\n\n**Fit ledger.**\n\n- `hard_gate`", "break_ledger_count_beside")
+    return "the snapshot counts"
+
+
+def break_ledger_sentence_only(root: Path) -> str:
+    """The first probe runs' shape: "the only rows below `direct`", under a ledger listing more."""
+    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
+              "R4 is the only row below `direct` that matters,", "break_ledger_sentence_only")
+    return "the sentence after the fit ledger says"
+
+
+def break_ledger_summary_universal(root: Path) -> str:
+    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+              '"summary": "Every must_have requirement is direct but R4;', "break_ledger_summary_universal")
+    return "decision.summary counts the map"
+
+
+def break_ledger_tier_twice(root: Path) -> str:
+    swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Ledger / reconciliation systems)\n",
+              "- `preferred` — absent: R7 (Ledger / reconciliation systems)\n- `preferred` — absent: R7 (Ledger)\n",
+              "break_ledger_tier_twice")
+    return "has more than one ledger line"
+
+
+def break_ledger_gate_line(root: Path) -> str:
+    swap_once(root, DOSSIER, "none failed (R1 `direct`, R9 `direct`)", "none failed (R1 `direct`)", "break_ledger_gate_line")
+    return "the hard-gates line names"
+
+
+def break_ledger_bare_severity(root: Path) -> str:
+    """A severity written like a band is read as one — the rule says write its full token."""
+    swap_once(root, DOSSIER, "- **Severe red flags:** none found.", "- **Severe red flags:** RR2 (`high`).",
+              "break_ledger_bare_severity")
+    return "without attaching it to one row"
+
+
+def break_ledger_tally_budget(root: Path) -> str:
+    swap_once(root, DOSSIER, "Research tier: L1 — searches 4 of 5,", "Research tier: L1 — searches 4 of 6,",
+              "break_ledger_tally_budget")
+    return "SKILL.md's L1 budget is 5/2"
+
+
+def break_ledger_tally_twice(root: Path) -> str:
+    swap_once(root, DOSSIER, "Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1\n",
+              "Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1\nResearch tier: L1 — searches 4 of 5, fetches 2 of 2\n",
+              "break_ledger_tally_twice")
+    return "2 Research tier lines"
+
+
+def break_ledger_stopword_name(root: Path) -> str:
+    swap_once(root, DOSSIER, "unclear: R5 (Mentoring or leading PMs)", "unclear: R5 (the)", "break_ledger_stopword_name")
+    return "in words its Requirement cell does not use"
+
+
+def keep_ledger_severity_token(root: Path) -> None:
+    """A severity in its full token beside a register ID is not a confidence band."""
+    swap_once(root, DOSSIER, "the compensation band is unstated against the candidate's £95k floor (RR2).",
+              "the compensation band is unstated against the candidate's £95k floor (RR2 (`severity: medium`)).",
+              "keep_ledger_severity_token")
+
+
+def break_answer_key(root: Path) -> str:
+    """The rubric's old Provenance example: a fixture's own sentence, installed beside the skill."""
+    swap_once(root, "skills/mock-interview/references/question-rubric.md",
+              '`[grounded] "Ran the small-grants round for three years"`',
+              '`[grounded] "ran the site\'s peak-season surge plan two years running"`', "break_answer_key")
+    return "quoted from this skill's own fixtures"
+
+
+def keep_answer_key_other_skill(root: Path) -> None:
+    """Another skill's fixture is not this skill's answer key: a room installs one skill."""
+    swap_once(root, "skills/job-underwriter/references/risk-and-decision.md",
+              '("we\'re a family, and families pitch in after hours")',
+              '("ran the site\'s peak-season surge plan two years running")', "keep_answer_key_other_skill")
+
 PASSES = [
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
     ("sections", "a bare section written \"of this spec\" beside another file's name", keep_self_reference_of_this_spec),
@@ -1237,6 +1316,8 @@ PASSES = [
     ("parameters", "a hard wrap before bold", keep_wrap_before_bold),
     ("readmes", "\"cases\" of something other than fixtures", keep_cases_of_something_else),
     ("fit-ledger", "a requirement split into two rows", keep_ledger_split_rows),
+    ("fit-ledger", "a severity in its full token beside a register ID", keep_ledger_severity_token),
+    ("answer-keys", "a quote from another skill's fixture", keep_answer_key_other_skill),
 ]
 
 
@@ -1436,6 +1517,16 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "a count back in decision.summary", break_ledger_summary_count),
     ("fit-ledger", "a name that is not the row's requirement", break_ledger_name),
     ("fit-ledger", "a band the map does not carry", break_ledger_band),
+    ("fit-ledger", "a count beside an intact ledger", break_ledger_count_beside),
+    ("fit-ledger", "\"the only row below\" in the sentence after the ledger", break_ledger_sentence_only),
+    ("fit-ledger", "a universal over a tier in decision.summary", break_ledger_summary_universal),
+    ("fit-ledger", "a tier with two ledger lines", break_ledger_tier_twice),
+    ("fit-ledger", "a hard-gates line missing a gate row", break_ledger_gate_line),
+    ("fit-ledger", "a severity written like a band", break_ledger_bare_severity),
+    ("fit-ledger", "a tally line with the wrong budget", break_ledger_tally_budget),
+    ("fit-ledger", "a second tally line", break_ledger_tally_twice),
+    ("fit-ledger", "a name made of a stopword", break_ledger_stopword_name),
+    ("answer-keys", "a fixture's own sentence as a worked example", break_answer_key),
     ("citations", "an entry's words with a different figure", break_misquoted_figure),
     ("citations", "a quotation lifted from after its source's hedge", break_hedge_dropped_from_quote),
     ("citations", "a paraphrase in curly single quotes", break_single_quoted_paraphrase),

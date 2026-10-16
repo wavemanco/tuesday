@@ -1614,6 +1614,30 @@ def ledger_name_words(text: str) -> set[str]:
     return {w.rstrip("s") for w in re.findall(r"[a-z0-9+]+", text.lower()) if w not in stop}
 
 
+FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b|\b(?:\d+|" + "|".join(COUNT_WORDS) + r")\s+out\s+of\b", re.I)
+TIER_WORDS = r"(?:hard[_ -]?gates?|must[_ -]?haves?|important|preferred|requirements?|rows?|gates?)"
+MAP_UNIVERSAL = re.compile(r"\b(?:every|all|each of|only|none of|both|neither|the one|the only|the rest)\b(?:\W+\w+){0,3}?\W+" + TIER_WORDS + r"\b", re.I)
+LEDGER_SENTENCE_UNIVERSAL = re.compile(r"\b(?:every|all|each of|only|none|both|neither|the one|the rest|no other|any other)\b", re.I)
+
+
+def ledger_sentence(snapshot: str) -> str:
+    """The paragraph directly after the ledger's lines, unless it is the next slot."""
+    lines = snapshot.splitlines()
+    try:
+        i = next(k for k, line in enumerate(lines) if line.strip().startswith("**Fit ledger"))
+    except StopIteration:
+        return ""
+    i += 1
+    while i < len(lines) and (not lines[i].strip() or lines[i].startswith("- ")):
+        i += 1
+    para = []
+    while i < len(lines) and lines[i].strip():
+        para.append(lines[i].strip())
+        i += 1
+    joined = " ".join(para)
+    return "" if joined.startswith("**") else joined
+
+
 def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | None]], list[str]]:
     """(priority, fit, id, name) per item of the snapshot's ledger, and what failed to parse."""
     lines = snapshot.splitlines()
@@ -1625,6 +1649,7 @@ def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | Non
     body = lines[start + 1:]
     while body and not body[0].strip():
         body = body[1:]
+    tiers_seen: set[str] = set()
     for line in body:
         if not line.startswith("- "):
             break
@@ -1632,11 +1657,18 @@ def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | Non
         if not m:
             problems.append(f"unparseable ledger line: {line.strip()!r}")
             continue
+        if m.group(1) in tiers_seen:
+            problems.append(f"tier {m.group(1)} has more than one ledger line")
+        tiers_seen.add(m.group(1))
+        fits_seen: set[str] = set()
         for group in m.group(2).split(" · "):
             g = LEDGER_GROUP.match(group.strip())
             if not g:
                 problems.append(f"unparseable group {group.strip()!r}")
                 continue
+            if g.group(1) in fits_seen:
+                problems.append(f"fit {g.group(1)} appears twice under {m.group(1)}")
+            fits_seen.add(g.group(1))
             for item in g.group(2).split(", "):
                 i = LEDGER_ITEM.match(item.strip())
                 if not i:
@@ -1715,7 +1747,7 @@ def check_fit_ledger() -> None:
         if fit != "direct":
             if not name:
                 fail(group, f"{WORKED_DOSSIER}: fit ledger's {rid} is below direct and carries no name")
-            elif not ledger_name_words(name) <= ledger_name_words(row["requirement"]):
+            elif not ledger_name_words(name) or not ledger_name_words(name) <= ledger_name_words(row["requirement"]):
                 fail(group, f"{WORKED_DOSSIER}: fit ledger names {rid} \"{name}\" in words its Requirement cell does not use")
     for rid, n in seen.items():
         if n > 1:
@@ -1727,7 +1759,7 @@ def check_fit_ledger() -> None:
 
     for m in re.finditer(r"`(" + "|".join(BANDS) + r")`", snap.group(1)):
         before = snap.group(1)[:m.start()]
-        attached = re.search(r"\b(" + ROW_ID + r") \($", before)
+        attached = re.search(r"(?<![A-Za-z])(" + ROW_ID + r") \($", before)
         if not attached:
             fail(group, f"{WORKED_DOSSIER}: snapshot states `{m.group(1)}` without attaching it to one row")
         elif table.get(attached.group(1), {}).get("confidence") != m.group(1):
@@ -1738,11 +1770,99 @@ def check_fit_ledger() -> None:
         summary = json.loads(blocks[-1])["sections"]["decision"]["summary"]
     except (KeyError, TypeError, ValueError):
         summary = ""
-    counted = COUNTED.search(summary)
+    counted = COUNTED.search(summary) or FRACTION.search(summary) or MAP_UNIVERSAL.search(summary)
     if counted:
         fail(group, f"{WORKED_DOSSIER}: decision.summary counts the map (\"{counted.group(0)}\") instead of leaving it to evidence_map")
+
+    # The sentence after the ledger is where the count came back in the first runs
+    # written to this shape; the rest of the snapshot may say "none failed" and
+    # "none found", which the slots require, so only count forms are read there.
+    after = ledger_sentence(snap.group(1))
+    hit = after and (COUNTED.search(after) or FRACTION.search(after) or LEDGER_SENTENCE_UNIVERSAL.search(after))
+    if hit:
+        fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger says \"{hit.group(0)}\" about the map")
+    prose = "\n".join(line for line in snap.group(1).splitlines() if not line.startswith("- `"))
+    hit = COUNTED.search(prose) or FRACTION.search(prose)
+    if hit:
+        fail(group, f"{WORKED_DOSSIER}: the snapshot counts (\"{hit.group(0)}\")")
+
+    gates = re.search(r"^- \*\*Hard gates:\*\*(.*)$", snap.group(1), re.MULTILINE)
+    gate_rows = {rid for rid, row in table.items() if row["priority"] == "hard_gate"}
+    if not gates:
+        fail(group, f"{WORKED_DOSSIER}: the snapshot has no **Hard gates:** line")
+    else:
+        named = set(re.findall(r"(?<![A-Za-z])(" + ROW_ID + r")\b", gates.group(1)))
+        if named != gate_rows:
+            fail(group, f"{WORKED_DOSSIER}: the hard-gates line names {sorted(named)}; the map's hard_gate rows are {sorted(gate_rows)}")
+        for rid, fit in re.findall(r"(?<![A-Za-z])(" + ROW_ID + r") `([a-z_]+)`", gates.group(1)):
+            if table.get(rid, {}).get("fit") != fit:
+                fail(group, f"{WORKED_DOSSIER}: the hard-gates line gives {rid} `{fit}`; the map says {table.get(rid, {}).get('fit')}")
+        failed = {rid for rid in gate_rows if table[rid]["fit"] == "hard_gate_fail"}
+        if not failed and "none failed" not in gates.group(1):
+            fail(group, f"{WORKED_DOSSIER}: no gate row failed, and the hard-gates line does not say \"none failed\"")
+
+    budget = re.search(r"at most (\d+) targeted searches and (\d+) page fetches",
+                       (REPO / "skills/job-underwriter/SKILL.md").read_text(encoding="utf-8"))
+    tallies = re.findall(r"^Research tier: (L\d) — (.*)$", text, re.MULTILINE)
+    if len(tallies) != 1:
+        fail(group, f"{WORKED_DOSSIER}: {len(tallies)} Research tier lines; the rule is exactly one")
+    elif tallies[0][0] == "L1":
+        m = re.match(r"searches (\d+) of (\d+), fetches (\d+) of (\d+)(?:; user links read \d+)?$", tallies[0][1])
+        if not m:
+            fail(group, f"{WORKED_DOSSIER}: the Research tier line does not read in the form SKILL.md gives: {tallies[0][1]!r}")
+        elif budget and (m.group(2), m.group(4)) != budget.groups():
+            fail(group, f"{WORKED_DOSSIER}: the Research tier line's budget is {m.group(2)}/{m.group(4)}; SKILL.md's L1 budget is {budget.group(1)}/{budget.group(2)}")
+        elif int(m.group(1)) > int(m.group(2)) or int(m.group(3)) > int(m.group(4)):
+            fail(group, f"{WORKED_DOSSIER}: the Research tier line spends more than its budget")
     if not any(f.startswith(f"[{group}]") for f in failures):
         ok(group, f"worked dossier: fit ledger matches the evidence map and the envelope, {len(items)} rows")
+
+
+def check_answer_keys() -> None:
+    """No skill's installed text quotes one of its own fixtures.
+
+    A clean room installs a skill with its references, so a worked example built
+    from a fixture's material is an answer key sitting beside the model while the
+    fixture is graded. It happened three times without anyone choosing it:
+    resume-tailor's worked ledger and prohibited-claims example used the very
+    candidate one of its fixtures is built on; the rubric's Provenance example was
+    a mock-interview fixture's own sentence; and job-underwriter's red-flag list
+    quoted a fixture's posting. Each was written as an illustration and read as one.
+    So any quoted span of four words or more in a skill's SKILL.md body or
+    references that appears in that skill's own eval prompts fails. Another skill's
+    fixtures are not read, because a room never installs two skills, and the
+    frontmatter is not, because routing is measured on its own.
+    """
+    group = "answer-keys"
+    checked = 0
+
+    def norm(s: str) -> str:
+        s = s.replace("“", '"').replace("”", '"').replace("’", "'").replace("‘", "'")
+        return re.sub(r"\s+", " ", s.lower()).strip()
+
+    for skill in skills():
+        cases = load_evals(skill / "evals" / "evals.json") or []
+        prompts = [norm(c.get("prompt", "")) for c in cases]
+        files = [skill / "SKILL.md"] + sorted((skill / "references").glob("*.md"))
+        for path in files:
+            if path.name == "citations.md":
+                continue
+            text = path.read_text(encoding="utf-8").replace("“", '"').replace("”", '"')
+            if path.name == "SKILL.md":
+                text = re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S)
+            for m in re.finditer(r'"([^"\n]{12,})"', text):
+                span = norm(m.group(1)).strip(" .,;:")
+                if " " not in span or len(re.findall(r"[a-z0-9]+", span)) < 4:
+                    continue
+                checked += 1
+                if any(span in prompt for prompt in prompts):
+                    line = text[:m.start()].count("\n") + 1
+                    fail(group, f"{skill.name}/{path.relative_to(skill)}:{line}: \"{span[:70]}\" is quoted from "
+                                f"this skill's own fixtures — a worked example the clean room installs as an answer key")
+    if checked == 0:
+        fail(group, "no quoted spans read — the check would pass vacuously")
+    elif not any(f.startswith(f"[{group}]") for f in failures):
+        ok(group, f"{checked} quoted spans in installed skill text, none from the skill's own fixtures")
 
 
 def check_ledger() -> None:
@@ -1803,6 +1923,7 @@ GROUPS = {
     "counts": check_counts,
     "readmes": check_readmes,
     "fit-ledger": check_fit_ledger,
+    "answer-keys": check_answer_keys,
     "ledger": check_ledger,
     "parameters": check_parameters,
     "package": check_package,
