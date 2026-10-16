@@ -71,21 +71,30 @@ on two runs of three is a *fail*, because that is what a user meets.
 `run_fixtures.py` runs each skill's own `evals/evals.json` fixtures in a project
 that contains only that skill — no repository, no spec, no conversation about
 what the skill was meant to do — and grades the responses with graders that see
-only the response and the expectations.
+only the response, the expectations, and the harness's own record of what
+research the run did.
 
 ```bash
-python evals/run_fixtures.py --out /tmp/clean-room
+python evals/run_fixtures.py --out /tmp/clean-room --model claude-sonnet-5
 python evals/run_fixtures.py --skill job-underwriter --eval 3 --out /tmp/cr
 python evals/run_fixtures.py --out /tmp/cr --retry-runs 0    # one run, no retries
-python evals/run_fixtures.py --out /tmp/cr --skip-execute    # re-grade, no re-run
+python evals/run_fixtures.py --out /tmp/cr --skip-execute    # grade saved, ungraded runs
+python evals/run_fixtures.py --regrade-from /tmp/cr --out /tmp/cr2 --expectation 14
+python evals/run_fixtures.py --skill job-underwriter --cases probe.json --out /tmp/p
 ```
 
 **Runs are adaptive, and a failure is classified rather than counted.** Every
-fixture runs once. A fixture that fails something runs twice more, and each
-failing expectation is reported as `deterministic` (failed every run) or
-`intermittent` (did not). An expectation fails a run if *either* grader fails
-it — the dissenting grader has found every defect worth fixing in this suite so
-far, and requiring both would discard exactly that.
+fixture runs once. A fixture that fails something — a grader verdict or a
+deterministic check — runs twice more, and each failure is reported as
+`deterministic` (failed every valid run), `intermittent` (at least one fully
+graded run passed it) or `unresolved`. An expectation fails a run if *either*
+grader fails it — the dissenting grader has found every defect worth fixing in
+this suite so far, and requiring both would discard exactly that. It passes a
+run only when *every* grader returned a valid PASS. A run where one grader
+returned nothing for it is partially graded, and an expectation resting on a
+partial run is unresolved, never clean: the old summary used every run as its
+denominator and counted only explicit failures, so a grader that skipped an
+expectation turned a deterministic failure into an intermittent one.
 
 The distinction is the point. One fixture here has scored 12/12, 13/13, 13/13
 and 9/13 on the same skill; a single run cannot tell that from a defect, and
@@ -118,7 +127,8 @@ rather than the skills:
 - **A grader needs to be told what does not count as a failure.** The first
   grader failed conditional expectations whose condition never occurred ("where
   research ran…", in a run with no web access), and once wrote FAIL above a
-  sentence reasoning its way to PASS. Those rules are now in the grader prompt.
+  sentence reasoning its way to PASS. Those rules are now in the grader prompt,
+  which asks for the reason before the verdict so the verdict has to follow it.
 
 A third lesson, this one about the harness rather than the evals: **grade the
 artifact, not the cover note.** mock-interview delivers by saving its pack as a
@@ -133,6 +143,151 @@ the scratchpad a nested `claude -p` is handed outside its working directory.
 All three are defects that only appear outside the room where the eval was
 written, which is the whole argument for running it there.
 
+### Rooms are isolated and pinned
+
+"Only that skill installed" was not true until the rooms were checked. A default
+`claude -p` loads the host's own skills — 46 on the machine these sets ran on,
+one of them a host skill named mock-interview — and the old runner counted any
+Skill call as a fire. Every historical room turned out to have fired the
+installed skill, so no past number is contaminated, but nothing would have
+noticed the first one that did not. Rooms now run with `--setting-sources
+project`, which leaves no competing skill; a fire counts only when the Skill
+call names the installed skill (another skill firing is `wrong_skill`); and the
+stream's init event — CLI version, model, tools, MCP servers, loaded skills and
+any that share the installed skill's name — is saved in the run's meta.json.
+
+`--model` pins the rooms. The host's default model changed between measured sets,
+and an unpinned comparison measures that change along with whatever else moved.
+The init event records the model that actually ran either way.
+
+A run that does not fire the installed skill is re-run with the skill named, in a
+**new room**. Reusing the room credited the first attempt's files and searches to
+the response being graded. Both attempts are recorded in meta.json; only the
+graded one's files, research and checks count. A run that never fires the
+installed skill is harness-invalid: it is not this skill's output.
+
+### Research rooms: denied and canned
+
+Every research expectation in this suite used to be graded from rooms where
+search was present and refused, so `unavailable` was the only label a run could
+earn truthfully and `yes` and `skipped` were never measured at all. A fixture now
+declares its research modes in an optional `research` block — the modes, the
+tier's budget, each declared target with the query terms that aim a call at it
+and the labels accepted for it per mode, the entity tokens that never score, and,
+for canned rooms, the pages and the canaries planted in them. A fixture without
+one runs denied, as every fixture always has.
+
+- **denied** is the historical condition, now pinned: `--setting-sources project
+  --strict-mcp-config`, with WebSearch and WebFetch present and refused. Never
+  `--disallowedTools` here — refused, not absent, is what the historical data
+  measured. A search that returns anything, or any MCP server in the room, makes
+  the run harness-invalid as a mode mismatch, because a user setting could
+  otherwise turn a denied room live without a trace.
+- **canned** serves the fixture's own pages through `research_server.py`, a
+  stdlib MCP server with deterministic search and fetch, and removes the built-in
+  web tools so the only search the skill can reach is the fixture's. Pages score
+  on their own keywords with the company's name removed, so the name alone
+  surfaces nothing and what a call returned says what it was aimed at; the
+  prototype scored on page text, and a run that searched only the company's name
+  "found" its interview process. A miss is an ordinary answer, never "failed",
+  which a run could fairly have read as a refusal.
+
+The server's corpus, its config and its call log live under `<out>/research/`, a
+set per invocation, never in the room or its scratchpad: anything there is
+collected as a file the response produced and graded as research the skill did.
+The server writes only to the log it is given. A canned room is harness-invalid
+when the server is missing or not connected, its tools are not offered, the
+built-in web tools are, its log has no initialize line, or it answered with an
+error. A canned room that connected and offered search but saw no call is a
+**valid** room — not searching is something the skill did, and the checks judge
+it.
+
+### What the graders see, and what they run with
+
+Graders used to run as default sessions — web search, a shell, every host skill
+— able to go and check a research claim themselves, with nothing recording which
+model graded. They now run with `--tools ""`, `--strict-mcp-config`,
+`--disable-slash-commands` and `--setting-sources project`, the prompt on stdin
+and the reply read from the JSON result. `--grader-model` pins them and defaults
+to `--model`. Every grade file records the model that answered, the CLI version,
+the flags, the sha256 of each expectation it graded and the grader prompt's
+version, so a later set can be compared like with like.
+
+The grader prompt states the room's actual research mode and carries a block
+headed "What the harness observed", in one of three states: not recorded for
+this run (do not infer whether research was attempted, and do not grade research
+counts); recorded, no calls made; or the calls themselves, each with its tool,
+query or URL, and whether it returned or was refused. Graders had been failing
+true claims of refused searches because nothing told them the searches happened.
+The block is ground truth for the response's claims about its own research and
+never a source of content the response lacks.
+
+Replies put the reason before the verdict. An expectation listed in a fixture's
+`enumerate` also asks for every site it covers, before the reason, each marked
+traced, slot or untraced, and the summary prints the untraced count per run per
+grader. A reply that covers fewer expectations than it was given is recorded as
+incomplete on the grade file and re-asked once for just the gaps; whatever is
+still missing stays recorded as missing, never as a failure.
+
+### Deterministic checks
+
+Some of what graders were asked to judge has a fixed form in the skills, and a
+fixed form can be read exactly. `output_checks.py` does so and writes
+`{stem}.checks.json` beside each response:
+
+- **Accounting**, for any fixture with a `research` block: the tally line, and
+  the accounting table read by each row's leading number. Each declared target
+  needs its row, a label from the vocabulary, a label the fixture accepts in this
+  mode, a call aimed at it behind a `yes`, none behind a `skipped` or `n/a`
+  (refused calls count), and in a canned room a refusal behind an `unavailable`.
+  The tally must match the recorded attempts and the tier's budget; a canary must
+  reach a canned `yes` and never appear in a denied room. Calls aimed at no
+  target are listed, never credited.
+- **Fit ledger** (`fit_ledger`): job-underwriter's ledger must be an exact
+  projection of the evidence map — every row once, under its own tier and fit,
+  each row below `direct` with the start of its Requirement, no numeral or
+  quantifier, and a confidence band only beside the one row it belongs to.
+- **Quotes** (`quotes`): every quotation of three words or more in
+  mock-interview's verbatim evidence column and in its banks' Provenance cells
+  must appear in the request, or in a canned room's pages.
+
+Each finding is judgement or format and they are counted apart: a qualifier
+beside a status label and a `yes` with no search behind it are different defects
+with different fixes. A table that is not there is absent, one that cannot be
+read is unparseable, and neither is a pass. A check that needs the research
+record is not run on a run that has none. A check failure counts like a grader's,
+keyed `chk:<check>:<target>`, and triggers the retry pass the same way.
+
+### Exit codes
+
+- `0`: every expectation and check passed in every valid run.
+- `1`: a grader or a check failed something.
+- `3`: a harness-invalid run or an unresolved expectation exists; this wins over
+  `1`, because a set with holes in it is not yet a measurement. (Not `2`, which
+  argparse and `recurring.py` already use.)
+
+### Regrading a saved set
+
+Grades are never overwritten. `--skip-execute` grades saved runs only in an
+`--out` that holds no grades yet; to regrade a set, `--regrade-from SRC --out
+NEW` copies its responses and meta into a fresh directory and grades there.
+`--expectation N` restricts grading to the numbers named.
+
+Runs saved before the harness kept a research record have none, and graders
+would be told so. The calls still exist in each nested session's transcript under
+`~/.claude/projects/`, so `backfill_tools.py` — which `--regrade-from` runs on the
+copy first — pairs each saved run with its transcript by matching the response
+text and writes the reconstructed record, with its provenance, into the copied
+meta.json. A run with no matching transcript, or more than one, gets no record
+and says why; it is never guessed.
+
+`recurring.py` reads grade files and check files across sets. It compares a
+grader verdict only with verdicts on the identical expectation text, by hash —
+older grade files without hashes are compared by position and flagged — and it
+keeps modes and check keys apart.
+
 These evals are not run in CI: they need a model, cost real tokens, and take
 minutes. Run them in a session against any change that could plausibly move
-triggering — a description edit, a new skill, a boundary reworded.
+triggering or output — a description edit, a new skill, a boundary reworded.
+`evals/test_harness.py` does run in CI: every decline path above has a test that
+spends no model calls.
