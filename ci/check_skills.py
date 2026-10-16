@@ -2264,6 +2264,45 @@ def check_fixtures() -> None:
             # cannot fail a correct n/a: any call there fails zero_calls first.
             no_call = bool(research.get("zero_calls")) or declined is True
             targets = research.get("targets") or []
+            # The room aimed_at reads a search for the company by name in: the
+            # request and every target (output_checks.identity_search).
+            room = {"prompt": case.get("prompt", ""), "targets": targets}
+
+            def aimed(query: str, target: dict, mode: str) -> bool:
+                return output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode, room)
+
+            for target in targets:
+                names = target.get("identity")
+                if names is None:
+                    continue
+                linted += 1
+                if not isinstance(names, list) or not names or not all(isinstance(x, str) and x.strip() for x in names):
+                    fail(group, f"{label}: target {target.get('n')}'s identity is {names!r}, not a list of the "
+                                f"company's name tokens")
+                    continue
+                for name in names:
+                    if not output_checks.term_in(name, case.get("prompt", "")):
+                        fail(group, f"{label}: identity name {name!r} of target {target.get('n')} is not in the "
+                                    f"prompt — no search for the company would carry it")
+                    if any(output_checks.term_in(name, " ".join(map(str, t.get("terms") or []))) for t in targets):
+                        fail(group, f"{label}: identity name {name!r} is a target's term — every query carries the "
+                                    f"name, so every call would be aimed there")
+                if not any(any(output_checks.term_in(n, q) for n in names) for q in research.get("stray_samples") or []):
+                    fail(group, f"{label}: target {target.get('n')} declares identity and no stray_samples query "
+                                f"carries the name — nothing tests that a search by name for something else stays "
+                                f"a stray")
+            if sum(1 for t in targets if t.get("identity")) > 1:
+                fail(group, f"{label}: more than one target declares identity — a search for the company by name "
+                            f"is one target's sweep")
+            # Queries a run might send that serve no declared target: each must stay a
+            # stray in every mode, so it is shown as an off-target row.
+            for query in research.get("stray_samples") or []:
+                linted += 1
+                for mode in modes:
+                    hit = [t.get("n") for t in targets if aimed(query, t, mode)]
+                    if hit:
+                        fail(group, f"{label}: stray sample {query!r} is aimed at target(s) {hit} in a {mode} room — "
+                                    f"a call outside every target would be charged to one")
             for target in targets:
                 linted += 1
                 n = target.get("n")
@@ -2273,7 +2312,7 @@ def check_fixtures() -> None:
                     own = []
                 for query in own:
                     for mode in modes:
-                        if not output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode):
+                        if not aimed(query, target, mode):
                             fail(group, f"{label}: target {n}'s own sample {query!r} is aimed at no term of it in "
                                         f"a {mode} room — a correct call for it would be read as a call outside "
                                         f"every target")
@@ -2285,8 +2324,7 @@ def check_fixtures() -> None:
                     fail(group, f"{label}: target {n} accepts n/a or skipped and has no hunt_samples")
                 else:
                     for mode in quiet:
-                        if not any(output_checks.aimed_at(search_entry(q, research, mode), target, pages, mode)
-                                   for q in hunts):
+                        if not any(aimed(q, target, mode) for q in hunts):
                             fail(group, f"{label}: target {n}'s terms match none of its own hunt_samples in a "
                                         f"{mode} room — a hunt for it would pass as no call")
                 if no_call:
@@ -2296,9 +2334,9 @@ def check_fixtures() -> None:
                         continue
                     for query in other.get("on_target_samples") or []:
                         for mode in quiet:
-                            if not output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode):
+                            if not aimed(query, target, mode):
                                 continue
-                            if output_checks.aimed_at(search_entry(query, research, "denied"), target, pages, "denied"):
+                            if aimed(query, target, "denied"):
                                 fail(group, f"{label}: target {n} accepts n/a or skipped, and its terms match target "
                                             f"{other.get('n')}'s sample {query!r} — a correct run would fail its n/a")
                             else:

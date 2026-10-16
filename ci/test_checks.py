@@ -1744,6 +1744,36 @@ def break_hunt_samples_missing(root: Path) -> str:
     return "has no hunt_samples"
 
 
+def break_identity_absent_name(root: Path) -> str:
+    """Audit A: an identity name the prompt never uses would claim no search."""
+    mutate_case(root, JU, 4, lambda c: c["research"]["targets"][0].update(identity=["zephyrine"]))
+    return "identity name 'zephyrine' of target 1 is not in the prompt"
+
+
+def break_identity_is_term(root: Path) -> str:
+    """Audit A: the company's name as a term would aim every query at that target."""
+    mutate_case(root, JU, 4, lambda c: c["research"]["targets"][0]["terms"].append("brindlemoor"))
+    return "identity name 'brindlemoor' is a target's term"
+
+
+def break_identity_untested(root: Path) -> str:
+    mutate_case(root, MI, 5, lambda c: c["research"].update(stray_samples=["partnerships manager salary market UK"]))
+    return "declares identity and no stray_samples query carries the name"
+
+
+def break_identity_twice(root: Path) -> str:
+    mutate_case(root, MI, 7, lambda c: c["research"]["targets"][0].update(identity=["saltmarsh"]))
+    return "more than one target declares identity"
+
+
+def break_stray_sample_aimed(root: Path) -> str:
+    """Audit A/D/E: a query no target serves must stay a stray in every room."""
+    mutate_case(root, MI, 8, lambda c: c["research"]["stray_samples"].append(
+        "credit union complaints handling regulatory requirements"))
+    mutate_case(root, MI, 8, lambda c: c["research"]["targets"][4]["terms"].append("requirements"))
+    return "stray sample 'credit union complaints handling regulatory requirements' is aimed at target(s) [5]"
+
+
 def break_constraints_missing(root: Path) -> str:
     """NP-8: a fit_ledger fixture with no candidate_constraints left the run's envelope to decide."""
     mutate_case(root, JU, 1, lambda c: c.pop("candidate_constraints"))
@@ -2420,6 +2450,11 @@ CASES: list[tuple[str, str, callable]] = [
     ("fixtures", "an n/a target whose terms match none of its hunts", break_hunt_vacuous),
     ("fixtures", "an on-target sample aimed at no term of its target", break_sample_unaimed),
     ("fixtures", "an n/a target with no hunt_samples", break_hunt_samples_missing),
+    ("fixtures", "an identity name the prompt does not use", break_identity_absent_name),
+    ("fixtures", "an identity name that is also a term", break_identity_is_term),
+    ("fixtures", "an identity with no stray sample carrying the name", break_identity_untested),
+    ("fixtures", "two targets claiming the company's identity", break_identity_twice),
+    ("fixtures", "a stray sample a bare generic term aims at a target", break_stray_sample_aimed),
     ("wording", "\"returned something\" back in a grader clause", break_retired_returned_something),
     ("wording", "\"every call was refused\" without \"or errored\"", break_retired_refused_only),
     ("wording", "a label definition without \"returned a result\"", break_labels_without_result),

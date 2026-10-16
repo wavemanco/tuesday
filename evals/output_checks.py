@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import urllib.parse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
@@ -205,20 +206,37 @@ def parse_accounting(text: str) -> dict:
             "sources": [s for s, _, _ in parsed]}
 
 
+# The fixed form, read as a prefix of its line: it ends at the end of the line or at
+# a boundary — "(", ";", "." or a spaced dash — and what follows is a remark, read
+# apart (TALLY_RESTATES). A prefix that is not the form ("L1 attempted", "L0
+# (forced)", "searches 6 of 6 attempted, 0 returned") is no tally line at all.
 TALLY = re.compile(
     r"research tier\s*:\s*(l\d)\s*[-–—]\s*(?:searches\s+(\d+)\s+of\s+(\d+)\s*,\s*"
     r"fetches\s+(\d+)\s+of\s+(\d+)|(no searches))"
-    r"(?:\s*;\s*user links read\s+(\d+))?\s*\.?\s*$", re.I)
+    r"(?:\s*;\s*user links read\s*:?\s*(\d+))?"
+    r"(?=\s*(?:$|\(|;|\.|[-–—]\s))", re.I)
 TALLY_CANDIDATE = re.compile(r"research tier\s*:", re.I)
+# What a remark after the line may not do (interaction-grammar.md §4: "No other
+# sentence restates the line"; job-underwriter SKILL.md: no "attempted", no second
+# tally): say "attempted", state a count of its own — a numeral, a number word or
+# "both" (a tier's "L1" is a name, not a count) — or carry the user-links clause
+# again (a broken "; user links read" clause). A remark that gives a reason ("(all
+# refused — permission wasn't granted)", "every search was refused") states no
+# count, and the rule as written does not bar it; it is noted, not failed.
+TALLY_RESTATES = re.compile(
+    r"\battempt(?:s|ed)?\b|\buser\s+links\s+read\b|(?<![A-Za-z])\d|"
+    r"\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|both)\b", re.I)
 
 
 def parse_tally(text: str) -> dict:
     """Read the one fixed tally line: absent, unparseable or checked.
 
     The count a grader got wrong in set 3 was stated in free prose ("Searches
-    attempted: 3. Completed: 0.") with nothing fixing which calls it counted.
+    attempted: 3. Completed: 0.") with nothing fixing which calls it counted. The
+    form is read as the line's prefix, so a reason after it ("(all refused)") does
+    not hide the counts; what follows is returned as `remarks`.
     """
-    found, loose = [], []
+    found, loose, remarks = [], [], []
     for source, body in split_response(text):
         for line in body.splitlines():
             plain = line.replace("*", "").replace("`", "").strip()
@@ -228,6 +246,9 @@ def parse_tally(text: str) -> dict:
             if not match:
                 loose.append(f"{source}: {plain[:120]}")
                 continue
+            rest = plain[match.end():].strip()
+            if rest not in ("", "."):
+                remarks.append((source, rest))
             tier = match.group(1).upper()
             links = int(match.group(7)) if match.group(7) else 0
             if match.group(6):
@@ -244,6 +265,7 @@ def parse_tally(text: str) -> dict:
     tally = dict(found[0][1])
     tally["outcome"] = "checked"
     tally["disagree"] = [f"{found[0][0]} and {s}" for s, t in found[1:] if t != found[0][1]]
+    tally["remarks"] = remarks
     return tally
 
 
@@ -314,19 +336,62 @@ def user_link_reads(log: list, research: dict | None) -> tuple[dict[str, list[di
     return read, {link: es for link, es in fetched.items() if link not in read}
 
 
-def aimed_at(entry: dict, target: dict, pages: list[dict], mode: str) -> bool:
+def term_matches(term, asked: str) -> bool:
+    """A target's term: a phrase (a string), or all of a list of phrases ("all-of",
+    e.g. ["careers", "member experience lead"]) found in the asked text."""
+    if isinstance(term, list):
+        return bool(term) and all(term_in(str(t), asked) for t in term)
+    return term_in(str(term), asked)
+
+
+# Function words an identity search may carry beyond the request's own words.
+IDENTITY_STOP = {"a", "an", "the", "and", "or", "of", "for", "in", "on", "at", "to", "with", "by", "is", "are",
+                 "what", "who", "does", "do"}
+
+
+def identity_search(asked: str, target: dict, room: dict) -> bool:
+    """A search for the company itself, by name and the request's own description of
+    it ("Brindlemoor insurtech pet insurance"): the sweep of the target that declares
+    `identity`, the company's distinctive name tokens. Every query carries the name,
+    so the name alone cannot be a term; it aims here only when the query (a) carries
+    one of those names, (b) has no other content word, function words aside, that the
+    request does not use, and (c) carries no other target's term."""
+    names = [str(n).lower() for n in target.get("identity") or []]
+    if not names or not any(term_in(n, asked) for n in names):
+        return False
+    prompt = str(room.get("prompt") or "")
+    words = re.findall(r"[a-z0-9]+(?:['-][a-z0-9]+)*", asked.lower())
+    if any(w not in IDENTITY_STOP and w not in names and not term_in(w, prompt) for w in words):
+        return False
+    return not any(term_matches(term, asked) for other in room.get("targets") or []
+                   if other is not target and other.get("n") != target.get("n")
+                   for term in other.get("terms", []))
+
+
+def aimed_at(entry: dict, target: dict, pages: list[dict], mode: str, room: dict | None = None) -> bool:
     """Was this call aimed at this target?
 
     By what it asked, never by what the response says it was for: its query (or
-    URL) carries one of the target's terms, it fetched a page tagged with the
-    target, or — where the server is ours — it returned one.
+    URL, its query string decoded) carries one of the target's terms
+    (`term_matches`), it fetched a page tagged with the target, where the server is
+    ours it returned one, or it is a search for the company by name that the
+    target's `identity` claims (`identity_search`, which needs the `room`: the
+    fixture's prompt and targets).
     """
     asked = str(entry.get("query_or_url") or "")
-    if any(term_in(term, asked) for term in target.get("terms", [])):
+    if entry.get("kind") == "fetch":
+        asked = urllib.parse.unquote_plus(asked)
+    if any(term_matches(term, asked) for term in target.get("terms", [])):
         return True
     if entry.get("kind") == "fetch" and any(
-            same_url(p.get("url", ""), asked) and p.get("target") == target.get("n")
+            same_url(p.get("url", ""), str(entry.get("query_or_url") or "")) and p.get("target") == target.get("n")
             for p in pages):
+        return True
+    if target.get("identity") and room is None:
+        # Fail closed: a caller that forgot the room would silently read every
+        # identity search as aimed at no target.
+        raise ValueError(f"target {target.get('n')} declares identity; aimed_at needs the room (prompt and targets)")
+    if entry.get("kind") == "search" and room is not None and identity_search(asked, target, room):
         return True
     return mode == "canned" and target.get("n") in (entry.get("targets") or [])
 
@@ -355,7 +420,7 @@ def canary_in(spelling: str, text: str) -> bool:
 
 
 def check_accounting(response: str, research: dict, mode: str,
-                     research_log: list | None) -> dict:
+                     research_log: list | None, prompt: str | None = None) -> dict:
     """Judge the accounting against what the harness recorded. Returns findings.
 
     Attribution is per target, because a run-level check passed the failure the
@@ -391,8 +456,11 @@ def check_accounting(response: str, research: dict, mode: str,
     def describe(e: dict, width: int = 60) -> str:
         return f"{e.get('tool')} {str(e.get('query_or_url'))[:width]!r} {e.get('outcome')}"
 
-    aimed = {t["n"]: [e for e in log if aimed_at(e, t, pages, mode)] for t in targets}
-    stray = [e for e in log if not any(aimed_at(e, t, pages, mode) for t in targets)]
+    # The room a call is read in: the request (for a search for the company by name,
+    # `identity_search`) and every declared target.
+    room = {"prompt": prompt or "", "targets": targets} if prompt is not None else None
+    aimed = {t["n"]: [e for e in log if aimed_at(e, t, pages, mode, room)] for t in targets}
+    stray = [e for e in log if not any(aimed_at(e, t, pages, mode, room) for t in targets)]
     if have_log:
         for entry in stray:
             info.append(f"unattributed call: {describe(entry, 100)}")
@@ -427,7 +495,7 @@ def check_accounting(response: str, research: dict, mode: str,
             return None
         went = set()
         for e in searches_sent:
-            higher = [t["n"] for t in targets if t["n"] < n and aimed_at(e, t, pages, mode)]
+            higher = [t["n"] for t in targets if t["n"] < n and aimed_at(e, t, pages, mode, room)]
             if not higher:
                 return None
             went.update(higher)
@@ -549,6 +617,15 @@ def check_accounting(response: str, research: dict, mode: str,
         checks.append(finding("tally", "all", False, why))
     else:
         checks.append(finding("tally", "all", True, "the tally line is present and readable"))
+        for source, rest in tally.get("remarks", []):
+            restated = TALLY_RESTATES.search(rest)
+            if restated:
+                checks.append(finding("tally_remark", "all", False,
+                                      f"{source}: after the tally line, {rest[:100]!r} restates it "
+                                      f"({restated.group(0)!r}); interaction-grammar.md §4: no other sentence "
+                                      f"restates the line", "format"))
+            else:
+                info.append(f"{source}: a remark after the tally line, restating nothing: {rest[:100]!r}")
         for pair in tally.get("disagree", []):
             checks.append(finding("format", "all", False,
                                   f"{pair} carry tally lines that disagree", "format"))
@@ -662,9 +739,10 @@ def check_accounting(response: str, research: dict, mode: str,
 PRIORITIES = tuple(ledger_rules.PRIORITY_ORDER)
 FITS = tuple(ledger_rules.FIT_ORDER)
 LEDGER_MARK = ledger_rules.LEDGER_MARK
+SLOT_HEADING = ledger_rules.SLOT_HEADING
 LEDGER_LINE = re.compile(r"^-\s+`?([a-z_]+)`?\s*(?:—|–|-|:)\s*(.+?)\s*$")
 ITEM = ledger_rules.LEDGER_ITEM      # one item grammar with CI's and the hard-gates line's
-GROUP = re.compile(r"^`?([a-z_]+)`?\s*:\s*(.+)$")
+GROUP = re.compile(r"^`?([a-z_]+)`?\s*(?::|—|–)\s*(.+)$")   # the separators LEDGER_LINE takes after a tier
 ID_RE = re.compile(r"\bR\d+[a-z]?\b")
 split_top = ledger_rules.split_top
 names_requirement = ledger_rules.names_requirement
@@ -744,21 +822,32 @@ def snapshot_section(text: str) -> str | None:
     A probe run titled its response with the user's question and gave the snapshot
     no heading; the ledger was there and its bands could not be read. Without a
     heading, the snapshot is the stretch from the heading above the ledger (or the
-    top) to the next heading at level two or above.
+    top) to the next heading at level two or above. A titled snapshot ends at the
+    next heading at its own level or above, and never below level two, so "# Decision
+    snapshot" does not run to the end of the document. A heading that names a slot
+    of the snapshot ("## Fit ledger", "## Opportunity ledger"; ledger_rules.SLOT_HEADING)
+    is inside it, never its start or end.
     """
     lines = text.splitlines()
     mark = next((i for i, line in enumerate(lines) if LEDGER_MARK.match(line)), None)
     titled = any(re.match(r"^#{1,6}\s+.*snapshot", line, re.I) for line in lines)
+
+    def heading(j: int) -> re.Match | None:
+        """A heading that bounds the snapshot: not one naming a slot of its own."""
+        return None if SLOT_HEADING.match(lines[j]) else re.match(r"^(#{1,6})\s", lines[j])
+
     if not titled and mark is not None:
-        start = next((j + 1 for j in range(mark, -1, -1) if re.match(r"^#{1,6}\s", lines[j])), 0)
-        end = next((j for j in range(mark + 1, len(lines)) if re.match(r"^#{1,2}\s", lines[j])), len(lines))
+        start = next((j + 1 for j in range(mark, -1, -1) if heading(j)), 0)
+        end = next((j for j in range(mark + 1, len(lines)) if (m := heading(j)) and len(m.group(1)) <= 2),
+                   len(lines))
         return "\n".join(lines[start:end])
     for i, line in enumerate(lines):
         head = re.match(r"^(#{1,6})\s+(.*)$", line)
         if head and "snapshot" in head.group(2).lower():
-            level = len(head.group(1))
-            end = next((j for j in range(i + 1, len(lines))
-                        if (m := re.match(r"^(#{1,6})\s", lines[j])) and len(m.group(1)) <= level),
+            # Under an H1 title the response's own sections are H2: the snapshot
+            # ends at the next heading at level two or above, whatever its own.
+            level = max(len(head.group(1)), 2)
+            end = next((j for j in range(i + 1, len(lines)) if (m := heading(j)) and len(m.group(1)) <= level),
                        len(lines))
             return "\n".join(lines[i + 1:end])
     return None
@@ -1027,14 +1116,22 @@ EDGE = " \t\"'.,;:!?()[]{}-"
 # and where it came from — your CV, your message, the coach's notes, a dossier
 # row. The cell is parsed whole, never pruned: deleting "a dash and up to sixty
 # characters" before looking for leftovers is how "— your message, i.e. you set
-# hiring strategy" passed as an origin.
-ORIGIN = (r"(?:your\s+cv|your\s+message|the\s+coach's\s+notes|"
-          r"(?:a\s+|the\s+)?dossier(?:'s)?(?:\s+row)?(?:,?\s+(?:row\s+)?r\d+[a-z]?)?)")
+# hiring strategy" passed as an origin. A dossier origin may name the row, or the
+# field or section the quotation sits in — the template sends a dossier quote from
+# `handoff_to_mock_interview.verified_candidate_evidence`, whose items carry no row
+# ids — bare or alone in parentheses, from a closed set; nothing else may stand in
+# those parentheses. "coach's notes" with or without its article is one origin.
+DOSSIER_FIELD = (r"(?:handoff(?:_to_mock_interview)?(?:\.verified_candidate_evidence)?|verified_candidate_evidence|"
+                 r"evidence_map)")
+ORIGIN = (r"(?:your\s+cv|your\s+message|(?:the\s+)?coach's\s+notes|"
+          r"(?:a\s+|the\s+)?dossier(?:'s)?(?:\s+row)?(?:,?\s+(?:row\s+)?r\d+[a-z]?)?"
+          r"(?:\s+" + DOSSIER_FIELD + r"|\s*\(\s*" + DOSSIER_FIELD + r"\s*\))?)")
 EVIDENCE_SEGMENT = r'"[^"\n]+"\s*-{1,2}\s*' + ORIGIN
-# Segments are separated by punctuation or markup that adds no words — a comma,
-# semicolon, full stop, line break, "and" or a space; each piece must still be a
-# whole quote-and-origin segment, so nothing can be appended between them.
-EVIDENCE_JOIN = r"(?:\s*(?:[;,.]|<br\s*/?>|\band\b)\s*|\s+)"
+# Segments are separated by what adds no words — a comma, semicolon, full stop,
+# line break, "and" or a space, one punctuation mark optionally followed by "and"
+# or a line break (", and"); each piece must still be a whole quote-and-origin
+# segment, so nothing can be appended between them.
+EVIDENCE_JOIN = r"(?:\s*(?:[;,.]\s*)?(?:<br\s*/?>|\band\b)\s*|\s*[;,.]\s*|\s+)"
 EVIDENCE_CELL = re.compile(r"\s*" + EVIDENCE_SEGMENT + r"(?:" + EVIDENCE_JOIN + EVIDENCE_SEGMENT
                            + r")*\s*[.;]?\s*", re.I)
 NONE_GIVEN = re.compile(r"\s*none given\s*[.;]?\s*", re.I)
@@ -1047,8 +1144,52 @@ def normalise_quote(text: str) -> str:
 
 
 def quoted_spans(cell: str) -> list[str]:
+    return [span for span, _ in quoted_spans_with_origin(cell)]
+
+
+# A Provenance quotation that is not the candidate's: a line from the JD, the
+# recruiter, the company's published sources — the raising sources
+# mock-interview's references/question-rubric.md defines — quoted with its origin
+# beside it. Its origin is its own: "— X" or "(X)" right after it, "X:" or "X ("
+# right before it, or, for a quoted title, the origin of the quotation it sits in
+# ('"…" — Saltmarsh Games, "Announcing Project Larkspur"'). An origin that names the
+# candidate's own material — their CV or message, the coach's notes, a fit-snapshot
+# row, the dossier or one of its fields — is no other source.
+CANDIDATE_ORIGIN = re.compile(
+    r"(?<![a-z])(?:your\s+(?:cv|r[eé]sum[eé]|message|own|words)|(?:the\s+)?coach'?s?\s+notes?|cv|"
+    r"r[eé]sum[eé]|candidate|dossier|verified[\s_]+(?:candidate[\s_]+)?evidence|fit\s+snapshot|f\d+[a-z]?|"
+    # a dossier field is the dossier's material, named as rubric "A plain acknowledgment" says
+    r"prohibited_claims?|acknowledge_gaps?|rejected_inferences?|handoff\w*|evidence_(?:state|map))"
+    r"(?![a-z0-9])", re.I)
+_DASH_ORIGIN = re.compile(r'\s*(?:-{1,2}|[–—])\s*([^;"\n()]*[^;"\n()\s,])')
+_PAREN_ORIGIN = re.compile(r'\s*\(\s*([^()"\n]*[^()"\n\s])\s*\)')
+_LEAD_ORIGIN = re.compile(r"([A-Za-z][\w'’ .-]{0,60}?)\s*(?::|\()\s*$")
+_IN_ORIGIN = re.compile(r'^\s*(?:-{1,2}|[–—])\s*([^;"\n]*[^;"\n\s])\s*$')
+
+
+def quoted_spans_with_origin(cell: str) -> list[tuple[str, str | None]]:
+    """Each quotation in a cell with the origin written beside it, or None."""
     plain = cell.translate(DQUOTES).replace("`", "")
-    return re.findall(r'"([^"\n]+)"', plain)
+    hits = list(re.finditer(r'"([^"\n]+)"', plain))
+    out = []
+    for i, hit in enumerate(hits):
+        after = plain[hit.end():hits[i + 1].start() if i + 1 < len(hits) else len(plain)]
+        before = plain[hits[i - 1].end() if i else 0:hit.start()]
+        before = before.rsplit(";", 1)[-1]
+        origin = None
+        if m := (_DASH_ORIGIN.match(after) or _PAREN_ORIGIN.match(after)):
+            origin = m.group(1)
+        elif m := _LEAD_ORIGIN.search(before):
+            origin = m.group(1)
+        elif i and (m := _IN_ORIGIN.match(plain[hits[i - 1].end():hit.start()])):
+            origin = m.group(1)
+        out.append((hit.group(1), origin.strip() if origin and origin.strip() else None))
+    return out
+
+
+def other_source(origin: str | None) -> bool:
+    """An origin naming a source other than the candidate's own material."""
+    return bool(origin) and not CANDIDATE_ORIGIN.search(origin)
 
 
 # A plain acknowledgment's source may be a dossier item, named by its field
@@ -1116,16 +1257,23 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     compliance — and graders passed exactly that, because the quote was close
     enough to read as the candidate's.
 
-    Both columns hold the candidate's words and nothing else, so both are checked
-    against what the candidate gave (the fixture's `candidate_text`), on any length
-    of quotation: checked against the prompt, a quoted JD line, a dossier header
-    or a prohibited claim passed as the candidate's own. A fixture that declares
-    no `candidate_text` gets that check reported unchecked, never a fallback to the
-    prompt; `[]` means the candidate gave nothing quotable. A Provenance quote must
-    also stand in the fit snapshot's evidence column, because the template says it
-    is quoted exactly as it appears there — except a quotation that is one whole item
-    of a dossier field its cell names (fields_named). The requirement column quotes the JD,
-    so it is checked against the request and the pages, from three words up.
+    The evidence column holds the candidate's words and nothing else, and a
+    Provenance cell carries every candidate sentence its guidance rests on, so both
+    are checked against what the candidate gave (the fixture's `candidate_text`), on
+    any length of quotation: checked against the prompt, a quoted JD line, a
+    dossier header or a prohibited claim passed as the candidate's own. A fixture
+    that declares no `candidate_text` gets that check reported unchecked, never a
+    fallback to the prompt; `[]` means the candidate gave nothing quotable. A
+    Provenance quote must also stand in the fit snapshot's evidence column, because
+    the template says it is quoted exactly as it appears there. Three Provenance
+    quotations are not the candidate's: one whole item of a dossier field its cell
+    names (fields_named); a raising source's line — not in what the candidate gave,
+    with its own origin naming a source other than the candidate's material
+    (quoted_spans_with_origin, other_source) — checked only for existence in the
+    request or the room's pages; and the template's token "none given". The
+    requirement column quotes the JD, so it is checked against the request and the
+    pages, from three words up; a canned room's pages are their title, URL and text
+    (room_pages_text).
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
     own = normalise_quote("\n".join(candidate_text)) if candidate_text is not None else None
@@ -1167,14 +1315,26 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 f"a dossier row), with nothing else: {cell.strip()[:100]!r}", "format"))
         candidate_column = section in ("fit_snapshot", "banks")
         named = fields_named(cell) if section == "banks" else set()
-        for span in quoted_spans(cell):
+        for span, origin in quoted_spans_with_origin(cell):
             whole = normalise_quote(span).strip(EDGE)
             if not whole or (not candidate_column and len(whole.split()) < 3):
+                continue
+            if section == "banks" and whole == "none given":
+                # The template's own token for an empty evidence cell ("derived
+                # from F2's \"none given\" row"), never anyone's sentence.
                 continue
             frags = [f for f in (x.strip(EDGE) for x in re.split(r"\.\.\.|…", normalise_quote(span))) if f]
             if named and dossier is not None and any(whole in dossier[f] for f in named):
                 # One whole item of a dossier field the cell names: that item.
                 bad, where = [], ""
+            elif section == "banks" and other_source(origin) and not (
+                    own is not None and all(contains_words(f, own) for f in frags)):
+                # A raising source's line, quoted with its own origin, which names
+                # no material of the candidate's: checked for existence, as the
+                # requirement column is, at any length. A quotation found in what
+                # the candidate gave stays the candidate's, whatever it claims.
+                bad = [f for f in frags if not contains_words(f, haystack)]
+                where = f"the request{' or the pages' if corpus_texts else ''} (quoted as from {origin[:40]!r})"
             elif candidate_column:
                 if own is None:
                     bad, where = [], ""
@@ -1226,6 +1386,17 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
 
 # --- Assembly ----------------------------------------------------------------------
 
+def room_pages_text(pages: list[dict], research_log: list | None) -> list[str]:
+    """What a canned room showed the model, as quotable text: each page's title, URL
+    and text, as research_server.py shows them in every result and fetch — and only
+    the pages the run's research log shows returned. With no log, which pages
+    returned is unknown, and every page of the fixture stands."""
+    if research_log is not None:
+        returned = [u for e in research_log if e.get("outcome") == "returned" for u in e.get("urls_returned") or []]
+        pages = [p for p in pages if any(same_url(p.get("url", ""), u) for u in returned)]
+    return [f"{p.get('title', '')}\n{p.get('url', '')}\n{p.get('text', '')}" for p in pages]
+
+
 def run_checks(case: dict, mode: str, response: str, research_log: list | None,
                harness_status: str = "ok", harness_reasons: list | None = None) -> dict:
     """Everything this fixture asks for, as one {stem}.checks.json record."""
@@ -1237,12 +1408,11 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     wanted = case.get("checks", [])
     parts = []
     if research:
-        parts.append(check_accounting(response, research, mode, research_log))
+        parts.append(check_accounting(response, research, mode, research_log, case.get("prompt", "")))
     if "fit_ledger" in wanted:
         parts.append(check_fit_ledger(response, case.get("candidate_constraints"), fixture=True))
     if "quotes" in wanted:
-        corpus = [p.get("text", "") for p in (research or {}).get("pages", [])] \
-            if mode == "canned" else []
+        corpus = room_pages_text((research or {}).get("pages", []), research_log) if mode == "canned" else []
         parts.append(check_quotes(response, case.get("prompt", ""), corpus, case.get("candidate_text")))
     for part in parts:
         checks += part["checks"]

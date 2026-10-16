@@ -359,7 +359,13 @@ def is_second_sentence(text: str, hit: re.Match | None) -> bool:
     return bool(hit) and len(sentences(text)) > 1 and hit.group(0) == text[hit.start():]
 
 
-LEDGER_MARK = re.compile(r"^\s*[*_]*\s*fit ledger\b", re.I)
+# The ledger's mark: its label, bold or plain, or a markdown heading that names it
+# ("## Fit ledger").
+LEDGER_MARK = re.compile(r"^\s*(?:#{1,6}\s+)?[*_]*\s*fit ledger\b", re.I)
+# A heading that names one of the snapshot's own slots ("## Opportunity ledger") is
+# inside the snapshot: it neither starts nor ends it (snapshot readers use this).
+SLOT_HEADING = re.compile(r"^\s*#{1,6}\s+[*_]*\s*(?:fit ledger|opportunity ledger|hard gates|severe red flags|"
+                          r"what would change|conditions)\b", re.I)
 
 
 def ledger_lines_span(lines: list[str]) -> tuple[int, int] | None:
@@ -399,12 +405,13 @@ def ledger_sentence(snapshot: str) -> str:
 
 
 def snapshot_prose(snapshot: str) -> str:
-    """The snapshot without the ledger's own lines and without table rows."""
+    """The snapshot without the ledger's own lines, table rows and the Research tier
+    line (bold or plain), whose counts are the tally's, not the map's."""
     lines = snapshot.splitlines()
     span = ledger_lines_span(lines)
     drop = set(range(*span)) if span else set()
     return "\n".join(line for i, line in enumerate(lines)
-                     if i not in drop and not line.lstrip().startswith(("|", "Research tier")))
+                     if i not in drop and not line.lstrip().lstrip("*_").startswith(("|", "Research tier")))
 
 
 SLOT_LINE = re.compile(r"^\s*[-*+]\s+(?:\*\*|__)?[A-Z][^:\n]{0,40}:")
@@ -518,10 +525,37 @@ def split_top(text: str, separators: tuple[str, ...]) -> list[str]:
 NAME_STOP = {"a", "an", "the", "and", "or", "of", "for", "with", "in", "on", "to", "at", "by"}
 
 
+# The abbreviations a Requirement's own words are written in, a closed table read on
+# both sides of the comparison ("5+ yrs PM" names "5+ years of product management").
+# Never initials matching: "(PR)" or "(BI)" names nothing it is not spelled as.
+ABBREVIATIONS = {"pm": ("product", "management"), "yrs": ("years",), "yr": ("year",),
+                 "mgmt": ("management",), "exp": ("experience",)}
+# One spelling per word: partnering and partner, launches and launch, coordination
+# and coordinate read alike. The stem keeps three letters or more; a figure ("5+",
+# "150k") is kept whole.
+_SUFFIXES = ("ations", "ation", "ates", "ate", "ings", "ing", "ions", "ion", "es", "ed", "e", "s")
+
+
+def lemma(word: str) -> str:
+    if re.fullmatch(r"\d+\+?|\d+k", word):
+        return word
+    for suffix in _SUFFIXES:
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[: -len(suffix)]
+    return word
+
+
 def name_words(text: str) -> set[str]:
-    """A parenthetical's words, for checking it names its row in the row's own words."""
-    return {w.rstrip("s") for w in re.findall(r"[a-z0-9+]+", text.replace("*", "").replace("`", "").lower())
-            if w not in NAME_STOP}
+    """A parenthetical's words, for checking it names its row in the row's own words:
+    compared by lemma, through the ABBREVIATIONS table, with "+" and "&" standing
+    alone read as "and". Every other word must be the Requirement's, so a gloss or a
+    conflict still fails."""
+    out = set()
+    for w in re.findall(r"[a-z0-9]+\+?|[+&]", text.replace("*", "").replace("`", "").lower()):
+        if w in NAME_STOP or w in ("+", "&"):
+            continue
+        out.update(lemma(part) for part in ABBREVIATIONS.get(w, (w,)))
+    return out
 
 
 # A row named in its Requirement's own words, "R6 (Fully remote (UK))": the words in

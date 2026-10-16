@@ -1695,7 +1695,7 @@ def test_user_links() -> None:
                 "https://www.pellucidlearning.com/careers"):
         got = output_checks.check_accounting(
             accounting(rows, "Research tier: L0 — no searches; user links read 1"), research, "canned",
-            [entry(url, kind="fetch", targets=[1])])
+            [entry(url, kind="fetch", targets=[1])], ju5["prompt"])
         check(f"ju 5: a fetch of {url} is research: zero_calls, target 1's skip, the count and "
               f"the user-link claim all fail",
               [verdict_of(got, "zero_calls"), verdict_of(got, "skip_has_no_call", 1),
@@ -2017,6 +2017,239 @@ def test_recurring() -> None:
               sorted(seen[("s", 1, "canned", ("chk", "accept", "2"), "check")]["failed_sets"]),
               ["a", "b"])
 
+# --- Misfires found by auditing a clean-room measurement ------------------------
+#
+# Each check below states a misfire (a correct output the check failed, or a check
+# stricter than its rule) as a must-pass, beside the real violations named with it
+# as must-fails, so the fix lets nothing real through.
+
+def test_audit_quotes() -> None:
+    print("\nchecks: a Provenance quote of a named non-candidate source is checked for existence (audit A-C)")
+    prompt = ("ME: I ran the weekly content-drop calendar. Never led a team.\n"
+              "RECRUITER'S EMAIL: we'd like you to present a short POV on operator partnerships.\n"
+              "STRATEGY BRIEF: consolidate eight branches into five hubs over 2027.")
+    own = ["I ran the weekly content-drop calendar. Never led a team."]
+    evidence = '"I ran the weekly content-drop calendar" — your message'
+
+    def pack(provenance, requirement="Own the calendar", corpus=(), log=None, mode="denied"):
+        return ("| # | Requirement (source) | Evidence, verbatim | Confidence | Bridge |\n|---|---|---|---|---|\n"
+                f"| F1 | {requirement} | {evidence} | high | — |\n\n"
+                "| # | Question | Type | Provenance | Answer guidance | Rationale |\n|---|---|---|---|---|---|\n"
+                f"| A1 | q | EXP | {provenance} | g | F1 |\n")
+
+    def banks(provenance, corpus=()):
+        got = output_checks.check_quotes(pack(provenance), prompt, corpus, own)["checks"]
+        return sorted(c["verdict"] for c in got if c["check"] == "quotes" and c["target"] == "banks"
+                      and c["verdict"] == "FAIL") or ["PASS"]
+    for cell in ('[grounded] "we\'d like you to present a short POV on operator partnerships" — recruiter\'s email',
+                 '[grounded] strategy brief: "consolidate eight branches into five hubs over 2027"',
+                 '[grounded] "consolidate eight branches into five hubs over 2027" (strategy brief)',
+                 '[grounded] "consolidate eight branches into five hubs over 2027" — strategy brief (via recruiter); '
+                 '"I ran the weekly content-drop calendar" — your message',
+                 '[grounded] role_profile R5 ("consolidate eight branches into five hubs")'):
+        check(f"must pass: a source line quoted with its own non-candidate origin: {cell[:70]!r}",
+              banks(cell), ["PASS"])
+    check("must pass: a page's title quoted inside the previous quote's origin, from the room's pages",
+          banks('[grounded] "Larkspur retires per-title event teams" — Saltmarsh Games, "Announcing Project '
+                'Larkspur"', ["Announcing Project Larkspur\nhttps://s.test/news\nLarkspur retires per-title "
+                              "event teams in favour of one group."]), ["PASS"])
+    check("must pass: the template token \"none given\" quoted as a reference is no sentence (C)",
+          banks('[grounded] "I ran the weekly content-drop calendar"; [inferred] derived from F2\'s "none given" '
+                'row'), ["PASS"])
+    check("must fail: a company line with no origin of its own (mi1.run2 D2), beside one that has one",
+          banks('[grounded] "five hubs over 2027"; "we\'d like you to present a short POV" (recruiter\'s email)'),
+          ["FAIL"])
+    check("must fail: a source that does not hold the quote (mi7.canned.run2 A2)",
+          banks('[generic]; the "don\'t overpromise" framing is [inferred] from Tobias\'s own GDC talk (researched)'),
+          ["FAIL"])
+    check("must fail: an origin-tagged quote that no source holds",
+          banks('[grounded] "consolidate nine branches into two hubs" — strategy brief'), ["FAIL"])
+    check("must fail: a candidate negative tagged as their own, absent from the snapshot (mi7.denied.run2 B2)",
+          banks('[grounded] "Never led a team" — your own stated negative'), ["FAIL"])
+    check("must fail: a candidate sentence stays the candidate's whatever origin it claims, and must stand in "
+          "the snapshot", banks('[grounded] "Never led a team" — LinkedIn'), ["FAIL"])
+    check("must fail: a candidate quote with an insertion ([years]) is no quote",
+          banks('[grounded] "I ran the weekly [years] content-drop calendar"'), ["FAIL"])
+    check("must fail: a spliced quote (\"I\" for \"I've\") is no quote of a source either",
+          banks('[grounded] "I ran the five hubs over 2027" — strategy brief'), ["FAIL"])
+    check("must fail: a dossier field's name is the dossier's material, not another source",
+          banks('[grounded] prohibited_claims: "consolidate eight branches"'), ["FAIL"])
+
+    # B: a canned room's pages are quotable by their title and URL too, and only the
+    # pages the run's log shows returned.
+    mi7 = fixture("mock-interview", 7)
+    larkspur = "https://saltmarshgames.com/news/project-larkspur"
+    title_req = '"Announcing Project Larkspur" — Saltmarsh Games news page'
+    text = pack("[grounded]").replace("| F1 | Own the calendar |", f"| F1 | {title_req} |")
+    shown = [{"kind": "search", "query_or_url": "Saltmarsh news", "outcome": "returned",
+              "urls_returned": [larkspur], "targets": [3]}]
+
+    def req(log):
+        got = output_checks.run_checks(mi7, "canned", text, log)["checks"]
+        return [c["verdict"] for c in got if c["check"] == "quotes" and c["target"] == "requirements"]
+    check("must pass: a requirement quoting a returned page's title (mi7.canned.run1 F9)", req(shown), ["PASS"])
+    check("must fail: the same title when the room never returned that page", req([]), ["FAIL"])
+    check("must fail: quoted [generic] prose is in no page's title, URL or text (mi7.canned.run2 F9)",
+          [c["verdict"] for c in output_checks.run_checks(mi7, "canned", text.replace(
+              title_req, '"[generic] team/people-management experience, a near-certain probe"'), shown)["checks"]
+           if c["check"] == "quotes" and c["target"] == "requirements"], ["FAIL"])
+
+
+def test_audit_evidence_form() -> None:
+    print("\nchecks: the evidence cell's origins and separators are the template's, no stricter (audit)")
+    for cell in ('"A" — dossier (verified_candidate_evidence)', '"A" — dossier `verified_candidate_evidence`',
+                 '"A" — dossier (handoff)', '"A" — dossier handoff_to_mock_interview.verified_candidate_evidence',
+                 '"A" — dossier R3 (evidence_map)', '"A" — coach\'s notes', '"A" — your CV, and "B" — your message',
+                 '"A" — your CV; and "B" — your CV', '"A" — your CV, <br> "B" — your CV'):
+        check(f"must pass: {cell!r}", output_checks.evidence_cell_lawful(cell), True)
+    for cell in ('"A" — dossier (medium confidence: expect a probe)',
+                 '"A" — dossier (handoff; medium confidence, expect a probe)',
+                 '"A"; "B" — dossier (handoff)', '"A" — dossier handoff, which shows ownership',
+                 '"A" — dossier (verified_candidate_evidence, strong)', '"A" — coach notes',
+                 '"A" — your message, i.e. you set hiring strategy', '"A" and "B" — your message',
+                 '"A", "B" — your message', '"A." "B." — your message', '"A" — your CV; adjacent: "B" — your CV',
+                 '"A" — your CV + "B" — your CV', '"A" — your CV / "B" — your CV',
+                 '"A" — your CV, and also "B" — your CV'):
+        check(f"must fail: {cell!r}", output_checks.evidence_cell_lawful(cell), False)
+
+
+def test_audit_research() -> None:
+    print("\nchecks: a search for the company by name is its sweep target's; terms read as the rule does (audit)")
+    ju4, mi5, mi8, mi3 = (fixture("job-underwriter", 4), fixture("mock-interview", 5),
+                          fixture("mock-interview", 8), fixture("mock-interview", 3))
+
+    def aimed(case, query, mode="denied", kind="search"):
+        r = case["research"]
+        room = {"prompt": case["prompt"], "targets": r["targets"]}
+        e = {"kind": kind, "query_or_url": query, "targets": []}
+        return [t["n"] for t in r["targets"] if output_checks.aimed_at(e, t, r.get("pages", []), mode, room)]
+    check("must pass: the company's name plus the request's own description is JU target 1 (ju-4)",
+          aimed(ju4, "Brindlemoor insurtech pet insurance"), [1])
+    check("must pass: the name alone is JU target 1", aimed(ju4, '"Brindlemoor"'), [1])
+    check("must pass: MI target 3 is the company sweep (mi-5)", aimed(mi5, '"Kelverton Rail" company'), [3])
+    check("must fail: a word the request does not use makes it a stray (Brindlemoor layoffs glassdoor)",
+          aimed(ju4, "Brindlemoor layoffs glassdoor"), [])
+    check("must fail: words outside the request stay strays (ju-5 canned run3)",
+          [aimed(fixture("job-underwriter", 5), q) for q in
+           ("Pellucid Learning tutoring platform Glassdoor reviews", "Pellucid Learning Crunchbase")], [[], []])
+    check("must fail: no company name, no identity (mi-8 canned run3)",
+          [aimed(mi8, q) for q in ("credit union member complaints regulation ombudsman",
+                                   "credit union branch complaints handling financial services regulator")], [[], []])
+    check("must fail: another target's term takes it out of the identity route",
+          aimed(mi8, "Ashgrove Credit Union interview process"), [2])
+    try:
+        output_checks.aimed_at({"kind": "search", "query_or_url": "x"}, ju4["research"]["targets"][0], [], "denied")
+        raised = False
+    except ValueError:
+        raised = True
+    check("an identity target read with no room fails closed, never silently a stray", raised, True)
+    check("must pass: a market sweep tied to the sector is MI-5 target 3 (D)",
+          aimed(mi5, "UK rail scheduling software train operating companies partnerships market 2026"), [3])
+    check("must fail: a salary market search is no sector sweep",
+          aimed(mi5, "partnerships manager salary market UK"), [])
+    check("must fail: a live-service best-practices search is no target (mi-7 denied run4)",
+          aimed(fixture("mock-interview", 7),
+                "live service mobile game content calendar post-event review KPIs best practices 2025"), [])
+    check("must pass: a job-listing fetch with an encoded role title is target 5 (mi-3 run3, C)",
+          aimed(mi3, "https://stripe.com/jobs/search?q=product+operations+manager", kind="fetch"), [5])
+    check("must pass: the culture page stays target 1 only",
+          aimed(mi3, "https://stripe.com/jobs/culture", kind="fetch"), [1])
+    check("must fail: a careers search for the role is a target-5 hunt (mi-8 canned run3)",
+          aimed(mi8, "Ashgrove Credit Union careers Member Experience Lead"), [5])
+    check("must pass: a regulatory search with a bare 'requirements' is no JD hunt (E)",
+          5 in aimed(mi8, '"credit union" complaints handling process regulatory requirements branches contact centre'),
+          False)
+    check("must fail: real JD hunts still match target 5",
+          [5 in aimed(mi8, q) for q in ("member experience lead responsibilities requirements",
+                                        "member experience lead job description credit union")], [True, True])
+    check("an all-of term needs every part", (output_checks.term_matches(["careers", "lead"], "careers page"),
+                                             output_checks.term_matches(["careers", "lead"], "lead careers")),
+          (False, True))
+
+    print("\nchecks: the tally line is read as a prefix; a remark after it is read apart (audit B, B2)")
+    base = "Research tier: L1 — searches 4 of 5, fetches 0 of 2"
+    for line in (base + " (all refused — permission wasn't granted)", base + "; user links read: 0",
+                 base + ". Every L1 target was already fixed by a provided document."):
+        got = output_checks.parse_tally(line)
+        check(f"must pass: a correct line with a reason or a colon is read: {line[-50:]!r}",
+              (got["outcome"], got.get("searches")), ("checked", 4))
+        check("and its remark restates nothing",
+              [bool(output_checks.TALLY_RESTATES.search(r)) for _, r in got.get("remarks", [])],
+              [False] * len(got.get("remarks", [])))
+    for line in ("Research tier: L1 attempted — searches 3 of 6, fetches 0 of 2", "Research tier: L0 (forced) — no searches",
+                 "Research tier: L1 — searches 0 of 6 usable / completed", "Research tier: L1 — 4 of 6 searches sent",
+                 "Research tier: L1 — searches 6 of 6 attempted, 0 returned"):
+        check(f"must fail: a prefix that is not the form: {line!r}", output_checks.parse_tally(line)["outcome"],
+              "unparseable")
+    for remark in (". All three were blocked.", " (both search calls were refused)", " (all four calls refused)",
+                   " — 4 attempted", "; user links read"):
+        got = output_checks.parse_tally(base + remark)
+        check(f"must fail: a remark that restates the line: {remark!r}",
+              [bool(output_checks.TALLY_RESTATES.search(r)) for _, r in got["remarks"]], [True])
+    research = {"targets": [{"n": 1, "terms": ["about"], "accept": ["unavailable"]}],
+                "budget": {"searches": 5, "fetches": 2}}
+    log = [{"kind": "search", "query_or_url": "x about", "outcome": "refused", "urls_returned": [], "targets": []}] * 2
+    got = output_checks.check_accounting(
+        "Research tier: L0 — no searches (WebSearch wasn't granted permission)\n\n| Target | Status | x |\n|---|---|---|\n"
+        "| 1. about | unavailable | x |\n", research, "denied", log)
+    check("must fail: an `L0 — no searches` line with a reason now parses, and its count is judged (ju-3 run3)",
+          (verdict_of(got, "tally"), verdict_of(got, "tally_searches")), ("PASS", "FAIL"))
+    got = output_checks.check_accounting(
+        base + " (both calls refused)\n\n| Target | Status | x |\n|---|---|---|\n| 1. about | unavailable | x |\n",
+        research, "denied", log)
+    check("and a restating remark fails as format, apart from the counts",
+          [(c["check"], c["kind"]) for c in got["checks"] if c["verdict"] == "FAIL"],
+          [("tally_remark", "format"), ("tally_searches", "judgement")])
+
+
+def test_audit_ledger() -> None:
+    print("\nchecks: the fit ledger is read wherever the template's shape puts it (audit)")
+    for note, req in (("partnering with clinicians specifically", "Partner with clinicians specifically"),
+                      ("mentoring two junior analysts", "Mentor two junior analysts"),
+                      ("launch coordination with sales and support", "Coordinate launches with sales and support"),
+                      ("specs + delivery with two squads", "Write specs and drive delivery with two engineering squads"),
+                      ("3+ years PM experience", "3+ years product management experience (must-have)"),
+                      ("3+ yrs PM experience", "3+ years PM experience (must-have)")):
+        check(f"must pass: {note!r} names {req!r}", ledger_rules.names_requirement(note, req), True)
+    for note, req in (("vs. Leeds office four days a week", "Leeds office four days a week"),
+                      ("150k vs. your $150k floor", "Base at or above 150k"),
+                      ("PM eligibility", "3+ years product management experience"),
+                      ("solo execution", "Team of one"), ("dbt-modelled pipelines", "dbt pipelines"),
+                      ("PR experience", "Public relations"), ("BI tooling", "Business intelligence tooling")):
+        check(f"must fail: {note!r} adds words {req!r} lacks", ledger_rules.names_requirement(note, req), False)
+
+    heading = LEDGER_OK.replace("**Fit ledger.**", "## Fit ledger").replace(
+        "**Opportunity ledger.** Authority", "## Opportunity ledger\n\nAuthority")
+    check("must pass: a ledger under a markdown heading, with a slot heading after it", ledger_fails(heading), [])
+    check("must fail: and its problems are read there (a flipped fit)", ledger_fails(heading.replace(
+        "| must_have | adjacent | medium", "| must_have | unclear | medium")), ["ledger_fit"])
+    check("must fail: a response with no ledger still fails ledger_present",
+          ledger_fails(LEDGER_OK.replace("**Fit ledger.**\n", "").replace(
+              "- `hard_gate` — direct: R1\n", "").replace("- `must_have`", "x").replace("- `important`", "x")
+              .replace("- `preferred`", "x")), ["ledger_present"])
+    dashed = LEDGER_OK.replace("- `hard_gate` — direct: R1", "- `hard_gate`: direct — R1")
+    check("must pass: a fit group written 'fit — IDs'", ledger_fails(dashed), [])
+    check("must fail: and its rows are still judged (a missing parenthetical)", ledger_fails(dashed.replace(
+        "adjacent: R4 (Regulatory exposure)", "adjacent — R4")), ["ledger_parenthetical"])
+    check("must fail: a fit group with an unknown fit is still no group",
+          ledger_fails(dashed.replace("direct — R1", "strong — R1")), ["ledger_present"])
+    h1 = LEDGER_OK.replace("## Decision snapshot", "# Decision snapshot").replace(
+        "| RR2 | Compensation unstated | risk_signal | medium | unresolved |",
+        "| RR2 | Compensation unstated | risk_signal | medium | unresolved |\n\n## Upgrade menu\n\n"
+        "Confidence would rise to `high` overall with a reference.")
+    check("must pass: an H1 snapshot ends at the next H2, so later sections' bands are not the snapshot's",
+          ledger_fails(h1), [])
+    check("must fail: a bare band inside that snapshot still fails", ledger_fails(h1.replace(
+        "R3 (`medium`) waits on an artifact", "R3 waits on an artifact; `high` confidence overall")),
+          ["snapshot_band"])
+    bold_tier = LEDGER_OK.replace("**Opportunity ledger.**", "**Research tier:** L1 — searches 3 of 5, fetches 0 "
+                                                           "of 2\n\n**Opportunity ledger.**")
+    check("must pass: a bold Research tier line in the snapshot is the tally, not a count of the map",
+          ledger_fails(bold_tier), [])
+    check("must fail: a count of the map beside it still fails", ledger_fails(bold_tier.replace(
+        "**Opportunity ledger.** Authority", "**Opportunity ledger.** Three of five rows are direct. Authority")),
+          ["snapshot_count"])
+
 
 def main() -> int:
     for test in (test_routing_declines, test_cli_refusal, test_parse_stream,
@@ -2029,7 +2262,8 @@ def main() -> int:
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules,
                  test_user_links,
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
-                 test_recurring):
+                 test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
+                 test_audit_ledger):
         test()
     print()
     if FAILURES:

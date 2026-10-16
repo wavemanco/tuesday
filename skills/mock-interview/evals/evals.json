@@ -170,13 +170,17 @@
               "roadmap",
               "announced"
             ],
+            "identity": [
+              "stripe"
+            ],
             "accept": [
               "unavailable"
             ],
             "on_target_samples": [
               "Stripe strategy 2026",
               "Stripe news product launch 2026",
-              "Stripe priorities competitors"
+              "Stripe priorities competitors",
+              "\"Stripe\""
             ]
           },
           {
@@ -206,12 +210,31 @@
             "n": 5,
             "name": "representative JD",
             "terms": [
-              "description",
+              "job description",
+              "job listing",
               "jd",
               "posting",
               "responsibilities",
-              "requirements",
-              "listing"
+              [
+                "requirements",
+                "product operations manager"
+              ],
+              [
+                "requirements",
+                "job"
+              ],
+              [
+                "requirements",
+                "role"
+              ],
+              [
+                "careers",
+                "product operations manager"
+              ],
+              [
+                "jobs",
+                "product operations manager"
+              ]
             ],
             "accept": [
               "unavailable"
@@ -222,6 +245,9 @@
               "Stripe product operations manager posting"
             ]
           }
+        ],
+        "stray_samples": [
+          "Stripe layoffs lawsuit"
         ]
       },
       "checks": [
@@ -358,7 +384,14 @@
               "competitors",
               "roadmap",
               "announced",
-              "report"
+              "report",
+              [
+                "market",
+                "scheduling software"
+              ]
+            ],
+            "identity": [
+              "kelverton"
             ],
             "accept": [
               "unavailable"
@@ -366,7 +399,10 @@
             "on_target_samples": [
               "Kelverton Rail strategy 2026",
               "Kelverton Rail news operator partnerships",
-              "rail scheduling software market report 2026"
+              "rail scheduling software market report 2026",
+              "Kelverton Rail scheduling software train operating companies",
+              "\"Kelverton Rail\" company",
+              "UK rail scheduling software train operating companies partnerships market 2026"
             ]
           },
           {
@@ -388,12 +424,31 @@
             "n": 5,
             "name": "representative JD",
             "terms": [
-              "description",
+              "job description",
+              "job listing",
               "jd",
               "posting",
               "responsibilities",
-              "requirements",
-              "listing"
+              [
+                "requirements",
+                "partnerships manager"
+              ],
+              [
+                "requirements",
+                "job"
+              ],
+              [
+                "requirements",
+                "role"
+              ],
+              [
+                "careers",
+                "partnerships manager"
+              ],
+              [
+                "jobs",
+                "partnerships manager"
+              ]
             ],
             "accept": [
               "unavailable"
@@ -403,6 +458,10 @@
               "senior partnerships manager responsibilities requirements"
             ]
           }
+        ],
+        "stray_samples": [
+          "Kelverton Rail layoffs lawsuit",
+          "partnerships manager salary market UK"
         ]
       },
       "checks": [
@@ -543,6 +602,9 @@
               "roadmap",
               "announced"
             ],
+            "identity": [
+              "saltmarsh"
+            ],
             "accept": {
               "canned": [
                 "yes"
@@ -554,7 +616,8 @@
             "on_target_samples": [
               "Saltmarsh Games news 2026",
               "Saltmarsh Games roadmap season pass announced",
-              "Saltmarsh Games strategy"
+              "Saltmarsh Games strategy",
+              "\"Saltmarsh Games\" mobile game studio"
             ]
           },
           {
@@ -582,12 +645,31 @@
             "n": 5,
             "name": "representative JD",
             "terms": [
-              "description",
+              "job description",
+              "job listing",
               "jd",
               "posting",
               "responsibilities",
-              "requirements",
-              "listing"
+              [
+                "requirements",
+                "live operations producer"
+              ],
+              [
+                "requirements",
+                "job"
+              ],
+              [
+                "requirements",
+                "role"
+              ],
+              [
+                "careers",
+                "live operations producer"
+              ],
+              [
+                "jobs",
+                "live operations producer"
+              ]
             ],
             "accept": [
               "skipped"
@@ -698,6 +780,10 @@
               "Patch Notes Are a Promise"
             ]
           }
+        ],
+        "stray_samples": [
+          "Saltmarsh Games layoffs lawsuit",
+          "live service mobile game content calendar post-event review KPIs best practices 2025"
         ]
       },
       "checks": [
@@ -812,17 +898,22 @@
               "roadmap",
               "announced"
             ],
+            "identity": [
+              "ashgrove"
+            ],
             "accept": [
               "skipped"
             ],
             "on_target_samples": [
               "Ashgrove Credit Union strategy 2026",
               "Ashgrove Credit Union news branch consolidation",
-              "Ashgrove Credit Union small business lending launch"
+              "Ashgrove Credit Union small business lending launch",
+              "Ashgrove Credit Union"
             ],
             "hunt_samples": [
               "Ashgrove Credit Union strategy 2026",
-              "Ashgrove Credit Union news branch consolidation"
+              "Ashgrove Credit Union news branch consolidation",
+              "Ashgrove Credit Union"
             ]
           },
           {
@@ -853,12 +944,31 @@
             "n": 5,
             "name": "representative JD",
             "terms": [
-              "description",
+              "job description",
+              "job listing",
               "jd",
               "posting",
               "responsibilities",
-              "requirements",
-              "listing"
+              [
+                "requirements",
+                "member experience lead"
+              ],
+              [
+                "requirements",
+                "job"
+              ],
+              [
+                "requirements",
+                "role"
+              ],
+              [
+                "careers",
+                "member experience lead"
+              ],
+              [
+                "jobs",
+                "member experience lead"
+              ]
             ],
             "accept": [
               "skipped"
@@ -915,6 +1025,11 @@
             ],
             "text": "June 2026: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027. Main competitive pressure: app-only banks."
           }
+        ],
+        "stray_samples": [
+          "credit union member complaints regulation ombudsman",
+          "credit union branch complaints handling financial services regulator",
+          "Ashgrove Credit Union layoffs lawsuit"
         ]
       },
       "checks": [

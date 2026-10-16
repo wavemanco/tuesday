@@ -186,16 +186,29 @@ denied, as every fixture always has.
   the words that never score; and `zero_calls` where the inputs answer every
   target, so no research call should be sent.
 - `targets`, each with its number, the query `terms` that aim a call at it, and
-  the labels it `accept`s, for every mode or per mode. A call is aimed at a
-  target when its query or URL carries one of the terms, it fetched a page tagged
-  with the target, or in a canned room the server returned such a page
-  (`output_checks.aimed_at`). Each target also lists `on_target_samples`, queries
-  a correct run might send for it, and a target that accepts `n/a` or `skipped`
-  lists `hunt_samples`, queries that really are hunts for it. CI checks the terms
-  against both with `aimed_at` itself, in every mode the fixture runs, a canned
-  room's sample read as the log entry the stub server's own page route
-  (`research_server.search`) would leave; where no correct run sends a call
-  (`zero_calls` or `declined`), it skips the cross-target collision check.
+  the labels it `accept`s, for every mode or per mode. A term is a phrase, or a
+  list of phrases that must all appear
+  (`["careers", "member experience lead"]`), for a word too generic to stand
+  alone ("market", "requirements"). A call is aimed at a target when its query,
+  or its URL with the query string decoded, carries one of the terms, it fetched
+  a page tagged with the target, or in a canned room the server returned such a
+  page (`output_checks.aimed_at`). The company's name cannot be a term, since
+  every query carries it, so the target that owns the sweep of the company
+  itself (job-underwriter's target 1, mock-interview's target 3) declares
+  `identity`, the company's distinctive name tokens (never `entity_tokens`,
+  which hold generic words): a search aims there when it carries the name, every
+  other word but a function word is one the request uses, and it carries no
+  other target's term (`output_checks.identity_search`). `stray_samples` are
+  queries a run might send that serve no target ("Brindlemoor layoffs
+  glassdoor"); CI fails one that any target's terms or identity claim, and an
+  `identity` no stray sample tests. Each target also lists `on_target_samples`,
+  queries a correct run might send for it, and a target that accepts `n/a` or
+  `skipped` lists `hunt_samples`, queries that really are hunts for it. CI
+  checks the terms against both with `aimed_at` itself, in every mode the
+  fixture runs, a canned room's sample read as the log entry the stub server's
+  own page route (`research_server.search`) would leave; where no correct run
+  sends a call (`zero_calls` or `declined`), it skips the cross-target collision
+  check.
 - `user_links`: the links the user gave the skill to read (absent means none).
   A URL the prompt names only as the source of text the user pasted is not one.
 - `declined`: `true` when the user's prompt declines research or chooses L0
@@ -298,37 +311,43 @@ fixed form can be read exactly. `output_checks.py` does so and writes
 
 - **Accounting**, for any fixture with a `research` block, judges the rule in
   `conventions/interaction-grammar.md` §4 and nothing stricter. It reads the
-  tally line and the accounting table, each row by its leading number. Each
-  declared target needs its row, a label from the vocabulary, and a label the
-  fixture accepts in this mode. Against the record of calls: a `yes` needs a call
-  aimed at the target that returned (an error returns nothing); `skipped` and
-  `n/a` need no call aimed at it, refused ones included; in a canned room
-  `unavailable` needs at least one aimed call, every one refused or errored — or
-  no call aimed at it, the fixture's whole declared search budget sent, and every
-  search aimed at a lower-numbered target, which also satisfies the accept list.
-  Where the fixture declares `research.declined`, `unavailable` with no call
-  aimed at the target is lawful in any room and also satisfies the accept list;
-  the tally must read `L0 — no searches` (`tally_l0`), and `zero_calls` applies.
-  Of interaction-grammar.md §4's three grounds for `unavailable` with no call
-  sent, these are the two a canned room can meet; it always offers search.
-  A call aimed at no declared target needs an un-numbered `yes` row after the
-  numbered ones; one such row may cover several calls, since rows are not matched
-  to calls by their wording. An un-numbered row before or between the numbered
+  tally line and the accounting table, each row by its leading number. The tally
+  line's fixed form is read as the line's prefix, ending at the end of the line,
+  "(", ";", "." or a spaced dash, so a reason after it does not hide the counts;
+  a remark there that restates the line — "attempted", a number of its own,
+  "both", or a second user-links clause — fails `tally_remark`, a format check,
+  and any other remark is noted. Each declared target needs its row, a label
+  from the vocabulary, and a label the fixture accepts in this mode. Against the
+  record of calls: a `yes` needs a call aimed at the target that returned (an
+  error returns nothing); `skipped` and `n/a` need no call aimed at it, refused
+  ones included; in a canned room `unavailable` needs at least one aimed call,
+  every one refused or errored — or no call aimed at it, the fixture's whole
+  declared search budget sent, and every search aimed at a lower-numbered
+  target, which also satisfies the accept list. Where the fixture declares
+  `research.declined`, `unavailable` with no call aimed at the target is lawful
+  in any room and also satisfies the accept list; the tally must read
+  `L0 — no searches` (`tally_l0`), and `zero_calls` applies. Of
+  interaction-grammar.md §4's three grounds for `unavailable` with no call sent,
+  these are the two a canned room can meet; it always offers search. A call
+  aimed at no declared target needs an un-numbered `yes` row after the numbered
+  ones; one such row may cover several calls, since rows are not matched to
+  calls by their wording. An un-numbered row before or between the numbered
   ones, or under any other label, is a format failure, and one in a run that
-  recorded no research call fails. The tally's search and fetch counts must equal
-  the recorded research attempts, refused ones included, within the budget the
-  fixture declares, and `zero_calls` fails on any research call. A fetch whose
-  URL equals a link in `research.user_links` after `output_checks.norm_url`
-  (scheme and host lowercased; the scheme, a leading `www.`, a `#fragment` and
-  one trailing `/` dropped; path and query kept) is reading an input, not
-  research: it is left out of those counts, of attribution and of `zero_calls`.
-  `; user links read N`, on every form of the line, `no searches` included,
-  counts the declared links with at least one fetch that returned, each once
-  after `norm_url` however often it was fetched (`output_checks.user_link_reads`,
-  which the grader's observed block reads too); a link no fetch of which returned
-  is not a read and is not counted (the response should say it could not open it,
-  which the graders judge). Nothing is inferred from the prompt, so a prefix, a
-  parent path or the home page of a declared link is research.
+  recorded no research call fails. The tally's search and fetch counts must
+  equal the recorded research attempts, refused ones included, within the budget
+  the fixture declares, and `zero_calls` fails on any research call. A fetch
+  whose URL equals a link in `research.user_links` after
+  `output_checks.norm_url` (scheme and host lowercased; the scheme, a leading
+  `www.`, a `#fragment` and one trailing `/` dropped; path and query kept) is
+  reading an input, not research: it is left out of those counts, of attribution
+  and of `zero_calls`. `; user links read N`, on every form of the line,
+  `no searches` included, counts the declared links with at least one fetch that
+  returned, each once after `norm_url` however often it was fetched
+  (`output_checks.user_link_reads`, which the grader's observed block reads
+  too); a link no fetch of which returned is not a read and is not counted (the
+  response should say it could not open it, which the graders judge). Nothing is
+  inferred from the prompt, so a prefix, a parent path or the home page of a
+  declared link is research.
 - **Canaries**, for a fixture that plants them: in a denied room a canary must
   never appear. In a canned room each canary must name its `page`, one of the
   fixture's pages for its target; anything else fails as a fixture error, never
@@ -338,58 +357,85 @@ fixed form can be read exactly. `output_checks.py` does so and writes
 - **Fit ledger** (`fit_ledger`): job-underwriter's ledger must be an exact
   projection of the evidence map — every row once, under its own tier and fit,
   each row below `direct` with its Requirement's own words — and the decision
-  snapshot is read by the rules in `skills/job-underwriter/references/risk-and-decision.md`
-  ("The decision snapshot") and `evidence-model.md` ("The row is the unit"). The
-  patterns and rule functions are `ci/ledger_rules.py`, the same ones CI runs on
-  the worked dossier, so the two checks of a rule cannot disagree; how they read
-  prose — what is a count, which words are map words (a fit or tier word that is
-  also ordinary English included), how far a count reaches, and when "N of M" or a
-  fraction counts rows — is stated once there, above `MAP_WORDS`. A
-  ledger row's parenthetical and a failed or unconfirmed gate row's are judged by
-  one naming rule, `ledger_rules.names_requirement`, on one item grammar,
-  `ledger_rules.ITEM_WORDS`. One count reader, `ledger_rules.map_claim`, reads
-  every count, fraction and quantifier over the map, here and in CI. Checks:
-  `ledger_sentence` (no count over the map, no word of the quantifier list in
-  any sense, and no second sentence after the ledger), `snapshot_count` (no
-  count, fraction or listed quantifier over the map in the snapshot's prose),
-  `summary_count` (the same, by the same reader, in the last JSON envelope's
-  `decision.summary`; unchecked when the response has no envelope with one),
-  `snapshot_band` (a bare band
-  word, backticked or not, only as `R4 (\`medium\`)` and equal to that row's
+  snapshot is read by the rules in
+  `skills/job-underwriter/references/risk-and-decision.md` ("The decision
+  snapshot") and `evidence-model.md` ("The row is the unit"). The patterns and
+  rule functions are `ci/ledger_rules.py`, the same ones CI runs on the worked
+  dossier, so the two checks of a rule cannot disagree. The ledger's mark may be
+  a heading ("## Fit ledger"), a fit group may be written `fit: IDs` or
+  `fit — IDs`, and a titled snapshot ends at the next heading of its own level
+  or higher (of level two or higher under an H1 title), its own slots' headings
+  excepted (`output_checks.snapshot_section`). How they read prose — what is a
+  count, which words are map words (a fit or tier word that is also ordinary
+  English included), how far a count reaches, and when "N of M" or a fraction
+  counts rows — is stated once there, above `MAP_WORDS`. A ledger row's
+  parenthetical and a failed or unconfirmed gate row's are judged by one naming
+  rule, `ledger_rules.names_requirement` (every word the Requirement's, compared
+  by lemma — partnering is partner — through a closed table of the abbreviations
+  a Requirement is written in, `ledger_rules.ABBREVIATIONS`, with a lone "+" or
+  "&" read as "and"), on one item grammar, `ledger_rules.ITEM_WORDS`. One count
+  reader, `ledger_rules.map_claim`, reads every count, fraction and quantifier
+  over the map, here and in CI. Checks: `ledger_sentence` (no count over the
+  map, no word of the quantifier list in any sense, and no second sentence after
+  the ledger), `snapshot_count` (no count, fraction or listed quantifier over
+  the map in the snapshot's prose), `summary_count` (the same, by the same
+  reader, in the last JSON envelope's `decision.summary`; unchecked when the
+  response has no envelope with one), `snapshot_band` (a bare band word,
+  backticked or not, only as `R4 (\`medium\`)` and equal to that row's
   Confidence; `RR2 (\`high\`)` or `RR2 (high)` is a severity written as a band,
-  and fails), `gates_line` and
-  `gates_form` (the `Hard gates:` slot, anchored at the start of its line, in
-  every snapshot: a missing slot fails as format whether or not the map has gate
-  rows; each failed and unconfirmed row carries a few of its Requirement's own
-  words in parentheses, and anything else there fails as format; a `hard_gate` row at any
-  fit but `direct`, `unclear` or `hard_gate_fail`, or `hard_gate_fail` on a row that
-  is not a gate, fails `gates_line` however the line reads, per `evidence-model.md`
-  "A gate is met, not established, or failed"), and `severity` and
-  `severity_form` (every `RR5 (\`severity: high\`)` against the risk register's
-  Severity, and the severe-red-flags slot naming exactly its high entries). The
-  hard-gates line's closing "candidate constraints not given" clause is judged
-  against the fixture's `candidate_constraints` (above); a response with no risk
-  register leaves `severity` unchecked.
-- **Quotes** (`quotes`): the verbatim evidence column and the banks' Provenance
-  cells hold the candidate's words, so every quotation in either, of any length,
+  and fails), `gates_line` and `gates_form` (the `Hard gates:` slot, anchored at
+  the start of its line, in every snapshot: a missing slot fails as format
+  whether or not the map has gate rows; each failed and unconfirmed row carries
+  a few of its Requirement's own words in parentheses, and anything else there
+  fails as format; a `hard_gate` row at any fit but `direct`, `unclear` or
+  `hard_gate_fail`, or `hard_gate_fail` on a row that is not a gate, fails
+  `gates_line` however the line reads, per `evidence-model.md` "A gate is met,
+  not established, or failed"), and `severity` and `severity_form` (every
+  `RR5 (\`severity: high\`)` against the risk register's Severity, and the
+  severe-red-flags slot naming exactly its high entries). The hard-gates line's
+  closing "candidate constraints not given" clause is judged against the
+  fixture's `candidate_constraints` (above); a response with no risk register
+  leaves `severity` unchecked.
+- **Quotes** (`quotes`): the verbatim evidence column holds the candidate's own
+  words "and nothing else", and a Provenance cell carries every candidate
+  sentence its guidance rests on, so every quotation in either, of any length,
   must appear on word boundaries in the fixture's `candidate_text` — `[]` means
   nothing the candidate gave is quotable, and a fixture without the key has that
   check reported unchecked, never run against the prompt instead. A Provenance
   quotation must also appear in the response's own evidence column, because the
-  template quotes it "exactly as it appears in the fit snapshot". The one
-  exception is a dossier item named by its field, the source mock-interview's
+  template quotes it "exactly as it appears in the fit snapshot". Three
+  Provenance quotations are not the candidate's. The first is a dossier item
+  named by its field, the source mock-interview's
   `references/question-rubric.md` ("A plain acknowledgment") allows and defines:
   a quotation that equals, whole, one item the request's dossier lists under a
   field its Provenance cell names (`output_checks.fields_named`) is that item;
-  any other quotation in the cell is the candidate's words. Quotations of
-  three words or more in a Requirement column beside the verbatim one must appear
-  in the request or in a canned room's pages; that is existence, not attribution,
-  which stays with the graders. `evidence_form`, a format check, parses each
-  evidence cell whole against the grammar in mock-interview's
-  `references/output-template.md`: `none given`, or quotations each followed by a
-  dash and its origin (your CV, your message, the coach's notes, a dossier row),
-  separated by nothing that adds a word (a comma, semicolon, full stop, line
-  break, "and" or a space), with nothing else in the cell.
+  any other quotation in the cell is read as below. Second, a quotation not in
+  `candidate_text` that carries its own origin naming another source — "—
+  recruiter's email" or "(strategy brief)" after it, "strategy brief:" or
+  "role_profile R5 (" before it, or a page title quoted in the origin of the
+  quotation before it — is a raising source's line (question-rubric.md defines
+  them), checked for existence only: every fragment must appear on word
+  boundaries in the request or the room's pages. An origin that names the
+  candidate's material (their CV or message, the coach's notes, a fit-snapshot
+  row, the dossier or a dossier field) is no other source, and a quotation found
+  in `candidate_text` stays the candidate's whatever origin it claims
+  (`output_checks.quoted_spans_with_origin`, `other_source`). Third, the
+  template's own token `"none given"`, quoted as a reference to an empty
+  evidence cell, is no sentence. Quotations of three words or more in a
+  Requirement column beside the verbatim one must appear in the request or in a
+  canned room's pages; that is existence, not attribution, which stays with the
+  graders. A canned room's pages are quotable by their title, URL and text, as
+  the stub server shows them, and only the pages the run's log shows returned
+  (`output_checks.room_pages_text`). `evidence_form`, a format check, parses
+  each evidence cell whole against the grammar in mock-interview's
+  `references/output-template.md`: `none given`, or quotations each followed by
+  a dash and its origin (your CV, your message, the coach's notes with or
+  without "the", a dossier row — which may name its field or section, bare or
+  alone in parentheses, from a closed set: `verified_candidate_evidence`,
+  `handoff`, `handoff_to_mock_interview[.verified_candidate_evidence]`,
+  `evidence_map`), separated by nothing that adds a word (a comma, semicolon,
+  full stop, line break, "and" or a space, one punctuation mark optionally
+  followed by "and"), with nothing else in the cell.
 
 Each finding is judgement or format and they are counted apart: a qualifier
 beside a status label and a `yes` with no search behind it are different defects

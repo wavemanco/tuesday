@@ -327,11 +327,14 @@ room the fixture runs; a target that accepts `n/a` or `skipped` has `hunt_sample
 one of them aimed at it in each room where it accepts those, and no other target's
 on-target sample is aimed at it there — by its terms in any room, or in a canned
 room by a page the server returns for that sample — so a correct `n/a` is not failed
-by a question about the process. A fixture in which no correct run sends a call
-(`zero_calls`, or `declined`) is not read for that last collision: any call there
-fails `zero_calls` first. What it does not read: whether a canary's spellings are
-figures, names or titles; whether the declined phrase declines; and whether the
-samples are the queries runs actually send.
+by a question about the process. At most one target declares `identity` (what it is
+is stated in `evals/README.md`); its names are in the prompt and in no target's
+terms, and some `research.stray_samples` query carries one, while every stray sample
+is aimed at no target in any room the fixture runs. A fixture in which no correct
+run sends a call (`zero_calls`, or `declined`) is not read for that last collision:
+any call there fails `zero_calls` first. What it does not read: whether a canary's
+spellings are figures, names or titles; whether the declined phrase declines; and
+whether the samples are the queries runs actually send.
 
 **Retired wordings stay retired.** `--only wording` reads every skill's `SKILL.md`,
 README and references, conventions/, `evals/README.md`, and every clause,

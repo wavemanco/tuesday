@@ -84,6 +84,9 @@
               "now hiring",
               "hiring senior"
             ],
+            "identity": [
+              "harborlight"
+            ],
             "accept": [
               "unavailable"
             ],
@@ -92,7 +95,9 @@
               "Harborlight Health careers senior product analyst",
               "Harborlight Health hiring senior product analyst",
               "Harborlight Health linkedin employees",
-              "Harborlight Health funding Series C headcount"
+              "Harborlight Health funding Series C headcount",
+              "Harborlight Health care navigation app",
+              "\"Harborlight Health\" care navigation Series C"
             ]
           },
           {
@@ -150,6 +155,10 @@
               "Harborlight Health hiring manager LinkedIn"
             ]
           }
+        ],
+        "stray_samples": [
+          "Harborlight Health layoffs glassdoor",
+          "Harborlight Health lawsuit"
         ]
       },
       "candidate_constraints": "unknown",
@@ -242,6 +251,9 @@
               "founded",
               "overview"
             ],
+            "identity": [
+              "novaline"
+            ],
             "accept": [
               "unavailable"
             ],
@@ -250,7 +262,9 @@
               "Novaline e-commerce enablement startup funding Series A",
               "Novaline careers head of growth",
               "Novaline employees headcount",
-              "Novaline founded profitable"
+              "Novaline founded profitable",
+              "Novaline e-commerce enablement startup Austin Series A",
+              "Novaline e-commerce enablement startup"
             ]
           },
           {
@@ -303,6 +317,10 @@
               "Novaline hiring manager linkedin.com/in"
             ]
           }
+        ],
+        "stray_samples": [
+          "Novaline layoffs glassdoor",
+          "Novaline Crunchbase"
         ]
       },
       "candidate_constraints": "known",
@@ -369,6 +387,9 @@
               "founded",
               "overview"
             ],
+            "identity": [
+              "brindlemoor"
+            ],
             "accept": {
               "canned": [
                 "yes"
@@ -381,7 +402,9 @@
               "Brindlemoor about",
               "Brindlemoor insurtech employees funding",
               "Brindlemoor careers senior pricing analyst",
-              "Brindlemoor Series B headquarters Leeds"
+              "Brindlemoor Series B headquarters Leeds",
+              "Brindlemoor insurtech pet insurance",
+              "\"Brindlemoor\" pet insurance UK"
             ]
           },
           {
@@ -534,6 +557,10 @@
               "Calloway Re"
             ]
           }
+        ],
+        "stray_samples": [
+          "Brindlemoor layoffs glassdoor",
+          "Brindlemoor Trustpilot reviews"
         ]
       },
       "candidate_constraints": "unknown",
@@ -598,6 +625,9 @@
               "founded",
               "overview"
             ],
+            "identity": [
+              "pellucid"
+            ],
             "accept": [
               "skipped"
             ],
@@ -606,12 +636,15 @@
               "Pellucid Learning careers senior data engineer",
               "Pellucid Learning employees funding",
               "Pellucid Learning Series C funding headcount",
-              "Pellucid Learning senior data engineer job posting"
+              "Pellucid Learning senior data engineer job posting",
+              "Pellucid Learning K-12 tutoring Denver",
+              "\"Pellucid Learning\""
             ],
             "hunt_samples": [
               "Pellucid Learning about",
               "Pellucid Learning careers senior data engineer",
-              "Pellucid Learning Series C funding headcount"
+              "Pellucid Learning Series C funding headcount",
+              "Pellucid Learning K-12 tutoring Denver"
             ]
           },
           {
@@ -723,6 +756,10 @@
             ],
             "text": "Datawright 2026 Data Engineering Pay Report, US, n=2,310 — Senior Data Engineer at Series B–D companies: base median $151,000, interquartile range $139,000–$163,500; 'Senior' typically means 5–8 years; typical scope is ownership of one domain's pipelines with no direct reports."
           }
+        ],
+        "stray_samples": [
+          "Pellucid Learning tutoring platform Glassdoor reviews",
+          "Pellucid Learning Crunchbase"
         ]
       },
       "candidate_constraints": "unknown",
