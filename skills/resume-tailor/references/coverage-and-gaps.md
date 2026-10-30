@@ -64,7 +64,12 @@ row and carrying the response modes:
 ```text
 C1 — [one focused question]
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+
+**Watch-out:** The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line, check that quote and the new line against your original resume.
 ```
+
+The last line is the watch-out, `closing_order`'s last item, copied exactly from
+SKILL.md; nothing follows it.
 
 `Why it matters here` is where this section's world-claims live — what a
 requirement costs on this application, what a screener does with it — so the row

@@ -441,6 +441,20 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   full stop, line break, "and" or a space, one punctuation mark optionally
   followed by "and"), with nothing else in the cell.
 
+- **Watch-out** (`watch_out`), on every fixture of every skill, because every
+  fixture's turn delivers output: the chat's last non-empty line must be
+  `**Watch-out:** ` and the sentence the skill's `SKILL.md` declares as
+  `watch_out`, exactly, once runs of whitespace collapse — read by
+  `output_checks.declared_watch_out`, the reader CI uses too, and passed in by
+  `run_fixtures.check_run` — and no other chat line may be labelled a watch-out.
+  A missing line, a line that is not last, a paraphrase, a last line labelled a
+  warning and a second labelled line are told apart in the reason. Each produced
+  file fails if it holds the sentence or a labelled line: the line closes the
+  message that presents a file, never the file. A skill that declares no
+  sentence has the check reported unchecked. A fixture whose turn delivers
+  nothing — one that only asks for a missing gate input — would carry no line,
+  and none exists; adding one means exempting it here first.
+
 Each finding is judgement or format and they are counted apart: a qualifier
 beside a status label and a `yes` with no search behind it are different defects
 with different fixes. A third kind, `fixture`, marks a fixture that cannot be

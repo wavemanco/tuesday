@@ -72,10 +72,11 @@ are absolute; the parameters it names are declared here.
 question_budget: 3
 enum_fields: confidence, gap_type, question_type
 enum_columns: confidence=output-template.md#The fit snapshot/Confidence, gap_type=output-template.md#The fit snapshot/Gap type, question_type=output-template.md#Question banks/Type
-closing_order: upgrade menu, drill and dossier offers, questions
+closing_order: upgrade menu, drill and dossier offers, questions, watch-out
 qualifier_fields: gap-and-bridge language
 provenance_sections: The fit snapshot, Question banks
 sibling_mentions: 1
+watch_out: Suggested answers can make your experience sound bigger than what you told me — rehearse only what you actually did, in your own words.
 ```
 
 `provenance` is not declared an enum: a Provenance cell leads with exactly one
@@ -86,9 +87,11 @@ snapshot the quotes sit in the evidence column and the label stands alone.
 The drill and dossier offers sit inside the closing run because they are things
 the candidate acts on, not commentary on the pack — one line each, neither pushed.
 `closing_order` governs the delivery as a whole: the pack, whose last section is
-the upgrade menu, then the offers, then any questions. When the pack is saved as a
-file, the offers and questions close the message that presents it, and nothing
-follows the questions.
+the upgrade menu, then the offers, then any questions, then the watch-out line.
+When the pack is saved as a file, the offers, the questions and the watch-out line
+close the message that presents it, and nothing follows the watch-out line; where
+it never goes — the pack file, a drill's in-character turns — is
+`references/output-discipline.md` rule 7.
 
 ## The n + x rule
 

@@ -134,6 +134,15 @@ beyond a private prototype, and how did you know whether it worked?
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
 ```
 
+Where G2's is the last question, the response ends one line later — the watch-out
+line, `closing_order`'s last item, copied exactly from SKILL.md:
+
+```text
+Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+
+**Watch-out:** A summary line here can contradict the evidence table — before you act on a count, an "only" or an all-clear, check it against the table's rows.
+```
+
 Note what the `Provenance` cell does in both rows. "Why it matters" is where this
 section's world-claims live — a claim about what interviews probe, or about what
 would move a decision — and they read as findings when they are patterns. Two

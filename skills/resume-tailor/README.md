@@ -67,7 +67,7 @@ resume-tailor/
 │   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
 │   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── interaction-grammar.md          # mirror of conventions/ — standalone invariant, research tiers
-│   ├── output-discipline.md            # mirror of conventions/ — six rules on a response's shape
+│   ├── output-discipline.md            # mirror of conventions/ — seven rules on a response's shape
 │   ├── dossier-schema.md               # mirror of conventions/ — the shared dossier's schema
 │   └── citations.md                    # mirror of conventions/ — sources behind the outside claims, verbatim
 └── evals/                              # excluded from the package

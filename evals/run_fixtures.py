@@ -1084,7 +1084,12 @@ def check_run(skill: str, case: dict, out: Path, run: int, mode: str) -> dict:
     if status == "ok" and not body_path.exists():
         status, reasons = "harness-invalid", ["no response saved"]
     body = body_path.read_text() if body_path.exists() else ""
-    record = output_checks.run_checks(case, mode, body, meta.get("research_log"), status, reasons)
+    # Every fixture's turn delivers output, so every run is held to the skill's
+    # watch-out line, read from the SKILL.md it declares it in.
+    skill_md = REPO / "skills" / skill / "SKILL.md"
+    sentence = output_checks.declared_watch_out(skill_md.read_text()) if skill_md.exists() else None
+    record = output_checks.run_checks(case, mode, body, meta.get("research_log"), status, reasons,
+                                      watch_out=sentence or "")
     record = {"skill": skill, "id": case["id"], "run": run, "stem": stem, **record}
     (out / f"{stem}.checks.json").write_text(json.dumps(record, indent=2) + "\n")
     return record

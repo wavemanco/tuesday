@@ -1389,6 +1389,85 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     return {"checks": checks, "info": info, "unchecked": unchecked}
 
 
+# --- The watch-out line (output-discipline.md rule 7) -----------------------------
+
+WATCH_OUT_LABEL = "**Watch-out:**"
+OUTPUT_DISCIPLINE = re.compile(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", re.M | re.S)
+WATCH_OUT_PARAM = re.compile(r"^[ \t]*watch_out[ \t]*:[ \t]*(.*?)[ \t]*$", re.M)
+# A line labelled as a watch-out, in any spelling; and one labelled with the name it
+# never takes, which counts only where the watch-out line should be.
+WATCH_OUT_LABELLED = re.compile(r"^[\s>*_#-]*watch[- ]?outs?[*_\s]*:", re.I)
+WARNING_LABELLED = re.compile(r"^[\s>*_#-]*warnings?[*_\s]*:", re.I)
+
+
+def declared_watch_out(skill_md: str) -> str | None:
+    """The sentence a SKILL.md declares as `watch_out:` under `## Output discipline`.
+
+    One reader for the harness and for CI (ci/check_skills.py imports it), so the
+    sentence the runs are held to and the one the copies are held to are the same
+    string. None when the section or the parameter is missing or empty."""
+    section = OUTPUT_DISCIPLINE.search(skill_md)
+    found = WATCH_OUT_PARAM.search(section.group(1)) if section else None
+    return found.group(1) if found and found.group(1) else None
+
+
+def watch_out_line(sentence: str) -> str:
+    """The line a delivered response ends with, exactly."""
+    return f"{WATCH_OUT_LABEL} {sentence}"
+
+
+def check_watch_out(response: str, sentence: str) -> dict:
+    """The chat text ends with the skill's watch-out line, and no produced file holds it.
+
+    Read exactly: the chat's last non-empty line must be `**Watch-out:** ` and the
+    declared sentence, character for character once runs of whitespace are
+    collapsed, and no other chat line may be labelled a watch-out. The chat is the
+    text above the first file marker (split_response); a produced file fails if it
+    holds the sentence or a line labelled a watch-out. A missing line, a line that is
+    not last, a paraphrase, a line labelled a warning and a second labelled line are
+    told apart in the reason, because each has a different fix. A warning elsewhere
+    in the chat is not read: only the last line's label is."""
+    checks = []
+    want = " ".join(watch_out_line(sentence).split())
+    sources = split_response(response)
+    lines = [" ".join(line.split()) for line in sources[0][1].splitlines() if line.strip()]
+    last = lines[-1] if lines else ""
+    labelled = [i for i, line in enumerate(lines) if WATCH_OUT_LABELLED.match(line)]
+    exact = [i for i, line in enumerate(lines) if line == want]
+    if last == want and len(labelled) == 1:
+        checks.append(finding("watch_out", "chat", True, "the chat's last line is the skill's watch-out, exactly"))
+    elif last == want:
+        others = [lines[i][:80] for i in labelled[:-1]]
+        checks.append(finding("watch_out", "chat", False,
+                              f"the watch-out line is last, but {len(others)} more line(s) are labelled as one, "
+                              f"first {others[0]!r} — the line appears once"))
+    elif exact:
+        checks.append(finding("watch_out", "chat", False,
+                              f"the watch-out line is present but not last: {len(lines) - 1 - exact[-1]} line(s) "
+                              f"follow it, ending {last[:80]!r}"))
+    elif WARNING_LABELLED.match(last):
+        checks.append(finding("watch_out", "chat", False,
+                              f"the last line is labelled a warning, which the watch-out is never called: "
+                              f"{last[:120]!r}, wanted {want[:120]!r}"))
+    elif labelled:
+        got = lines[labelled[-1]]
+        where = "the last line" if labelled[-1] == len(lines) - 1 else \
+            f"a line {len(lines) - 1 - labelled[-1]} line(s) from the end"
+        checks.append(finding("watch_out", "chat", False,
+                              f"{where} is labelled a watch-out but is not the skill's sentence word for word: "
+                              f"{got[:120]!r}, wanted {want[:120]!r}"))
+    else:
+        checks.append(finding("watch_out", "chat", False,
+                              f"no watch-out line: the chat ends {(last or '(nothing)')[:80]!r}, wanted {want[:80]!r}"))
+    flat = " ".join(sentence.split())
+    for name, text in sources[1:]:
+        inside = flat in " ".join(text.split()) or any(WATCH_OUT_LABELLED.match(line) for line in text.splitlines())
+        checks.append(finding("watch_out", name, not inside,
+                              f"{name} carries the watch-out — it closes the message that presents a file, never "
+                              f"the file" if inside else f"{name} carries no watch-out line"))
+    return {"checks": checks, "info": [], "unchecked": []}
+
+
 # --- Assembly ----------------------------------------------------------------------
 
 def room_pages_text(pages: list[dict], research_log: list | None) -> list[str]:
@@ -1403,8 +1482,14 @@ def room_pages_text(pages: list[dict], research_log: list | None) -> list[str]:
 
 
 def run_checks(case: dict, mode: str, response: str, research_log: list | None,
-               harness_status: str = "ok", harness_reasons: list | None = None) -> dict:
-    """Everything this fixture asks for, as one {stem}.checks.json record."""
+               harness_status: str = "ok", harness_reasons: list | None = None,
+               watch_out: str | None = None) -> dict:
+    """Everything this fixture asks for, as one {stem}.checks.json record.
+
+    `watch_out` is the skill's declared sentence. The runner passes it for every
+    fixture of every skill, because every fixture's turn delivers output
+    (run_fixtures.check_run); an empty string means the skill declares none, and
+    the check is reported unchecked rather than passed. None leaves it out."""
     if harness_status != "ok":
         return {"status": "harness-invalid", "mode": mode, "checks": [],
                 "info": list(harness_reasons or []), "unchecked": []}
@@ -1419,6 +1504,11 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     if "quotes" in wanted:
         corpus = room_pages_text((research or {}).get("pages", []), research_log) if mode == "canned" else []
         parts.append(check_quotes(response, case.get("prompt", ""), corpus, case.get("candidate_text")))
+    if watch_out:
+        parts.append(check_watch_out(response, watch_out))
+    elif watch_out is not None:
+        parts.append({"checks": [], "unchecked": ["watch_out"],
+                      "info": ["the skill declares no watch_out sentence: the watch-out line is unchecked"]})
     for part in parts:
         checks += part["checks"]
         info += part["info"]

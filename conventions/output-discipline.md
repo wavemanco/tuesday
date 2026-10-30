@@ -3,11 +3,12 @@
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
 `references/` with a synced-from header; this copy wins on conflict.
 
-Six rules about the *shape* of a delivered response. Every one was learned from a
-measured defect in a clean-room run, and three of them were fixed twice in
-different skills because nothing carried them across — the question budget in two
-skills weeks apart, the enum cell in three separate files. That is what this file
-is for.
+Seven rules about the *shape* of a delivered response. The first six were each
+learned from a measured defect in a clean-room run, and three of them were fixed
+twice in different skills because nothing carried them across — the question
+budget in two skills weeks apart, the enum cell in three separate files. That is
+what this file is for. The seventh is where a measured defect goes when two fixes
+have not closed it: to the user, as the one thing to double-check.
 
 ## How to read this file
 
@@ -21,7 +22,7 @@ by each skill in its own `SKILL.md`, under a heading of exactly
 
 question_budget: 3
 enum_fields: priority, fit_status, confidence, gap_type
-closing_order: dossier offer, upgrade menu, questions
+closing_order: dossier offer, upgrade menu, questions, watch-out
 sibling_mentions: 1
 ```
 
@@ -107,11 +108,11 @@ for brackets must not find something else there.
 
 No parameter. This is a collision, not a preference.
 
-## 4. The calls to action close the message
+## 4. The calls to action close the message, and only the watch-out follows them
 
 **Invariant.** The sections a user acts on next are the last thing they meet, and
-nothing follows them — no recap, no summary, no closing restatement, no
-pleasantry.
+nothing follows them but the skill's watch-out line (rule 7) — no recap, no
+summary, no closing restatement, no pleasantry.
 
 The pull is to write one more sentence tying it together. That sentence is a
 second summary of an analysis that already opened with one, and two summaries of
@@ -119,7 +120,8 @@ the same analysis can only agree by luck — the reader will trust whichever the
 read last. Whatever leads the response is the summary; the response ends without
 restating itself.
 
-**Parameter: `closing_order`** — which sections are the calls to action, in order.
+**Parameter: `closing_order`** — which sections close the message, in order: the
+calls to action, then `watch-out`, which every skill lists last.
 
 ## 5. A sibling skill is named, not lobbied for
 
@@ -177,3 +179,40 @@ resist. The check would have rejected that row, and three worked examples beside
 is the one in `evidence-conventions.md` §5: that rule is gradeable rather than
 mechanical, and it says so, instead of shipping a mechanism that encodes a wrong
 version of it. A suite with this many real checks can afford to name the gap.
+
+## 7. A delivered output ends with its skill's watch-out
+
+**Invariant.** A response that delivers the skill's output — a first pass, a
+regenerated or revised version, drill feedback, the message presenting a file —
+ends with one line, copied exactly:
+
+```text
+**Watch-out:** <the skill's watch_out sentence>
+```
+
+It is the response's last line, after the questions, and the one thing rule 4
+lets follow them. It is the skill's fixed sentence, word for word: not a recap,
+not a call to action, not written for this run or adapted to it. A sentence
+composed for the run would be the second summary rule 4 exists to prevent; a
+fixed one restates nothing. It names what the user should double-check, because
+the suite measured a defect there that its fixes have not closed
+(`CONTRIBUTING.md`, "When an issue survives two iterations"). It is called a
+watch-out in every file and every response, and by no other name; and no other
+line of a response, or of a file it produces, is labelled a watch-out.
+
+Three places it never goes:
+
+- **Inside a file meant to be kept or sent** — a resume, a cover letter, a saved
+  prep pack, a `tuesday-dossier.md`. It closes the message that presents or offers
+  the file. A line addressed to the user about the output does not belong in the
+  output they will send on.
+- **After an in-character turn of a live drill.** The interviewer's lines are the
+  rehearsal; the feedback that ends the drill closes with the watch-out.
+- **On a turn that delivers nothing** — one that only asks for an input the skill
+  cannot run without, such as a missing job description.
+
+**Parameter: `watch_out`** — the skill's sentence: one sentence, in plain words a
+user would know, naming what to check and against what. It is stated once, in the
+skill's `SKILL.md`; every copy elsewhere — the root README's watch-out table, the
+fixtures' closing expectations, a worked example — is held equal to it by CI, so
+changing it means changing the parameter and the copies in one change.

@@ -580,10 +580,10 @@ def break_wrapped_count(root: Path) -> str:
 
 
 def break_sections_count(root: Path) -> str:
-    """ "Six rules" ahead of six numbered sections."""
-    swap_once(root, "conventions/output-discipline.md", "Six rules about the *shape*",
+    """ "Seven rules" ahead of seven numbered sections."""
+    swap_once(root, "conventions/output-discipline.md", "Seven rules about the *shape*",
               "Five rules about the *shape*", "break_sections_count")
-    return "says 5, has 6 numbered sections"
+    return "says 5, has 7 numbered sections"
 
 
 def break_mid_sentence_count(root: Path) -> str:
@@ -609,9 +609,9 @@ def break_indented_count(root: Path) -> str:
 
 def break_restated_count(root: Path) -> str:
     """README restating output-discipline.md's count — the drift that actually happened."""
-    swap_once(root, "README.md", "— six rules on the shape of a delivered response",
+    swap_once(root, "README.md", "— seven rules on the shape of a delivered response",
               "— five rules on the shape of a delivered response", "break_restated_count")
-    return '"five rules" beside `output-discipline.md`, which has 6 rules'
+    return '"five rules" beside `output-discipline.md`, which has 7 rules'
 
 
 
@@ -681,11 +681,11 @@ def break_close_contradicts_order(root: Path) -> str:
     """The expectation resume-tailor v0.1 shipped, and PR #9 fixed by hand: the
     response "closes with an upgrade menu", where closing_order puts questions last."""
     swap_once(root, "skills/resume-tailor/evals/evals.json",
-              "The response ends with the upgrade menu and the questions as its last two sections in that order, "
+              "The response ends with the upgrade menu, then the questions, then the watch-out line, in that order, "
               "asks at most three questions across the whole message",
               "The response closes with an upgrade menu and asks at most three questions across the whole message",
               "break_close_contradicts_order")
-    return "closing_order ends questions"
+    return "closing_order ends watch-out"
 
 
 def break_close_far_from_subject(root: Path) -> str:
@@ -693,7 +693,7 @@ def break_close_far_from_subject(root: Path) -> str:
     sixty characters and a filename's full stop between "The response" and "closes"."""
     swap_once(root, "skills/job-underwriter/evals/evals.json",
               "and its upgrade menu names what each missing input would unlock. The response closes with the "
-              "dossier offer, then the upgrade menu, then the questions",
+              "dossier offer, then the upgrade menu, then the questions, then the watch-out line",
               "and closes with an upgrade menu naming what each missing input would unlock",
               "break_close_far_from_subject")
     return '"closes with an upgrade menu naming what each missing input'
@@ -802,43 +802,43 @@ def break_count_bold_lead(root: Path) -> str:
 
 
 def break_count_determiner_opening(root: Path) -> str:
-    """ "These five rules" ahead of six numbered sections."""
-    swap_once(root, "conventions/output-discipline.md", "Six rules about the *shape*",
+    """ "These five rules" ahead of seven numbered sections."""
+    swap_once(root, "conventions/output-discipline.md", "Seven rules about the *shape*",
               "These five rules are about the *shape*", "break_count_determiner_opening")
-    return "says 5, has 6 numbered sections"
+    return "says 5, has 7 numbered sections"
 
 
 def break_close_reversed(root: Path) -> str:
     """The right sections named in the wrong order."""
     swap_once(root, "skills/resume-tailor/evals/evals.json",
-              "The response ends with the upgrade menu and the questions as its last two sections in that order, "
+              "The response ends with the upgrade menu, then the questions, then the watch-out line, in that order, "
               "asks at most three questions across the whole message",
-              "The response ends with the questions and the upgrade menu as its last two sections in that order, "
+              "The response ends with the watch-out line, then the questions, then the upgrade menu, in that order, "
               "asks at most three questions across the whole message", "break_close_reversed")
-    return "closing_order ends upgrade menu, then questions"
+    return "closing_order ends upgrade menu, then questions, then watch-out"
 
 
 def break_close_synonym(root: Path) -> str:
     swap_once(root, "skills/job-underwriter/evals/evals.json",
-              "The response closes with the dossier offer, then the upgrade menu, then the questions",
+              "The response closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line",
               "The response concludes with an upgrade menu", "break_close_synonym")
-    return "closing_order ends questions"
+    return "closing_order ends watch-out"
 
 
 def break_close_skill_subject(root: Path) -> str:
     swap_once(root, "skills/job-underwriter/evals/evals.json",
-              "The response closes with the dossier offer, then the upgrade menu, then the questions",
+              "The response closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line",
               "The skill closes with an upgrade menu", "break_close_skill_subject")
-    return "closing_order ends questions"
+    return "closing_order ends watch-out"
 
 
 def break_close_incidental_word(root: Path) -> str:
     """ "questions" inside a participle clause is not the questions section."""
     swap_once(root, "skills/job-underwriter/evals/evals.json",
-              "The response closes with the dossier offer, then the upgrade menu, then the questions",
+              "The response closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line",
               "The response closes with an upgrade menu listing the questions that would sharpen it",
               "break_close_incidental_word")
-    return "closing_order ends questions"
+    return "closing_order ends watch-out"
 
 
 def break_budget_maximum(root: Path) -> str:
@@ -919,23 +919,23 @@ def break_section_wrapped_qualifier(root: Path) -> str:
 
 def break_count_definite_frame(root: Path) -> str:
     """ "the five rules in `output-discipline.md`" — the total, restated wrong."""
-    swap_once(root, "README.md", "— six rules on the shape of a delivered response",
+    swap_once(root, "README.md", "— seven rules on the shape of a delivered response",
               "— the five rules in `output-discipline.md` on the shape of a delivered response",
               "break_count_definite_frame")
-    return '"five rules" beside `output-discipline.md`, which has 6 rules'
+    return '"five rules" beside `output-discipline.md`, which has 7 rules'
 
 
 def break_close_adverb_imperative(root: Path) -> str:
     swap_once(root, "skills/job-underwriter/SKILL.md", "because the snapshot at the top is its one summary (Step 1).",
               "because the snapshot at the top is its one summary (Step 1). Always close with the upgrade menu.",
               "break_close_adverb_imperative")
-    return "closing_order ends questions"
+    return "closing_order ends watch-out"
 
 
 def break_close_head_subject(root: Path) -> str:
     """ "the message presenting the pack ends with the upgrade menu" is about the message."""
     swap_once(root, "skills/mock-interview/evals/evals.json",
-              'and the message presenting it ends with the drill and dossier offers, then at most three questions counted across the whole message, with nothing after the questions',
+              'and the message presenting it ends with the drill and dossier offers, then the questions, then the watch-out line, with nothing after it',
               "and the message presenting the pack ends with the upgrade menu",
               "break_close_head_subject")
     return "closing_order ends"
@@ -1044,9 +1044,9 @@ def keep_drill_turn(root: Path) -> None:
 
 def keep_wrap_before_bold(root: Path) -> None:
     swap_once(root, "skills/mock-interview/SKILL.md",
-              "file, the offers and questions close the message that presents it, and nothing\nfollows the questions.",
+              "file, the offers, the questions and the watch-out line\nclose the message that presents it,",
               "file, the message that presents it closes with the drill and dossier offers, then\n**any questions**, "
-              "and nothing follows the questions.", "keep_wrap_before_bold")
+              "then the watch-out line,", "keep_wrap_before_bold")
 
 
 def keep_cases_of_something_else(root: Path) -> None:
@@ -1103,8 +1103,8 @@ def keep_subset_beside_file(root: Path) -> None:
 
 def keep_negated_close(root: Path) -> None:
     swap_once(root, "skills/job-underwriter/evals/evals.json",
-              "The response closes with the dossier offer, then the upgrade menu, then the questions",
-              "The response does not close with the upgrade menu: it closes with the dossier offer, then the upgrade menu, then the questions",
+              "The response closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line",
+              "The response does not close with the upgrade menu: it closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line",
               "keep_negated_close")
 
 
@@ -2523,6 +2523,148 @@ def break_clause_nested(root: Path) -> str:
     return "keeps an unexpanded clause reference"
 
 
+# --- The watch-out line (output-discipline.md rule 7) -------------------------------------
+
+MI_WATCH = ("Suggested answers can make your experience sound bigger than what you told me — rehearse only what "
+            "you actually did, in your own words.")
+RT_WATCH = ("The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve "
+            "a line, check that quote and the new line against your original resume.")
+
+
+def break_watch_out_undeclared(root: Path) -> str:
+    """The parameter line deleted from a SKILL.md."""
+    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n", "", "break_watch_out_undeclared")
+    return "declares no watch_out sentence"
+
+
+def break_watch_out_two_sentences(root: Path) -> str:
+    """Extended past one sentence — the standing rule says extend it and keep it one."""
+    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n",
+              f"watch_out: {MI_WATCH} Check the dates too.\n", "break_watch_out_two_sentences")
+    return "watch_out is not one sentence"
+
+
+def break_watch_out_too_long(root: Path) -> str:
+    """One sentence, and no longer crisp."""
+    swap_once(root, "skills/resume-tailor/SKILL.md", "against your original resume.\n```",
+              "against your original resume, your portfolio, your old cover letters, your LinkedIn profile and any "
+              "reference you plan to give.\n```", "break_watch_out_too_long")
+    return "over 40"
+
+
+def break_watch_out_pipe(root: Path) -> str:
+    """A pipe in the sentence breaks the README's table."""
+    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n",
+              f"watch_out: {MI_WATCH.replace(' — ', ' | ')}\n", "break_watch_out_pipe")
+    return "bracket, pipe or code span"
+
+
+def break_closing_order_without_watch_out(root: Path) -> str:
+    """closing_order back to ending on the questions."""
+    swap_once(root, "skills/resume-tailor/SKILL.md", "closing_order: upgrade menu, questions, watch-out\n",
+              "closing_order: upgrade menu, questions\n", "break_closing_order_without_watch_out")
+    return "closing_order does not end with watch-out"
+
+
+def break_watch_out_readme_drift(root: Path) -> str:
+    """The README's copy edited and the parameter not."""
+    swap_once(root, "README.md", f"| mock-interview | {MI_WATCH} |",
+              "| mock-interview | Suggested answers can overstate your experience — rehearse only what you did. |",
+              "break_watch_out_readme_drift")
+    return "README.md's watch-out table quotes mock-interview's sentence"
+
+
+def break_watch_out_parameter_drift(root: Path) -> str:
+    """The parameter edited and its copies not — the other direction of the same drift."""
+    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n",
+              f"watch_out: {MI_WATCH.replace('in your own words', 'and say it in your own words')}\n",
+              "break_watch_out_parameter_drift")
+    return "README.md's watch-out table quotes mock-interview's sentence"
+
+
+def break_watch_out_readme_row_missing(root: Path) -> str:
+    swap_once(root, "README.md", f"| resume-tailor | {RT_WATCH} |",
+              f"| resume tailoring | {RT_WATCH} |", "break_watch_out_readme_row_missing")
+    return "has 0 rows for resume-tailor"
+
+
+def break_watch_out_fixture_paraphrase(root: Path) -> str:
+    """A fixture's closing clause paraphrasing the line a grader holds the run to."""
+    swap_once(root, "skills/resume-tailor/evals/evals.json", f"**Watch-out:** {RT_WATCH}",
+              "**Watch-out:** Check each quote and each new line against your original resume.",
+              "break_watch_out_fixture_paraphrase")
+    return "labels a watch-out line that is not the declared sentence"
+
+
+def break_watch_out_fixture_typography(root: Path) -> str:
+    """A fixture's code-span copy of the line with curly quotes: the clause says the harness checks it
+    character for character, so CI holds the copy to the same exactness."""
+    swap_once(root, "skills/job-underwriter/evals/evals.json",
+              'before you act on a count, an \\"only\\" or an all-clear, check it against the table\'s rows.`',
+              'before you act on a count, an “only” or an all-clear, check it against the table\'s rows.`',
+              "break_watch_out_fixture_typography")
+    return "labels a watch-out line that is not the declared sentence"
+
+
+def break_watch_out_example_drift(root: Path) -> str:
+    """A worked example's last line no longer the declared one."""
+    swap_once(root, "skills/resume-tailor/references/coverage-and-gaps.md", f"**Watch-out:** {RT_WATCH}",
+              "**Watch-out:** Check every edit against your original resume.", "break_watch_out_example_drift")
+    return "a watch-out line that is not the declared one"
+
+
+def break_watch_out_convention(root: Path) -> str:
+    """The convention losing its definition of the slot."""
+    swap_once(root, "conventions/output-discipline.md", "**Parameter: `watch_out`**", "**The sentence**",
+              "break_watch_out_convention")
+    return "does not define the watch-out slot"
+
+
+def break_watch_out_named_warning(root: Path) -> str:
+    """The slot labelled with the name it never takes, in a skill's template."""
+    swap_once(root, "skills/mock-interview/references/output-template.md", "Running a drill:",
+              "**Warning:** rehearse only what you did.\n\nRunning a drill:", "break_watch_out_named_warning")
+    return "names a line a warning"
+
+
+def break_watch_out_readme_warning(root: Path) -> str:
+    swap_once(root, "README.md", "Each skill ends its output with one sentence telling you what to double-check.",
+              "Each skill ends its output with a one-sentence warning telling you what to double-check.",
+              "break_watch_out_readme_warning")
+    return "watch-out section uses \"warning\""
+
+
+def break_standing_rule_renamed(root: Path) -> str:
+    """The heading the README links to, renamed."""
+    swap_once(root, "CONTRIBUTING.md", "## When an issue survives two iterations\n", "## Stopping rule\n",
+              "break_standing_rule_renamed")
+    return "no '## When an issue survives two iterations' section"
+
+
+def keep_watch_out_changed_everywhere(root: Path) -> None:
+    """The sentence changed in its parameter and every copy at once: the way to change it."""
+    new = MI_WATCH.replace("in your own words", "and say it in your own words")
+    for rel in ("skills/mock-interview/SKILL.md", "README.md", "skills/mock-interview/evals/evals.json"):
+        path = root / rel
+        text = path.read_text()
+        if text.count(MI_WATCH) < 1:
+            raise SystemExit(f"keep_watch_out_changed_everywhere: no sentence in {rel} — it has gone stale")
+        path.write_text(text.replace(MI_WATCH, new))
+
+
+def keep_watch_out_readme_linked_name(root: Path) -> None:
+    """The README's Skill cell written as a link in code, like the table above it."""
+    swap_once(root, "README.md", f"| job-underwriter | A summary line",
+              "| [`job-underwriter`](skills/job-underwriter/) | A summary line", "keep_watch_out_readme_linked_name")
+
+
+def keep_warning_signs_elsewhere(root: Path) -> None:
+    """"warning" about something else, not as a line's label."""
+    swap_once(root, "skills/mock-interview/references/output-template.md", "Running a drill:",
+              "Warning signs that a drill is going badly are covered in step 6.\n\nRunning a drill:",
+              "keep_warning_signs_elsewhere")
+
+
 PASSES = [
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
     ("sections", "a bare section written \"of this spec\" beside another file's name", keep_self_reference_of_this_spec),
@@ -2610,6 +2752,9 @@ PASSES = [
     ("fit-ledger", "GRADER: a named \"only\" in decision.summary, false of the map", keep_set_only_named_summary),
     ("wording", "the rule that retired the count rule, stated in its words", keep_unnamed_rule_stated),
     ("wording", "the two accounting grounds in the other order", keep_budget_grounds_reversed),
+    ("watch-out", "a watch-out sentence changed in its parameter and every copy at once", keep_watch_out_changed_everywhere),
+    ("watch-out", "the README naming a skill as a link in code", keep_watch_out_readme_linked_name),
+    ("watch-out", "\"warning\" about something other than the slot", keep_warning_signs_elsewhere),
 ]
 
 
@@ -2941,6 +3086,21 @@ CASES: list[tuple[str, str, callable]] = [
     ("evals", "an expectation naming an unknown clause", break_clause_unknown),
     ("evals", "a clause nothing uses", break_clause_unused),
     ("evals", "a clause inside a clause", break_clause_nested),
+    ("watch-out", "a SKILL.md with no watch_out", break_watch_out_undeclared),
+    ("watch-out", "a watch_out of two sentences", break_watch_out_two_sentences),
+    ("watch-out", "a watch_out over the word limit", break_watch_out_too_long),
+    ("watch-out", "a pipe in a watch_out", break_watch_out_pipe),
+    ("watch-out", "a closing_order not ending with watch-out", break_closing_order_without_watch_out),
+    ("watch-out", "the README's copy drifting from the parameter", break_watch_out_readme_drift),
+    ("watch-out", "the parameter drifting from its copies", break_watch_out_parameter_drift),
+    ("watch-out", "a skill with no row in the README's table", break_watch_out_readme_row_missing),
+    ("watch-out", "a fixture's closing clause paraphrasing the line", break_watch_out_fixture_paraphrase),
+    ("watch-out", "a fixture's copy of the line with curly quotes", break_watch_out_fixture_typography),
+    ("watch-out", "a worked example's watch-out line drifting", break_watch_out_example_drift),
+    ("watch-out", "the convention no longer defining the slot", break_watch_out_convention),
+    ("watch-out", "a line labelled a warning", break_watch_out_named_warning),
+    ("watch-out", "the README calling it a warning", break_watch_out_readme_warning),
+    ("watch-out", "the standing rule's heading renamed", break_standing_rule_renamed),
 ]
 
 

@@ -2593,6 +2593,106 @@ def test_audit_ledger() -> None:
           ["snapshot_count"])
 
 
+def test_watch_out() -> None:
+    """The chat ends with the skill's watch-out line, exactly; no produced file holds it."""
+    print("\nchecks: the watch-out line (output-discipline.md rule 7)")
+    repo = Path(__file__).resolve().parent.parent
+    sentences = {s: output_checks.declared_watch_out((repo / "skills" / s / "SKILL.md").read_text())
+                 for s in run_fixtures.SKILLS}
+    check("every skill declares a watch_out sentence", [s for s, v in sentences.items() if not v], [])
+    sentence = sentences["resume-tailor"]
+    line = output_checks.watch_out_line(sentence)
+    body = "## Edit ledger\n\n| # | Current |\n|---|---|\n| E1 | x |\n\nC1 — What did you own?\nAnswer in text, or say skip.\n"
+    marker = "\n----- file the response produced: {} -----\n"
+
+    def verdicts(response: str) -> dict:
+        got = output_checks.check_watch_out(response, sentence)
+        return {c["target"]: c["verdict"] for c in got["checks"]}
+
+    def why(response: str, target: str = "chat") -> str:
+        got = output_checks.check_watch_out(response, sentence)
+        return next(c["why"] for c in got["checks"] if c["target"] == target)
+
+    check("must pass: the line is the chat's last line", verdicts(body + "\n" + line + "\n"), {"chat": "PASS"})
+    check("must pass: trailing blank lines and spaces after it", verdicts(body + "\n" + line + "   \n\n\n"),
+          {"chat": "PASS"})
+    check("must pass: a doubled space inside the line, since runs of whitespace collapse",
+          verdicts(body + "\n" + line.replace(" — ", "  — ") + "\n"), {"chat": "PASS"})
+    check("must fail: no watch-out line", verdicts(body), {"chat": "FAIL"})
+    check_true("and says so", why(body).startswith("no watch-out line"))
+    after = body + "\n" + line + "\n\nHope this helps — good luck with the application!\n"
+    check("must fail: the line is not last", verdicts(after), {"chat": "FAIL"})
+    check_true("and says what follows it", "not last: 1 line(s) follow it" in why(after))
+    para = body + "\n**Watch-out:** Check each quote and each new line against your original resume.\n"
+    check("must fail: a paraphrased line", verdicts(para), {"chat": "FAIL"})
+    check_true("and says it is not word for word", "not the skill's sentence word for word" in why(para))
+    curly = body + "\n" + line.replace("you wrote", "you’d written") + "\n"
+    check("must fail: one word changed", verdicts(curly), {"chat": "FAIL"})
+    ju = sentences["job-underwriter"]
+    ju_body = body + "\n" + output_checks.watch_out_line(ju)
+    for label, swapped in (("curly quotes", ju_body.replace('"only"', "“only”")),
+                           ("a double hyphen for the dash", ju_body.replace(" — ", " -- "))):
+        got = {c["target"]: c["verdict"] for c in output_checks.check_watch_out(swapped + "\n", ju)["checks"]}
+        check(f"must fail: the line copied with {label}, since it is checked character for character",
+              got, {"chat": "FAIL"})
+    warned = body + "\n**Warning:** " + sentence + "\n"
+    check("must fail: the right sentence labelled a warning", verdicts(warned), {"chat": "FAIL"})
+    check_true("and says it is never called that", "labelled a warning" in why(warned))
+    twice = body + "\n**Watch-out:** check the dates.\n\n" + line + "\n"
+    check("must fail: a second line labelled a watch-out", verdicts(twice), {"chat": "FAIL"})
+    check_true("and says the line appears once", "the line appears once" in why(twice))
+    bare = body + "\n" + sentence + "\n"
+    check("must fail: the sentence without its label", verdicts(bare), {"chat": "FAIL"})
+    warning_elsewhere = "Warning: this posting has no salary.\n" + body + "\n" + line + "\n"
+    check("must pass: a warning elsewhere in the chat is not the slot", verdicts(warning_elsewhere), {"chat": "PASS"})
+    resume = "# Priya Shah\n\nProgramme manager.\n\n" + line + "\n"
+    inside = body + "\n" + line + "\n" + marker.format("resume.md") + resume
+    check("must fail: the line inside a produced resume file, though the chat is right", verdicts(inside),
+          {"chat": "PASS", "resume.md": "FAIL"})
+    check_true("and says where it belongs", "never the file" in why(inside, "resume.md"))
+    moved = body + marker.format("resume.md") + resume
+    check("must fail: the line moved into the file, the chat ending without it", verdicts(moved),
+          {"chat": "FAIL", "resume.md": "FAIL"})
+    unlabelled = body + "\n" + line + "\n" + marker.format("resume.md") + "# Priya\n\n" + sentence + "\n"
+    check("must fail: the sentence in a file without its label", verdicts(unlabelled),
+          {"chat": "PASS", "resume.md": "FAIL"})
+    clean = body + "\n" + line + "\n" + marker.format("pack.md") + "# Pack\n\n## Upgrade menu\n- JD text\n"
+    check("must pass: a produced file without it", verdicts(clean), {"chat": "PASS", "pack.md": "PASS"})
+
+    case = {"id": 1, "prompt": "p", "expectations": ["e"]}
+    got = output_checks.run_checks(case, "denied", body + "\n" + line + "\n", None, watch_out=sentence)
+    check("run_checks runs it when given the sentence", verdict_of(got, "watch_out", "chat"), "PASS")
+    got = output_checks.run_checks(case, "denied", body, None, watch_out=sentence)
+    check("and fails the run without the line", (verdict_of(got, "watch_out", "chat"), got["status"]),
+          ("FAIL", "fail"))
+    got = output_checks.run_checks(case, "denied", body, None, watch_out="")
+    check("a skill that declares none is unchecked, never passed",
+          (verdict_of(got, "watch_out", "chat"), "watch_out" in got["unchecked"], got["status"]),
+          (None, True, "uncheckable"))
+    got = output_checks.run_checks(case, "denied", body, None)
+    check("left out when not asked for", verdict_of(got, "watch_out", "chat"), None)
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        for skill in run_fixtures.SKILLS:
+            case = fixture(skill, 1)
+            stem = run_fixtures.stem_for(skill, case, "denied", 1)
+            (out / f"{stem}.meta.json").write_text(json.dumps({"harness": {"status": "ok", "reasons": []}}))
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_line(sentences[skill]) + "\n")
+            rec = run_fixtures.check_run(skill, case, out, 1, "denied")
+            check(f"check_run holds {skill} eval 1 to its own SKILL.md sentence",
+                  verdict_of(rec, "watch_out", "chat"), "PASS")
+            other = next(s for s in run_fixtures.SKILLS if s != skill)
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_line(sentences[other]) + "\n")
+            rec = run_fixtures.check_run(skill, case, out, 1, "denied")
+            check(f"and fails {skill} on a sibling's sentence", verdict_of(rec, "watch_out", "chat"), "FAIL")
+    for skill in run_fixtures.SKILLS:
+        from fixture_clauses import load_cases
+        cases = load_cases(repo / "skills" / skill / "evals" / "evals.json")
+        line_of = output_checks.watch_out_line(sentences[skill])
+        check(f"every {skill} fixture's expectations carry its watch-out line, exactly",
+              [c["id"] for c in cases if not any(line_of in e for e in c["expectations"])], [])
+
+
 def main() -> int:
     for test in (test_routing_declines, test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
@@ -2605,7 +2705,7 @@ def main() -> int:
                  test_user_links,
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
-                 test_audit_ledger):
+                 test_audit_ledger, test_watch_out):
         test()
     print()
     if FAILURES:

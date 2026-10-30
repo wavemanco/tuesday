@@ -6,6 +6,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 
 - **Filename is exactly `tuesday-dossier.md`** — recognizable among a user's uploads months later.
 - **Two layers, one artifact.** Concise human-readable report on top; one fenced ```json envelope at the bottom. The report is rendered from the envelope as `dossier-schema.md` §2 defines — two layers that can drift are two artifacts. One envelope entry may render in two places: a `gap_queue` row renders as a queue row *and* as a closing question, from the same `prompt` object. That is one source with two placements, which is not drift; two hand-written copies would be.
+- **No watch-out line in the file.** The dossier is a file the user keeps and carries; the watch-out line closes the message that offers or presents it, never the dossier (`output-discipline.md` rule 7).
 - **Offered, never forced.** A one-line offer stands in every delivered assessment, first pass included, immediately before the upgrade menu; the direct offer comes at the natural end of the engagement or whenever the user asks. The user decides whether to carry it.
 - **This skill writes its own sections only:** `role_profile`, `evidence_map`, `gap_queue`, `risk_register`, `application_plan`, `evidence_state`, `decision`, `candidate_constraints`, `handoff_to_mock_interview`. It reads but never mutates `pack_feedback` (mock-interview owns it). When updating a dossier that has sections this skill doesn't recognize, carry them through verbatim.
 - **Envelope version is `1.2`** (adds `evidence_map[].provenance`; see the canonical schema's version history). Reading a dossier with a higher major version: say so and proceed standalone rather than guessing.
@@ -95,8 +96,8 @@ R6 are the rows that would have hedged. Note also that R6 is `direct` fit with a
 **The queue holds no questions, and that is the point.** Every row here has a
 question worth asking, and until now the row carried it — a `Question:` line in a
 prose block sitting fourth of nine sections. Two rules broke on that. The
-questions were not the last thing the reader met, which `closing_order` requires
-and which graders failed in eight runs of fourteen; and there were two question
+questions sat mid-message rather than in the closing run `closing_order` fixes,
+which graders failed in eight runs of fourteen; and there were two question
 sites in one message, which the question-budget rule forbids by name — either the
 embedded prompts are the budget or the closing block is, never both. So the row
 says what the gap is and what would close it, and **the question itself goes in

@@ -35,11 +35,11 @@ Read `references/evidence-conventions.md` for the vocabulary, `references/refram
 
 **When the candidate arrives with a premise, correct it before working to it.** Two arrive constantly. *"The ATS filter is auto-rejecting me before anyone reads it"* — say what the cited evidence in `references/machine-readers.md` shows — match scores mostly order who is reviewed first, content-based auto-rejection exists but is uncommon in the one sample available, and knockout questions on the form are what most often reject without a person — then do the work, without claiming more certainty than that sample carries. *"Hidden text gets you past the AI"* — refuse it per `references/machine-readers.md`. Working silently to a false premise leaves the candidate believing it, and they will carry it to the next twenty applications.
 
-**A correction or a refusal is never a gate.** Say it in a paragraph or two, then deliver the whole ledger in the same message. The failure has a recognisable shape and it is worth naming so it can be caught while writing: the response refuses well, explains itself well, offers the honest alternative — and then closes with *"want me to go ahead and run the tailoring on that basis?"*. That question has spent the candidate's turn on a conversation about the work instead of the work, and it is most likely exactly when the request was most uncomfortable, which is when they can least afford to spend a turn. Refusing and delivering are not sequential; they happen in one message. Everything Step 2 owes is still owed — the ledger, the coverage map, the prohibited-claims list with the refused request recorded in it, and the upgrade menu. A turn that refuses and then closes on a question has delivered none of them.
+**A correction or a refusal is never a gate.** Say it in a paragraph or two, then deliver the whole ledger in the same message. The failure has a recognisable shape and it is worth naming so it can be caught while writing: the response refuses well, explains itself well, offers the honest alternative — and then asks, as its last question, *"want me to go ahead and run the tailoring on that basis?"*. That question has spent the candidate's turn on a conversation about the work instead of the work, and it is most likely exactly when the request was most uncomfortable, which is when they can least afford to spend a turn. Refusing and delivering are not sequential; they happen in one message. Everything Step 2 owes is still owed — the ledger, the coverage map, the prohibited-claims list with the refused request recorded in it, and the upgrade menu. A turn that refuses and then closes on a question has delivered none of them.
 
 ### Step 2 — Deliver, then wait
 
-The first response is never questions-only. Deliver the whole ledger from whatever inputs exist, then the coverage map, gap handling, prohibited claims, and the parse-safety check — then the upgrade menu, then at most three questions closing the message.
+The first response is never questions-only. Deliver the whole ledger from whatever inputs exist, then the coverage map, gap handling, prohibited claims, and the parse-safety check — then the upgrade menu, then at most three questions, then the watch-out line closing the message.
 
 **Three questions, counted across the whole message — and one place to ask them.** The recall prompt no longer carries its own `Question:` line: its row says what the gap is and what would close it, and the question it implies is asked in the closing block, tagged to its row. Counting was the rule for three versions and it failed in half of all graded runs, because a `Question:` line inside a template does not feel like it counts. Removing the second site is what counting could not do. **And the sibling is named at most once, counted the same way**: a mention in the prose and another inside a closing question is twice, and the second one is the skill lobbying rather than informing. State the assumption anything was built on rather than withholding the work until it is confirmed.
 
@@ -47,7 +47,7 @@ The first response is never questions-only. Deliver the whole ledger from whatev
 
 ### Step 3 — Apply approved rows only
 
-On approval, produce the tailored resume from **approved rows only**. Partial approval is normal and produces a partial application. Never apply a rejected row because the document reads better with it, and never re-propose a rejected row in a later turn — record it in the prohibited-claims list so it is not re-derived.
+On approval, produce the tailored resume from **approved rows only**. The resume carries no watch-out line; the message presenting it ends with one (`references/output-discipline.md` rule 7). Partial approval is normal and produces a partial application. Never apply a rejected row because the document reads better with it, and never re-propose a rejected row in a later turn — record it in the prohibited-claims list so it is not re-derived.
 
 Where the candidate approves a row and asks for a change to it, the changed version is a new row and goes through the audit again. Approval attaches to specific language, not to the idea behind it.
 
@@ -65,10 +65,11 @@ are absolute; the parameters it names are declared here.
 question_budget: 3
 enum_fields: operation, coverage_status, priority, row_status
 enum_columns: operation=edit-ledger.md#The row/Operation, coverage_status=coverage-and-gaps.md#The coverage map/Status, priority=coverage-and-gaps.md#The coverage map/Priority, row_status=edit-ledger.md#The row/Status
-closing_order: upgrade menu, questions
+closing_order: upgrade menu, questions, watch-out
 qualifier_fields: none
 sibling_mentions: 1
 provenance_sections: The coverage map, Recovery per gap, A worked ledger
+watch_out: The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line, check that quote and the new line against your original resume.
 ```
 
 `provenance` is not declared an enum, for the reason job-underwriter gives: a

@@ -94,6 +94,37 @@ the next one (CI enforces this, because the mistake was made twice in one
 session); and a fix to this class is not verified by the failure count dropping,
 it is verified by the graders naming a surface that no longer exists.
 
+## When an issue survives two iterations
+
+A standing rule, set by the owner. An issue that two fix iterations have not
+closed — each iteration a change made to close it, then reviewed or measured — is
+not iterated a third time. Work on it stops, and one of two things happens:
+
+- **If the user can protect themselves by checking something,** the issue is
+  covered by that skill's watch-out: the one sentence every delivered output of the
+  skill ends with (`conventions/output-discipline.md` rule 7). If the sentence
+  does not already cover the issue, extend it — and keep it one sentence, because
+  the slot holds one line and a list of cautions is read as none. The issue is
+  recorded as open in the README's Tracked-work ledger, with its measurement,
+  and added, with its rate and a link to that entry, to the skill's "Why it's
+  there" cell in the README's watch-out table — which CI does not read, so it is
+  also updated by hand when an issue the cell explains is closed.
+- **If the user cannot protect themselves** — the skill does not fire at all, say,
+  so there is no output for them to check — it goes to the owner as an open
+  decision.
+
+Any two changes made to close an issue count, whatever their kind. For a
+deterministic failure the rule above makes the second one a change of shape; for
+an intermittent one, recording its rate is not an iteration.
+
+A watch-out has one source, the `watch_out:` parameter in the skill's
+`SKILL.md`, and a change to it is made there. Its copies — the root README's
+watch-out table, each fixture's closing expectation, any worked example that shows
+a response's last line — are never edited on their own: `check_skills.py --only
+watch-out` fails until every copy matches the parameter, so the change reaches
+them in the same commit. The README says all of this to users in plain words, under "Watch-outs:
+what to double-check".
+
 ## Harnesses report three outcomes, not two
 
 An eval harness runs external processes that can decline: time out, hit a rate
@@ -234,6 +265,24 @@ in its order. It skips negated sentences, budgets for one topic, objects that
 name no call to action, and subjects other than the response: a pack, a cell or
 a drill turn ends with other things. Three eval expectations had contradicted
 their skill's declaration unnoticed.
+
+**A watch-out is one sentence, and every copy of it is exact.** `--only
+watch-out` holds each skill's `watch_out` parameter to one sentence of at most
+forty words, with no bracket, pipe or code span; checks that `closing_order` ends
+with `watch-out` and that `output-discipline.md` defines the slot; and compares
+every copy with the parameter character for character — any line labelled a
+watch-out in the skill's own `SKILL.md`, README and references, every fixture's
+expanded expectations (each must carry the line, since a grader sees the fixture
+and not `SKILL.md`), and the root README's table, one row per skill. It also
+fails the standing rule's heading going missing from this file, since the README
+links to it, and a line labelled a warning anywhere a rule is stated or graded.
+It does not read whether a sentence is plain, whether it names the defect the
+ledger measured, or the README table's "Why it's there" column; that is review's.
+A known limit: it does not read the prose that states the closing order either —
+a sentence such as "nothing follows the questions" or "the questions close the
+message", edited back into a `SKILL.md`, a reference or the convention, passes
+every group. `--only parameters` reads only "closes/ends with" clauses, so those
+statements are held by review.
 
 **A worked fit ledger is its own evidence map, projected.** `--only fit-ledger`
 reads job-underwriter's worked dossier with the rule functions in

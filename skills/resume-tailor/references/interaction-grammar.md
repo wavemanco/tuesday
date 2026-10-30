@@ -19,12 +19,12 @@ Corollary: skills compose in any order, or not at all. The dossier contract (see
 - **One clarifying message maximum, at most three questions**, covering only what is missing, structural, and un-researchable. Consent items (deep research, optional modes) ride along; they never drive.
 - **Proceed on silence.** If the user ignores or declines, continue down the degradation ladder. Never re-ask.
 - **Research before asking.** Never ask the user what the public web knows.
-- **Adaptive skills** (those whose product *is* iterative recovery, like the underwriter) may ask again in later turns — but each turn obeys the same shape: updated analysis first, then at most three highest-value questions, ranked by importance × uncertainty × recovery probability × decision impact ÷ user effort.
+- **Adaptive skills** (those whose product *is* iterative recovery, like the underwriter) may ask again in later turns — but each turn obeys the same shape: updated analysis first, then at most three highest-value questions, ranked by importance × uncertainty × recovery probability × decision impact ÷ user effort, then the skill's watch-out line (`output-discipline.md` rule 7).
 
 ## 3. Degradation and the upgrade menu
 
 - Degrade by dropping or genericizing sections and labeling provenance — never by inventing specifics. A smaller honest output beats a full-looking fabricated one.
-- Every output ends with an **upgrade menu**: each missing input and what adding it concretely unlocks. The menu is how enhancers arrive without gating — make the value visible and let the user pull.
+- Every output carries an **upgrade menu** among its closing sections — in the order each skill's `closing_order` fixes, before the questions and the watch-out line (`output-discipline.md` rules 4 and 7): each missing input and what adding it concretely unlocks. The menu is how enhancers arrive without gating — make the value visible and let the user pull.
 - When a late input arrives, regenerate only the affected sections, lead with a one-line changelog, and check the whole artifact for internal consistency before redelivering.
 
 ## 4. Research tiers

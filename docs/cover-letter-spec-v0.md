@@ -354,7 +354,7 @@ Five fixtures, each carrying the trap the research identifies:
 5. **The dossier-driven run.** `prohibited_claims` present and binding, `evidence_map` consumed rather than re-derived, and the letter still complete if the dossier is absent.
 
 Every fixture asserts the standalone invariant, the per-paragraph trace and
-provenance columns, output-discipline rules 1–6, and — specific to this skill —
+provenance columns, output-discipline rules 1–7, and — specific to this skill —
 that the delivered artifact is not a finished letter with nothing for the
 candidate to do.
 

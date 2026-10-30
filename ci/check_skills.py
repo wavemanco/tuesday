@@ -28,6 +28,7 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   answer-keys  installed skill text shares no run of words with its fixtures
   fixtures     the fixture fields the harness reads are what it assumes
   wording      retired wordings stay retired
+  watch-out    each skill's one watch-out sentence, and every copy of it, exact
 """
 
 from __future__ import annotations
@@ -2620,6 +2621,147 @@ def check_ledger() -> None:
         ok(group, f"ledger: {len(titles)} entries, no duplicate or colliding subjects")
 
 
+WATCH_OUT_HEADING = re.compile(r"^## Watch-outs\b[^\n]*$(.*?)(?=^## |\Z)", re.M | re.S)
+STANDING_RULE = re.compile(r"^## When an issue survives two iterations\s*$(.*?)(?=^## |\Z)", re.M | re.S)
+RULE_7 = re.compile(r"^## 7\. [^\n]*$(.*?)(?=^## |\Z)", re.M | re.S)
+WATCH_OUT_WORDS = 40
+# The name the slot never takes, as a label or as the slot's name.
+WARNING_NAME = re.compile(r"\*\*warnings?:?\*\*|^[\s>*_-]*warnings?\s*:|\bwarning (?:line|sentence|slot)s?\b",
+                          re.I | re.M)
+
+
+def check_watch_outs() -> None:
+    """Each skill declares one watch-out sentence, and every copy of it is exact.
+
+    output-discipline.md rule 7 defines the slot: the last line of every delivered
+    output, `**Watch-out:** ` and the skill's `watch_out` sentence, copied exactly.
+    The sentence is stated once, in SKILL.md, and copied where it must be read
+    whole — the root README's table, each fixture's closing expectation (a grader
+    sees the fixture, not SKILL.md), a worked example's last line — and a copy
+    edited in one place and not another is the drift this suite keeps finding. So:
+    the convention defines the slot and names its parameter; each sentence is one
+    sentence of at most WATCH_OUT_WORDS words, with no brackets, pipe or code span,
+    and never named a warning; each closing_order ends with `watch-out`; every
+    labelled line in a skill's own SKILL.md, README and references is the declared
+    line; every fixture carries the declared line in an expectation, and any
+    expectation that labels one carries it exactly; the README's table has one row
+    per skill quoting its sentence exactly; CONTRIBUTING.md keeps the standing rule
+    the README links to; and nothing that states or grades a rule labels the slot
+    a warning. What it does not read: whether a sentence is plain, or names what
+    the measured defect is, or the README table's "Why it's there" column — that
+    is review's. A known limit: nor does it read the prose that states the closing
+    order ("nothing follows the questions", "the questions close the message"), so
+    such a sentence edited back in passes; see CONTRIBUTING.md.
+    """
+    group = "watch-out"
+    checked = 0
+    convention = (CONVENTIONS / "output-discipline.md").read_text(encoding="utf-8")
+    if "**Parameter: `watch_out`**" not in convention or output_checks.WATCH_OUT_LABEL not in convention:
+        fail(group, "conventions/output-discipline.md does not define the watch-out slot — its line "
+                    f"({output_checks.WATCH_OUT_LABEL} …) and its `watch_out` parameter")
+    rule = RULE_7.search(convention)
+    if rule and re.search(r"\bwarning", rule.group(1), re.I):
+        fail(group, "conventions/output-discipline.md rule 7 uses \"warning\" — the slot is a watch-out, by no other name")
+    declared: dict[str, str] = {}
+    for skill in skills():
+        text = (skill / "SKILL.md").read_text(encoding="utf-8")
+        sentence = output_checks.declared_watch_out(text)
+        if sentence is None:
+            fail(group, f"{skill.name}: SKILL.md declares no watch_out sentence under '## Output discipline'")
+            continue
+        declared[skill.name] = sentence
+        checked += 1
+        words = len(sentence.split())
+        inner = re.findall(r"[.!?](?=[\s\"”']+[A-Z])", sentence)
+        if not re.search(r"[.!?][\"”']?$", sentence) or inner:
+            fail(group, f"{skill.name}: watch_out is not one sentence: {sentence[:90]!r}")
+        if words > WATCH_OUT_WORDS:
+            fail(group, f"{skill.name}: watch_out runs to {words} words, over {WATCH_OUT_WORDS} — one crisp sentence")
+        if re.search(r"[\[\]|`]", sentence):
+            fail(group, f"{skill.name}: watch_out holds a bracket, pipe or code span — plain words only, and a pipe "
+                        f"breaks the README's table")
+        if re.search(r"\bwarning", sentence, re.I):
+            fail(group, f"{skill.name}: watch_out calls itself a warning")
+        section = output_checks.OUTPUT_DISCIPLINE.search(text)
+        order = re.search(r"^\s*closing_order\s*:\s*(.+?)\s*$", section.group(1) if section else "", re.M)
+        if not order or order.group(1).split(",")[-1].strip() != "watch-out":
+            fail(group, f"{skill.name}: closing_order does not end with watch-out "
+                        f"({order.group(1) if order else 'undeclared'!s})")
+        line = output_checks.watch_out_line(sentence)
+        surfaces = [("SKILL.md", text)]
+        for path in [skill / "README.md"] + sorted((skill / "references").glob("*.md")):
+            if path.exists():
+                body = path.read_text(encoding="utf-8")
+                if not SYNCED_HEADER.match(body):
+                    surfaces.append((str(path.relative_to(skill)), body))
+        for where, body in surfaces:
+            for n, raw in enumerate(body.splitlines(), 1):
+                if output_checks.WATCH_OUT_LABELLED.match(raw):
+                    checked += 1
+                    if " ".join(raw.split()) != line:
+                        fail(group, f"{skill.name} {where}:{n}: a watch-out line that is not the declared one: "
+                                    f"{raw.strip()[:90]!r}")
+        for case in load_evals(skill / "evals" / "evals.json") or []:
+            expectations = [e for e in case.get("expectations", []) if isinstance(e, str)]
+            checked += 1
+            if not any(line in e for e in expectations):
+                fail(group, f"{skill.name} eval {case.get('id')}: no expectation carries the watch-out line exactly — "
+                            f"every fixture's turn delivers output, so every fixture grades the line")
+            for n, e in enumerate(expectations, 1):
+                if output_checks.WATCH_OUT_LABEL in e and line not in e:
+                    fail(group, f"{skill.name} eval {case.get('id')} #{n}: labels a watch-out line that is not the "
+                                f"declared sentence")
+
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    section = WATCH_OUT_HEADING.search(readme)
+    if not section:
+        fail(group, "README.md has no '## Watch-outs' section")
+    else:
+        body = section.group(1)
+        if re.search(r"\bwarning", body, re.I):
+            fail(group, "README.md's watch-out section uses \"warning\" — the slot is a watch-out, by no other name")
+        tables = output_checks.md_tables(body)
+        rows: dict[str, list[str]] = {}
+        for table in tables[:1]:
+            names = output_checks.header_names(table)
+            if "skill" not in names or not any("watch" in h for h in names):
+                fail(group, f"README.md's watch-out table has no Skill and Watch-out columns: {names}")
+                continue
+            s_col, w_col = names.index("skill"), next(i for i, h in enumerate(names) if "watch" in h)
+            for cells in table["rows"]:
+                name = re.sub(r"[`*\[\]]|\(.*?\)", "", cells[s_col]).strip() if s_col < len(cells) else ""
+                rows.setdefault(name, []).append(cells[w_col].strip() if w_col < len(cells) else "")
+        if not tables:
+            fail(group, "README.md's watch-out section has no table")
+        for name, cells in rows.items():
+            if name not in {s.name for s in skills()}:
+                fail(group, f"README.md's watch-out table names {name!r}, which is not a skill")
+        for name, sentence in declared.items():
+            checked += 1
+            cells = rows.get(name, [])
+            if len(cells) != 1:
+                fail(group, f"README.md's watch-out table has {len(cells)} rows for {name}, not one")
+            elif " ".join(cells[0].split()) != " ".join(sentence.split()):
+                fail(group, f"README.md's watch-out table quotes {name}'s sentence as {cells[0][:90]!r}, not its "
+                            f"SKILL.md watch_out — change the parameter and the copy together")
+    contributing = (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    standing = STANDING_RULE.search(contributing)
+    if not standing:
+        fail(group, "CONTRIBUTING.md has no '## When an issue survives two iterations' section — the standing rule "
+                    "the README links to")
+    elif re.search(r"\bwarning", standing.group(1), re.I):
+        fail(group, "CONTRIBUTING.md's standing rule uses \"warning\" — the slot is a watch-out, by no other name")
+    for where, raw in wording_surfaces():
+        hit = WARNING_NAME.search(raw)
+        if hit:
+            fail(group, f"{where}: {hit.group(0).strip()!r} names a line a warning — the slot is a watch-out")
+    if checked and not any(f.startswith(f"[{group}]") for f in failures):
+        ok(group, f"{len(declared)} watch-out sentences, one sentence each, and {checked} copies and fixtures "
+                  f"agree with them")
+    elif not checked:
+        fail(group, "no watch-out sentence read — the check would pass vacuously")
+
+
 GROUPS = {
     "frontmatter": check_frontmatter,
     "columns": check_columns,
@@ -2637,6 +2779,7 @@ GROUPS = {
     "mirrors": check_mirrors,
     "evals": check_evals,
     "triggers": check_triggers,
+    "watch-out": check_watch_outs,
 }
 
 
