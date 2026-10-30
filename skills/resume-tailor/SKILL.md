@@ -1,15 +1,27 @@
 ---
 name: resume-tailor
-description: Tailor an existing resume or CV to a specific job. Use for ALL resume-tailoring requests, including small ones — "tailor my resume for this role", "rewrite my CV for this job", "make my resume match this JD", "which bullets should I lead with", "is my resume right for this posting" — or a resume and a job description arriving together with any rewriting intent. Produces an edit ledger where every proposed change is a row showing the current line, the proposed line, what changed, and the sentence of the candidate's own it traces to, plus a coverage map against the JD, the claims it refused to write, and a parse-safety check. Nothing is applied until the candidate approves it, and no row may add a claim their own material does not support. Candidate-side only, never for employers screening applicants. Deciding whether to apply belongs to job-underwriter and interview rehearsal to mock-interview; on a request that spans them, run this skill for the resume and name the sibling once.
+description: Tailors an existing resume or CV to a specific job. Use for ALL resume-tailoring requests, including small ones — "tailor my resume for this role", "rewrite my CV for this job", "make my resume match this JD", "which bullets should I lead with", "is my resume right for this posting" — or a resume and a job description arriving together with any rewriting intent. Produces an edit ledger where every proposed change is a row showing the current line, the proposed line, what changed, and the sentence of the candidate's own it traces to, plus a coverage map against the JD, the claims it refused to write, and a parse-safety check. Nothing is applied until the candidate approves it, and no row may add a claim their own material does not support. Candidate-side only, never for employers screening applicants. Deciding whether to apply belongs to job-underwriter and interview rehearsal to mock-interview; on a request that spans them, run this skill for the resume and name the sibling once.
 ---
 
 # Resume Tailor
 
-Tailor a resume the way an editor works on someone else's memoir: every sentence has to be defensible by the person whose name is on it. The market norm for this task is a model that reads a JD, reads a resume, and writes the resume the JD asked for — inventing the overlap wherever the evidence is thin, because that is what makes the output look good. This skill does the same job under one constraint that changes the product entirely: **it cannot add a claim.**
+Tailor a resume so that every sentence is defensible by the person whose name is on it, under one constraint: **it cannot add a claim.**
 
 Reorganize, re-emphasize, retitle, compress, cut, surface. Never introduce a fact, widen a scope, upgrade a verb, or import the JD's vocabulary for the candidate's own history. Where the JD wants something the evidence does not hold, say so and offer to go looking — never write around the gap.
 
-The constraint is the product. A tailored resume the candidate can defend line by line in an interview is worth more than one that scores better and collapses on the first follow-up question. Every row of the ledger is a sentence they may have to say out loud to someone who was there.
+## Before sending
+
+Copy this list and check the response against it. Each item points to its rule and restates none; rules 1, 5 and 7 are in `references/output-discipline.md`.
+
+```text
+1. The whole ledger delivered, even beside a correction or refusal (Step 1, Step 2)
+2. Every row traced to a quoted source sentence and audited (Guardrails)
+3. Every row pending approval; nothing applied (Step 2)
+4. No questions inside rows (Step 1, Step 2); questions within question_budget (rule 1)
+5. The closing run in closing_order (Output discipline)
+6. Watch-out line last in the message, exact, never in the resume (rule 7)
+7. Sibling named at most sibling_mentions times (rule 5)
+```
 
 ## Workflow
 
@@ -17,7 +29,7 @@ The constraint is the product. A tailored resume the candidate can defend line b
 
 Two gates, not one. Without a **target JD** there is nothing to tailor toward; without a **resume or background** there is nothing to tailor. Say which is missing and ask for it. Everything else is an enhancer that sharpens the work and never gates it.
 
-Read what is present before asking for anything: a `tuesday-dossier.md` in context supplies `role_profile` (satisfying the JD tier), `evidence_map`, `application_plan.resume_edits_pending_approval` and `evidence_state.rejected_inferences`. Consume it per `references/dossier-consumption.md` — it sharpens the ledger and never gates it, and a ledger built without one is still a complete ledger.
+Read what is present before asking for anything: a `tuesday-dossier.md` in context supplies `role_profile` (satisfying the JD tier), `evidence_map`, `application_plan.resume_edits_pending_approval` and `evidence_state.rejected_inferences`. Consume it per `references/dossier-consumption.md`, with `references/dossier-schema.md` for the fields it names — it sharpens the ledger and never gates it, and a ledger built without one is still a complete ledger.
 
 Prose background is accepted in place of a document and treated as `cv`-equivalent self-report: leads for verification, not proof.
 
@@ -33,15 +45,15 @@ Read `references/evidence-conventions.md` for the vocabulary, `references/refram
 6. **Prohibited claims** — what this skill refused to write and why.
 7. **Parse-safety check** — per `references/machine-readers.md`.
 
-**When the candidate arrives with a premise, correct it before working to it.** Two arrive constantly. *"The ATS filter is auto-rejecting me before anyone reads it"* — say what the cited evidence in `references/machine-readers.md` shows — match scores mostly order who is reviewed first, content-based auto-rejection exists but is uncommon in the one sample available, and knockout questions on the form are what most often reject without a person — then do the work, without claiming more certainty than that sample carries. *"Hidden text gets you past the AI"* — refuse it per `references/machine-readers.md`. Working silently to a false premise leaves the candidate believing it, and they will carry it to the next twenty applications.
+**When the candidate arrives with a premise, correct it before working to it.** Two arrive constantly. *"The ATS filter is auto-rejecting me before anyone reads it"* — say what the cited evidence in `references/machine-readers.md` shows, its figures only as the `references/citations.md` entries hold them — match scores mostly order who is reviewed first, content-based auto-rejection exists but is uncommon in the one sample available, and knockout questions on the form are what most often reject without a person — then do the work, without claiming more certainty than that sample carries. *"Hidden text gets you past the AI"* — refuse it per `references/machine-readers.md`.
 
-**A correction or a refusal is never a gate.** Say it in a paragraph or two, then deliver the whole ledger in the same message. The failure has a recognisable shape and it is worth naming so it can be caught while writing: the response refuses well, explains itself well, offers the honest alternative — and then asks, as its last question, *"want me to go ahead and run the tailoring on that basis?"*. That question has spent the candidate's turn on a conversation about the work instead of the work, and it is most likely exactly when the request was most uncomfortable, which is when they can least afford to spend a turn. Refusing and delivering are not sequential; they happen in one message. Everything Step 2 owes is still owed — the ledger, the coverage map, the prohibited-claims list with the refused request recorded in it, and the upgrade menu. A turn that refuses and then closes on a question has delivered none of them.
+**A correction or a refusal is never a gate.** Say it in a paragraph or two, then deliver the whole ledger in the same message. Never close such a turn by asking whether to go ahead with the tailoring: refusing and delivering happen in one message. Everything Step 2 owes is still owed — the ledger, the coverage map, the prohibited-claims list with the refused request recorded in it, and the upgrade menu. A turn that refuses and then closes on a question has delivered none of them.
 
 ### Step 2 — Deliver, then wait
 
 The first response is never questions-only. Deliver the whole ledger from whatever inputs exist, then the coverage map, gap handling, prohibited claims, and the parse-safety check — then the upgrade menu, then at most three questions, then the watch-out line closing the message.
 
-**Three questions, counted across the whole message — and one place to ask them.** The recall prompt no longer carries its own `Question:` line: its row says what the gap is and what would close it, and the question it implies is asked in the closing block, tagged to its row. Counting was the rule for three versions and it failed in half of all graded runs, because a `Question:` line inside a template does not feel like it counts. Removing the second site is what counting could not do. **And the sibling is named at most once, counted the same way**: a mention in the prose and another inside a closing question is twice, and the second one is the skill lobbying rather than informing. State the assumption anything was built on rather than withholding the work until it is confirmed.
+**Three questions, counted across the whole message — and one place to ask them.** The recall-prompt row carries no `Question:` line: it says what the gap is and what would close it, and the question it implies is asked in the closing block, tagged to its row. **And the sibling is named at most once, counted the same way**: a mention in the prose and another inside a closing question is twice. State the assumption anything was built on rather than withholding the work until it is confirmed.
 
 **Nothing is applied.** Every row lands `pending your approval`, and the tailored document is produced only in Step 3.
 
@@ -57,9 +69,8 @@ A portfolio artifact, an answered recall prompt, a dossier arriving mid-conversa
 
 ## Output discipline
 
-Bound by `references/output-discipline.md`, the suite's canonical rules on the
-shape of a delivered response, mirrored verbatim into this skill. Its invariants
-are absolute; the parameters it names are declared here.
+Bound by `references/output-discipline.md`: its invariants are absolute, and the
+parameters it names are declared here.
 
 ```text
 question_budget: 3
@@ -69,30 +80,22 @@ closing_order: upgrade menu, questions, watch-out
 qualifier_fields: none
 sibling_mentions: 1
 provenance_sections: The coverage map, Recovery per gap, A worked ledger
-watch_out: The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line, check that quote and the new line against your original resume.
+watch_out: The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line or send the resume, check that quote and the new line against what you actually wrote.
 ```
 
-`provenance` is not declared an enum, for the reason job-underwriter gives: a
-Provenance cell leads with one label, and a recovery row whose cell covers two
-derived claims carries a label for each. That cell is free text, not a compound
-value; the labels themselves come only from the three.
+`provenance` is not an enum: a Provenance cell leads with one label, and a
+recovery row whose cell covers two derived claims carries a label for each; the
+labels themselves come only from the three.
 
-`operation` and `row_status` are this skill's own enums and they are the ones most
-likely to acquire a qualifier: a change that feels like two operations is a row
-that should be split, and a status that needs a parenthetical is a status doing a
-neighbouring column's job.
+A change that feels like two operations is two rows, and a status that needs a
+parenthetical is a status doing a neighbouring column's job.
 
-`qualifier_fields: none` is a declared absence, not an oversight: the edit
-ledger's eight columns are all load-bearing — `Traces to` holds a verbatim quote
-and is not free text — so a qualifier that will not fit `Operation` or `Status`
-has nowhere in this skill to go. Sibling skills route theirs to `reasoning` or
-`hypothesis`. This is recorded rather than fixed because adding a ninth column
-changes the ledger's shape and that needs its own measurement; the exposure is
-real and so far unfired.
+`qualifier_fields: none` is a declared absence: a qualifier that will not fit
+`Operation` or `Status` has nowhere in this skill to go.
 
 ## The n + x rule
 
-The sections this skill's spec defines are *n* — owed, delivered complete and unconditional. Anything beyond spec is *x*: offered as a clearly-labeled proposal, one line on what it would add and why this engagement earns it, and built only on approval. Label the offer in prose; square brackets are reserved for the provenance labels `[grounded]`, `[inferred]`, and `[generic]`.
+`references/interaction-grammar.md` §8 binds. The sections this skill's spec defines are *n* — owed, delivered complete and unconditional. Anything beyond spec is *x*: offered as a clearly-labeled proposal, one line on what it would add and why this engagement earns it, and built only on approval. Label the offer in prose; square brackets are reserved for the provenance labels `[grounded]`, `[inferred]`, and `[generic]`.
 
 ## Input contract and degradation ladder
 
@@ -108,14 +111,9 @@ The sections this skill's spec defines are *n* — owed, delivered complete and 
 ## Research
 
 **This skill runs no research tier.** It works from the posting and the
-candidate's own material, and `references/interaction-grammar.md` §4 — tiers,
-budgets, the depth rule and its target accounting — is mirrored here because
-canonical files are mirrored whole, not because any of it fires. Declared
-targets: none, so the accounting has nothing to account for.
-
-Stated rather than left silent: a rule that cannot fire is invisible from
-inside, and the next person to add a research step to this skill needs to find
-the tiers already binding rather than discover them afterwards.
+candidate's own material. `references/interaction-grammar.md` §4 — tiers,
+budgets, the depth rule and its target accounting — is mirrored here whole and
+binds any research step added later. Declared targets: none.
 
 ## Guardrails
 
@@ -128,11 +126,16 @@ the tiers already binding rather than discover them afterwards.
 
 ## Reference files
 
-- `references/evidence-conventions.md` — the suite's canonical vocabulary, mirrored verbatim: source types, confidence bands, provenance labels, the mapping between them, the never-do list.
-- `references/reframing-audit.md` — the suite's canonical audit, mirrored verbatim: six axes of drift, five disciplines, what to do with a clause that cannot be traced. Read before proposing any language.
-- `references/edit-ledger.md` — the row shape, the named operations, the worked ledger, and how approval is recorded.
-- `references/coverage-and-gaps.md` — the coverage map, recall prompts for `not_evidenced` requirements, the confirmation card, and the prohibited-claims list.
-- `references/machine-readers.md` — what actually screens a resume, the parse-safety check, truthful keyword placement, and the hidden-text refusal.
-- `references/interaction-grammar.md` — the suite's canonical interaction rules, mirrored verbatim: the standalone invariant, the elicitation policy, the research tiers (which this skill does not exercise — see Research above), privacy scope, and the n + x rule. Canonical wins on conflict.
-- `references/dossier-schema.md` — the canonical dossier contract, mirrored verbatim: envelope, versioning, and which sections this skill reads.
-- `references/citations.md` — the suite's recorded sources, mirrored verbatim: every figure, research finding, survey result and statement of law the conventions and references make, quoted exactly beside its source, with what weakens it. A `(cite C1)` elsewhere points here; quote nothing from a source that its entry does not hold.
+Each is named at the step that needs it. Mirrors copy the suite's canonical files verbatim; canonical wins on conflict.
+
+- `references/edit-ledger.md` — read before proposing any row
+- `references/coverage-and-gaps.md` — read before the coverage map, gap handling and the prohibited list
+- `references/machine-readers.md` — read before the parse-safety check, and when a premise about screening arrives
+- `references/dossier-consumption.md` — read when a dossier is present
+- `references/evidence-conventions.md` (mirror)
+- `references/reframing-audit.md` (mirror) — read before proposing any language
+- `references/output-discipline.md` (mirror)
+- `references/interaction-grammar.md` (mirror)
+- `references/dossier-schema.md` (mirror)
+- `references/citations.md` (mirror) — sources behind outside claims; quote nothing a `(cite C1)` entry does not hold
+- `references/rationale.md` — why the rules are shaped this way; not needed to follow them

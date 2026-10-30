@@ -5,7 +5,19 @@
      A byte check strips this header and compares the remainder to canonical. -->
 # Dossier schema
 
-The dossier is Tuesday's shared artifact: one file the user carries between skills, sessions, and — later — the agent. It makes the skills order-independent without coupling them. Skills carry a mirror of this file in their `references/` with a synced-from header; this copy wins on conflict.
+## Contents
+
+- 1. Behavior contract
+- 2. Carrier format
+- 3. Versioning
+- 4. Envelope (v1.2)
+- 5. Sections — owner and consumers
+- 6. `handoff_to_mock_interview` (v1.0)
+- 7. `pack_feedback` (v1.0)
+- 8. UI note
+- 9. Version history
+
+The dossier is Tuesday's shared artifact: one file the user carries between skills, sessions, and — later — the agent. It makes the skills order-independent without coupling them. Skills carry a mirror of this file in their `references/` with a synced-from header; on a conflict between a mirror and the canonical file it names, the canonical file wins.
 
 ## 1. Behavior contract
 

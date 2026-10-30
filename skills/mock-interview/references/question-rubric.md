@@ -1,5 +1,13 @@
 # Question types, coverage rules, and writing rules
 
+## Contents
+
+- The five types
+- Coverage rules
+- Provenance labels
+- Writing the guidance cell
+- Reverse questions
+
 Personas describe how a question arrives; types describe what it's scoring. Tag every question with a type so the candidate can see the pack's coverage at a glance — and so you can see where coverage is thin before delivering.
 
 ## The five types

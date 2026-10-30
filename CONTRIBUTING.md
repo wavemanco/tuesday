@@ -442,6 +442,24 @@ could lose its Gap type column and pass on the glossary's. `qualifier_fields` an
 `provenance_sections` are read in the same worked tables, outside the mirrors. What
 it does not read: whether the cells hold only the enum's tokens.
 
+**A skill meets Anthropic's authoring guidance, and keeps meeting it.** `--only
+guidance` holds what the guidance asks of a shipped skill: a `## Contents` list
+directly under the H1 of every reference file over 100 lines as shipped — a
+mirror's synced-from header counted, so a canonical file near the limit carries
+the list for its mirrors; a `SKILL.md` body under 500 lines and under 5,000
+tokens, estimated at four characters a token; a description whose first word is a
+third-person verb, read as a word ending in "s", where a word ending in "ss"
+("Assess") is a bare imperative; and every file in `references/` linked from
+`SKILL.md` as `references/<name>`, the path that resolves in the installed skill.
+The frontmatter group holds the guidance's other frontmatter limits: only the six
+keys the spec allows (claude.ai rejects any other), a description of at most 1,024
+characters, and no angle brackets. Rationale and measurement history a `SKILL.md`
+sheds to stay under the estimate go to that skill's `references/rationale.md`,
+which is never required reading. What it does not read: whether a contents list
+matches the file's headings, whether a description stays in the third person past
+its first word, and whether a reference is linked at the step that needs it
+rather than only in the index; review holds those.
+
 **A clause is defined once and expanded once.** `--only evals` reads every evals.json
 through `evals/fixture_clauses.py`, as the runner does: an expectation naming a
 clause the file does not define, a clause nothing uses, and braces left in the

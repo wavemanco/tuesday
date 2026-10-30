@@ -1,5 +1,19 @@
 # Output template
 
+## Contents
+
+- Session-mode pack skeleton
+- The message that presents the pack
+- The fit snapshot
+- The prohibited list
+- Question banks
+- Target accounting in Sources
+- Loop mode
+- Drill mode
+- The dossier offer
+- Regeneration (Step 5 of SKILL.md)
+
+
 ## Session-mode pack skeleton
 
 Deliver these sections in this order. The conditionality column is binding — a section whose condition fails is dropped entirely, not filled with padding, because an empty-calorie section teaches the candidate to skim.
@@ -24,7 +38,36 @@ Deliver these sections in this order. The conditionality column is binding — a
 
 Formatting: markdown tables; no pipe characters inside cells; question IDs letter-by-persona (A1, A2, B1…) so the drill and the coaching section can reference them; cells crisp — guidance speakable in 90–120 seconds, rationales 2–3 sentences.
 
-File conventions: save as `{company}_{role-slug}_interview_pack.md` to the outputs directory and present it. The file ends at the upgrade menu; the offers, the questions and the watch-out line close the message that presents it (`closing_order` in SKILL.md). Offer a Word (.docx) conversion in one line rather than producing one by default — most candidates iterate in markdown and convert once at the end.
+File conventions: save as `{company}_{role-slug}_interview_pack.md` to the outputs directory and present it. The file ends at the upgrade menu: its last line is the menu's last item, and, per rule 7 of `references/output-discipline.md`, it holds no offer, no question and no watch-out line. The offers, the questions and the watch-out line close the message that presents it (`closing_order` in SKILL.md), worked below under **The message that presents the pack**. Offer a Word (.docx) conversion in one line rather than producing one by default — most candidates iterate in markdown and convert once at the end.
+
+## The message that presents the pack
+
+The saved file and the message presenting it are two things, and the watch-out line belongs to the message. The rule is `references/output-discipline.md` rule 7; this is its worked form, for a session-mode pack saved as a file.
+
+The saved file's last lines — the upgrade menu, and nothing after it:
+
+```text
+## Upgrade menu
+
+- The interviewer's name → a tailored reverse question, and persona weights read from their public footprint
+- The recruiter's prep email → coverage of any pre-declared deliverable
+```
+
+The message that presents it, whole:
+
+```text
+Your prep pack is saved as {company}_{role-slug}_interview_pack.md. I built it for a hiring-manager round, since your note didn't say who you're meeting.
+
+Say the word and I'll play the Skeptic on B2, the question the pack names as its highest-ROI prep.
+I can also save a tuesday-dossier.md recording the gaps this prep exposed, for you to carry into later sessions.
+If you'd like the pack as a Word document, say so and I'll convert it.
+
+Is the person you're meeting your future manager, or a peer on the team? The answer reweights every bank.
+
+**Watch-out:** Suggested answers can make your experience sound bigger than what you told me — rehearse only what you actually did, in your own words.
+```
+
+The Word offer sits with the other offers. The message's last line is the `watch_out` sentence (rule 7).
 
 ## The fit snapshot
 

@@ -295,7 +295,7 @@ def break_qualifier_column_missing(root: Path) -> str:
     qualifier there, and the rendered table had no such column. `none/low` went
     into the Confidence cell beside it.
     """
-    path = root / "skills/job-underwriter/references/dossier-template.md"
+    path = root / "skills/job-underwriter/references/dossier-worked-report.md"
     text = path.read_text()
     mutated = text.replace("| Confidence | Gap | Reasoning | Provenance | Next action |",
                            "| Confidence | Gap | Provenance | Next action |", 1)
@@ -324,7 +324,7 @@ def break_provenance_column_missing(root: Path) -> str:
     weeks that this table had a Provenance cell, it never had, and it took a
     grader reading generated output to notice.
     """
-    path = root / "skills/job-underwriter/references/dossier-template.md"
+    path = root / "skills/job-underwriter/references/dossier-worked-report.md"
     text = path.read_text()
     mutated = text.replace("| Hypothesis | Provenance | Verification question |",
                            "| Hypothesis | Verification question |", 1)
@@ -354,7 +354,7 @@ def break_qualifier_without_label(root: Path) -> str:
     column shipped without one in the same commit and was not, and six graders in
     the next run-set pointed straight at it.
     """
-    path = root / "skills/job-underwriter/references/dossier-template.md"
+    path = root / "skills/job-underwriter/references/dossier-worked-report.md"
     text = path.read_text()
     mutated = text.replace("| Gap | Reasoning | Provenance | Next action |",
                            "| Gap | Reasoning | Next action |", 1)
@@ -1164,7 +1164,9 @@ def keep_topic_sub_budget(root: Path) -> None:
 # The worked dossier's fit ledger, read against its own map. Each mutation is a
 # way the old prose sentence was, or could have been, wrong without anyone seeing.
 
-DOSSIER = "skills/job-underwriter/references/dossier-template.md"
+# The worked dossier is two files: the report, and the JSON envelope that closes it.
+DOSSIER = "skills/job-underwriter/references/dossier-worked-report.md"
+ENVELOPE = "skills/job-underwriter/references/dossier-worked-envelope.md"
 
 
 def break_ledger_fit_cell(root: Path) -> str:
@@ -1193,7 +1195,7 @@ def break_ledger_duplicate_row(root: Path) -> str:
 
 
 def break_ledger_envelope(root: Path) -> str:
-    path = root / DOSSIER
+    path = root / ENVELOPE
     text = path.read_text()
     old = '"requirement_id": "R4",\n        "priority": "must_have",'
     if text.count(old) != 1:
@@ -1215,7 +1217,7 @@ def break_ledger_back_to_prose(root: Path) -> str:
 
 
 def break_ledger_summary_count(root: Path) -> str:
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Strong fit: five of seven material requirements are direct. Fit as evidence_map reads it,',
               "break_ledger_summary_count")
     return 'decision.summary: "five of seven material requirements" is a set claim over the map that names no row'
@@ -1225,7 +1227,7 @@ def keep_ledger_summary_count_named(root: Path) -> None:
     """GRADER: the same count in the summary's first sentence, which names R4: read as
     a count over the map, it names a row and passes the check; that it counts five of
     seven and names one is the grader's (the comment above Claim in ci/ledger_rules.py)."""
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Strong fit (five of seven material requirements direct),', "keep_ledger_summary_count_named")
 
 
@@ -1247,6 +1249,9 @@ def keep_ledger_split_rows(root: Path) -> None:
     row = next(line for line in text.splitlines() if line.startswith("| R4 |"))
     text = text.replace(row, row.replace("| R4 |", "| R4a |") + "\n" + row.replace("| R4 |", "| R4b |").replace("| adjacent |", "| absent |"))
     text = text.replace("adjacent: R4 (Community energy knowledge)", "adjacent: R4a (Community energy knowledge) · absent: R4b (Community energy knowledge)")
+    path.write_text(text)
+    path = root / ENVELOPE
+    text = path.read_text()
     blocks = text.split("```json\n")
     head, rest = blocks[-1].split("\n```", 1)
     data = json.loads(head)
@@ -1282,7 +1287,7 @@ def break_ledger_sentence_only_unnamed(root: Path) -> str:
 
 
 def break_ledger_summary_universal(root: Path) -> str:
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Every must_have requirement is direct. Fit as evidence_map reads it,',
               "break_ledger_summary_universal")
     return 'decision.summary: "Every must_have" is a set claim over the map that names no row'
@@ -1291,7 +1296,7 @@ def break_ledger_summary_universal(root: Path) -> str:
 def keep_ledger_summary_universal_but(root: Path) -> None:
     """GRADER: "every … but R4" names R4; an exception in its words is the grader's (the
     comment above Claim in ci/ledger_rules.py)."""
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Every must_have requirement is direct but R4;', "keep_ledger_summary_universal_but")
 
 
@@ -1414,19 +1419,19 @@ def keep_ledger_universal_but_in_verdict(root: Path) -> None:
 
 
 def break_ledger_summary_all_but(root: Path) -> str:
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Direct on all but R4;',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,', '"summary": "Direct on all but R4;',
               "break_ledger_summary_all_but")
     return 'decision.summary: "all but" is a complement'
 
 
 def break_ledger_summary_bare_count(root: Path) -> str:
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Four direct. Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,', '"summary": "Four direct. Fit as evidence_map reads it,',
               "break_ledger_summary_bare_count")
     return 'decision.summary: "Four direct" is a set claim over the map that names no row'
 
 
 def break_ledger_summary_of_the(root: Path) -> str:
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Four of the seven direct. Fit as evidence_map reads it,', "break_ledger_summary_of_the")
     return 'decision.summary: "Four of the seven direct" is a set claim over the map that names no row'
 
@@ -1435,7 +1440,7 @@ def keep_ledger_summary_counts_named(root: Path) -> None:
     """GRADER: "Four direct" and "Four of the seven direct" in the summary's first
     sentence, which names R4: each names a row and passes the check; that each counts
     four and names one, and M, are the grader's (the comment above Claim in ci/ledger_rules.py)."""
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Four direct, four of the seven direct;', "keep_ledger_summary_counts_named")
 
 
@@ -1483,17 +1488,19 @@ def _refit_row(root: Path, rid: str, old_fit: str, new_fit: str, ledger_old: str
     """Move one row to another fit everywhere the worked dossier states it — the map's
     Fit cell, the envelope's fit_status, the ledger and, for a gate, the hard-gates
     line — so the only rule left broken is the one the mutation names."""
+    envelope = root / ENVELOPE
+    env = envelope.read_text()
+    key = f'"requirement_id": "{rid}",'
+    head, _, tail = env.partition(key)  # the evidence_map entry comes first
+    if f'"fit_status": "{old_fit}"' not in tail.split("},\n      {")[0]:
+        raise SystemExit(f"_refit_row: the envelope's {rid} is not {old_fit} — it has gone stale")
+    envelope.write_text(head + key + tail.replace(f'"fit_status": "{old_fit}"', f'"fit_status": "{new_fit}"', 1))
     path = root / DOSSIER
     text = path.read_text()
     row = next(line for line in text.splitlines() if line.startswith(f"| {rid} |"))
     if f"| {old_fit} |" not in row:
         raise SystemExit(f"_refit_row: {rid} is not {old_fit} — it has gone stale")
     text = text.replace(row, row.replace(f"| {old_fit} |", f"| {new_fit} |", 1))
-    key = f'"requirement_id": "{rid}",'
-    head, _, tail = text.partition(key)  # the evidence_map entry comes first
-    if f'"fit_status": "{old_fit}"' not in tail.split("},\n      {")[0]:
-        raise SystemExit(f"_refit_row: the envelope's {rid} is not {old_fit} — it has gone stale")
-    text = head + key + tail.replace(f'"fit_status": "{old_fit}"', f'"fit_status": "{new_fit}"', 1)
     for old, new in ((ledger_old, ledger_new), (gates_old, gates_new)):
         if old is None:
             continue
@@ -1531,7 +1538,7 @@ def break_ledger_fail_off_gate(root: Path) -> str:
 
 def break_ledger_constraints_clause(root: Path) -> str:
     """The envelope says the constraints were not given; the gates line does not say so."""
-    swap_once(root, DOSSIER, '"candidate_constraints": {\n      "status": "known",',
+    swap_once(root, ENVELOPE, '"candidate_constraints": {\n      "status": "known",',
               '"candidate_constraints": {\n      "status": "unknown",', "break_ledger_constraints_clause")
     return "the candidate's constraints were not given"
 
@@ -1624,7 +1631,7 @@ def keep_ledger_ratio_of_other_noun(root: Path) -> None:
 
 def keep_summary_ratio_of_other_noun(root: Path) -> None:
     """decision.summary is read by the same reader as the snapshot (N4)."""
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "One of two openings, with a 24/7 on-call rota. Fit as evidence_map reads it,',
               "keep_summary_ratio_of_other_noun")
 
@@ -1635,7 +1642,7 @@ def keep_summary_ratio_of_other_noun(root: Path) -> None:
 
 def break_summary_ratio_predicate(root: Path) -> str:
     """A ratio whose clause ends in a predicate the old follower list lacked."""
-    swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Conditional go: 5 of 7 covered. Fit as evidence_map reads it,',
               "break_summary_ratio_predicate")
     return "decision.summary: \"5 of 7\" is a set claim over the map that names no row"
@@ -2141,7 +2148,7 @@ FIT_SNAPSHOT_HOME = "gap_type=output-template.md#The fit snapshot/Gap type"
 
 
 def break_enum_without_column(root: Path) -> str:
-    swap_once(root, "skills/job-underwriter/SKILL.md", ", severity=dossier-template.md#Opportunity risk register/Severity",
+    swap_once(root, "skills/job-underwriter/SKILL.md", ", severity=dossier-worked-report.md#Opportunity risk register/Severity",
               "", "break_enum_without_column")
     return "enum_fields names 'severity' and enum_columns gives it no column"
 
@@ -2243,13 +2250,13 @@ def keep_set_unnamed_constraints(root: Path) -> None:
 def keep_set_unnamed_gap_type(root: Path) -> None:
     """GRADER: a set by gap type written without "gap" or "gaps" is not read (the
     comment above Claim in ci/ledger_rules.py)."""
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "None of them is a capability problem. Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "None of them is a capability problem. Fit as evidence_map reads it,',
               "keep_set_unnamed_gap_type")
 
 
 def break_set_unnamed_gap_word(root: Path) -> str:
     """The same set by gap type written with "gap": a map word, read, and unnamed."""
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "None of them is a capability gap. Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "None of them is a capability gap. Fit as evidence_map reads it,',
               "break_set_unnamed_gap_word")
     return 'decision.summary: "None of them is a capability gap" is a set claim over the map that names no row'
 
@@ -2313,13 +2320,13 @@ def keep_set_both_three(root: Path) -> None:
 
 def keep_set_two_tiers_partial(root: Path) -> None:
     """GRADER: two tiers joined, and only R1 and R9 named."""
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "Every hard gate and must-have — R1 and R9 — is met. Fit as '
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "Every hard gate and must-have — R1 and R9 — is met. Fit as '
               'evidence_map reads it,', "keep_set_two_tiers_partial")
 
 
 def keep_set_unresolved_other_clause(root: Path) -> None:
     """GRADER: the candidate's claims, not the map's rows, with R4 in another clause."""
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "All your candidate claims are self-reported, and R4 needs a work '
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "All your candidate claims are self-reported, and R4 needs a work '
               'sample. Fit as evidence_map reads it,', "keep_set_unresolved_other_clause")
 
 
@@ -2347,7 +2354,7 @@ def keep_set_true_negative(root: Path) -> None:
 
 def keep_set_constraints_not_given(root: Path) -> None:
     """The candidate's constraints, stated or not, are not the map's vocabulary."""
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "No hard constraints were stated beyond the start date and the '
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "No hard constraints were stated beyond the start date and the '
               'contract basis. Fit as evidence_map reads it,', "keep_set_constraints_not_given")
 
 
@@ -2393,7 +2400,7 @@ def keep_set_named_count(root: Path) -> None:
 
 
 def keep_set_named_ratio_summary(root: Path) -> None:
-    swap_once(root, DOSSIER, SUMMARY,
+    swap_once(root, ENVELOPE, SUMMARY,
               '"summary": "Five of the nine requirements are direct (R1, R2, R3, R6, R9). Fit as evidence_map reads it,',
               "keep_set_named_ratio_summary")
 
@@ -2431,12 +2438,12 @@ def keep_set_the_one_named(root: Path) -> None:
 def keep_set_only_named_summary(root: Path) -> None:
     """GRADER: a named "only" in decision.summary, false of the map (R5, R7 and R8 are
     below `direct` too): exactness is the grader's."""
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "R4 is the only row below direct. Fit as evidence_map reads it,',
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "R4 is the only row below direct. Fit as evidence_map reads it,',
               "keep_set_only_named_summary")
 
 
 def break_set_the_one_unnamed(root: Path) -> str:
-    swap_once(root, DOSSIER, SUMMARY, '"summary": "The one must-have below direct has a bridge. Fit as evidence_map '
+    swap_once(root, ENVELOPE, SUMMARY, '"summary": "The one must-have below direct has a bridge. Fit as evidence_map '
               'reads it,', "break_set_the_one_unnamed")
     return 'decision.summary: "The one must-have" is a set claim over the map that names no row'
 
@@ -2622,7 +2629,7 @@ def break_clause_nested(root: Path) -> str:
 MI_WATCH = ("Suggested answers can make your experience sound bigger than what you told me — rehearse only what "
             "you actually did, in your own words.")
 RT_WATCH = ("The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve "
-            "a line, check that quote and the new line against your original resume.")
+            "a line or send the resume, check that quote and the new line against what you actually wrote.")
 
 
 def break_watch_out_undeclared(root: Path) -> str:
@@ -2640,8 +2647,8 @@ def break_watch_out_two_sentences(root: Path) -> str:
 
 def break_watch_out_too_long(root: Path) -> str:
     """One sentence, and no longer crisp."""
-    swap_once(root, "skills/resume-tailor/SKILL.md", "against your original resume.\n```",
-              "against your original resume, your portfolio, your old cover letters, your LinkedIn profile and any "
+    swap_once(root, "skills/resume-tailor/SKILL.md", "against what you actually wrote.\n```",
+              "against what you actually wrote, your original resume, your portfolio, your old cover letters, your LinkedIn profile and any "
               "reference you plan to give.\n```", "break_watch_out_too_long")
     return "over 40"
 
@@ -2738,7 +2745,8 @@ def break_standing_rule_renamed(root: Path) -> str:
 def keep_watch_out_changed_everywhere(root: Path) -> None:
     """The sentence changed in its parameter and every copy at once: the way to change it."""
     new = MI_WATCH.replace("in your own words", "and say it in your own words")
-    for rel in ("skills/mock-interview/SKILL.md", "README.md", "skills/mock-interview/evals/evals.json"):
+    for rel in ("skills/mock-interview/SKILL.md", "README.md", "skills/mock-interview/evals/evals.json",
+                "skills/mock-interview/references/output-template.md"):
         path = root / rel
         text = path.read_text()
         if text.count(MI_WATCH) < 1:
@@ -2757,6 +2765,245 @@ def keep_warning_signs_elsewhere(root: Path) -> None:
     swap_once(root, "skills/mock-interview/references/output-template.md", "Running a drill:",
               "Warning signs that a drill is going badly are covered in step 6.\n\nRunning a drill:",
               "keep_warning_signs_elsewhere")
+
+
+# --- guidance: Anthropic's skill-authoring limits ----------------------------
+
+def _drop_contents(text: str) -> str:
+    """The text with its '## Contents' block (heading and list) removed."""
+    mutated = re.sub(r"\n## Contents\n\n(?:[ ]*- .*\n)+", "\n", text, count=1)
+    if mutated == text:
+        raise SystemExit("_drop_contents found no contents list — it has gone stale")
+    return mutated
+
+
+def break_toc_removed(root: Path) -> str:
+    """A skill's own 200-line reference file with its contents list deleted."""
+    path = root / "skills/job-underwriter/references/evidence-model.md"
+    path.write_text(_drop_contents(path.read_text()))
+    return "starts with a table of contents"
+
+
+def break_toc_below_intro(root: Path) -> str:
+    """The contents list present, but under the intro rather than at the top."""
+    path = root / "skills/resume-tailor/references/coverage-and-gaps.md"
+    text = path.read_text()
+    block = re.search(r"\n## Contents\n\n(?:[ ]*- .*\n)+", text).group(0)
+    text = text.replace(block, "\n", 1)
+    first_section = text.index("\n## ")
+    path.write_text(text[:first_section] + block + text[first_section:])
+    return "does not open with '## Contents' directly under its H1"
+
+
+def break_toc_mirror(root: Path) -> str:
+    """The canonical file loses its list and the resync carries the loss into every mirror."""
+    canonical = root / "conventions/output-discipline.md"
+    canonical.write_text(_drop_contents(canonical.read_text()))
+    for mirror in root.glob("skills/*/references/output-discipline.md"):
+        text = mirror.read_text()
+        header = re.match(r"\A<!-- SYNCED FROM: .*?-->\n", text, re.S).group(0)
+        mirror.write_text(header + canonical.read_text())
+    return "references/output-discipline.md is 2"
+
+
+def break_skill_body_tokens(root: Path) -> str:
+    """Rationale paragraphs added back to a SKILL.md, one at a time, until it is over."""
+    path = root / "skills/job-underwriter/SKILL.md"
+    para = ("This rule exists because a measured run once did the opposite, and the paragraph explaining "
+            "that history sat beside the rule for three releases. ")
+    path.write_text(path.read_text() + "\n" + para * 12 + "\n")
+    return "over the 5000-token estimate"
+
+
+def break_skill_body_lines(root: Path) -> str:
+    path = root / "skills/resume-tailor/SKILL.md"
+    path.write_text(path.read_text() + "".join(f"\n- item {i}" for i in range(500)) + "\n")
+    return "500-line limit"
+
+
+def break_description_imperative(root: Path) -> str:
+    """The form every description had before this check: a bare imperative."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", "description: Decides whether", "description: Decide whether",
+              "break_description_imperative")
+    return "'Decide', a bare imperative"
+
+
+def break_description_imperative_ss(root: Path) -> str:
+    """A bare imperative that already ends in "s"."""
+    swap_once(root, "skills/resume-tailor/SKILL.md", "description: Tailors an existing", "description: Process an existing",
+              "break_description_imperative_ss")
+    return "'Process', a bare imperative"
+
+
+def break_reference_bare_name(root: Path) -> str:
+    """A reference named in SKILL.md only by its bare file name, a path that resolves nowhere."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    if "`references/machine-readers.md`" not in text:
+        raise SystemExit("break_reference_bare_name found no link — it has gone stale")
+    path.write_text(text.replace("`references/machine-readers.md`", "`machine-readers.md`"))
+    return "never links references/machine-readers.md"
+
+
+def break_frontmatter_extra_key(root: Path) -> str:
+    """A Claude Code-only key in source: claude.ai rejects the upload."""
+    swap_once(root, "skills/mock-interview/SKILL.md", "name: mock-interview\n",
+              "name: mock-interview\ndisable-model-invocation: true\n", "break_frontmatter_extra_key")
+    return "unexpected frontmatter key(s): disable-model-invocation"
+
+
+def keep_toc_at_100_lines(root: Path) -> None:
+    """A reference file of exactly 100 lines needs no contents list: the rule is over 100."""
+    (root / "skills/resume-tailor/references/notes.md").write_text(
+        "# Notes\n\n" + "".join(f"Line {i}.\n" for i in range(98)))
+    swap_once(root, "skills/resume-tailor/SKILL.md", "- `references/rationale.md`",
+              "- `references/notes.md`\n- `references/rationale.md`", "keep_toc_at_100_lines")
+
+
+def keep_body_near_limit(root: Path) -> None:
+    """A body just under the estimate is accepted."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    body = len(re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S))
+    room = 5000 * 4 - 8 - body - 2
+    if room < 10:
+        raise SystemExit("keep_body_near_limit: no room left under the estimate — it has gone stale")
+    path.write_text(text + "\n" + ("w" * (room - 1)) + "\n")
+
+
+def keep_description_assesses(root: Path) -> None:
+    """A third-person verb whose bare form ends in "ss"."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", "description: Decides whether", "description: Assesses whether",
+              "keep_description_assesses")
+
+
+def keep_reference_markdown_link(root: Path) -> None:
+    """A reference linked as a markdown link carries its path and is accepted."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    path.write_text(text.replace("`references/machine-readers.md`", "[machine readers](references/machine-readers.md)"))
+
+
+def keep_frontmatter_license_key(root: Path) -> None:
+    """One of the six keys the spec allows."""
+    swap_once(root, "skills/mock-interview/SKILL.md", "name: mock-interview\n", "name: mock-interview\nlicense: MIT\n",
+              "keep_frontmatter_license_key")
+
+
+def _body_len(text: str) -> int:
+    return len(re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S))
+
+
+def _pad_body_to(root: Path, rel: str, chars: int, name: str) -> None:
+    """Append one line of filler so the SKILL.md body is exactly `chars` characters."""
+    path = root / rel
+    text = path.read_text()
+    fill = chars - _body_len(text) - 2
+    if fill < 1:
+        raise SystemExit(f"{name}: the body is already at or over {chars} chars — it has gone stale")
+    path.write_text(text + "\n" + "w" * fill + "\n")
+    if _body_len(path.read_text()) != chars:
+        raise SystemExit(f"{name}: padding missed {chars} chars")
+
+
+def _pad_lines_to(root: Path, rel: str, lines: int, name: str) -> None:
+    """Append short lines so the SKILL.md body is exactly `lines` lines."""
+    path = root / rel
+    text = path.read_text()
+    if not text.endswith("\n"):
+        raise SystemExit(f"{name}: {rel} no longer ends with a newline — it has gone stale")
+    have = len(re.sub(r"\A---\n.*?\n---\n", "", text, flags=re.S).splitlines())
+    if have >= lines:
+        raise SystemExit(f"{name}: the body already has {have} lines — it has gone stale")
+    path.write_text(text + "".join(f"- {i}\n" for i in range(lines - have)))
+
+
+def break_skill_body_tokens_at_limit(root: Path) -> str:
+    """A body of exactly 20,000 chars is 5,000 estimated tokens: at the limit, so over it."""
+    _pad_body_to(root, "skills/resume-tailor/SKILL.md", 5000 * 4, "break_skill_body_tokens_at_limit")
+    return "over the 5000-token estimate"
+
+
+def keep_body_one_token_under(root: Path) -> None:
+    """A body of 19,999 chars is 4,999 estimated tokens: one under, accepted."""
+    _pad_body_to(root, "skills/resume-tailor/SKILL.md", 5000 * 4 - 1, "keep_body_one_token_under")
+
+
+def break_skill_body_lines_at_limit(root: Path) -> str:
+    """A body of exactly 500 lines is at the limit, so over it."""
+    _pad_lines_to(root, "skills/resume-tailor/SKILL.md", 500, "break_skill_body_lines_at_limit")
+    return "500-line limit"
+
+
+def keep_body_499_lines(root: Path) -> None:
+    """A body of 499 lines is accepted."""
+    _pad_lines_to(root, "skills/resume-tailor/SKILL.md", 499, "keep_body_499_lines")
+
+
+def break_toc_heading_without_list(root: Path) -> str:
+    """The contents heading kept, its list rewritten as a sentence."""
+    path = root / "skills/job-underwriter/references/evidence-model.md"
+    mutated = re.sub(r"\n## Contents\n\n(?:[ ]*- .*\n)+",
+                     "\n## Contents\n\nThe vocabulary, the row, the card, the examples and the serialization.\n",
+                     path.read_text(), count=1)
+    if mutated == path.read_text():
+        raise SystemExit("break_toc_heading_without_list found no contents list — it has gone stale")
+    path.write_text(mutated)
+    return "has a '## Contents' heading with no list under it"
+
+
+def break_toc_no_h1(root: Path) -> str:
+    """A reference over 100 lines with no H1 for its contents list to sit under."""
+    swap_once(root, "skills/job-underwriter/references/evidence-model.md", "# Evidence model\n\n", "",
+              "break_toc_no_h1")
+    return "has no H1 for a contents list to sit under"
+
+
+def break_reference_unlinked_short(root: Path) -> str:
+    """A short reference file, well under 100 lines, that SKILL.md never names."""
+    swap_once(root, "skills/resume-tailor/SKILL.md",
+              "- `references/rationale.md` — why the rules are shaped this way; not needed to follow them\n", "",
+              "break_reference_unlinked_short")
+    return "never links references/rationale.md"
+
+
+def break_reference_unlinked_mirror(root: Path) -> str:
+    """A mirror that SKILL.md never names: a mirror ships, so it is linked like any other file."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    if text.count("`references/dossier-schema.md`") < 1:
+        raise SystemExit("break_reference_unlinked_mirror found no link — it has gone stale")
+    text = text.replace("- `references/dossier-schema.md` (mirror)\n", "")
+    path.write_text(text.replace("`references/dossier-schema.md`", "the dossier schema"))
+    return "never links references/dossier-schema.md"
+
+
+def break_reference_named_only_in_frontmatter(root: Path) -> str:
+    """Named in the description, which is not the body that loads: still unlinked."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    line = "- `references/rationale.md` — why the rules are shaped this way; not needed to follow them\n"
+    if text.count(line) != 1:
+        raise SystemExit("break_reference_named_only_in_frontmatter found no index line — it has gone stale")
+    text = text.replace(line, "")
+    path.write_text(text.replace("\n---\n", " See references/rationale.md.\n---\n", 1))
+    return "never links references/rationale.md"
+
+
+def keep_frontmatter_compatibility_key(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/SKILL.md", "name: mock-interview\n",
+              "name: mock-interview\ncompatibility: Requires web search for research tiers L1 and L2\n",
+              "keep_frontmatter_compatibility_key")
+
+
+def keep_frontmatter_metadata_key(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/SKILL.md", "name: mock-interview\n",
+              "name: mock-interview\nmetadata:\n  version: \"1.0\"\n", "keep_frontmatter_metadata_key")
+
+
+def keep_frontmatter_allowed_tools_key(root: Path) -> None:
+    swap_once(root, "skills/mock-interview/SKILL.md", "name: mock-interview\n",
+              "name: mock-interview\nallowed-tools: Read Write\n", "keep_frontmatter_allowed_tools_key")
 
 
 PASSES = [
@@ -2850,6 +3097,16 @@ PASSES = [
     ("watch-out", "a watch-out sentence changed in its parameter and every copy at once", keep_watch_out_changed_everywhere),
     ("watch-out", "the README naming a skill as a link in code", keep_watch_out_readme_linked_name),
     ("watch-out", "\"warning\" about something other than the slot", keep_warning_signs_elsewhere),
+    ("guidance", "a reference file of exactly 100 lines, with no contents list", keep_toc_at_100_lines),
+    ("guidance", "a SKILL.md body just under the token estimate", keep_body_near_limit),
+    ("guidance", "a description opening \"Assesses\"", keep_description_assesses),
+    ("guidance", "a reference linked as a markdown link", keep_reference_markdown_link),
+    ("frontmatter", "the license key, one of the six the spec allows", keep_frontmatter_license_key),
+    ("frontmatter", "the compatibility key, one of the six", keep_frontmatter_compatibility_key),
+    ("frontmatter", "the metadata key, nested, one of the six", keep_frontmatter_metadata_key),
+    ("frontmatter", "the allowed-tools key, one of the six", keep_frontmatter_allowed_tools_key),
+    ("guidance", "a SKILL.md body of 19,999 chars, one token under the estimate", keep_body_one_token_under),
+    ("guidance", "a SKILL.md body of 499 lines", keep_body_499_lines),
 ]
 
 
@@ -3207,6 +3464,22 @@ CASES: list[tuple[str, str, callable]] = [
     ("watch-out", "a line labelled a warning", break_watch_out_named_warning),
     ("watch-out", "the README calling it a warning", break_watch_out_readme_warning),
     ("watch-out", "the standing rule's heading renamed", break_standing_rule_renamed),
+    ("guidance", "a reference file over 100 lines with its contents list deleted", break_toc_removed),
+    ("guidance", "a contents list below the intro, not at the top", break_toc_below_intro),
+    ("guidance", "a canonical file's contents list lost, and its mirrors with it", break_toc_mirror),
+    ("guidance", "a SKILL.md body over the token estimate", break_skill_body_tokens),
+    ("guidance", "a SKILL.md body of 500 lines or more", break_skill_body_lines),
+    ("guidance", "a description opening with a bare imperative", break_description_imperative),
+    ("guidance", "a bare imperative ending in \"ss\"", break_description_imperative_ss),
+    ("guidance", "a reference named in SKILL.md by bare file name only", break_reference_bare_name),
+    ("guidance", "a SKILL.md body of exactly 20,000 chars, at the token estimate", break_skill_body_tokens_at_limit),
+    ("guidance", "a SKILL.md body of exactly 500 lines", break_skill_body_lines_at_limit),
+    ("guidance", "a contents heading with prose, not a list, under it", break_toc_heading_without_list),
+    ("guidance", "a reference over 100 lines with no H1", break_toc_no_h1),
+    ("guidance", "a short reference file SKILL.md never names", break_reference_unlinked_short),
+    ("guidance", "a mirror SKILL.md never names", break_reference_unlinked_mirror),
+    ("guidance", "a reference named only in the frontmatter, not the body", break_reference_named_only_in_frontmatter),
+    ("frontmatter", "a Claude Code-only frontmatter key in source", break_frontmatter_extra_key),
 ]
 
 

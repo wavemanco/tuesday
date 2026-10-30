@@ -29,6 +29,8 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   fixtures     the fixture fields the harness reads are what it assumes
   wording      retired wordings stay retired
   watch-out    each skill's one watch-out sentence, and every copy of it, exact
+  guidance     Anthropic's skill-authoring limits: contents lists, SKILL.md size,
+               a third-person description, and every reference linked
 """
 
 from __future__ import annotations
@@ -1770,7 +1772,11 @@ def check_readmes() -> None:
 LEDGER_LINE = re.compile(r"^- `?(" + "|".join(PRIORITY_ORDER) + r")`? — (.+)$")
 LEDGER_GROUP = re.compile(r"^(" + "|".join(FIT_ORDER) + r"): (.+)$")
 LEDGER_ITEM = ledger_rules.LEDGER_ITEM
-WORKED_DOSSIER = "skills/job-underwriter/references/dossier-template.md"
+# The worked dossier is two files, split so no step reads more than it needs: the
+# report (snapshot, map, register, target accounting) and the JSON envelope that
+# closes the same emitted file. The check reads them as the one dossier they are.
+WORKED_DOSSIER = "skills/job-underwriter/references/dossier-worked-report.md"
+WORKED_ENVELOPE = "skills/job-underwriter/references/dossier-worked-envelope.md"
 
 
 def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | None]], list[str]]:
@@ -1856,12 +1862,12 @@ def check_fit_ledger() -> None:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         table[cells[cid]] = {"requirement": cells[creq], "priority": cells[cpri].strip("`"),
                              "fit": cells[cfit].strip("`"), "confidence": cells[cconf].strip("`")}
-    blocks = re.findall(r"```json\n(.*?)\n```", text, re.DOTALL)
+    blocks = re.findall(r"```json\n(.*?)\n```", (REPO / WORKED_ENVELOPE).read_text(encoding="utf-8"), re.DOTALL)
     try:
         envelope = json.loads(blocks[-1])["sections"]["evidence_map"]
         env = {r["requirement_id"]: r for r in envelope}
     except (IndexError, KeyError, TypeError, ValueError):
-        fail(group, f"{WORKED_DOSSIER}: no evidence_map in the last json block")
+        fail(group, f"{WORKED_ENVELOPE}: no evidence_map in the last json block")
         return
 
     seen: dict[str, int] = {}
@@ -1909,7 +1915,7 @@ def check_fit_ledger() -> None:
     # reads and what it leaves to the grader, above Claim in ci/ledger_rules.py).
     counted = ledger_rules.map_claim(summary)
     if counted:
-        fail(group, f"{WORKED_DOSSIER}: decision.summary: {counted.why}")
+        fail(group, f"{WORKED_ENVELOPE}: decision.summary: {counted.why}")
 
     # Everything between the ledger and the next slot is rule 2's "at most one
     # sentence" (after_ledger_claim), where every word of the lists and every ratio
@@ -2871,6 +2877,108 @@ def check_watch_outs() -> None:
         fail(group, "no watch-out sentence read — the check would pass vacuously")
 
 
+# --- Anthropic's skill-authoring guidance ------------------------------------
+# The limits the guidance sets for what a skill ships, as numbers this file can
+# hold. The SKILL.md body is estimated at four characters a token, the estimate the
+# owner set; the guidance recommends a body under about 5,000 tokens and requires
+# under 500 lines.
+MAX_BODY_LINES = 500
+MAX_BODY_TOKENS = 5000
+CHARS_PER_TOKEN = 4
+TOC_OVER_LINES = 100
+CONTENTS = "## Contents"
+# A third-person verb ends in "s" ("Decides", "Generates", "Tailors", "Assesses");
+# a bare imperative does not ("Decide", "Generate", "Tailor", "Use"). A verb whose
+# bare form already ends in "ss" ("Assess", "Process") is a bare imperative when it
+# stops there, so a first word ending in "ss" fails too.
+THIRD_PERSON = re.compile(r"^[A-Za-z]+(?<!s)s\b|^[A-Za-z]+ses\b")
+
+
+def skill_body(text: str) -> str:
+    """SKILL.md without its frontmatter: what loads when the skill triggers."""
+    match = re.match(r"^---\n.*?\n---\n", text, re.DOTALL)
+    return text[match.end():] if match else text
+
+
+def contents_problem(text: str) -> str | None:
+    """Why a reference file does not start with a table of contents, or None.
+
+    Starts with means: after the synced-from header, if any, and the file's H1, the
+    first thing is a '## Contents' heading, then a list of at least one item.
+    """
+    body = text[SYNCED_HEADER.match(text).end():] if SYNCED_HEADER.match(text) else text
+    lines = body.splitlines()
+    try:
+        h1 = next(i for i, line in enumerate(lines) if line.startswith("# "))
+    except StopIteration:
+        return "has no H1 for a contents list to sit under"
+    rest = [line for line in lines[h1 + 1:] if line.strip()]
+    if not rest or rest[0].strip() != CONTENTS:
+        return f"does not open with '{CONTENTS}' directly under its H1"
+    after = lines[lines.index(rest[0], h1 + 1) + 1:]
+    while after and not after[0].strip():
+        after = after[1:]
+    if not after or not after[0].lstrip().startswith("- "):
+        return f"has a '{CONTENTS}' heading with no list under it"
+    return None
+
+
+def check_guidance() -> None:
+    """What Anthropic's skill-authoring guidance asks of a shipped skill, held here.
+
+    Each limit was met by hand once and drifted: two SKILL.md bodies passed 5,000
+    tokens one rationale paragraph at a time, every description opened with a bare
+    imperative, and 22 reference files over 100 lines had no contents list for a
+    reader who previews the top of a file. What this reads: a contents list at the
+    top of every reference file over TOC_OVER_LINES lines, as shipped (a mirror's
+    header counted, since a mirror ships with it); each SKILL.md body under
+    MAX_BODY_LINES lines and MAX_BODY_TOKENS estimated tokens; each description
+    opening in the third person, read from its first word alone (THIRD_PERSON);
+    and every file in references/ linked from SKILL.md by the path that resolves
+    in the installed skill, `references/<name>`. The frontmatter keys, the
+    description's length and its angle brackets are the frontmatter group's. What
+    it does not read: whether a contents list matches the file's headings, whether
+    the rest of a description is in the third person, and whether a link sits at
+    the step that needs the file.
+    """
+    group = "guidance"
+    for skill in skills():
+        text = (skill / "SKILL.md").read_text(encoding="utf-8")
+        body = skill_body(text)
+        lines = len(body.splitlines())
+        tokens = len(body) // CHARS_PER_TOKEN
+        if lines >= MAX_BODY_LINES:
+            fail(group, f"{skill.name}: SKILL.md body is {lines} lines, at or over the {MAX_BODY_LINES}-line limit")
+        if tokens >= MAX_BODY_TOKENS:
+            fail(group, f"{skill.name}: SKILL.md body is about {tokens} tokens ({len(body)} chars / {CHARS_PER_TOKEN}), "
+                        f"over the {MAX_BODY_TOKENS}-token estimate — move rationale to a reference file")
+        if lines < MAX_BODY_LINES and tokens < MAX_BODY_TOKENS:
+            ok(group, f"{skill.name}: SKILL.md body is {lines} lines and about {tokens} tokens")
+
+        fm = parse_frontmatter(text) or {}
+        desc = fm.get("description", "")
+        if desc and not THIRD_PERSON.match(desc):
+            first = desc.split()[0]
+            fail(group, f"{skill.name}: description opens with '{first}', a bare imperative — write it in the third "
+                        f"person ('Generates…', not 'Generate…')")
+        elif desc:
+            ok(group, f"{skill.name}: description opens in the third person ('{desc.split()[0]}')")
+
+        for ref in sorted((skill / "references").glob("*.md")):
+            if f"references/{ref.name}" not in body:
+                fail(group, f"{skill.name}: SKILL.md never links references/{ref.name} by that path — a reference "
+                            f"is linked directly from SKILL.md, one level deep")
+            ref_text = ref.read_text(encoding="utf-8")
+            n = len(ref_text.splitlines())
+            if n > TOC_OVER_LINES:
+                problem = contents_problem(ref_text)
+                if problem:
+                    fail(group, f"{skill.name}: references/{ref.name} is {n} lines and {problem} — a reference "
+                                f"file over {TOC_OVER_LINES} lines starts with a table of contents")
+                else:
+                    ok(group, f"{skill.name}: references/{ref.name} ({n} lines) opens with its contents")
+
+
 GROUPS = {
     "frontmatter": check_frontmatter,
     "columns": check_columns,
@@ -2889,6 +2997,7 @@ GROUPS = {
     "evals": check_evals,
     "triggers": check_triggers,
     "watch-out": check_watch_outs,
+    "guidance": check_guidance,
 }
 
 

@@ -5,13 +5,19 @@
      A byte check strips this header and compares the remainder to canonical. -->
 # Citations
 
-Canonical for every Tuesday skill. Skills carry a mirror of this file in their `references/` with a synced-from header; this copy wins on conflict.
+## Contents
+
+- Why this file exists
+- Rules
+- C1 to C36, one entry per source
+
+Canonical for every Tuesday skill. Skills carry a mirror of this file in their `references/` with a synced-from header; on a conflict between a mirror and the canonical file it names, the canonical file wins.
 
 Claims this suite makes about the outside world — a figure from a study, a finding from a survey, what the law permits — are recorded here once, verbatim, beside their source and what weakens them. Prose elsewhere cites an entry as `(cite C1)`, and a quotation followed by a marker may quote only text the entry holds. CI enforces that.
 
 ## Why this file exists
 
-The suite requires every line a skill proposes to trace to a quoted source in a cell. The conventions that impose the rule did not follow it: they paraphrased external sources from memory, and a paraphrase that sits in one file while its source sits in another is never read beside it — which is `CONTRIBUTING.md`'s own test for when a sentence has to become a slot.
+The suite requires every line a skill proposes to trace to a quoted source in a cell. The conventions that impose the rule did not follow it: they paraphrased external sources from memory, and a paraphrase that sits in one file while its source sits in another is never read beside it — which is the suite's own test, in its contributing guide, for when a sentence has to become a slot.
 
 The record of what that cost, in the order it was found:
 
@@ -37,7 +43,7 @@ These are why the rules below are strict about units, bases and primary sources,
 - **Figures with different units, bases or constructs are not compared as if they shared one.** Say what each counts.
 - **Scope, stated honestly:** every figure, research finding, survey result and statement of law in the conventions, the skills' shipped files and the specs has an entry here, as of the sweep recorded above. Practitioner heuristics — interviewer personas, company archetypes, question stems — are the skills' own priors, presented as priors, and are not cited. The ledger records this repository's history and cites where it states an outside finding. A claim without an entry reads as an inference or is removed. CI catches a quotation that strays from its entry and a paraphrase in quotation marks; a paraphrase without them it cannot see, so this scope is kept by review as well as by CI.
 - **Every quotation in an entry is the source's words.** Verbatim holds what prose may quote; a Weakens field may quote the source too, and the verifier reads every quotation in the entry. This suite's own earlier wording, recorded as history, is set in italics, not quotation marks.
-- **Re-verify rather than re-remember.** `ci/verify_citations.py` refetches every source and reports each entry as verified, not found, malformed, or unreachable. It needs the network, so it runs by hand rather than in CI, and unreachable is reported as unchecked, never as a pass.
+- **Re-verify rather than re-remember.** The suite's citation verifier, which lives in its source repository and ships with no skill, refetches every source and reports each entry as verified, not found, malformed, or unreachable. It needs the network, so it runs by hand rather than in CI, and unreachable is reported as unchecked, never as a pass.
 
 ---
 

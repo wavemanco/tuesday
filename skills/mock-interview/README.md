@@ -78,6 +78,7 @@ mock-interview/
 │   ├── research-checklist.md     # L0/L1/L2 research tiers, budgets, archetype fallbacks
 │   ├── output-template.md        # pack skeleton, loop mode, drill mode
 │   ├── dossier-handoff.md        # reading handoff_to_mock_interview, writing pack_feedback
+│   ├── rationale.md              # why the rules are shaped as they are; not required reading
 │   ├── evidence-conventions.md   # mirror of conventions/ — source types, bands, labels
 │   ├── reframing-audit.md        # mirror of conventions/ — six drift axes, five disciplines
 │   ├── interaction-grammar.md    # mirror of conventions/ — standalone invariant, research tiers

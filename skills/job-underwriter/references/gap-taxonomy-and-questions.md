@@ -1,5 +1,14 @@
 # Gap taxonomy and recovery questions
 
+## Contents
+
+- Fit status and gap type
+- Recovery patterns, per gap type
+  - The reframing audit
+- Selecting the next questions
+- Response modes
+- Worked discovery prompts
+
 How this skill tells four situations apart and asks the questions that convert one into another. The vocabulary it uses is defined in `references/evidence-conventions.md`, the suite's canonical file mirrored verbatim into this skill; what follows is this skill's own method for applying it.
 
 ## Fit status and gap type

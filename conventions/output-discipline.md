@@ -1,7 +1,19 @@
 # Output discipline
 
+## Contents
+
+- How to read this file
+- 1. The question budget is counted across the whole message
+- 2. Enum cells hold exactly one token
+- 3. Square brackets are reserved for provenance labels — **absolute**
+- 4. The calls to action close the message, and only the watch-out follows them
+- 5. A sibling skill is named, not lobbied for
+- 6. A claim about the world lives in a row, not in prose
+- 7. A delivered output ends with its skill's watch-out
+
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
-`references/` with a synced-from header; this copy wins on conflict.
+`references/` with a synced-from header; on a conflict between a mirror and the
+canonical file it names, the canonical file wins.
 
 Seven rules about the *shape* of a delivered response. The first six were each
 learned from a measured defect in a clean-room run, and three of them were fixed
@@ -89,7 +101,7 @@ mapping per declared enum, `field=file.md#Section/Column`, naming a column of th
 first worked table under that `##` section of one of its own references, never a
 mirrored one — and CI fails a declared enum with no mapping, a mapping to no such
 file, section, table or column, a mapping into a mirror, or a mapping for an
-undeclared field (`CONTRIBUTING.md`).
+undeclared field (the suite's contributing guide).
 
 **Parameter: `qualifier_fields`** — the free-text columns a qualifier goes to when
 it will not fit an enum cell. Every field named here must exist as a column in the
@@ -196,7 +208,7 @@ not a call to action, not written for this run or adapted to it. A sentence
 composed for the run would be the second summary rule 4 exists to prevent; a
 fixed one restates nothing. It names what the user should double-check, because
 the suite measured a defect there that its fixes have not closed
-(`CONTRIBUTING.md`, "When an issue survives two iterations"). It is called a
+(the suite's contributing guide, "When an issue survives two iterations"). It is called a
 watch-out in every file and every response, and by no other name; and no other
 line of a response, or of a file it produces, is labelled a watch-out.
 

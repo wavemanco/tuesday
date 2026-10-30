@@ -63,7 +63,10 @@ job-underwriter/
 │   ├── evidence-model.md               # evidence vocabulary, map row shape, confirmation card
 │   ├── gap-taxonomy-and-questions.md   # five gap types, recovery patterns, question selection
 │   ├── risk-and-decision.md            # signal classes, red-flag patterns, decision semantics
-│   ├── dossier-template.md             # emission rules + full worked tuesday-dossier.md
+│   ├── dossier-emission.md             # emission rules for tuesday-dossier.md
+│   ├── dossier-worked-report.md        # worked dossier, the report: every assessment's sections
+│   ├── dossier-worked-envelope.md      # worked dossier, the JSON envelope
+│   ├── rationale.md                    # why the rules are shaped as they are; not required reading
 │   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
 │   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── interaction-grammar.md          # mirror of conventions/ — standalone invariant, research tiers

@@ -5,7 +5,18 @@
      A byte check strips this header and compares the remainder to canonical. -->
 # Interaction grammar
 
-How every skill in Tuesday behaves with the user. A person moving between skills should feel the same hands. Canonical here; skills mirror in `references/` with a synced-from header.
+## Contents
+
+- 1. The standalone invariant
+- 2. Elicitation policy
+- 3. Degradation and the upgrade menu
+- 4. Research tiers
+- 5. Privacy and scope
+- 6. Trigger hygiene
+- 7. Voice, buttons, and host honesty
+- 8. The n + x rule
+
+How every skill in Tuesday behaves with the user. A person moving between skills should feel the same hands. Canonical here; skills mirror in `references/` with a synced-from header, and on a conflict between a mirror and the canonical file it names, the canonical file wins.
 
 ## 1. The standalone invariant
 
@@ -91,8 +102,8 @@ fetching it, or any other page on that site, is a research call, charged and
 attributed to the target the page serves like any other. No other sentence
 restates the line.
 
-The accounting is a slot and not a sentence, for the reason `CONTRIBUTING.md`
-gives: compliance here depends on noticing an absence, and a search that ran
+The accounting is a slot and not a sentence, for the reason the suite's
+contributing guide gives: compliance here depends on noticing an absence, and a search that ran
 wastefully and a search correctly skipped leave a response that looks identical.
 Neither a reader nor a grader can tell them apart from prose. A line per declared
 target is visibly empty when a target goes unaccounted for, which is the only
