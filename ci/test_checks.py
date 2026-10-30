@@ -926,8 +926,8 @@ def break_count_definite_frame(root: Path) -> str:
 
 
 def break_close_adverb_imperative(root: Path) -> str:
-    swap_once(root, "skills/job-underwriter/SKILL.md", "the assessment ends without restating itself.",
-              "the assessment ends without restating itself. Always close with the upgrade menu.",
+    swap_once(root, "skills/job-underwriter/SKILL.md", "because the snapshot at the top is its one summary (Step 1).",
+              "because the snapshot at the top is its one summary (Step 1). Always close with the upgrade menu.",
               "break_close_adverb_imperative")
     return "closing_order ends questions"
 
@@ -1032,9 +1032,9 @@ def keep_interview_questions_budget(root: Path) -> None:
 
 
 def keep_close_after_colon(root: Path) -> None:
-    swap_once(root, "skills/job-underwriter/SKILL.md", "the assessment ends without restating itself.",
-              "the assessment ends without restating itself. The response ends with its three calls to action: the "
-              "dossier offer, then the upgrade menu, then the questions.", "keep_close_after_colon")
+    swap_once(root, "skills/job-underwriter/SKILL.md", "because the snapshot at the top is its one summary (Step 1).",
+              "because the snapshot at the top is its one summary (Step 1). The response ends with its three calls to "
+              "action: the dossier offer, then the upgrade menu, then the questions.", "keep_close_after_colon")
 
 
 def keep_drill_turn(root: Path) -> None:
@@ -1175,7 +1175,7 @@ def break_ledger_back_to_prose(root: Path) -> str:
 def break_ledger_summary_count(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Strong fit (five of seven material requirements direct),', "break_ledger_summary_count")
-    return "decision.summary counts the map"
+    return 'decision.summary: "seven material requirements" counts 7 rows'
 
 
 def break_ledger_name(root: Path) -> str:
@@ -1212,20 +1212,20 @@ def break_ledger_count_beside(root: Path) -> str:
     """The v0.1 sentence put back next to an intact ledger, not instead of it."""
     swap_once(root, DOSSIER, "**Fit ledger.**\n\n- `hard_gate`",
               "Five of seven material requirements are `direct`.\n\n**Fit ledger.**\n\n- `hard_gate`", "break_ledger_count_beside")
-    return "the snapshot counts"
+    return 'the snapshot\'s prose: "Five of seven material requirements" is a set claim over the map that names no row'
 
 
 def break_ledger_sentence_only(root: Path) -> str:
     """The first probe runs' shape: "the only rows below `direct`", under a ledger listing more."""
     swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
               "R4 is the only row below `direct` that matters,", "break_ledger_sentence_only")
-    return "the sentence after the fit ledger says"
+    return 'the sentence after the fit ledger: "the only row" is an exclusive quantifier'
 
 
 def break_ledger_summary_universal(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Every must_have requirement is direct but R4;', "break_ledger_summary_universal")
-    return "decision.summary counts the map"
+    return 'decision.summary: "Every must_have requirement is direct but" is an exclusive quantifier'
 
 
 def break_ledger_tier_twice(root: Path) -> str:
@@ -1297,19 +1297,19 @@ def break_ledger_count_words_between(root: Path) -> str:
     """"N of the M" with words before the noun: COUNTED needed "N of M" exactly."""
     swap_once(root, DOSSIER, AFTER_LEDGER, AFTER_LEDGER + " Four of the seven material requirements are `direct`.",
               "break_ledger_count_words_between")
-    return "the sentence after the fit ledger says"
+    return 'the sentence after the fit ledger: "Four of the seven material requirements" is a set claim over the map that names no row'
 
 
 def break_ledger_bare_count(root: Path) -> str:
     """A count with no "of" at all."""
     swap_once(root, DOSSIER, AFTER_LEDGER, "Four rows are `direct`.", "break_ledger_bare_count")
-    return "the sentence after the fit ledger says"
+    return 'the sentence after the fit ledger: "Four rows" is a set claim over the map that names no row'
 
 
 def break_ledger_second_paragraph(root: Path) -> str:
     """The first paragraph after the ledger is clean; the second one quantifies."""
     swap_once(root, DOSSIER, AFTER_LEDGER, AFTER_LEDGER + "\n\nThe rest are `direct`.", "break_ledger_second_paragraph")
-    return "the sentence after the fit ledger says \"The rest"
+    return "the sentence after the fit ledger: \"The rest are `direct`\" is an exclusive quantifier"
 
 
 def break_ledger_two_sentences(root: Path) -> str:
@@ -1321,33 +1321,39 @@ def break_ledger_two_sentences(root: Path) -> str:
 
 
 def break_ledger_both_after(root: Path) -> str:
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Both R4 and R3 (`medium`) wait on an artifact.", "break_ledger_both_after")
-    return "the sentence after the fit ledger says \"Both\""
+    """"both" over a set the sentence leaves unnamed (round 7: named, it is lawful)."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Both wait on an artifact.", "break_ledger_both_after")
+    return "the sentence after the fit ledger: \"Both\" is a set claim over the map that names no row"
+
+
+def keep_ledger_both_named(root: Path) -> None:
+    """"both" over the rows the sentence names: the set is those rows, and nothing is left to resolve."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Both R4 and R3 (`medium`) wait on an artifact.", "keep_ledger_both_named")
 
 
 def break_ledger_universal_in_verdict(root: Path) -> str:
     """A universal over a tier in a slot other than the sentence after the ledger."""
     swap_once(root, DOSSIER, "**Worth applying to — on the conditions below.",
               "**Worth applying to — every must_have requirement is direct but R4.", "break_ledger_universal_in_verdict")
-    return "the snapshot counts or quantifies the map"
+    return 'the snapshot\'s prose: "every must_have requirement is direct but" is an exclusive quantifier'
 
 
 def break_ledger_summary_all_but(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Direct on all but R4;',
               "break_ledger_summary_all_but")
-    return "decision.summary counts the map"
+    return 'decision.summary: "all but" is an exclusive quantifier'
 
 
 def break_ledger_summary_bare_count(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Four direct;',
               "break_ledger_summary_bare_count")
-    return "decision.summary counts the map"
+    return 'decision.summary: "Four direct" counts 4 rows, and the sentence names 1'
 
 
 def break_ledger_summary_of_the(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Four of the seven direct;',
               "break_ledger_summary_of_the")
-    return "decision.summary counts the map"
+    return 'decision.summary: "Four of the seven direct" counts 4 rows'
 
 
 def break_ledger_plain_band(root: Path) -> str:
@@ -1451,7 +1457,7 @@ def break_quantifier_drift_rule(root: Path) -> str:
     """The rule's list gains a word the shared set does not hold (D6)."""
     swap_once(root, "skills/job-underwriter/references/evidence-model.md", '"each of", ', '"each of", "most", ',
               "break_quantifier_drift_rule")
-    return "QUANTIFIERS lacks ['most']"
+    return "ci/ledger_rules.py lacks ['most'] from evidence-model.md's inclusive quantifiers"
 
 
 def break_quantifier_drift_grader(root: Path) -> str:
@@ -1481,28 +1487,28 @@ SNAPSHOT_PROSE = "One entry runs the other way"
 
 def break_ledger_plural_gates(root: Path) -> str:
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Both gates hold. " + SNAPSHOT_PROSE, "break_ledger_plural_gates")
-    return "the snapshot counts or quantifies the map (\"Both gates\")"
+    return "the snapshot's prose: \"Both gates\""
 
 
 def break_ledger_gate_predicate(root: Path) -> str:
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Every gate passes. " + SNAPSHOT_PROSE, "break_ledger_gate_predicate")
-    return "the snapshot counts or quantifies the map (\"Every gate\")"
+    return "the snapshot's prose: \"Every gate\""
 
 
 def break_ledger_fit_noun(root: Path) -> str:
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Five direct fits back it. " + SNAPSHOT_PROSE, "break_ledger_fit_noun")
-    return "the snapshot counts or quantifies the map (\"Five direct\")"
+    return "the snapshot's prose: \"Five direct\""
 
 
 def break_ledger_ratio_alone(root: Path) -> str:
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Fit: 4 of 7 met. " + SNAPSHOT_PROSE, "break_ledger_ratio_alone")
-    return "the snapshot counts or quantifies the map (\"4 of 7\")"
+    return "the snapshot's prose: \"4 of 7\""
 
 
 def break_ledger_no_other(root: Path) -> str:
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "R8 is the open gate; no other gate is in doubt. " + SNAPSHOT_PROSE,
               "break_ledger_no_other")
-    return "the snapshot counts or quantifies the map (\"no other gate\")"
+    return "the snapshot's prose: \"no other gate\""
 
 
 def keep_ledger_ratio_of_other_noun(root: Path) -> None:
@@ -1528,7 +1534,7 @@ def break_summary_ratio_predicate(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,',
               '"summary": "Conditional go: 5 of 7 covered. Fit as evidence_map reads it,',
               "break_summary_ratio_predicate")
-    return "decision.summary counts the map (\"5 of 7\")"
+    return "decision.summary: \"5 of 7\" is a set claim over the map that names no row"
 
 
 def break_after_ledger_fraction(root: Path) -> str:
@@ -1536,27 +1542,27 @@ def break_after_ledger_fraction(root: Path) -> str:
     swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
               "R4 has a credible bridge with its limit named, leaving four out of seven covered,",
               "break_after_ledger_fraction")
-    return "the sentence after the fit ledger says \"four out of seven\""
+    return "the sentence after the fit ledger: \"four out of seven\" counts 4 rows"
 
 
 def break_after_ledger_slash(root: Path) -> str:
     swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
               "R4 has a credible bridge with its limit named, fit at 5/7 covered,", "break_after_ledger_slash")
-    return "the sentence after the fit ledger says \"5/7\""
+    return "the sentence after the fit ledger: \"5/7\" counts 5 rows"
 
 
 def break_ledger_gate_unlisted_verb(root: Path) -> str:
     """A singular gate before a verb no list names is still the map's gate."""
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Every gate checks out. " + SNAPSHOT_PROSE,
               "break_ledger_gate_unlisted_verb")
-    return "the snapshot counts or quantifies the map (\"Every gate\")"
+    return "the snapshot's prose: \"Every gate\""
 
 
 def break_ledger_direct_unlisted_noun(root: Path) -> str:
     """"direct" before a noun that is not one of its ordinary heads is the fit."""
     swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Two direct hits: R2 and R3. " + SNAPSHOT_PROSE,
               "break_ledger_direct_unlisted_noun")
-    return "the snapshot counts or quantifies the map (\"Two direct\")"
+    return "the snapshot's prose: \"Two direct\""
 
 
 def keep_ledger_candidate_ratio(root: Path) -> None:
@@ -2040,6 +2046,197 @@ def break_qualifier_in_mirror_only(root: Path) -> str:
     return "names 'definition', which is not a column in any references/ table outside the mirrors"
 
 
+# Round 7: a set claim names its rows, exactly (evidence-model.md, "The row is the
+# unit"). The measured sentences, each in a slot of the worked dossier, against its
+# own map: R1, R8, R9 hard_gate; R2, R3, R4 must_have (R4 adjacent); R5, R6
+# important; R7 preferred; R1, R2, R3, R6, R9 direct.
+
+VERDICT = "**Worth applying to — on the conditions below."
+SUMMARY = '"summary": "Fit as evidence_map reads it,'
+
+
+def break_set_unnamed_status(root: Path) -> str:
+    """The status line's measured recap: true, and naming nothing."""
+    swap_once(root, DOSSIER, VERDICT, "**Worth applying to — you clear every must-have directly, on the conditions below.",
+              "break_set_unnamed_status")
+    return "the snapshot's prose: \"every must-have\" is a set claim over the map that names no row"
+
+
+def break_set_unnamed_constraints(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Both of your hard constraints hold. " + SNAPSHOT_PROSE,
+              "break_set_unnamed_constraints")
+    return "the snapshot's prose: \"Both of your hard constraints\" is a set claim over the map that names no row"
+
+
+def break_set_unnamed_gap_type(root: Path) -> str:
+    """A set of rows by gap type: one this module cannot resolve, but unnamed it fails."""
+    swap_once(root, DOSSIER, SUMMARY, '"summary": "None of them is a capability problem. Fit as evidence_map reads it,',
+              "break_set_unnamed_gap_type")
+    return "decision.summary: \"None of them is a capability\" is a set claim over the map that names no row"
+
+
+def break_set_named_inexact(root: Path) -> str:
+    """Named, but the tier has a third row the sentence leaves out."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Every must-have — R2 and R3 — is `direct`.", "break_set_named_inexact")
+    return ("the sentence after the fit ledger: \"Every must-have\" describes the map's must_have rows, "
+            "['R2', 'R3', 'R4'], and the sentence leaves out ['R4']")
+
+
+def break_set_named_wrong_number(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Three must-haves are `direct`: R2, R3 and R4. " + SNAPSHOT_PROSE,
+              "break_set_named_wrong_number")
+    return "the snapshot's prose: \"Three must-haves\" gives 3; the map's must_have `direct` rows number 2"
+
+
+def break_set_named_v01(root: Path) -> str:
+    """The v0.1 count with rows named: the map has nine rows, and five `direct`."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Four of the seven material requirements are `direct`: R1, R2, R3 and R6.",
+              "break_set_named_v01")
+    return "\"Four of the seven material requirements\" describes the map's `direct` rows"
+
+
+def break_set_named_unknown_row(root: Path) -> str:
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Both R4 and R12 wait on an artifact.", "break_set_named_unknown_row")
+    return "the sentence after the fit ledger: \"Both\" sits in a sentence naming ['R12'], which the map does not have"
+
+
+def break_set_exclusive_named(root: Path) -> str:
+    """The measured plan note: "only" names its rows and speaks for the rest."""
+    swap_once(root, DOSSIER, "(3) the retrofit bridge", "(3) W1 covers only R3 and R4; (4) the retrofit bridge",
+              "break_set_exclusive_named")
+    return "the snapshot's prose: \"only R3\" is an exclusive quantifier"
+
+
+def break_set_bare_none_after(root: Path) -> str:
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4 and R5 sit below `direct`, and none is a gate.", "break_set_bare_none_after")
+    return "the sentence after the fit ledger: \"none\" is an exclusive quantifier"
+
+
+
+# Round 7, adversarial check: which set a claim describes follows its subject, and
+# what it says of the rows it names is true of each (evidence-model.md, "The row is
+# the unit"). Against the worked map: R8 hard_gate `unclear`; R4 must_have
+# `adjacent`; R5 important `unclear`; R7 preferred `absent`; the rest `direct`.
+
+def break_set_false_universal(root: Path) -> str:
+    """Named, exact, and false of one row it names: the count's twin."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Every must-have — R2, R3 and R4 — is `direct`.", "break_set_false_universal")
+    return "\"Every must-have\" says R4 is `direct`; the map has R4 at must_have `adjacent`"
+
+
+def break_set_ids_false(root: Path) -> str:
+    """A quantifier over the IDs it names, a linking verb between: false of R4."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R3 and R4 are both `direct`.", "break_set_ids_false")
+    return "\"both `direct`\" says R4 is `direct`"
+
+
+def break_set_both_three(root: Path) -> str:
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4, R5 and R7 both wait on evidence.", "break_set_both_three")
+    return "\"both\" says two, and it stands over 3 rows"
+
+
+def break_set_two_tiers_partial(root: Path) -> str:
+    swap_once(root, DOSSIER, SUMMARY, '"summary": "Every hard gate and must-have — R1 and R9 — is met. Fit as '
+              'evidence_map reads it,', "break_set_two_tiers_partial")
+    return "describes the map's hard_gate and must_have rows"
+
+
+def break_set_unresolved_other_clause(root: Path) -> str:
+    """An ID in another clause does not name a set this module cannot resolve."""
+    swap_once(root, DOSSIER, SUMMARY, '"summary": "All your candidate claims are self-reported, and R4 needs a work '
+              'sample. Fit as evidence_map reads it,', "break_set_unresolved_other_clause")
+    return "names no row in its own clause"
+
+
+def break_set_range(root: Path) -> str:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Every must-have (R2–R4) is evidenced. " + SNAPSHOT_PROSE, "break_set_range")
+    return "a range names only its endpoints"
+
+
+def break_set_ratio_wrong_m(root: Path) -> str:
+    """M is the noun's set: the map has four rows below `direct`."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "One of the five gaps is a must-have: R4. " + SNAPSHOT_PROSE,
+              "break_set_ratio_wrong_m")
+    return "\"One of the five gaps\" gives 5; the map's below `direct` rows number 4"
+
+
+def keep_set_ids_link_verb(root: Path) -> None:
+    """Over the IDs it names, a linking verb between: R1, R6 and R9 are `direct` too."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R2 and R3 are both `direct`, and R3 (`medium`) waits on an artifact.",
+              "keep_set_ids_link_verb")
+
+
+def keep_set_true_negative(root: Path) -> None:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "None of the hard gates — R1, R8 and R9 — is `hard_gate_fail`. "
+              + SNAPSHOT_PROSE, "keep_set_true_negative")
+
+
+def keep_set_constraints_not_given(root: Path) -> None:
+    """The candidate's constraints, stated or not, are an input, not a tier."""
+    swap_once(root, DOSSIER, SUMMARY, '"summary": "No hard constraints were stated beyond the start date and the '
+              'contract basis. Fit as evidence_map reads it,', "keep_set_constraints_not_given")
+
+
+def keep_set_exclusive_not_rows(root: Path) -> None:
+    """"only" restricting who can act, not which rows."""
+    swap_once(root, DOSSIER, "(2) the post confirmed as permanent — R8, RR2;",
+              "(2) only the employer can settle R8 — the post confirmed as permanent, RR2;",
+              "keep_set_exclusive_not_rows")
+
+
+def keep_set_count_verb(root: Path) -> None:
+    """A verb after the counted noun is what the count says, not part of its noun."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Two gaps matter: R4 and R5. " + SNAPSHOT_PROSE, "keep_set_count_verb")
+
+
+def keep_set_narrowed_noun(root: Path) -> None:
+    """A noun narrowed by a word the map cannot read is the grader's."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Every open must-have — R4 — has a named bridge. " + SNAPSHOT_PROSE,
+              "keep_set_narrowed_noun")
+
+def break_retired_count_rule(root: Path) -> str:
+    """The pre-round-7 rule, back in a grader clause: every quantifier fails, named or not."""
+    clause_swap(root, JU, "no_score", "No single numeric fit score or percentage appears",
+                "No single numeric fit score or percentage appears. Any number, total or set quantifier over the map "
+                "fails, even when it is accurate", "break_retired_count_rule")
+    return "is the retired count rule"
+
+
+def keep_unnamed_rule_stated(root: Path) -> None:
+    """The rule that retired it, in the same words, passes: the set it fails is unnamed."""
+    clause_swap(root, JU, "no_score", "No single numeric fit score or percentage appears",
+                "No single numeric fit score or percentage appears. Any quantifier over a set of rows left unnamed "
+                "fails, even when it is accurate", "keep_unnamed_rule_stated")
+
+
+def keep_set_named_exact_after(root: Path) -> None:
+    swap_once(root, DOSSIER, AFTER_LEDGER, "Every must-have — R2, R3 and R4 — has evidence, and R3 (`medium`) waits on "
+              "an artifact.", "keep_set_named_exact_after")
+
+
+def keep_set_named_count(root: Path) -> None:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Five rows are `direct`: R1, R2, R3, R6 and R9. " + SNAPSHOT_PROSE,
+              "keep_set_named_count")
+
+
+def keep_set_named_ratio_summary(root: Path) -> None:
+    """"N of M" named: N the rows named, M the map's rows of the set."""
+    swap_once(root, DOSSIER, SUMMARY,
+              '"summary": "Five of the nine requirements are direct (R1, R2, R3, R6, R9). Fit as evidence_map reads it,',
+              "keep_set_named_ratio_summary")
+
+
+def keep_set_named_status(root: Path) -> None:
+    """Rule 1's worked form: a reason about rows names them."""
+    swap_once(root, DOSSIER, VERDICT, "**Worth applying to — R1 and R9, both hard gates, are met; on the conditions below.",
+              "keep_set_named_status")
+
+
+def keep_set_named_gap_type(root: Path) -> None:
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "None of R4, R5 is a capability gap. " + SNAPSHOT_PROSE,
+              "keep_set_named_gap_type")
+
+
 # The answer-key check reads fenced code as prose (NP-5).
 
 def break_answer_key_fenced(root: Path) -> str:
@@ -2066,16 +2263,16 @@ RISK_AND_DECISION = "skills/job-underwriter/references/risk-and-decision.md"
 
 def break_quantifier_scope_drift(root: Path) -> str:
     """The list scopes a new word to the sentence after the ledger; the shared set does not."""
-    swap_once(root, EVIDENCE_MODEL, 'no bare "none" either', 'no bare "none" or "most" either',
+    swap_once(root, EVIDENCE_MODEL, 'a bare "none" too', 'a bare "none" or "most" too',
               "break_quantifier_scope_drift")
-    return "lacks ['most'] from evidence-model.md's list it scopes to the sentence after the ledger"
+    return "lacks ['most'] from evidence-model.md's words scoped to the sentence after the ledger"
 
 
 def break_quantifier_set_extra(root: Path) -> str:
     """The shared set holds a word the rule does not: set equality, not a subset."""
-    swap_once(root, "ci/ledger_rules.py", '"neither", "the rest",', '"neither", "most", "the rest",',
+    swap_once(root, "ci/ledger_rules.py", '"the one", "the rest",', '"the one", "most", "the rest",',
               "break_quantifier_set_extra")
-    return "holds ['most'] among the quantifiers, which evidence-model.md's list does not"
+    return "holds ['most'] among the exclusive quantifiers, which evidence-model.md's list does not"
 
 
 def clause_swap(root: Path, rel: str, clause: str, old: str, new: str, name: str) -> None:
@@ -2096,20 +2293,20 @@ def break_grader_bare_none(root: Path) -> str:
 
 def break_grader_scope_missing(root: Path) -> str:
     clause_swap(root, JU, "ledger_counts",
-                ", and so does a bare 'none', because it speaks for the rows that sentence does not name", "",
+                ", and a bare 'none' fails too, because it speaks for the rows that sentence does not name", "",
                 "break_grader_scope_missing")
     return "lists quantifiers without ['none'], which evidence-model.md's list scopes"
 
 
 def break_rule2_unpointed(root: Path) -> str:
-    swap_once(root, RISK_AND_DECISION, 'listed in `references/evidence-model.md` ("The row is the unit")',
-              'such as "every", "all" or "both"', "break_rule2_unpointed")
+    swap_once(root, RISK_AND_DECISION, 'under the rule in `references/evidence-model.md` ("The row is the unit")',
+              'under a rule of its own', "break_rule2_unpointed")
     return "rule 2 no longer points to evidence-model.md"
 
 
 def break_rule2_spells_list(root: Path) -> str:
-    swap_once(root, RISK_AND_DECISION, 'including the one word that list scopes to this sentence',
-              'including the one word that list scopes to this sentence, such as "no other"', "break_rule2_spells_list")
+    swap_once(root, RISK_AND_DECISION, 'and scopes one more word to it.',
+              'and scopes one more word to it, such as "no other".', "break_rule2_spells_list")
     return "rule 2 spells ['no other']"
 
 
@@ -2184,6 +2381,19 @@ PASSES = [
     ("fit-ledger", "a ledger name whose Requirement words hold a parenthesis", keep_ledger_nested_name),
     ("wording", "years named as not a hard gate", keep_years_negated_gate),
     ("fit-ledger", "the candidate's own ratios and a date in the snapshot", keep_ledger_candidate_ratio),
+    ("fit-ledger", "\"both\" over the rows it names, after the ledger", keep_ledger_both_named),
+    ("fit-ledger", "a named universal that is exact, after the ledger", keep_set_named_exact_after),
+    ("fit-ledger", "a named count that is exact", keep_set_named_count),
+    ("fit-ledger", "a named \"N of M\" in decision.summary", keep_set_named_ratio_summary),
+    ("fit-ledger", "a status line naming its rows under a floating \"both\"", keep_set_named_status),
+    ("fit-ledger", "a named set by gap type", keep_set_named_gap_type),
+    ("fit-ledger", "a quantifier over the IDs it names, a verb between", keep_set_ids_link_verb),
+    ("fit-ledger", "a named negative universal that is true", keep_set_true_negative),
+    ("fit-ledger", "the candidate's constraints, stated as not given", keep_set_constraints_not_given),
+    ("fit-ledger", "\"only\" restricting something other than rows", keep_set_exclusive_not_rows),
+    ("fit-ledger", "a count whose verb follows its noun", keep_set_count_verb),
+    ("fit-ledger", "a noun narrowed by a word the map cannot read", keep_set_narrowed_noun),
+    ("wording", "the rule that retired the count rule, stated in its words", keep_unnamed_rule_stated),
     ("wording", "the two accounting grounds in the other order", keep_budget_grounds_reversed),
 ]
 
@@ -2418,7 +2628,7 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "\"four rows\" after the ledger", break_ledger_bare_count),
     ("fit-ledger", "a second paragraph after the ledger", break_ledger_second_paragraph),
     ("fit-ledger", "two sentences after the ledger", break_ledger_two_sentences),
-    ("fit-ledger", "\"both\" after the ledger", break_ledger_both_after),
+    ("fit-ledger", "an unnamed \"both\" after the ledger", break_ledger_both_after),
     ("fit-ledger", "a universal over a tier in the verdict line", break_ledger_universal_in_verdict),
     ("fit-ledger", "\"all but\" in decision.summary", break_ledger_summary_all_but),
     ("fit-ledger", "a bare count in decision.summary", break_ledger_summary_bare_count),
@@ -2484,6 +2694,23 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "a grader clause without the after-ledger words", break_grader_scope_missing),
     ("fit-ledger", "rule 2 no longer pointing to the list", break_rule2_unpointed),
     ("fit-ledger", "rule 2 spelling a word of the list", break_rule2_spells_list),
+    ("fit-ledger", "an unnamed \"every must-have\" in the status line", break_set_unnamed_status),
+    ("fit-ledger", "an unnamed \"both of your hard constraints\"", break_set_unnamed_constraints),
+    ("fit-ledger", "an unnamed set by gap type in decision.summary", break_set_unnamed_gap_type),
+    ("fit-ledger", "a named set that leaves out a row of its tier", break_set_named_inexact),
+    ("fit-ledger", "a named count that is not the class's size", break_set_named_wrong_number),
+    ("fit-ledger", "the v0.1 count with its rows named", break_set_named_v01),
+    ("fit-ledger", "a named set holding a row the map lacks", break_set_named_unknown_row),
+    ("fit-ledger", "\"only\" over rows it names", break_set_exclusive_named),
+    ("fit-ledger", "a bare \"none\" after the ledger beside named rows", break_set_bare_none_after),
+    ("fit-ledger", "a named universal false of a row it names", break_set_false_universal),
+    ("fit-ledger", "\"both\" over the IDs it names, false of one", break_set_ids_false),
+    ("fit-ledger", "\"both\" over three IDs", break_set_both_three),
+    ("fit-ledger", "two tiers joined, one named in full", break_set_two_tiers_partial),
+    ("fit-ledger", "an unresolved set whose ID sits in another clause", break_set_unresolved_other_clause),
+    ("fit-ledger", "a range in place of the rows' IDs", break_set_range),
+    ("fit-ledger", "\"N of M\" with M not the noun's set", break_set_ratio_wrong_m),
+    ("wording", "the retired count rule back in a grader clause", break_retired_count_rule),
     ("fixtures", "a fit_ledger fixture with no candidate_constraints", break_constraints_missing),
     ("fixtures", "candidate_constraints misspelt", break_constraints_misspelt),
     ("fixtures", "research.declined that is not a boolean", break_declined_not_bool),

@@ -248,14 +248,27 @@ row below `direct` named only in words its Requirement cell uses. A band beside 
 row ID, backticked or not — R3 (`medium`), R3 (medium) — is that row's Confidence; a
 band beside a register ID is a severity written like a band and fails, and so does
 one attached to nothing. Everything between the ledger and the next slot is rule 2's
-one sentence: it fails as a second sentence, with a count over the map, or with any
-word of evidence-model.md's quantifier list in any sense, the bare "none" the list
-scopes to that sentence included. The rest of the snapshot, and the envelope's
-`decision.summary`, fail on a count over the map or a word of that list with a map
-word in reach, or on "all but". One reader, `ledger_rules.map_claim`, reads every
-count for all three, here and in the harness. What is a count, which words are map
-words, how far a count reaches, and when "N of M" or a fraction counts rows are
-stated once, in the comment above `MAP_WORDS` in `ci/ledger_rules.py`. The **Hard gates:** slot is
+one sentence: it fails as a second sentence, or on a set claim that breaks
+evidence-model.md's rule ("The row is the unit"), where every word of its lists and
+every ratio is read as about the map, wherever it stands, and the bare "none" the
+list scopes to that sentence is exclusive. The rest of the snapshot, the status line
+included, and the envelope's `decision.summary` are read for a count over the map, a
+word of the lists with a map word in reach, an exclusive word with a map word in
+reach or standing directly over a row ID ("only R1–R5"), and "all but". One reader,
+`ledger_rules.set_claims` (through `map_claim` and `after_ledger_claim`), judges
+every one of them for all three, here and in the harness, against the worked map's
+rows, in the order the comment above `Claim` in `ci/ledger_rules.py` states: with or
+without the map, an exclusive word fails, and an inclusive word or a count fails
+when its sentence names no row or fewer rows than it counts; the map adds that a
+named row is one of its rows and, where the claim's set resolves to rows of the
+map, that the sentence names exactly them, gives their number and says of each only
+what the map holds. Which set a claim describes is evidence-model.md's rule to say;
+one that does not resolve still names a row in its own clause, and whether it is
+exact is the grader's. Without the map's rows the functions check the first part
+only, which no CI or harness caller does. What is a count, which
+words are map words, how far a count reaches, and when "N of M" or a fraction counts
+rows are stated once, in the comment above `MAP_WORDS` in `ci/ledger_rules.py`, and
+how a claim is judged, in the comment above `Claim`. The **Hard gates:** slot is
 required in every snapshot and parsed as rule 4 states it: its failed, unconfirmed
 and met clauses are compared with the map's `hard_gate` rows, each failed and
 unconfirmed row named in words its Requirement uses, and the closing clause with the
@@ -265,21 +278,27 @@ only (evidence-model.md, "A gate is met, not established, or failed"), whatever 
 line says. Every `severity: x` beside a register ID is that entry's Severity, and
 **Severe red flags:** names exactly the `severity: high` entries or says "none
 found". There is one Research tier line, read with the harness's own pattern, its
-L1 budget SKILL.md's and no count above its budget. And the quantifier list in
-evidence-model.md ("The row is the unit") is the one statement of the words: the
-shared set holds exactly it, scope by scope; risk-and-decision.md's rule 2 points to
-it and spells none of it; and every job-underwriter expectation that speaks of
-quantifiers quotes each of its words, the one it scopes to the sentence after the
-ledger inside the expectation's sentence about that sentence and nowhere else.
+L1 budget SKILL.md's and no count above its budget. And the quantifier lists in
+evidence-model.md ("The row is the unit") are the one statement of the words: the
+shared sets hold exactly them, list by list — inclusive, exclusive, and the word
+scoped to the sentence after the ledger; risk-and-decision.md's rule 2 points to
+them and spells none of them; and every job-underwriter expectation that speaks of
+quantifiers quotes each of their words, sorted as the rule sorts them — each
+inclusive word inside the expectation's sentence on the inclusive ones, each
+exclusive word inside its sentence on the exclusive ones, and the scoped word inside
+its sentence about the sentence after the ledger and nowhere else.
 The ledger was a sentence from v0.1 — "five of seven material requirements are
 `direct`" over a map with four — and a dossier whose ledger cannot be parsed fails
 rather than skips. What it does not read: whether the tally's numerators are true
 (the target table records a status per target, not calls); a count or quantifier
-beyond the reach `MAP_WORDS`'s comment gives ("both R4 and R5 sit below `direct`"
-outside the sentence after the ledger), or about the map in words none of these;
-prose about the map outside the snapshot and the summary, such as the gap queue; and
-the snapshots and summaries runs write, which the harness reads with the same
-functions.
+beyond the reach `MAP_WORDS`'s comment gives ("both of them sit, in the end, below
+`direct`" outside the sentence after the ledger), or about the map in words none of
+these ("the hard gates fail"); whether what a named set's sentence says of its rows
+is true ("every must-have — R2, R3, R4 — is direct" with R4 `adjacent` passes: the
+class is named exactly, and the fit is the grader's); a set that does not resolve,
+as above; prose about the map outside the snapshot and the summary, such as the gap
+queue, the plan and a closing recap, which the grader reads; and the snapshots and
+summaries runs write, which the harness reads with the same functions.
 
 **A skill's installed text shares no run of words with its own fixtures.**
 `--only answer-keys` reads each skill's `SKILL.md` body and references — the files a

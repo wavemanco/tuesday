@@ -51,7 +51,7 @@ sys.path.insert(0, str(REPO / "ci"))
 # checks of one rule cannot disagree (ci/ledger_rules.py says why).
 import ledger_rules  # noqa: E402
 from ledger_rules import (BANDS, COUNT_WORDS, FIT_ORDER, PRIORITY_ORDER, ROW_ID,  # noqa: E402,F401
-                          COUNTED, FRACTION, MAP_UNIVERSAL, TIER_WORDS)
+                          COUNTED, FRACTION, TIER_WORDS)
 SKILLS_DIR = REPO / "skills"
 DIST = REPO / "dist"
 CONVENTIONS = REPO / "conventions"
@@ -1712,8 +1712,8 @@ def check_readmes() -> None:
         ok(group, f"all {checked} README inventory entries match their folders")
 
 
-# PRIORITY_ORDER, FIT_ORDER, BANDS, ROW_ID, COUNTED, FRACTION, TIER_WORDS and
-# MAP_UNIVERSAL come from ci/ledger_rules.py, as do the rule functions used below and
+# PRIORITY_ORDER, FIT_ORDER, BANDS, ROW_ID, COUNTED, FRACTION and TIER_WORDS come
+# from ci/ledger_rules.py, as do the rule functions used below and
 # LEDGER_ITEM, the one grammar of a ledger item the harness reads runs with too.
 LEDGER_LINE = re.compile(r"^- `?(" + "|".join(PRIORITY_ORDER) + r")`? — (.+)$")
 LEDGER_GROUP = re.compile(r"^(" + "|".join(FIT_ORDER) + r"): (.+)$")
@@ -1851,25 +1851,28 @@ def check_fit_ledger() -> None:
         summary = json.loads(blocks[-1])["sections"]["decision"]["summary"]
     except (KeyError, TypeError, ValueError):
         summary = ""
-    counted = ledger_rules.map_claim(summary)
+    # Every set claim over the map — in the summary, the sentence after the ledger
+    # and the rest of the snapshot — is judged against the map's own rows by the one
+    # reader the harness calls too (evidence-model.md, "The row is the unit").
+    rows = {rid: (row["priority"], row["fit"]) for rid, row in table.items()}
+    counted = ledger_rules.map_claim(summary, rows)
     if counted:
-        fail(group, f"{WORKED_DOSSIER}: decision.summary counts the map (\"{counted.group(0)}\") instead of leaving it to evidence_map")
+        fail(group, f"{WORKED_DOSSIER}: decision.summary: {counted.why}")
 
     # Everything between the ledger and the next slot is rule 2's "at most one
-    # sentence", and it may hold no count over the map and no word of the quantifier
-    # list (after_ledger_claim). The rest of the snapshot, like the summary above, is
-    # read by the one count reader, map_claim; bare "none" is read only after the
-    # ledger, because the slots require "none failed" and "none found" and the list
-    # exempts it.
+    # sentence" (after_ledger_claim), where every word of the lists and every ratio
+    # is read as about the map, and a bare "none" is exclusive. The rest of the
+    # snapshot, like the summary above, is read by map_claim; bare "none" is not
+    # read there, because the slots require "none failed" and "none found".
     after = ledger_rules.ledger_sentence(snapshot)
-    hit = after and ledger_rules.after_ledger_claim(after)
+    hit = after and ledger_rules.after_ledger_claim(after, rows)
     if ledger_rules.is_second_sentence(after, hit):
-        fail(group, f"{WORKED_DOSSIER}: the fit ledger is followed by more than one sentence (\"{hit.group(0)[:80]}\"); rule 2 allows one")
+        fail(group, f"{WORKED_DOSSIER}: the fit ledger is followed by more than one sentence (\"{hit.text[:80]}\"); rule 2 allows one")
     elif hit:
-        fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger says \"{hit.group(0)}\" about the map")
-    hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot))
+        fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger: {hit.why}")
+    hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot), rows)
     if hit:
-        fail(group, f"{WORKED_DOSSIER}: the snapshot counts or quantifies the map (\"{hit.group(0)}\")")
+        fail(group, f"{WORKED_DOSSIER}: the snapshot's prose: {hit.why}")
 
     try:
         status = json.loads(blocks[-1])["sections"]["candidate_constraints"]["status"]
@@ -1913,34 +1916,38 @@ GRADER_QUOTE = re.compile(r"(?<!\w)['‘\"“]((?:[^'\"‘’“”\n]|(?<=\w)['
 
 
 def quantifier_drift(group: str) -> None:
-    """D9: the after-ledger words are written once, in evidence-model.md.
+    """D9: the quantifier lists are written once, in evidence-model.md.
 
-    Its "The row is the unit" list is the rule, in two scopes: the quantifiers over
-    the map anywhere, and the further one — a bare "none" — it scopes to the one
-    sentence after the fit ledger. ci/ledger_rules.py holds
-    exactly that list in those scopes (QUANTIFIERS, AFTER_LEDGER_ONLY);
-    risk-and-decision.md's rule 2 points to the list and spells none of it; and
-    every job-underwriter expectation that speaks of quantifiers quotes each word of
-    the list, the scoped one inside its sentence about the sentence after the
-    ledger and nowhere else — so a grader is never told bare 'none' is exempt.
+    Its "The row is the unit" bullet is the rule, with its words in three lists: the
+    inclusive quantifiers, which a named set may carry; the exclusive ones, which fail
+    whatever they name; and the further one — a bare "none" — it makes exclusive in
+    the one sentence after the fit ledger. ci/ledger_rules.py holds exactly those
+    lists (INCLUSIVE, EXCLUSIVE, AFTER_LEDGER_ONLY); risk-and-decision.md's rule 2
+    points to the bullet and spells none of it; and every job-underwriter expectation
+    that speaks of quantifiers quotes each word of the lists, sorted as the rule sorts
+    them — an inclusive word inside the expectation's sentence on the inclusive ones,
+    an exclusive word inside its sentence on the exclusive ones, and the scoped word
+    inside its sentence about the sentence after the ledger and nowhere else — so a
+    grader is never told a named "only" passes, or bare 'none' is exempt.
     """
     refs = REPO / "skills/job-underwriter/references"
-    general, after_only = ledger_rules.rule_quantifier_scopes((refs / "evidence-model.md").read_text(encoding="utf-8"))
-    if not general or not after_only:
-        fail(group, "evidence-model.md's \"The row is the unit\" list of quantifiers, in its two scopes, was not "
-                    "found — the drift check would pass vacuously")
+    inclusive, exclusive, after_only = ledger_rules.rule_quantifier_scopes(
+        (refs / "evidence-model.md").read_text(encoding="utf-8"))
+    if not inclusive or not exclusive or not after_only:
+        fail(group, "evidence-model.md's \"The row is the unit\" lists of quantifiers — inclusive, exclusive, and the "
+                    "word scoped to the sentence after the ledger — were not found; the drift check would pass vacuously")
         return
-    shared_general = [q for q in ledger_rules.QUANTIFIERS if q not in ledger_rules.AFTER_LEDGER_ONLY]
-    for scope, rule, shared in (("", general, shared_general),
-                                (" it scopes to the sentence after the ledger", after_only,
+    for label, rule, shared in (("inclusive quantifiers", inclusive, list(ledger_rules.INCLUSIVE)),
+                                ("exclusive quantifiers", exclusive, list(ledger_rules.EXCLUSIVE)),
+                                ("words scoped to the sentence after the ledger", after_only,
                                  list(ledger_rules.AFTER_LEDGER_ONLY))):
         missing = [q for q in rule if q not in shared]
         extra = [q for q in shared if q not in rule]
         if missing:
-            fail(group, f"ci/ledger_rules.py QUANTIFIERS lacks {missing} from evidence-model.md's list{scope}")
+            fail(group, f"ci/ledger_rules.py lacks {missing} from evidence-model.md's {label}")
         if extra:
-            fail(group, f"ci/ledger_rules.py holds {extra} among the quantifiers{scope}, which evidence-model.md's "
-                        f"list does not")
+            fail(group, f"ci/ledger_rules.py holds {extra} among the {label}, which evidence-model.md's list does not")
+    every = inclusive + exclusive + after_only
 
     decision = (refs / "risk-and-decision.md").read_text(encoding="utf-8")
     rule2 = re.search(r"^2\. \*\*Fit ledger\*\*.*$", decision, re.MULTILINE)
@@ -1949,32 +1956,54 @@ def quantifier_drift(group: str) -> None:
     else:
         if "evidence-model.md" not in rule2.group(0) or '"The row is the unit"' not in rule2.group(0):
             fail(group, "risk-and-decision.md rule 2 no longer points to evidence-model.md (\"The row is the "
-                        "unit\") for the words the sentence after the ledger may not carry")
-        spelled = sorted({m.group(1) for m in GRADER_QUOTE.finditer(rule2.group(0))} & set(general + after_only))
+                        "unit\") for the rule the sentence after the ledger is held to")
+        spelled = sorted({m.group(1) for m in GRADER_QUOTE.finditer(rule2.group(0))} & set(every))
         if spelled:
-            fail(group, f"risk-and-decision.md rule 2 spells {spelled} from evidence-model.md's list — a second "
-                        f"copy of it; point to the list instead")
+            fail(group, f"risk-and-decision.md rule 2 spells {spelled} from evidence-model.md's lists — a second "
+                        f"copy of them; point to the lists instead")
+
+    def segment(expectation: str, marker: re.Pattern) -> tuple[int, int] | None:
+        hit = marker.search(expectation)
+        if not hit:
+            return None
+        stop = re.search(r"[.;](?:\s|$)", expectation[hit.start():])
+        return hit.start(), hit.start() + stop.start() if stop else len(expectation)
+
+    def quoted(text: str) -> set[str]:
+        return {m.group(1) for m in GRADER_QUOTE.finditer(text)}
 
     for case in load_evals(REPO / "skills/job-underwriter/evals/evals.json") or []:
         for n, expectation in enumerate(case.get("expectations", []), 1):
             if "quantifier" not in expectation:
                 continue
             where = f"job-underwriter eval {case.get('id')} #{n}"
-            turn = ledger_rules.SCOPE_TURN.search(expectation)
-            end = len(expectation)
-            if turn:
-                stop = re.search(r"[.;](?:\s|$)", expectation[turn.start():])
-                end = turn.start() + stop.start() if stop else end
-            inside = {m.group(1) for m in GRADER_QUOTE.finditer(expectation[turn.start():end])} if turn else set()
-            outside = {m.group(1) for m in GRADER_QUOTE.finditer(
-                expectation[:turn.start()] + " | " + expectation[end:] if turn else expectation)}
-            lacking = [q for q in general if q not in inside | outside]
+            spans = {name: segment(expectation, marker) for name, marker in (
+                ("inclusive", re.compile(r"\binclusive\b", re.I)), ("exclusive", re.compile(r"\bexclusive\b", re.I)),
+                ("after", ledger_rules.SCOPE_TURN))}
+            inside = {name: quoted(expectation[span[0]:span[1]]) if span else set() for name, span in spans.items()}
+            everywhere = quoted(expectation)
+            lacking = [q for q in inclusive + exclusive if q not in everywhere]
             if lacking:
-                fail(group, f"{where} lists quantifiers without {lacking} from evidence-model.md's list")
-            lacking = [q for q in after_only if q not in inside]
+                fail(group, f"{where} lists quantifiers without {lacking} from evidence-model.md's lists")
+            for name, words, other in (("inclusive", inclusive, exclusive + after_only),
+                                       ("exclusive", exclusive, inclusive)):
+                if spans[name] is None:
+                    fail(group, f"{where} speaks of quantifiers without a sentence on the {name} ones, as "
+                                f"evidence-model.md sorts them")
+                    continue
+                astray = [q for q in words if q in everywhere and q not in inside[name]]
+                if astray:
+                    fail(group, f"{where} quotes {astray} outside its sentence on the {name} quantifiers")
+                mixed = [q for q in other if q in inside[name] and q not in inside["after"]]
+                if mixed:
+                    fail(group, f"{where} quotes {mixed} in its sentence on the {name} quantifiers; "
+                                f"evidence-model.md does not list them there")
+            lacking = [q for q in after_only if q not in inside["after"]]
             if lacking:
                 fail(group, f"{where} lists quantifiers without {lacking}, which evidence-model.md's list scopes to "
                             f"the sentence after the ledger — say so \"in the one sentence after\" the ledger")
+            outside = quoted(expectation[:spans["after"][0]] + " | " + expectation[spans["after"][1]:]) \
+                if spans["after"] else everywhere
             stray = [q for q in after_only if q in outside]
             if stray:
                 fail(group, f"{where} quotes {stray} outside its sentence on the sentence after the ledger; "
@@ -2423,6 +2452,12 @@ RETIRED = [
     (SentenceRule(r"\bhard gates?\b", tail=r"\byears(?:/level)?\b", negation=NEGATION),
      "years listed as a hard gate is the retired gate list — a gate is a term, not experience "
      "(evidence-conventions.md §3, \"A gate is a term, not experience\")"),
+    # Round 7's rule change: a set claim that names its rows is lawful when exact.
+    (SentenceRule(r"\bany\b[^.]{0,80}\bquantifier\b", tail=r"\bfails?,?\s+even when (?:it is )?accurate\b",
+                  unless=r"\bunnamed\b|\bnames? no row\b"),
+     "a quantifier over the map failing \"even when it is accurate\" whatever it names is the retired count rule — "
+     "a set claim that names its rows passes when exact, and only an unnamed one or an exclusive word fails "
+     "(evidence-model.md, \"The row is the unit\")"),
 ]
 LABELS_DEFINED = re.compile(r"(?=.*\byes\b)(?=.*\bunavailable\b)(?=.*\bcalls?\b)", re.I | re.S)
 
@@ -2463,9 +2498,9 @@ def check_wording() -> None:
     personas.md once pre-mapped a story per stem with no quote behind it. Each is a
     phrase, so each is checked as one (round 4 added the old accounting ground, the
     user-link tally that counted refused reads, "plainly" for failed gate rows, the
-    slot required only with gate rows, and years in a hard-gate list; the first and
-    the last are read in their sentence, so the rule that retired them, stated in
-    the same words, passes): the retired phrasings anywhere a rule is stated or graded; any expectation that defines the yes/unavailable labels carries
+    slot required only with gate rows, and years in a hard-gate list; round 7 the
+    count rule that failed a named set; the first and the last two are read in
+    their sentence, so the rule that retired them, stated in the same words, passes): the retired phrasings anywhere a rule is stated or graded; any expectation that defines the yes/unavailable labels carries
     "returned a result" and "or errored"; no L0 definition says "no network"; and
     personas.md keeps its pointer to the quote-or-slot rule and pre-maps nothing
     unquoted.

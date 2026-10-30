@@ -373,14 +373,27 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   rule, `ledger_rules.names_requirement` (every word the Requirement's, compared
   by lemma — partnering is partner — through a closed table of the abbreviations
   a Requirement is written in, `ledger_rules.ABBREVIATIONS`, with a lone "+" or
-  "&" read as "and"), on one item grammar, `ledger_rules.ITEM_WORDS`. One count
-  reader, `ledger_rules.map_claim`, reads every count, fraction and quantifier
-  over the map, here and in CI. Checks: `ledger_sentence` (no count over the
-  map, no word of the quantifier list in any sense, and no second sentence after
-  the ledger), `snapshot_count` (no count, fraction or listed quantifier over
-  the map in the snapshot's prose), `summary_count` (the same, by the same
-  reader, in the last JSON envelope's `decision.summary`; unchecked when the
-  response has no envelope with one), `snapshot_band` (a bare band word,
+  "&" read as "and"), on one item grammar, `ledger_rules.ITEM_WORDS`. One
+  set-claim reader, `ledger_rules.set_claims`, judges every count, fraction and
+  quantifier over the map against the run's own evidence-map rows, here and in
+  CI, by evidence-model.md's rule ("The row is the unit"), in the order the
+  comment above `Claim` in `ci/ledger_rules.py` states: an exclusive word fails
+  whatever it names; an inclusive word or a count fails when its sentence names
+  no row, fewer rows than it counts, or a row the map lacks; and where its set
+  resolves to rows of the map, when the sentence leaves one out, gives a number
+  that is not their count, or says of a row it names what the map does not
+  hold. A set that does not resolve — a gap type, the candidate's claims or
+  constraints, a predicate in words that are not the map's — still names a row
+  in its own clause, and whether it is exact is left to the grader. How it reads
+  and resolves is stated once in `ci/ledger_rules.py`, above `MAP_WORDS` and
+  above `Claim`. Checks: `ledger_wording` (no numeral, quantifier or count in
+  the ledger's own lines, named or not), `ledger_sentence` (the set claims of
+  the one sentence after the ledger, where every word of the lists and every
+  ratio is read as about the map and a bare "none" is exclusive, and no second
+  sentence), `snapshot_count` (the set claims in the snapshot's prose, its
+  status line included), `summary_count` (the same, by the same reader, in the
+  last JSON envelope's `decision.summary`; unchecked when the response has no
+  envelope with one), `snapshot_band` (a bare band word,
   backticked or not, only as `R4 (\`medium\`)` and equal to that row's
   Confidence; `RR2 (\`high\`)` or `RR2 (high)` is a severity written as a band,
   and fails), `gates_line` and `gates_form` (the `Hard gates:` slot, anchored at
