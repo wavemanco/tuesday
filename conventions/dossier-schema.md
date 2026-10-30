@@ -1,6 +1,6 @@
 # Dossier schema
 
-The dossier is Tuesday's shared artifact: one file the user carries between skills, sessions, and — later — the agent. It makes the skills order-independent without coupling them.
+The dossier is Tuesday's shared artifact: one file the user carries between skills, sessions, and — later — the agent. It makes the skills order-independent without coupling them. Skills carry a mirror of this file in their `references/` with a synced-from header; this copy wins on conflict.
 
 ## 1. Behavior contract
 
@@ -12,7 +12,7 @@ The dossier is Tuesday's shared artifact: one file the user carries between skil
 
 ## 2. Carrier format
 
-A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable among a user's uploads across sessions — with a concise human-readable report on top and the machine layer as one fenced ```json block at the bottom. Two layers, one artifact, no drift — the report is rendered *from* the JSON, never written separately.
+A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable among a user's uploads across sessions — with a concise human-readable report on top and the machine layer as one fenced ```json block at the bottom. Two layers, one artifact, no drift — every report line whose content a JSON field holds is rendered *from* that field, never written separately. A report part no JSON field holds is report-only: the emitting skill's dossier template names each such part, it is carried as the delivered output wrote it, no later skill reads it, and it never restates what the JSON holds — where it needs a fact the JSON carries, it points to the row or entry ("see R8") instead.
 
 ## 3. Versioning
 
@@ -58,7 +58,7 @@ A single Markdown file, `tuesday-dossier.md` — named so it stays recognizable 
 ```yaml
 handoff_to_mock_interview:
   high_priority_requirements: []        # the requirements interviews will actually test
-  verified_candidate_evidence: []       # high/medium-confidence claims, per evidence-conventions §5
+  verified_candidate_evidence: []       # high/medium-confidence claims, per `evidence-conventions.md` §5
   uncertain_or_weak_areas:
     - requirement: string
       gap_type: discovery | transferability | capability
@@ -67,7 +67,7 @@ handoff_to_mock_interview:
   likely_interviewer_objections: []     # nominates the pack's highest-ROI rehearsal
   opportunity_risks_to_validate: []     # unresolved risk-register items worth asking about live
   questions_for_employer: []            # seeds reverse questions
-  prohibited_claims: []                 # absolute — see evidence-conventions §5 overrides
+  prohibited_claims: []                 # absolute — see `evidence-conventions.md` §5 overrides
 ```
 
 Consumption rules for mock-interview (bound in its v2 patch): verified evidence upgrades story-mapping to evidence-level `[grounded]`; `allowed_interview_strategy` constrains what guidance may coach; `likely_interviewer_objections` names the highest-ROI rehearsal instead of inferring it; risks and employer questions seed the reverse-question bank; `prohibited_claims` are hard guardrails on every guidance cell.
@@ -96,5 +96,5 @@ Any review surface — a claude.ai artifact, a Cowork HTML viewer with feedback 
 
 - **1.0** — initial schema.
 - **1.1** (2026-08-16, additive) — added the `candidate_constraints` section. Surfaced by job-underwriter v0.1's worked dossier: the underwriter's spec carries candidate constraints as a first-class object (non-negotiables drive hard-gate checks and the risk register), and constraints must travel in the dossier or every new session re-elicits them. Consumers on 1.0 ignore the unknown section, per §1.
-- **1.1 erratum** (2026-09-08, no version change) — `gap_type` has six members, not five: `evidence-conventions.md` §3 omitted `none` while `evidence-model.md`'s row spec declared it, the worked dossier wrote it, and every 1.1 envelope has carried it. Nothing on the wire changes, so nothing is bumped; a consumer that implemented five was reading a documented contract narrower than the emitted one. Recorded here rather than silently corrected because the gap between the two is what a version history is for.
+- **1.1 erratum** (2026-09-08, no version change) — `gap_type` has six members, not five: `evidence-conventions.md` §3 omitted `none` while the emitting skill's row spec declared it, the worked dossier wrote it, and every 1.1 envelope has carried it. Nothing on the wire changes, so nothing is bumped; a consumer that implemented five was reading a documented contract narrower than the emitted one. Recorded here rather than silently corrected because the gap between the two is what a version history is for.
 - **1.2** (2026-09-08, additive) — `evidence_map[].provenance`, `risk_register[].provenance` and `gap_queue[].provenance`. All three carry free-text fields holding derived judgment — `reasoning` and `hypothesis` — and neither had a label beside it, so the largest concentration of world-claims in a dossier travelled unmarked. Found by graders pointing at those exact cells across a run-set, after the same defect had been fixed once in the register and missed in the map. Consumers on 1.1 ignore the unknown fields, per §1.

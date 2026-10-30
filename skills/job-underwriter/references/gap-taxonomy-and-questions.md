@@ -85,7 +85,7 @@ priority = requirement_importance
 
 Operational rules:
 
-- **At most three questions per turn, counted across the whole message** — and fewer when fewer could change anything. Zero is correct when the decision is already stable: a decidable case does not earn an interview. The budget counts every question put to the user, wherever it sits: the `Question:` line inside each recall prompt is one of the three, not a free extra because it arrived inside a template. A gap queue holding two recall prompts plus a closing block of three questions is a five-question turn, and it reads as an interrogation however neatly it is sectioned. Either the recall prompts *are* the questions, or the closing block is — never both.
+- **At most three questions per turn, counted across the whole message** — and fewer when fewer could change anything. Zero is correct when the decision is already stable: a decidable case does not earn an interview. The budget counts every question put to the user, wherever it sits. Recall-prompt rows in the gap queue carry no questions: the question each row implies is asked once, in the closing block, tagged to its row, and those make up the three. A queue that also carried its own questions would make a five-question turn out of two rows and a closing block of three, and it would put questions mid-message, which this skill's `closing_order` rules out.
 - **Prefer questions that could move the decision status.** A question that only polishes an already-`direct` row loses to one that could resolve a must-have.
 - **Never ask for what was already supplied, and never re-ask.** Silence and "skip" are answers: mark the gap unresolved (or `absent`, if the user says so) and proceed.
 - **Research before asking.** Never ask the user what the public web knows.
@@ -111,14 +111,14 @@ Worked, for a must-have the CV leaves unresolved:
 
 | # | Gap (req) | Type | What I currently see | Why it matters | Experience that may count | Useful evidence | Provenance |
 |---|---|---|---|---|---|---|---|
-| G1 | Cross-functional delivery leadership (R2, must_have) | discovery | The CV establishes product-building work, but not which functions were coordinated, what decision authority was held, or who owned launch | A must-have; resolving it likely moves the decision from `hold_pending_answers` to `conditional_go` | Taking a product, feature, experiment or client project from idea to release; coordinating an engineer, designer, contractor, customer or marketing effort — titles do not matter, the coordination does; setting priorities or resolving a product-versus-technical trade-off others accepted | A launch plan, roadmap, project board export, portfolio write-up, or product brief | `[grounded]` CV silence on coordination scope; `[inferred]` that resolving it moves the status |
+| G1 | Joint working with other funders (R2, must_have) | discovery | The CV establishes grant-making work, but not which partner organizations were involved, what decision authority was held, or who owned a joint call's launch | A must-have; resolving it likely moves the decision from `hold_pending_answers` to `conditional_go` | Running a call co-funded with another trust or a local council; bringing a funder, a council and community groups to one set of criteria — titles do not matter, the brokering does; agreeing a funding split or an eligibility rule the partners accepted | A partnership agreement, a joint-call timeline, a panel paper, or a programme brief | `[grounded]` CV silence on partnership scope; `[inferred]` that resolving it moves the status |
 
 **The closing question** — in the closing block, tagged to its row, with response
 modes as prose:
 
 ```text
-G1 — Is there a project where you personally coordinated two or more functions to
-ship something? What did you own, who was involved, and what happened?
+G1 — Is there a fund or a round where you personally brought two or more
+organizations to one decision? What did you own, who was involved, and what happened?
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
 ```
 
@@ -132,6 +132,15 @@ A second, for a gap where the distinction itself is the finding:
 G2 — Which parts of an AI system have you personally owned, did it reach users
 beyond a private prototype, and how did you know whether it worked?
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+```
+
+Where G2's is the last question, the response ends one line later — the watch-out
+line, `closing_order`'s last item, copied exactly from SKILL.md:
+
+```text
+Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+
+**Watch-out:** A summary line here can contradict the evidence table — before you act on a count, an "only" or an all-clear, check it against the table's rows.
 ```
 
 Note what the `Provenance` cell does in both rows. "Why it matters" is where this

@@ -8,7 +8,7 @@ Weighting is a shown judgment, not a hidden score. Work in three passes and disp
 
 1. **Relationship priors** (table below) set the starting weights.
 2. **Interviewer signals** adjust them when a profile exists (rules below).
-3. **Company archetype** adjusts them when research reveals the loop structure (see `research-checklist.md` — e.g., a documented values round makes Values/Behavioral guaranteed *somewhere* in the loop even if not in this session).
+3. **The loop** adjusts them as `research-checklist.md` Loop detection decides: the rounds a loop source names where one establishes the loop, the fallback archetype's tilt where none does. A values-style round a loop source documents makes Values/Behavioral guaranteed *somewhere* in the loop even if not in this session.
 
 Depth follows weight: the top persona gets 4–5 questions, mid-weight personas 3, low-weight 2. Every pack still touches all plausible personas — the candidate should never meet a style for the first time live.
 
@@ -40,22 +40,24 @@ Apply only public professional signals — profile language, career pattern, pub
 
 ## The seven personas
 
+A counter-strategy is a rehearsal method, not a claim, and a stem is an example wording, not a licence. Wherever a pack applies either to this candidate — a named story, an arc, a walkthrough, a held position, a stem used as a Question — the quote-or-slot rule in `references/question-rubric.md` applies to it like any other cell, and a stem used as a Question is an open prompt or a premised question under that file's rule on what a question may presuppose.
+
 ### 1. The Data-Driven Prober
 - **Looks like:** reads the CV line by line; asks for inputs, denominators, validation; follow-ups go two levels deeper than the answer.
 - **Actually scoring:** whether headline numbers survive scrutiny; whether the candidate knows their own assumptions.
-- **Counter-strategy:** know every assumption behind every CV number; name the weakest assumption before they do; volunteer a walkthrough of one analysis end-to-end.
-- **Stems:** "Walk me through how you got to that number." / "Which assumption in that model would you defend least?"
+- **Counter-strategy:** know what you can and cannot say about how each CV number was counted, and say plainly when you do not know; name the weakest assumption you know of before they do; if there is an analysis you did yourself, offer to walk through it end to end.
+- **Stems:** "Walk me through how that number was counted." / "Which assumption behind that number would you defend least?"
 
 ### 2. The Pressure / Stress Interviewer
 - **Looks like:** interrupts, plays devil's advocate, time-boxes answers, questions motives. Testing composure, not content.
 - **Actually scoring:** whether the candidate holds a position without becoming defensive, and concedes uncertainty without folding.
-- **Counter-strategy:** pause before answering; restate the question; anchor in data; hold a challenged position through two follow-ups before conceding anything real.
+- **Counter-strategy:** pause before answering; restate the question; anchor in what you actually stated; hold a challenged position through two follow-ups before conceding anything real.
 - **Stems:** "Sixty seconds: why you over an internal candidate?" / "That result — how much of it was actually you?"
 
 ### 3. The Values / Behavioral Interviewer
 - **Looks like:** scenario probes mapped to the company's published values or principles; expects STAR-shaped stories; often from outside the function.
 - **Actually scoring:** whether past behavior demonstrates the specific published values — not generic virtue.
-- **Counter-strategy:** pre-map one story per published value; "we" for context, "I" for contribution; every harmony story ends with the hard truth actually landing.
+- **Counter-strategy:** map a story to each published value where one of the candidate's quoted sentences carries one, and a selection scaffold ending in its honest branch where none does; "we" for context, "I" for contribution; choose harmony stories in which the hard truth actually landed, and where the material shows none, say so rather than supplying the ending.
 - **Stems:** "Tell me about a time you delivered an unpopular truth to leadership." / "When did you put a customer ahead of an internal metric?"
 
 ### 4. The Case / Strategist
@@ -67,8 +69,8 @@ Apply only public professional signals — profile language, career pattern, pub
 ### 5. The Skeptic
 - **Looks like:** quiet, persistent probing of the gaps — the background mismatch, the missing competency, the "why leave, why here, why now."
 - **Actually scoring:** motivation consistency and honest self-assessment; whether the candidate's story survives cross-examination.
-- **Counter-strategy:** rehearse the single most predictable objection until it's boring; adjacent-evidence bridges plus a concrete ramp plan; calibrated candor over bluffing a competency the interviewer personally owns.
-- **Stems:** "Which part of this JD would you be weakest at on day one?" / "You've never done X — how will you handle the X in this role?"
+- **Counter-strategy:** rehearse the single most predictable objection until it's boring; bridges built only from adjacent evidence the candidate actually stated — where none was, the limit said plainly — plus a concrete ramp plan; calibrated candor over bluffing a competency the interviewer personally owns.
+- **Stems:** "Which part of this JD would you be weakest at on day one?" / "I don't see X in your background — how would you handle the X in this role?" ("You've never done X" only where the negative has the source `references/question-rubric.md` requires)
 
 ### 6. The Conversational / Rapport Builder
 - **Looks like:** friendly, unstructured, chatty openers; feels safe. That's the danger — casual-register questions are still scored.
@@ -84,4 +86,4 @@ Apply only public professional signals — profile language, career pattern, pub
 
 ## Protective mini-bank: inappropriate or illegal questions
 
-Include only on the candidate's request. Some interviews drift into questions about age, family plans, health, religion, or immigration status beyond work authorization — improper in many jurisdictions and uncomfortable everywhere. Coach three moves, in escalating order: answer the legitimate underlying concern ("if you're asking about my availability for travel — yes, fully"); redirect to relevance ("happy to talk about anything that bears on the role — on that front…"); and a plain boundary for repeat offenses. Note that specifics vary by jurisdiction, and never coach deception — the candidate declines or redirects, they don't fabricate. A candidate who has rehearsed the redirect once won't freeze on it live.
+Include only on the candidate's request. Some interviews drift into questions about age, family plans, health, religion, or immigration status beyond work authorization and sponsorship. In the US, federal guidance generally permits employers to ask about work authorization and sponsorship (cite C14), and otherwise differs by topic. Questions touching race, color, sex, national origin, religion or age are not clearly forbidden, but "may be used as evidence of an employer's intent to discriminate unless the questions asked can be justified by some business purpose" (cite C29); questions about marriage and children "may violate Title VII if used to deny or limit employment opportunities" (cite C34); for employers the ADA covers, "Employers are explicitly prohibited from making pre-offer inquiries about disability" (cite C30), and an employer "may not ask a job applicant to answer medical questions or take a medical exam before making a job offer" (cite C33); and "Most employers should not ask whether or not a job applicant is a United States citizen before making an offer of employment" (cite C32). Other jurisdictions differ, and a question can be lawful and still uncomfortable. Coach three moves, in escalating order: answer the legitimate underlying concern ("if you're asking about my availability for travel — yes, fully"); redirect to relevance ("happy to talk about anything that bears on the role — on that front…"); and a plain boundary for repeat offenses. Never coach deception — the candidate declines or redirects, they don't fabricate. A candidate who has rehearsed the redirect once won't freeze on it live.

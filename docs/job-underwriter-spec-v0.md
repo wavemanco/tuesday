@@ -118,7 +118,7 @@ Extract and normalize:
 - Job title, organization, location, employment type.
 - Stated responsibilities.
 - Must-have, preferred, and implied requirements.
-- Hard gates: authorization, license, location, clearance, schedule, credentials, years/level, legal constraints.
+- Hard gates: terms the candidate meets or does not, never a length of experience. Which requirements are gates is defined once, in `conventions/evidence-conventions.md` §3; how a gate row's fit is read is `skills/job-underwriter/references/evidence-model.md`, "A gate is met, not established, or failed".
 - Expected outcomes in the first 90 days and first year, if stated or carefully inferred.
 - Scope signals: team size, ownership, budget, decision rights, reporting line, customer/problem domain, company stage.
 - JD unknowns, contradictions, risk signals, and red flags.
@@ -171,7 +171,7 @@ Use this taxonomy:
 | Discovery gap | Evidence may exist but the current inputs are inconclusive | Ask targeted question; suggest exact documents/links/artifacts |
 | Transferability gap | No direct match, but there is credible adjacent work | Explain transferable case and its limitation; recommend a work sample or positioning approach |
 | Capability gap | No credible direct or adjacent evidence | Suggest realistic closure path, or mark as material risk |
-| Hard-gate gap | Required eligibility/credential/constraint is not met | Surface clearly; do not imply wording can solve it |
+| Hard-gate gap | Required eligibility/credential/constraint not met, or not yet established — an unsettled gate is still a hard-gate gap, never a discovery gap (the definition is `conventions/evidence-conventions.md` §3) | Surface clearly; the one question allowed asks whether the gate is met; do not imply wording can solve it |
 
 ### Step F: Select the next-best questions
 

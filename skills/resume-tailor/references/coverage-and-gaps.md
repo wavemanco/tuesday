@@ -20,7 +20,9 @@ Boilerplate ("self-starter", "fast-paced environment") is not material.
 | # | Requirement | Priority | Status | Where it lands | Provenance |
 |---|---|---|---|---|---|
 
-`status` is one of exactly three values, one token per cell — no parenthetical, no slash, no qualifying clause. `surfaced_by_edit (partial — see G2)` and `not_evidenced (adjacent work exists)` are not statuses; they are a status plus the nuance that belongs in the *Where it lands* column, where it can be read without breaking anything that parses the status:
+`status` is one of exactly three values, one token per cell — no parenthetical, no slash, no qualifying clause. `surfaced_by_edit (partial — see G2)` and `not_evidenced (adjacent work exists)` are not statuses; they are a status plus the nuance that belongs in the *Where it lands* column, where it can be read without breaking anything that parses the status.
+
+The three values:
 
 - **`already_evidenced`** — the current resume supports it as written. No row needed; say so.
 - **`surfaced_by_edit`** — the evidence exists but is buried, mis-sectioned, or compressed away. Names the ledger row that fixes it.
@@ -62,7 +64,12 @@ row and carrying the response modes:
 ```text
 C1 — [one focused question]
 Answer in text, paste a voice transcript, attach a document, drop a link, or say skip.
+
+**Watch-out:** The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line, check that quote and the new line against your original resume.
 ```
+
+The last line is the watch-out, `closing_order`'s last item, copied exactly from
+SKILL.md; nothing follows it.
 
 `Why it matters here` is where this section's world-claims live — what a
 requirement costs on this application, what a screener does with it — so the row
@@ -72,7 +79,7 @@ carries a Provenance cell and those claims get labeled where they are made.
 and the second is the one that gets dropped. Say the gap plainly in one sentence —
 then say what closing it would take: a specific project, a certification, six
 months on a particular kind of work, a scoped-down target role. "You have never
-touched Kafka, and it is listed as a plus rather than a requirement" is half an
+run a capital-grants programme, and it is listed as a plus rather than a requirement" is half an
 answer; it tells the candidate where they stand and nothing about what to do,
 which is the half they came for. An absence with no closing path is an
 unfinished row even when the honest closing path is "not worth closing for this
@@ -118,14 +125,14 @@ Carried in every delivery, not only when something was refused. It holds:
 ```text
 Not written, and why:
 
-- "Product management experience" — you have never held the title and the JD makes
+- "Programme management experience" — you have never held the title and the JD makes
   it a must-have. Adjacent work is in E1 and E3; the gap is named in the coverage
   map rather than papered over.
-- "Owned the partner platform roadmap" — you coordinated on custom builds. Owning a
-  roadmap is a different job and an interviewer will know within one question.
-- "Partner integrations" — the posting's word is "partner"; yours is "client". You
-  worked at the vendor. The word change would move which side of the table you sat
-  on.
+- "Owned the grants pipeline" — you ran one round of it. Owning a pipeline is a
+  different job and an interviewer will know within one question.
+- "Partnered with community groups" — the posting's word is "partner"; yours is
+  "coordinated". You administered their awards, and the word change would move
+  which side of the table you sat on.
 ```
 
 That last entry matters more than it looks. It is a single word, it is the

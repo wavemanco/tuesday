@@ -2,8 +2,8 @@
 """Suite-level routing eval.
 
 Per-skill evals cannot test triggering *between* skills: the decision is made
-across the whole available-skills list, so it has no home inside either skill's
-evals/. This runner puts both skills in front of the model at once and records
+across the whole available-skills list, so it has no home inside any one skill's
+evals/. This runner puts every skill in front of the model at once and records
 which one fires.
 
 Method: each skill is copied into a throwaway project's `.claude/skills/`, so it

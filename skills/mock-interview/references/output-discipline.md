@@ -8,11 +8,12 @@
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
 `references/` with a synced-from header; this copy wins on conflict.
 
-Six rules about the *shape* of a delivered response. Every one was learned from a
-measured defect in a clean-room run, and three of them were fixed twice in
-different skills because nothing carried them across — the question budget in two
-skills weeks apart, the enum cell in three separate files. That is what this file
-is for.
+Seven rules about the *shape* of a delivered response. The first six were each
+learned from a measured defect in a clean-room run, and three of them were fixed
+twice in different skills because nothing carried them across — the question
+budget in two skills weeks apart, the enum cell in three separate files. That is
+what this file is for. The seventh is where a measured defect goes when two fixes
+have not closed it: to the user, as the one thing to double-check.
 
 ## How to read this file
 
@@ -26,7 +27,7 @@ by each skill in its own `SKILL.md`, under a heading of exactly
 
 question_budget: 3
 enum_fields: priority, fit_status, confidence, gap_type
-closing_order: dossier offer, upgrade menu, questions
+closing_order: dossier offer, upgrade menu, questions, watch-out
 sibling_mentions: 1
 ```
 
@@ -86,7 +87,14 @@ enum needs a column to live in.** A field declared an enum with nowhere specifie
 to appear gets invented at write time, and an invented column arrives with no
 token set: `low-medium` and `[grounded, partial]` are what that looks like. The
 declaration and the output shape have to agree, or the parameter is a promise
-about a cell that does not exist.
+about a cell that does not exist. So each skill declares, beside `enum_fields`,
+the column each enum lives in — `enum_columns:
+confidence=output-template.md#The fit snapshot/Confidence, …`, one explicit
+mapping per declared enum, `field=file.md#Section/Column`, naming a column of the
+first worked table under that `##` section of one of its own references, never a
+mirrored one — and CI fails a declared enum with no mapping, a mapping to no such
+file, section, table or column, a mapping into a mirror, or a mapping for an
+undeclared field (`CONTRIBUTING.md`).
 
 **Parameter: `qualifier_fields`** — the free-text columns a qualifier goes to when
 it will not fit an enum cell. Every field named here must exist as a column in the
@@ -105,11 +113,11 @@ for brackets must not find something else there.
 
 No parameter. This is a collision, not a preference.
 
-## 4. The calls to action close the message
+## 4. The calls to action close the message, and only the watch-out follows them
 
 **Invariant.** The sections a user acts on next are the last thing they meet, and
-nothing follows them — no recap, no summary, no closing restatement, no
-pleasantry.
+nothing follows them but the skill's watch-out line (rule 7) — no recap, no
+summary, no closing restatement, no pleasantry.
 
 The pull is to write one more sentence tying it together. That sentence is a
 second summary of an analysis that already opened with one, and two summaries of
@@ -117,7 +125,8 @@ the same analysis can only agree by luck — the reader will trust whichever the
 read last. Whatever leads the response is the summary; the response ends without
 restating itself.
 
-**Parameter: `closing_order`** — which sections are the calls to action, in order.
+**Parameter: `closing_order`** — which sections close the message, in order: the
+calls to action, then `watch-out`, which every skill lists last.
 
 ## 5. A sibling skill is named, not lobbied for
 
@@ -132,12 +141,17 @@ user's attention on a skill they did not ask for.
 
 **Invariant.** Free prose in a delivered output asserts nothing about the world.
 It may quote a source, and it may read the analysis the reader can already see —
-"five of seven requirements are `direct`" is a reading, and deleting the analysis
-deletes the sentence. Anything that would still assert something with the analysis
+a line naming which rows of the map are `direct` is a reading, and deleting the
+analysis deletes the sentence. A reading agrees with what it reads: this example
+used to be "five of seven requirements are `direct`", copied from a worked
+dossier whose map had four, and a count or a quantifier is the kind of reading
+that can be wrong while looking finished; one that names the rows it covers is
+the kind a reader can check against the table. Anything that would still assert something with the analysis
 gone is a world-claim: about the employer, the market, the candidate's history, or
 how hiring works. Those live in a row, in a structure with a Provenance cell.
 
-Four prose rules failed at this before it was written as a shape, and they failed
+Four prose rules failed at this — three before the first table column, a fourth in the section still written as
+prose — before it was written as a shape, and they failed
 in a way worth naming: **a writer who knows where a claim came from cannot see the
 sentence that fails to say so.** The label is missing from a sentence that reads
 perfectly. Nothing about proofreading catches it, which is why the fourth rule did
@@ -157,3 +171,53 @@ weeks that a third table carried one when it never had, and the claim was believ
 until a grader pointed at exactly that table's cells. A rule that names its own
 coverage can be checked against the shape; a rule that says "label your claims"
 cannot.
+
+A parameter was drafted here and withdrawn: `entity_rows`, naming tables whose
+every row was about the candidate or the employer, so that CI could reject a
+`[generic]` cell in them. It shipped for exactly one commit and was wrong.
+The skill owning the evidence map requires `[generic]` in a row's Provenance cell
+whenever its Reasoning reaches past the row — "funders of this size usually split
+assessment from grant management" — and names the pull to write `[inferred]` instead as the thing to
+resist. The check would have rejected that row, and three worked examples besides.
+
+**A check that rejects correct work is worse than no check.** The honest position
+is the one in `evidence-conventions.md` §5: that rule is gradeable rather than
+mechanical, and it says so, instead of shipping a mechanism that encodes a wrong
+version of it. A suite with this many real checks can afford to name the gap.
+
+## 7. A delivered output ends with its skill's watch-out
+
+**Invariant.** A response that delivers the skill's output — a first pass, a
+regenerated or revised version, drill feedback, the message presenting a file —
+ends with one line, copied exactly:
+
+```text
+**Watch-out:** <the skill's watch_out sentence>
+```
+
+It is the response's last line, after the questions, and the one thing rule 4
+lets follow them. It is the skill's fixed sentence, word for word: not a recap,
+not a call to action, not written for this run or adapted to it. A sentence
+composed for the run would be the second summary rule 4 exists to prevent; a
+fixed one restates nothing. It names what the user should double-check, because
+the suite measured a defect there that its fixes have not closed
+(`CONTRIBUTING.md`, "When an issue survives two iterations"). It is called a
+watch-out in every file and every response, and by no other name; and no other
+line of a response, or of a file it produces, is labelled a watch-out.
+
+Three places it never goes:
+
+- **Inside a file meant to be kept or sent** — a resume, a cover letter, a saved
+  prep pack, a `tuesday-dossier.md`. It closes the message that presents or offers
+  the file. A line addressed to the user about the output does not belong in the
+  output they will send on.
+- **After an in-character turn of a live drill.** The interviewer's lines are the
+  rehearsal; the feedback that ends the drill closes with the watch-out.
+- **On a turn that delivers nothing** — one that only asks for an input the skill
+  cannot run without, such as a missing job description.
+
+**Parameter: `watch_out`** — the skill's sentence: one sentence, in plain words a
+user would know, naming what to check and against what. It is stated once, in the
+skill's `SKILL.md`; every copy elsewhere — the root README's watch-out table, the
+fixtures' closing expectations, a worked example — is held equal to it by CI, so
+changing it means changing the parameter and the copies in one change.

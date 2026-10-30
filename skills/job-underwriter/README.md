@@ -25,7 +25,7 @@ New sessions pick it up automatically; it is also invokable directly as `/job-un
 
 ## First prompt
 
-You don't need to name the skill — "should I apply to this?" with a JD matches its description and auto-triggers. The ideal first prompt front-loads what the skill would otherwise ask:
+You don't need to name the skill — "is this one worth applying for?" with a JD matches its description and auto-triggers. The ideal first prompt front-loads what the skill would otherwise ask:
 
 ```
 Should I apply to this? [JD pasted or attached]
@@ -57,14 +57,21 @@ At the end, the skill offers (never forces) a `tuesday-dossier.md` — a human-r
 ```
 job-underwriter/
 ├── SKILL.md                            # the skill itself — instructions Claude follows
+├── README.md
+├── LICENSE
 ├── references/
 │   ├── evidence-model.md               # evidence vocabulary, map row shape, confirmation card
-│   ├── reframing-audit.md             # mirror of conventions/ — six drift axes, five disciplines
 │   ├── gap-taxonomy-and-questions.md   # five gap types, recovery patterns, question selection
 │   ├── risk-and-decision.md            # signal classes, red-flag patterns, decision semantics
-│   └── dossier-template.md             # emission rules + full worked tuesday-dossier.md
+│   ├── dossier-template.md             # emission rules + full worked tuesday-dossier.md
+│   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
+│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
+│   ├── interaction-grammar.md          # mirror of conventions/ — standalone invariant, research tiers
+│   ├── output-discipline.md            # mirror of conventions/ — seven rules on a response's shape
+│   ├── dossier-schema.md               # mirror of conventions/ — the shared dossier's schema
+│   └── citations.md                    # mirror of conventions/ — sources behind the outside claims, verbatim
 └── evals/
-    └── evals.json                      # 3 test fixtures with verifiable expectations
+    └── evals.json                      # 5 test fixtures with verifiable expectations
 ```
 
 `evals/` holds development fixtures and is excluded from the installable `.skill` package. `README.md` rides along inside the package but is inert at runtime — Claude only loads files that `SKILL.md` points to.

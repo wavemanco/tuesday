@@ -25,7 +25,7 @@ New sessions pick it up automatically; it is also invokable directly as `/resume
 
 ## First prompt
 
-You don't need to name the skill — "tailor my CV for this role" with a JD and a resume matches its description and auto-triggers.
+You don't need to name the skill — "rework my resume for this posting" with a JD and a resume matches its description and auto-triggers.
 
 ```
 Tailor my resume for this role. [JD pasted or attached]
@@ -60,13 +60,18 @@ resume-tailor/
 ├── README.md
 ├── LICENSE
 ├── references/
-│   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
-│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── edit-ledger.md                  # the row shape, the operations, a worked ledger
 │   ├── coverage-and-gaps.md            # coverage map, recall prompts, prohibited claims
 │   ├── machine-readers.md              # parse safety, keywords, the hidden-text refusal
-│   └── dossier-consumption.md          # reading tuesday-dossier.md as a consumer
-└── evals/                              # five fixtures — excluded from the package
+│   ├── dossier-consumption.md          # reading tuesday-dossier.md as a consumer
+│   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
+│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
+│   ├── interaction-grammar.md          # mirror of conventions/ — standalone invariant, research tiers
+│   ├── output-discipline.md            # mirror of conventions/ — seven rules on a response's shape
+│   ├── dossier-schema.md               # mirror of conventions/ — the shared dossier's schema
+│   └── citations.md                    # mirror of conventions/ — sources behind the outside claims, verbatim
+└── evals/                              # excluded from the package
+    └── evals.json                      # five fixtures with verifiable expectations
 ```
 
-`references/evidence-conventions.md` and `references/reframing-audit.md` are verbatim mirrors of the suite's canonical files, carried so the skill installs standalone. Canonical wins on conflict; a mirror that drifts is a defect and CI fails the build on it.
+The files marked as mirrors above are verbatim copies of the suite's canonical files, carried so the skill installs standalone. Canonical wins on conflict; a mirror that drifts is a defect and CI fails the build on it.

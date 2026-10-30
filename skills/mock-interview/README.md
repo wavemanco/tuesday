@@ -36,14 +36,14 @@ with [name], who'd be my [manager / peer / skip-level / unknown].
 JD and CV attached. [Optional: "Do the deeper research pass."]
 ```
 
-The bare minimum also works — "Help me prep, final round at Stripe for Product Operations Manager" — you'll just get one short setup question first and a pack with more `[inferred]` labels plus an upgrade menu telling you exactly what to add.
+The bare minimum also works — "Help me prep, final round at Canva for a Senior Program Manager role" — you'll just get one short setup question first and a pack with more `[inferred]` labels plus an upgrade menu telling you exactly what to add.
 
 ## What to provide
 
 | Tier | Inputs | If missing |
 |---|---|---|
 | Required | Company + role title | The skill can't run |
-| Sharpens | JD text, your CV | Representative-JD research; self-assessment fit worksheet |
+| Sharpens | JD text, your CV or background | Representative-JD research; a self-assessment fit worksheet when you give no background at all |
 | Optional | Interviewer profile, round schedule, a research note, a working-style assessment | Sections drop or genericize — never fabricate |
 | Optional, high-leverage | A `tuesday-dossier.md` from job-underwriter | The pack is built from your raw inputs as always; without it the likeliest objection is inferred rather than evidence-derived |
 
@@ -62,7 +62,7 @@ None of this is required. Skills in Tuesday stand alone; the dossier just means 
 ## Modes
 
 - **Session** (default) — one pack for one conversation.
-- **Loop** — "I have three rounds scheduled" gets a shared fit map plus per-round mini-packs.
+- **Loop** — "My loop is three interviews over two days" gets a shared fit map plus per-round mini-packs.
 - **Drill** — after any pack, ask for a rehearsal: Claude adopts a persona, asks with reactive follow-ups, then breaks character and scores you against the pack's own rubric.
 
 ## What's in this folder
@@ -70,16 +70,22 @@ None of this is required. Skills in Tuesday stand alone; the dossier just means 
 ```
 mock-interview/
 ├── SKILL.md                      # the skill itself — instructions Claude follows
+├── README.md
+├── LICENSE
 ├── references/
 │   ├── personas.md               # 7 interviewer personas, relationship priors, signal rules
-│   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── question-rubric.md        # 5 question types, coverage rules, guidance-writing rules
 │   ├── research-checklist.md     # L0/L1/L2 research tiers, budgets, archetype fallbacks
 │   ├── output-template.md        # pack skeleton, loop mode, drill mode
 │   ├── dossier-handoff.md        # reading handoff_to_mock_interview, writing pack_feedback
-│   └── evidence-conventions.md   # mirror of the suite's canonical vocabulary (synced-from header)
+│   ├── evidence-conventions.md   # mirror of conventions/ — source types, bands, labels
+│   ├── reframing-audit.md        # mirror of conventions/ — six drift axes, five disciplines
+│   ├── interaction-grammar.md    # mirror of conventions/ — standalone invariant, research tiers
+│   ├── output-discipline.md      # mirror of conventions/ — seven rules on a response's shape
+│   ├── dossier-schema.md         # mirror of conventions/ — the shared dossier's schema
+│   └── citations.md              # mirror of conventions/ — sources behind the outside claims, verbatim
 ├── evals/
-│   └── evals.json                # 4 test fixtures with verifiable expectations
+│   └── evals.json                # 8 test fixtures with verifiable expectations
 └── docs/
     └── workflow.html             # interactive install + first-use walkthrough (this repo only)
 ```

@@ -1,5 +1,23 @@
 {
   "skill_name": "job-underwriter",
+  "clauses": {
+    "first_pass": "The first response contains a full first-pass assessment (a decision snapshot, a requirement-by-requirement evidence map, and opportunity-side analysis) in the same message as any questions — it does not open with questions alone or a consent request alone",
+    "no_score": "No single numeric fit score or percentage appears",
+    "closing": "The response offers a tuesday-dossier.md in one sentence, without pressure, rather than emitting or forcing one, and its upgrade menu names what each missing input would unlock. The response closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line, with nothing between or beneath them — the response-modes line is part of the questions, after each question or once after the last for all of them, not something beneath them; the watch-out line is the response's last line, after the questions, is in no file the response produced, and is exactly this line, which the harness checks character for character: `**Watch-out:** A summary line here can contradict the evidence table — before you act on a count, an \"only\" or an all-clear, check it against the table's rows.`; the decision snapshot that opens it is its one summary, and no 'bottom line', recap or closing summary restates it anywhere",
+    "generic_scope": "No clause asserting something about the employer specifically — its team, stage, product, pay or practices — rests on a [generic] label: a [generic] row or cell states a role-family pattern, and any clause in it naming this employer or this candidate carries its own [grounded] or [inferred] basis. The standing failed-attribution risk entry, which labels a pattern and says it is not a claim about this company, is correct and does not fail this",
+    "accounting": "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned a result (an empty or unattributable one included) and unavailable only if every call was refused or errored, because an error returns nothing; it is never skipped or n/a. A target no call was sent for is n/a only when no name at all was given to form its query (a first name with a title and the company is a name), skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved; in a room that could search, unavailable with no call sent is right only when the user chose L0 or declined research (and the tally then reads L0 — no searches), or when the search budget was fully spent and every search went to a lower-numbered (higher-priority) target. A call sent outside every declared target is still shown, as an un-numbered yes row after the numbered ones saying what it was and what it moved.",
+    "accounting_counts": "Every yes row, numbered or un-numbered, names the queries and pages it rests on, and the Research tier line's counts agree with the research calls the harness observed, refused ones included. A link the user gave to read — the harness lists such links apart from research calls — counts once on that line as user links read only where a read of it returned, however many times it was fetched, and no read of it is counted as a fetch; a link the host could not open is not counted, and the response says it could not open it. A fetch of a URL the user named only as the source of text they pasted is a research call like any other",
+    "ledger_counts": "Anywhere in the response, every section and the dossier included, a statement about a set of evidence-map rows — a count, a quantifier, a ratio, 'only', a range, a set described by the rows it leaves out — agrees with the map: the rows it covers, any number it gives, and what it says of them are true of the map's rows, where 'must-have' means the must_have tier, a split row is two rows, and outside the snapshot a range covers every row between its endpoints. One that disagrees fails, named or not ('all four must-haves land direct' over a map with six must-haves, five of them direct). Which set a statement describes follows its subject: 'R1 and R2 both fail' is about R1 and R2, and passes where both fail, whatever else fails; 'every must-have — R1, R2 and R3 — is direct' is about the must_have tier, and fails where the map has another must-have or one it names is not `direct`. In the decision snapshot (its status line, the sentence after the fit ledger and its other lines) and in decision.summary, a statement about a set of rows also names every row of the set by ID, in the same sentence, each ID written out (a range names only its endpoints; a split row's parent ID names neither row); unnamed there, it fails even when accurate ('you clear every must-have', 'both of your hard constraints fail'). The named-set words ('N of M', 'every', 'all', 'each of', 'none of', 'both', 'neither', 'no `must_have` row', 'only', 'the one') and any count may carry a named set there, and pass when exact ('R6, R7 and R8 are the only rows below `direct`' passes where those are the rows below direct, and 'R5b and R8 are the only rows below `direct`' fails under a ledger that lists a third). The complements ('the rest', 'the others', 'everything else', 'nothing else', 'no other', 'any other', 'none of the others', 'all but', 'all except') fail in the snapshot and decision.summary whatever they name, because they describe a set by the rows they leave out and never name it ('R1 and R2 fail outright and nothing else in the map can offset that'); in the one sentence after the fit ledger, which is about the map by construction, every listed word and every 'N of M' is read as about the map wherever it stands and whatever it counts ('covers only the PII side' fails there when the sentence names no row), and a bare 'none' fails too, because it speaks for the rows that sentence does not name. Plain 'no' and the token `none` in backticks, a band or a gap type, are not quantifiers, and the hard-gates line's 'none failed (…)', which lists every row it covers, is allowed. A confidence band the snapshot attaches to a row is that row's Confidence. The severe-red-flags line names every severity: high register entry by ID with the full token, as in 'RR5 (`severity: high`)', or says 'none found', and passes when true; a severity written as a bare band token, as in 'RR5 (`high`)', fails, because a bare band token is a confidence band. Every other count that is not about map rows — the candidate's own figures ('9 years', in that sentence too), the Research tier line, items in a list the response itself shows — is out of scope",
+    "hard_gates_line": "The hard-gates line is the snapshot's bullet slot '- **Hard gates:** …' — prose that mentions hard gates is not it — and every snapshot carries that slot, gate rows or not; a snapshot without it fails. It names every hard_gate row, with its fit, in every case, in this order: the hard_gate_fail rows first, after 'failed:'; then the unclear gate rows, after 'unconfirmed:'; each of those followed by a few of its Requirement's own words in parentheses, as in 'failed: R1 (UK work eligibility without sponsorship)' and 'unconfirmed: R8 (Permanent contract, not fixed-term)' — the conflict itself, what the candidate has against the gate, belongs in what would change this, not in the parentheses; then the met rows, which are the `direct` rows, with their fit, as in 'met: R9 `direct`'. When no gate row failed the line opens 'none failed', with the met rows in its parentheses, as in 'none failed (R1 `direct`, R9 `direct`); unconfirmed: R8 (Permanent contract, not fixed-term)'. Where the candidate's constraints were not given, the line ends '; candidate constraints not given — checks against them unknown'; with no gate rows it reads 'none stated', plus that clause when it applies. The line fails if it is missing, if it leaves out a gate row, if the rows in its failed clause are not exactly the hard_gate_fail rows, or if it opens 'none failed' while a gate row failed",
+    "questions": "At most three questions are asked across the whole message, ranked toward what could change the decision, and the questions offer their response modes as prose — answer in text, paste a voice transcript, attach a document, drop a link, or say skip — placed as the expectation on how the response closes allows, with no bracketed pseudo-buttons; zero questions is acceptable where the decision is already stable",
+    "map_vocab": "The evidence map covers each material stated requirement, each row with a fit status from direct/adjacent/unclear/absent/hard_gate_fail, a gap type from none/presentation/discovery/transferability/capability/hard_gate, and a Confidence cell holding exactly one of high/medium/low/none with its reason, never a compound or coined value",
+    "two_ledgers": "Candidate fit and opportunity quality are judged separately: the opportunity is assessed on its own ledger — unknowns or risk signals about the role recorded, or the role affirmatively noted as well-specified — rather than the JD taken at face value, and neither judgment is averaged into or hidden by the other",
+    "decision": "The decision is one of go, conditional_go, hold_pending_answers or no_go, with its rationale, and what would change this names what it rests on: for conditional_go the conditions, for hold_pending_answers the specific answers it waits on, for no_go the facts that would have to be different",
+    "market_line": "Role reality's market calibration line places the role against role-family norms from a role-family source the run read or the request supplied, labeled [generic] with its basis named, and is never presented as this employer's own pay or offer; where no such source was available, the response says so and gives no band from memory",
+    "not_attributable": "Nothing about the employer is asserted from model memory or from research about a same-named entity; where the employer's own pages could not be read or attributed, the response says plainly that the employer is not established and labels role-family patterns [generic]",
+    "failed_attribution": "Where the employer is not established from attributable sources — its own pages could not be read or attributed, and the request did not supply them — the risk register carries the standing employer-not-established entry with a verification question and what would resolve it, and that entry caps the decision at conditional_go or below rather than being noted only as a research caveat; where the employer is established, no such entry appears and the decision is not capped for it",
+    "proposed_language": "Everything proposed for the candidate to say, write or send — resume and summary lines, positioning and outreach advice, interview framing — is marked as pending their approval, the approval statement placed so it visibly covers prose advice as well as any edits table; it traces clause by clause to their own sentences, with no drift in scope, verb, kind of activity, which side of a relationship they stood on, or logical form (a non-negotiable never becomes a preference, nor an 'and' an 'or'), and supplies no event, outcome or practice they did not describe; where their wording admits two readings, the one that claims less is used; and nothing suggests adding a claim their material does not support"
+  },
   "evals": [
     {
       "id": 1,
@@ -7,20 +25,145 @@
       "expected_output": "A full first-pass underwriting in one message: decision snapshot (go or conditional_go), requirement-by-requirement evidence map in conventions vocabulary, opportunity treated on its own ledger, the HIPAA plus classified as adjacent/transferability with limits, mentoring as a discovery gap with a recall prompt, at most three questions with prose response modes, dossier offered, upgrade menu.",
       "files": [],
       "expectations": [
-        "The first response contains a full first-pass assessment (a decision snapshot, a requirement-by-requirement evidence map, and opportunity-side analysis) in the same message as any questions — it does not open with questions alone or a consent request alone",
-        "No single numeric fit score, percentage match, or letter grade appears anywhere; fit is expressed per requirement using the confidence bands high/medium/low/none with reasons",
-        "The evidence map covers each material stated requirement (5+ years product analytics, expert SQL, experiment design at scale, Looker/BI, written stakeholder communication, mentoring junior analysts, healthcare/HIPAA) with a fit status from direct/adjacent/unclear/absent/hard_gate_fail and a gap type from the set none/presentation/discovery/transferability/capability/hard_gate",
+        "{{first_pass}}",
+        "{{no_score}}",
+        "{{map_vocab}}. Here the material requirements are 5+ years product analytics, expert SQL, experiment design at scale, Looker/BI, written stakeholder communication, mentoring junior analysts, and healthcare/HIPAA",
         "The healthcare/HIPAA requirement is classified as adjacent with a transferability gap — the GDPR/CCPA and consent-model work is presented as a bridge with its limit explicitly named — and is never inflated into direct healthcare experience nor written off as a capability gap",
         "Mentoring (absent from the stated background) is treated as a discovery gap or unclear — not as an established capability and not as a confirmed absence — and any question about it offers concrete examples of experience that may count (e.g., onboarding, informal coaching, review duties)",
-        "At most three questions are asked, and response modes are offered as prose (answer in text, paste a voice transcript, attach a document, drop a link, or say skip) with no bracketed pseudo-buttons",
-        "The decision is go or conditional_go with a rationale that treats candidate fit and opportunity quality as separate judgments; if conditional_go, the conditions are named",
-        "No facts about Harborlight Health are asserted from model memory or from research about same-named entities; if research is attempted and comes back non-attributable, that is said plainly and role-family patterns are labeled [generic]",
-        "Any proposed CV or positioning language is explicitly contingent on user approval, and nothing suggests adding a claim the stated background does not support",
-        "The response offers a tuesday-dossier.md rather than emitting or forcing one, and closes with an upgrade menu naming concrete missing inputs (e.g., the actual CV document, a portfolio or dashboard artifact, non-negotiables/constraints) and what each unlocks — the menu and the orientation questions are the last two sections, with no recap or summary beneath them",
+        "{{questions}}",
+        "{{decision}}. Here it is go or conditional_go. {{two_ledgers}}",
+        "{{not_attributable}}",
+        "{{proposed_language}}",
+        "{{closing}}. Here the menu names concrete missing inputs such as the actual CV document, a portfolio or dashboard artifact, and non-negotiables or constraints",
         "Any section beyond the assessment itself arrives as a clearly labeled offer rather than being woven in silently — where the decision snapshot, evidence map, role-reality/opportunity analysis, risk register, questions, application plan, dossier offer, and upgrade menu are all expected parts of the assessment and need no such label",
-        "Where research ran, role reality carries a market calibration line placing the role against role-family norms, labeled [generic] and with its basis named, and it is never presented as this employer's actual offer",
-        "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, and it constrains the decision (an unverified employer keeps the status at conditional_go or below) rather than being noted only as a research caveat",
-        "Any count the response states about its own analysis matches the analysis — if the decision snapshot or summary says how many requirements sit at a given fit status, or reports how much of the research budget was spent, that number agrees with the evidence map and the searches actually listed"
+        "{{market_line}}",
+        "{{failed_attribution}}. Here no research can reach the employer, so the entry stands",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Arjun states no constraints or non-negotiables of his own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
+        "{{accounting}} Here nothing in the request answers the first two targets, so they cannot be skipped, and no hiring manager was named, so the third is n/a. {{accounting_counts}}",
+        "{{generic_scope}}"
+      ],
+      "research": {
+        "modes": [
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 5,
+          "fetches": 2
+        },
+        "user_links": [],
+        "entity_tokens": [
+          "harborlight",
+          "health",
+          "senior",
+          "product",
+          "analyst"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "company site and careers page",
+            "terms": [
+              "about",
+              "careers",
+              "career",
+              "jobs at",
+              "job opening",
+              "openings",
+              "vacancy",
+              "vacancies",
+              "posting",
+              "company",
+              "employees",
+              "headcount",
+              "funding",
+              "headquarters",
+              "founded",
+              "overview",
+              "is hiring",
+              "now hiring",
+              "hiring senior"
+            ],
+            "identity": [
+              "harborlight"
+            ],
+            "accept": [
+              "unavailable"
+            ],
+            "on_target_samples": [
+              "Harborlight Health about",
+              "Harborlight Health careers senior product analyst",
+              "Harborlight Health hiring senior product analyst",
+              "Harborlight Health linkedin employees",
+              "Harborlight Health funding Series C headcount",
+              "Harborlight Health care navigation app",
+              "\"Harborlight Health\" care navigation Series C"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "role-family sweep",
+            "terms": [
+              "salary",
+              "salaries",
+              "pay",
+              "compensation",
+              "band",
+              "range",
+              "levels",
+              "market",
+              "survey",
+              "benchmark",
+              "typical",
+              "norms"
+            ],
+            "accept": [
+              "unavailable"
+            ],
+            "on_target_samples": [
+              "senior product analyst salary US 2026",
+              "senior product analyst compensation digital health",
+              "senior product analyst pay range Series C startup",
+              "product analytics job market 2026",
+              "senior product analyst typical years of experience"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "hiring manager's public footprint",
+            "terms": [
+              "hiring manager name",
+              "who is the hiring manager",
+              "hiring manager linkedin",
+              "linkedin.com/in",
+              "head of product analytics",
+              "head of analytics",
+              "director of analytics"
+            ],
+            "accept": [
+              "n/a"
+            ],
+            "on_target_samples": [
+              "who is the hiring manager for the Harborlight Health senior product analyst role",
+              "Harborlight Health head of product analytics",
+              "Harborlight Health senior product analyst hiring manager LinkedIn"
+            ],
+            "hunt_samples": [
+              "Harborlight Health senior product analyst hiring manager name",
+              "who is the hiring manager for the Harborlight Health senior product analyst role",
+              "Harborlight Health head of product analytics linkedin.com/in",
+              "Harborlight Health hiring manager LinkedIn"
+            ]
+          }
+        ],
+        "stray_samples": [
+          "Harborlight Health layoffs glassdoor",
+          "Harborlight Health lawsuit"
+        ]
+      },
+      "candidate_constraints": "unknown",
+      "checks": [
+        "fit_ledger"
       ]
     },
     {
@@ -29,18 +172,23 @@
       "expected_output": "A first-pass underwriting that handles the pivot honestly: the PM-experience must-have as a transferability case with limits (never a coached title claim, never dismissed without exploring adjacency), the memory line held as an unverified memory_lead that prompts a confirmation question, at most three decision-focused questions, and a four-status decision that names what it waits on.",
       "files": [],
       "expectations": [
-        "The first response contains a full first-pass assessment in the same message as any questions — never questions alone",
+        "{{first_pass}}",
         "The '3+ years product management experience' must-have is handled honestly: the integration-leadership work is presented as adjacent (a transferability gap) with the transferable case AND its limits stated (e.g., roadmap ownership and prioritization authority not yet evidenced) — the response neither coaches claiming a PM title nor writes the requirement off as a capability gap without exploring adjacency",
         "The agent-memory line about the request-triage tool is treated as a memory_lead: marked unverified (low or none confidence), used only as the basis for a confirmation question (what it was, what part was hers, who used it, any artifact), and never asserted as experience or proposed for the resume",
-        "Nothing anywhere suggests adding an unverified claim to the resume, and every clause of every thing proposed for Nadia to say, write, or send — resume lines, summary lines, positioning and outreach advice, interview framing — traces to her own sentences on all four axes (scope, verb, kind of activity, and which side of the relationship she stood on: she worked at the vendor integrating its APIs for clients, so she was never the customer or partner of such a platform); the approval statement is placed so it visibly covers prose advice as well as any edits table",
-        "At most three questions are asked, prioritized toward what could change the decision (the PM-experience bridge and API product-ownership evidence rank above minor requirements), each offering response modes as prose including the option to skip",
-        "Vocabulary matches the conventions exactly: gap types come only from none/presentation/discovery/transferability/capability/hard_gate, and each confidence cell holds exactly one of high/medium/low/none with no compound or coined value. Every statement asserting something about the world — the employer, the market, how hiring works, the candidate's experience — that is not quoted from a source carries its provenance label ([grounded], [inferred], or [generic]) on the sentence or row itself, not merely in a heading or preamble above it. The skill's own reasoning about its own analysis needs no label",
-        "No single numeric fit score or percentage appears",
-        "The decision uses one of go/conditional_go/hold_pending_answers/no_go with a rationale; if hold_pending_answers, it names which specific answers it is waiting on",
-        "Opportunity quality is assessed on its own ledger (unknowns or risk signals about the role are recorded, or the role is affirmatively noted as well-specified) rather than the JD being taken purely at face value",
-        "The response offers a tuesday-dossier.md rather than forcing one, and closes with an upgrade menu naming what each missing input would unlock — the menu and the questions are the last two sections, with no recap or summary beneath them",
-        "Failed entity attribution appears in the risk register as a standing entry with a verification question and what would resolve it, not only as a research caveat",
-        "No event, outcome, or stake Nadia did not describe is supplied to make her story land — nothing asserts that an integration failed, a client escalated, or a project was at risk unless she said so — and any number carried into proposed language stays attached to the noun it came from (\"requirements documents across 30+ integrations\" is a count of integrations, never \"30+ requirements documents\")"
+        "{{proposed_language}}. Here Nadia worked at the vendor integrating its APIs for clients, so she was never the customer or partner of such a platform, and nothing adds an unverified claim to the resume",
+        "{{questions}}. Here the PM-experience bridge and API product-ownership evidence rank above minor requirements",
+        "{{map_vocab}}. Every statement asserting something about the world — the employer, the market, how hiring works, the candidate's experience — that is not quoted from a source carries its provenance label ([grounded], [inferred], or [generic]) on the sentence or row itself, not merely in a heading or preamble above it. The skill's own reasoning about its own analysis needs no label",
+        "{{no_score}}",
+        "{{decision}}",
+        "{{two_ledgers}}",
+        "{{closing}}",
+        "{{failed_attribution}}. Here no research can reach the employer, so the entry stands",
+        "No event, outcome, or stake Nadia did not describe is supplied to make her story land — nothing asserts that an integration failed, a client escalated, or a project was at risk unless she said so — and any number carried into proposed language stays attached to the noun it came from (\"requirements documents across 30+ integrations\" is a count of integrations, never \"30+ requirements documents\")",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Nadia states no constraints or non-negotiables of her own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause"
+      ],
+      "candidate_constraints": "unknown",
+      "checks": [
+        "fit_ledger"
       ]
     },
     {
@@ -49,19 +197,574 @@
       "expected_output": "A first-pass underwriting that keeps the two ledgers separate: strong candidate fit acknowledged, the opportunity independently flagged — failed hard gates (comp floor, remote-only vs on-site) in the decision snapshot regardless of fit, red flags quoted with severity and verification questions, and a decision of no_go (or hold naming exactly what would have to change), never go on the strength of fit.",
       "files": [],
       "expectations": [
-        "Candidate fit and opportunity quality are explicitly separated: the response acknowledges strong fit on the growth-leadership requirements AND independently assesses the opportunity as problematic — neither judgment is averaged into or hidden by the other",
-        "The two failed hard constraints — compensation ($70–85k offered vs a stated $150k floor) and location (on-site Austin five days vs stated remote-only) — surface in the decision snapshot itself as failed hard gates, prominently, not buried mid-report or softened by the strong fit elsewhere",
+        "{{two_ledgers}}. Here the response acknowledges strong fit on the growth-leadership requirements and independently assesses the opportunity as problematic",
+        "The two failed hard constraints — compensation ($70–85k offered vs a stated $150k floor) and location (on-site Austin five days vs stated remote-only) — surface in the decision snapshot itself as failed hard gates, prominently, not buried mid-report or softened by the strong fit elsewhere. {{hard_gates_line}}. Here Tomás states his constraints, so the candidate's constraints were given and the line must not carry the 'candidate constraints not given' clause",
         "At least three red flags are identified with the posting's own language quoted, drawn from: responsibility without resources ('own all revenue' + 'team of one'), bundled specializations (paid, SEO, lifecycle, brand, PR, partnerships, and sales ops in one role), always-on expectations ('evenings and weekends when it matters'), seniority-compensation mismatch (8+ years leadership at $70–85k), absent/evolving success metrics on a demanding mandate, and the tension between 'Series A' and 'profitable since day one' — each with a severity and a verification question the candidate could ask live",
-        "The decision is no_go — or hold_pending_answers only if it names exactly which facts would have to change (the employer's terms or the candidate's own constraints) — and is never go or conditional_go on the strength of fit",
-        "No single numeric fit score or percentage appears",
+        "{{decision}}. Here it is no_go — or hold_pending_answers only if it names exactly which facts would have to change (the employer's terms or the candidate's own constraints) — and never go or conditional_go on the strength of fit",
+        "{{no_score}}",
         "Tomás's stated constraints are recorded as hard candidate constraints and drive the gate evaluation, using the conventions vocabulary (hard_gate_fail / hard_gate where statuses are given)",
         "Verification questions are phrased so the candidate could ask them in an interview verbatim (e.g., which levers and budget the role actually controls; how success will be measured at 90 days; how the comp band was set for this mandate)",
         "The response never coaches resolving the mismatch through wording, and never implies that phrasing, framing, or negotiation language can solve a failed hard gate — only changed facts can",
-        "The first response is a full assessment; any questions asked number at most three and are genuinely decision-relevant (zero questions is acceptable since the decision may already be stable)",
-        "The response offers a tuesday-dossier.md at the end rather than forcing one, and includes an upgrade menu",
+        "{{first_pass}}. {{questions}}",
+        "{{closing}}",
         "If the response classifies signals, it uses the conventions classes (unknown, risk signal, red flag, positive signal) and severities (low/medium/high) rather than invented synonyms",
-        "Where a role-family sweep ran, the stated compensation is calibrated against its norms with the band labeled [generic] and its basis named, feeding the seniority-compensation mismatch finding rather than replacing it; where the sweep could not run, the response says so and rests the mismatch on the posting's own terms rather than producing a market band from memory",
-        "Any text drafted for Tomás to send — an outreach note, a message to the recruiter, interview framing — traces clause by clause to his own sentences, including logical form: he stated two hard constraints conjunctively ($150k floor AND remote-only), so nothing may soften that into a disjunction ('if either is negotiable') or into a preference. Where his wording is ambiguous, the reading that claims less is the one used, and any self-certification that the text traces to his sentences is accurate rather than asserted"
+        "{{market_line}}. Here the stated compensation is calibrated against it, feeding the seniority-compensation mismatch finding rather than replacing it; where the sweep could not run, that mismatch rests on the posting's own terms",
+        "{{proposed_language}}. Here Tomás stated two hard constraints conjunctively ($150k floor AND remote-only), so nothing softens that into a disjunction ('if either is negotiable') or into a preference, and any self-certification that the text traces to his sentences is accurate rather than asserted",
+        "{{accounting}} Here nothing in the request answers the first two targets, so they cannot be skipped — the hard gates fix the decision, but not the market calibration line or the band comparison the sweep feeds, so a sweep row skipped on the strength of the gates fails — and no hiring manager was named, so the third is n/a. {{accounting_counts}}",
+        "{{generic_scope}}",
+        "{{ledger_counts}}"
+      ],
+      "research": {
+        "modes": [
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 5,
+          "fetches": 2
+        },
+        "user_links": [],
+        "entity_tokens": [
+          "novaline",
+          "head",
+          "growth"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "company site and careers page",
+            "terms": [
+              "about",
+              "careers",
+              "career",
+              "jobs at",
+              "job opening",
+              "openings",
+              "vacancy",
+              "vacancies",
+              "posting",
+              "company",
+              "employees",
+              "headcount",
+              "funding",
+              "headquarters",
+              "founded",
+              "overview"
+            ],
+            "identity": [
+              "novaline"
+            ],
+            "accept": [
+              "unavailable"
+            ],
+            "on_target_samples": [
+              "Novaline about",
+              "Novaline e-commerce enablement startup funding Series A",
+              "Novaline careers head of growth",
+              "Novaline employees headcount",
+              "Novaline founded profitable",
+              "Novaline e-commerce enablement startup Austin Series A",
+              "Novaline e-commerce enablement startup"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "role-family sweep",
+            "terms": [
+              "salary",
+              "salaries",
+              "pay",
+              "compensation",
+              "band",
+              "range",
+              "levels",
+              "market",
+              "survey",
+              "benchmark",
+              "typical",
+              "norms"
+            ],
+            "accept": [
+              "unavailable"
+            ],
+            "on_target_samples": [
+              "head of growth salary startup 2026",
+              "head of growth compensation Series A",
+              "head of growth base salary benchmark US",
+              "growth leadership job market salary 2026",
+              "head of growth typical scope team size"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "hiring manager's public footprint",
+            "terms": [
+              "hiring manager name",
+              "who is the hiring manager",
+              "hiring manager linkedin",
+              "linkedin.com/in"
+            ],
+            "accept": [
+              "n/a"
+            ],
+            "on_target_samples": [
+              "who is the hiring manager for the Novaline head of growth role",
+              "Novaline head of growth hiring manager LinkedIn"
+            ],
+            "hunt_samples": [
+              "Novaline head of growth hiring manager name",
+              "who is the hiring manager for the Novaline head of growth role",
+              "Novaline hiring manager linkedin.com/in"
+            ]
+          }
+        ],
+        "stray_samples": [
+          "Novaline layoffs glassdoor",
+          "Novaline Crunchbase"
+        ]
+      },
+      "candidate_constraints": "known",
+      "checks": [
+        "fit_ledger"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Should I go for this one? THE JD: 'Senior Pricing Analyst — Brindlemoor (insurtech). Own pricing analytics for our pet-insurance product: build and monitor rating models, design and read price tests, and turn the results into recommendations for underwriting and product. Requirements: 4+ years pricing or actuarial analytics; strong SQL and Python; GLM experience; experience presenting to underwriting or actuarial leads; insurance experience a plus. Fully remote (UK).' The hiring manager is Odile Varga, Director of Pricing. MY BACKGROUND (call me Renata): 5 years pricing analytics at a UK motor insurer, the last 2 as senior analyst. Built and maintained the GLM rating model for our young-driver book. Ran 14 price tests last year with the underwriting team. SQL and Python daily. I present the quarterly pricing review to the head of underwriting. Never worked on pet insurance, and I've never managed anyone.",
+      "expected_output": "A full first-pass underwriting whose research matches what the room allowed. With search available: the employer's own pages establish its stage and size, the careers page's office requirement surfaces as a contradiction with the JD's 'Fully remote (UK)', the pay survey's figure grounds a [generic] market calibration line, the hiring manager's public profile feeds the scope read or positioning, and every target reads yes. With no search available: every target reads unavailable, none of those facts appear, the failed-attribution entry stands, and the upgrade menu offers the research.",
+      "files": [],
+      "expectations": [
+        "{{first_pass}}",
+        "{{accounting}} Here no input answers any target and the hiring manager was named, so no row is skipped or n/a. {{accounting_counts}}",
+        "Role reality states Brindlemoor's stage and size from the company's own pages where they were read, naming the source. {{not_attributable}}",
+        "Where the careers page was read, its Leeds-office requirement, four days a week, against the JD's 'Fully remote (UK)' surfaces as a contradiction in role reality and as a risk-register entry with a verification question; where it was not read, no office requirement is asserted",
+        "{{market_line}}. Here, where the sweep returned the pay survey, the line cites its figure and names the survey as its basis",
+        "Where Odile Varga's public profile was read, it is used only as public professional footprint — her roles and her published talk, named by its title — and it feeds role reality's scope read or the application plan's positioning with its source named; where it was not read, nothing about her is asserted beyond her name and title",
+        "{{failed_attribution}}",
+        "{{map_vocab}}. Here the material requirements are 4+ years pricing analytics, SQL and Python, GLM experience, presenting to underwriting or actuarial leads, and insurance experience",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Renata states no constraints or non-negotiables of her own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
+        "{{no_score}}",
+        "{{closing}}",
+        "{{generic_scope}}"
+      ],
+      "research": {
+        "modes": [
+          "canned",
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 5,
+          "fetches": 2
+        },
+        "user_links": [],
+        "entity_tokens": [
+          "brindlemoor",
+          "senior",
+          "pricing",
+          "analyst",
+          "insurtech"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "company site and careers page",
+            "terms": [
+              "about",
+              "careers",
+              "career",
+              "jobs at",
+              "job opening",
+              "openings",
+              "vacancy",
+              "vacancies",
+              "posting",
+              "company",
+              "employees",
+              "headcount",
+              "funding",
+              "headquarters",
+              "founded",
+              "overview"
+            ],
+            "identity": [
+              "brindlemoor"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            },
+            "on_target_samples": [
+              "Brindlemoor about",
+              "Brindlemoor insurtech employees funding",
+              "Brindlemoor careers senior pricing analyst",
+              "Brindlemoor Series B headquarters Leeds",
+              "Brindlemoor insurtech pet insurance",
+              "\"Brindlemoor\" pet insurance UK"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "role-family sweep",
+            "terms": [
+              "salary",
+              "salaries",
+              "pay",
+              "compensation",
+              "band",
+              "range",
+              "levels",
+              "market",
+              "survey",
+              "benchmark",
+              "typical",
+              "norms"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            },
+            "on_target_samples": [
+              "senior pricing analyst salary UK 2026",
+              "pricing analyst insurance pay survey UK",
+              "senior pricing analyst salary benchmark insurtech"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "hiring manager's public footprint",
+            "terms": [
+              "odile",
+              "varga"
+            ],
+            "accept": {
+              "canned": [
+                "yes"
+              ],
+              "denied": [
+                "unavailable"
+              ]
+            },
+            "on_target_samples": [
+              "Odile Varga Brindlemoor",
+              "Odile Varga Director of Pricing",
+              "Odile Varga pricing talk"
+            ]
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://brindlemoor.co.uk/about",
+            "title": "About Brindlemoor",
+            "target": 1,
+            "keywords": [
+              "about",
+              "company",
+              "employees",
+              "headquarters",
+              "founded",
+              "funding",
+              "series",
+              "team",
+              "who"
+            ],
+            "text": "Brindlemoor has 143 employees and is a Series B insurtech based in Leeds, selling pet insurance through veterinary practices. Founded 2019; Series B raised in May 2026."
+          },
+          {
+            "url": "https://brindlemoor.co.uk/careers/senior-pricing-analyst",
+            "title": "Senior Pricing Analyst — Brindlemoor careers",
+            "target": 1,
+            "keywords": [
+              "careers",
+              "jobs",
+              "job",
+              "vacancy",
+              "posting",
+              "apply",
+              "opening",
+              "vacancies"
+            ],
+            "text": "Accepting applications. Senior Pricing Analyst, Leeds office four days a week. Own pricing analytics for our pet-insurance product; reports to the Director of Pricing."
+          },
+          {
+            "url": "https://pricewell.example/2026-uk-pricing-analytics-pay-survey",
+            "title": "Pricewell 2026 UK Pricing and Actuarial Analytics Pay Survey",
+            "target": 2,
+            "keywords": [
+              "band",
+              "benchmark",
+              "compensation",
+              "levels",
+              "market",
+              "pay",
+              "pricewell",
+              "range",
+              "salaries",
+              "salary",
+              "survey"
+            ],
+            "text": "Pricewell 2026: senior pricing analyst, UK insurers and insurtechs (n=612) — median base £58,400; interquartile range £52,100 to £64,900."
+          },
+          {
+            "url": "https://www.linkedin.example/in/odile-varga",
+            "title": "Odile Varga — Director of Pricing, Brindlemoor",
+            "target": 3,
+            "keywords": [
+              "director",
+              "forum",
+              "linkedin",
+              "odile",
+              "profile",
+              "speaker",
+              "talk",
+              "varga"
+            ],
+            "text": "Odile Varga, Director of Pricing at Brindlemoor. Spoke at the 2025 Insurance Pricing Forum: \"Small Books, Loud Errors\", on monitoring rating models in small books. Previously head of pricing analytics at Calloway Re for six years."
+          }
+        ],
+        "canaries": [
+          {
+            "target": 1,
+            "page": "https://brindlemoor.co.uk/about",
+            "text": [
+              "143"
+            ]
+          },
+          {
+            "target": 2,
+            "page": "https://pricewell.example/2026-uk-pricing-analytics-pay-survey",
+            "text": [
+              "Pricewell",
+              "58,400",
+              "58.4k",
+              "58.4K"
+            ]
+          },
+          {
+            "target": 3,
+            "page": "https://www.linkedin.example/in/odile-varga",
+            "text": [
+              "Small Books, Loud Errors",
+              "Small Books Loud Errors",
+              "Calloway Re"
+            ]
+          }
+        ],
+        "stray_samples": [
+          "Brindlemoor layoffs glassdoor",
+          "Brindlemoor Trustpilot reviews"
+        ]
+      },
+      "candidate_constraints": "unknown",
+      "checks": [
+        "fit_ledger"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Before I apply — is this worth it? THE JD, copied at 09:12 today from pellucidlearning.com/careers/senior-data-engineer, where the posting shows 'Accepting applications': 'Senior Data Engineer — Pellucid Learning. Build and run the pipelines behind our tutoring platform's reporting: ingestion from our app and CRM, a dbt-modelled warehouse in BigQuery, and the data contracts our analysts depend on. Requirements: 5+ years data engineering; strong SQL and Python; dbt and a cloud warehouse; orchestration with Airflow or similar; experience with data quality testing. Salary $148,000–$166,000 plus equity. Remote (US) or our Denver office.' THE COMPANY, copied at 09:10 from pellucidlearning.com/about: 'Pellucid Learning runs live online tutoring for K-12 schools in 31 US states. Founded 2016, Denver. 264 employees. Series C ($52M, February 2026).' THE MARKET, from the pay report my recruiter sent: Datawright 2026 Data Engineering Pay Report, US, n=2,310 — Senior Data Engineer at Series B–D companies: base median $151,000, interquartile range $139,000–$163,500; 'Senior' typically means 5–8 years; typical scope is ownership of one domain's pipelines with no direct reports. The posting names no hiring manager. MY BACKGROUND (call me Ines): 6 years of data engineering at a B2B payroll company. Built our dbt project on Snowflake — about 180 models. Airflow for orchestration, and I set up our Great Expectations test suite. Python and SQL daily. Never used BigQuery.",
+      "expected_output": "A full first-pass underwriting built from what the candidate pasted: the company's own pages establish the employer and the live posting, the pasted pay report grounds the market calibration line against the posting's own range, and the research accounting reads skipped, skipped, n/a — each skip naming the outputs the pasted material already fixes — with no search or fetch sent, whether or not this room could search.",
+      "files": [],
+      "expectations": [
+        "{{first_pass}}",
+        "{{accounting}} Here the request supplies the company's own pages and a pay report that together fix every output the first two targets feed, and names no hiring manager: the rows read skipped, skipped, n/a, each skipped row naming the outputs the pasted material already fixes, and no search or fetch is sent, whatever this room offers: the two pellucidlearning.com URLs the request names are where its pasted text came from, not links to read, so fetching either is a research call. {{accounting_counts}}",
+        "Role reality states Pellucid's stage, size and product from the pasted About text and treats the posting as live and matching the JD, citing the pasted pages. {{failed_attribution}}. Here the pasted pages establish the employer, so no such entry appears",
+        "{{market_line}}. Here it rests on the pasted Datawright report by name, and the posting's own $148,000–$166,000 is compared against it",
+        "{{map_vocab}}. Here the material requirements are 5+ years data engineering, SQL and Python, dbt and a cloud warehouse, orchestration, and data quality testing. The cloud-warehouse row may be direct on the Snowflake evidence, or BigQuery may be carried as an implied requirement at adjacent; either way the response says somewhere that the team's warehouse is BigQuery, that Ines has never used it, and that Snowflake is the transferable basis, with the limit or ramp stated, and BigQuery is never presented as direct experience",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Ines states no constraints or non-negotiables of her own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
+        "{{no_score}}",
+        "{{closing}}",
+        "{{proposed_language}}. Here nothing claims BigQuery experience or widens 'about 180 models' beyond what Ines said"
+      ],
+      "research": {
+        "modes": [
+          "canned",
+          "denied"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 5,
+          "fetches": 2
+        },
+        "user_links": [],
+        "zero_calls": true,
+        "entity_tokens": [
+          "pellucid",
+          "learning",
+          "senior",
+          "data",
+          "engineer"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "company site and careers page",
+            "terms": [
+              "about",
+              "careers",
+              "career",
+              "jobs at",
+              "job opening",
+              "openings",
+              "vacancy",
+              "vacancies",
+              "posting",
+              "company",
+              "employees",
+              "headcount",
+              "funding",
+              "headquarters",
+              "founded",
+              "overview"
+            ],
+            "identity": [
+              "pellucid"
+            ],
+            "accept": [
+              "skipped"
+            ],
+            "on_target_samples": [
+              "Pellucid Learning about",
+              "Pellucid Learning careers senior data engineer",
+              "Pellucid Learning employees funding",
+              "Pellucid Learning Series C funding headcount",
+              "Pellucid Learning senior data engineer job posting",
+              "Pellucid Learning K-12 tutoring Denver",
+              "\"Pellucid Learning\""
+            ],
+            "hunt_samples": [
+              "Pellucid Learning about",
+              "Pellucid Learning careers senior data engineer",
+              "Pellucid Learning Series C funding headcount",
+              "Pellucid Learning K-12 tutoring Denver"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "role-family sweep",
+            "terms": [
+              "salary",
+              "salaries",
+              "pay",
+              "compensation",
+              "band",
+              "range",
+              "levels",
+              "market",
+              "survey",
+              "benchmark",
+              "typical",
+              "norms"
+            ],
+            "accept": [
+              "skipped"
+            ],
+            "on_target_samples": [
+              "senior data engineer salary US 2026",
+              "senior data engineer base salary Series C startup",
+              "senior data engineer pay benchmark remote US",
+              "data engineering job market 2026 compensation",
+              "senior data engineer typical years of experience"
+            ],
+            "hunt_samples": [
+              "senior data engineer salary US 2026",
+              "senior data engineer pay benchmark remote US"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "hiring manager's public footprint",
+            "terms": [
+              "hiring manager name",
+              "who is the hiring manager",
+              "hiring manager linkedin",
+              "linkedin.com/in",
+              "head of data",
+              "director of data",
+              "data engineering manager"
+            ],
+            "accept": [
+              "n/a"
+            ],
+            "on_target_samples": [
+              "who is the hiring manager for the Pellucid Learning senior data engineer role",
+              "Pellucid Learning head of data",
+              "Pellucid Learning data engineering manager LinkedIn"
+            ],
+            "hunt_samples": [
+              "Pellucid Learning senior data engineer hiring manager name",
+              "Pellucid Learning head of data linkedin.com/in",
+              "who is the hiring manager for the Pellucid Learning senior data engineer role"
+            ]
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://pellucidlearning.com/about",
+            "title": "About Pellucid Learning",
+            "target": 1,
+            "keywords": [
+              "about",
+              "company",
+              "employees",
+              "headquarters",
+              "founded",
+              "funding",
+              "series"
+            ],
+            "text": "Pellucid Learning runs live online tutoring for K-12 schools in 31 US states. Founded 2016, Denver. 264 employees. Series C ($52M, February 2026)."
+          },
+          {
+            "url": "https://pellucidlearning.com/careers/senior-data-engineer",
+            "title": "Senior Data Engineer — Pellucid Learning careers",
+            "target": 1,
+            "keywords": [
+              "careers",
+              "jobs",
+              "job",
+              "vacancy",
+              "posting",
+              "apply",
+              "opening"
+            ],
+            "text": "Accepting applications. Senior Data Engineer — Pellucid Learning. Build and run the pipelines behind our tutoring platform's reporting: ingestion from our app and CRM, a dbt-modelled warehouse in BigQuery, and the data contracts our analysts depend on. Requirements: 5+ years data engineering; strong SQL and Python; dbt and a cloud warehouse; orchestration with Airflow or similar; experience with data quality testing. Salary $148,000–$166,000 plus equity. Remote (US) or our Denver office."
+          },
+          {
+            "url": "https://datawright.example/2026-data-engineering-pay-report",
+            "title": "Datawright 2026 Data Engineering Pay Report",
+            "target": 2,
+            "keywords": [
+              "salary",
+              "salaries",
+              "pay",
+              "compensation",
+              "survey",
+              "report",
+              "band",
+              "range",
+              "benchmark",
+              "market",
+              "levels"
+            ],
+            "text": "Datawright 2026 Data Engineering Pay Report, US, n=2,310 — Senior Data Engineer at Series B–D companies: base median $151,000, interquartile range $139,000–$163,500; 'Senior' typically means 5–8 years; typical scope is ownership of one domain's pipelines with no direct reports."
+          }
+        ],
+        "stray_samples": [
+          "Pellucid Learning tutoring platform Glassdoor reviews",
+          "Pellucid Learning Crunchbase"
+        ]
+      },
+      "candidate_constraints": "unknown",
+      "checks": [
+        "fit_ledger"
       ]
     }
   ]
