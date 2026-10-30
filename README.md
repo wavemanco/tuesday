@@ -71,7 +71,9 @@ Skills are dependency-free by rule: nothing outside a skill's folder is required
 
 ## Licensing
 
-Per-directory licensing, mapped in the root [`LICENSE`](LICENSE). Current staging, per the maintainer's working decision (finalize before any public release): `conventions/` and `skills/*` under MIT so the skills travel maximally; `agent/` is reserved for a copyleft grant (AGPL) decided when it exists. GitHub's sidebar shows a single license badge — the root LICENSE file is the authority. Contribution terms, including the CLA reservation for `agent/`, are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+MIT, for now — see [`LICENSE`](LICENSE). `conventions/` and each skill folder carry their own copy of the same grant, so a packaged skill travels with its license. A future `agent/` directory is planned to carry its own copyleft license (AGPL-3.0) when it exists; that, and the contributor agreement it will require, are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+While the repository is early, pull requests are open to collaborators and prior contributors only: the skills' contracts and the eval harness still change week to week, so an outside pull request would land on a moving target. Issues are welcome. The rationale is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Tracked work
 

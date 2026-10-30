@@ -1,0 +1,33 @@
+name: pr-policy
+
+# The early-repository policy in CONTRIBUTING.md ("Pull requests"): pull requests
+# are open to collaborators and prior contributors only, for now. Any other is
+# closed with a comment that points there and to issues.
+#
+# pull_request_target runs in the base repository's context, so it can close a
+# pull request opened from a fork. It never checks out or runs the pull
+# request's code, which is what keeps that context safe; keep it that way.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  close-outside-pull-requests:
+    if: >-
+      github.event.pull_request.user.type != 'Bot' &&
+      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR"]'),
+                github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close with the reason
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr close "$PR" --repo "$REPO" --comment "Thanks for this. The repository is early: its skills' contracts, shared conventions and eval harness still change week to week, so for now pull requests are open only to collaborators and prior contributors (CONTRIBUTING.md, \"Pull requests\"). Please open an issue instead: ideas, bug reports and failures you hit using a skill are all welcome there."
