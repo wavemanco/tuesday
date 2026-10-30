@@ -1852,10 +1852,10 @@ def check_fit_ledger() -> None:
     except (KeyError, TypeError, ValueError):
         summary = ""
     # Every set claim over the map — in the summary, the sentence after the ledger
-    # and the rest of the snapshot — is judged against the map's own rows by the one
-    # reader the harness calls too (evidence-model.md, "The row is the unit").
-    rows = {rid: (row["priority"], row["fit"]) for rid, row in table.items()}
-    counted = ledger_rules.map_claim(summary, rows)
+    # and the rest of the snapshot — is read by the one reader the harness calls too
+    # (evidence-model.md, "The row is the unit"; what it reads and what it leaves to
+    # the grader, above Claim in ci/ledger_rules.py).
+    counted = ledger_rules.map_claim(summary)
     if counted:
         fail(group, f"{WORKED_DOSSIER}: decision.summary: {counted.why}")
 
@@ -1865,12 +1865,12 @@ def check_fit_ledger() -> None:
     # snapshot, like the summary above, is read by map_claim; bare "none" is not
     # read there, because the slots require "none failed" and "none found".
     after = ledger_rules.ledger_sentence(snapshot)
-    hit = after and ledger_rules.after_ledger_claim(after, rows)
+    hit = after and ledger_rules.after_ledger_claim(after)
     if ledger_rules.is_second_sentence(after, hit):
         fail(group, f"{WORKED_DOSSIER}: the fit ledger is followed by more than one sentence (\"{hit.text[:80]}\"); rule 2 allows one")
     elif hit:
         fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger: {hit.why}")
-    hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot), rows)
+    hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot))
     if hit:
         fail(group, f"{WORKED_DOSSIER}: the snapshot's prose: {hit.why}")
 

@@ -248,27 +248,14 @@ row below `direct` named only in words its Requirement cell uses. A band beside 
 row ID, backticked or not — R3 (`medium`), R3 (medium) — is that row's Confidence; a
 band beside a register ID is a severity written like a band and fails, and so does
 one attached to nothing. Everything between the ledger and the next slot is rule 2's
-one sentence: it fails as a second sentence, or on a set claim that breaks
-evidence-model.md's rule ("The row is the unit"), where every word of its lists and
-every ratio is read as about the map, wherever it stands, and the bare "none" the
-list scopes to that sentence is exclusive. The rest of the snapshot, the status line
-included, and the envelope's `decision.summary` are read for a count over the map, a
-word of the lists with a map word in reach, an exclusive word with a map word in
-reach or standing directly over a row ID ("only R1–R5"), and "all but". One reader,
-`ledger_rules.set_claims` (through `map_claim` and `after_ledger_claim`), judges
-every one of them for all three, here and in the harness, against the worked map's
-rows, in the order the comment above `Claim` in `ci/ledger_rules.py` states: with or
-without the map, an exclusive word fails, and an inclusive word or a count fails
-when its sentence names no row or fewer rows than it counts; the map adds that a
-named row is one of its rows and, where the claim's set resolves to rows of the
-map, that the sentence names exactly them, gives their number and says of each only
-what the map holds. Which set a claim describes is evidence-model.md's rule to say;
-one that does not resolve still names a row in its own clause, and whether it is
-exact is the grader's. Without the map's rows the functions check the first part
-only, which no CI or harness caller does. What is a count, which
-words are map words, how far a count reaches, and when "N of M" or a fraction counts
-rows are stated once, in the comment above `MAP_WORDS` in `ci/ledger_rules.py`, and
-how a claim is judged, in the comment above `Claim`. The **Hard gates:** slot is
+one sentence; a second sentence there fails. That sentence, the rest of the
+snapshot (the status line included) and the envelope's `decision.summary` are read
+for set claims over the map by one reader, `ledger_rules.set_claims` (through
+`map_claim` and `after_ledger_claim`), here and in the harness. What it reads of
+evidence-model.md's rule ("The row is the unit") and what it leaves to the grader
+are stated once, in the comment above `Claim` in `ci/ledger_rules.py`; what is a
+count, which words are map words, how far a count reaches, and when "N of M" or a
+fraction counts rows, in the comment above `MAP_WORDS`. The **Hard gates:** slot is
 required in every snapshot and parsed as rule 4 states it: its failed, unconfirmed
 and met clauses are compared with the map's `hard_gate` rows, each failed and
 unconfirmed row named in words its Requirement uses, and the closing clause with the
@@ -293,10 +280,8 @@ rather than skips. What it does not read: whether the tally's numerators are tru
 (the target table records a status per target, not calls); a count or quantifier
 beyond the reach `MAP_WORDS`'s comment gives ("both of them sit, in the end, below
 `direct`" outside the sentence after the ledger), or about the map in words none of
-these ("the hard gates fail"); whether what a named set's sentence says of its rows
-is true ("every must-have — R2, R3, R4 — is direct" with R4 `adjacent` passes: the
-class is named exactly, and the fit is the grader's); a set that does not resolve,
-as above; prose about the map outside the snapshot and the summary, such as the gap
+these ("the hard gates fail"); what the comment above `Claim` leaves to the grader;
+prose about the map outside the snapshot and the summary, such as the gap
 queue, the plan and a closing recap, which the grader reads; and the snapshots and
 summaries runs write, which the harness reads with the same functions.
 

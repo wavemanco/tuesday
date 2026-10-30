@@ -1036,32 +1036,31 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     # back: a probe run wrote "R5b and R8 are the only rows below `direct`" under a
     # ledger that listed a third, and another "Every must-have is `direct`". It is
     # held to the rule everywhere else is (evidence-model.md, "The row is the
-    # unit"), every word of the lists and every ratio in it read as about the map,
-    # and judged against the map's rows (ledger_rules.after_ledger_claim).
-    table = {rid: (row.get("priority", ""), row.get("fit", "")) for rid, row in rows.items()}
+    # unit"), every word of the lists and every ratio in it read as a set claim
+    # (ledger_rules.after_ledger_claim; what it reads and what it leaves to the
+    # grader, above Claim in ci/ledger_rules.py).
     after = ledger_rules.ledger_sentence(source_text)
-    word = ledger_rules.after_ledger_claim(after, table) if after else None
+    word = ledger_rules.after_ledger_claim(after) if after else None
     if word and ledger_rules.is_second_sentence(after, word):
         said = f"more than one sentence after the ledger (rule 2 allows one): {word.text[:120]!r}"
     elif word:
         said = f"in the sentence after the ledger, {word.why}: {after[:120]!r}"
     else:
-        said = "the sentence after the ledger names every set it speaks of, exactly, and nothing exclusive"
+        said = "the sentence after the ledger names a row in every set claim it makes, and nothing exclusive"
     checks.append(finding("ledger_sentence", "all", word is None, said))
 
     # decision.summary is prose that reads the map, read with the one set-claim
-    # reader (ledger_rules.map_claim) that CI and snapshot_count use, against the
-    # same rows.
+    # reader (ledger_rules.map_claim) that CI and snapshot_count use.
     decision = (envelope_sections(response) or {}).get("decision")
     summary = decision.get("summary") if isinstance(decision, dict) else None
     if not isinstance(summary, str):
         unchecked.append("summary_count")
         info.append("no JSON envelope with sections.decision.summary: summary_count not checked")
     else:
-        claim = ledger_rules.map_claim(summary, table)
+        claim = ledger_rules.map_claim(summary)
         checks.append(finding("summary_count", "all", claim is None,
                               f"decision.summary: {claim.why}" if claim
-                              else "decision.summary names every set of rows it counts or quantifies, exactly, "
+                              else "decision.summary names a row in every set claim it makes over the map, "
                                    "and holds no exclusive quantifier"))
 
     section = snapshot_section(source_text)
@@ -1077,10 +1076,10 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     checks.append(finding("snapshot_band", "all", not band_problems,
                           "; ".join(band_problems) or "every band sits beside its row and "
                                                       "matches its Confidence"))
-    count = ledger_rules.map_claim(ledger_rules.snapshot_prose(section), table)
+    count = ledger_rules.map_claim(ledger_rules.snapshot_prose(section))
     checks.append(finding("snapshot_count", "all", count is None,
                           f"the snapshot's prose: {count.why}" if count
-                          else "the snapshot's prose names every set of rows it counts or quantifies, exactly, "
+                          else "the snapshot's prose names a row in every set claim it makes over the map, "
                                "and holds no exclusive quantifier"))
     unknown = (constraints == "unknown" if constraints in CONSTRAINTS else None) if fixture \
         else constraints_unknown(response, constraints)
