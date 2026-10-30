@@ -364,7 +364,58 @@ def check_evals() -> None:
         for case in spec.get("cases", []):
             if case.get("expected") not in routes:
                 fail(group, f"suite-routing case {case.get('id')}: expected '{case.get('expected')}' is not a declared route")
+            if case.get("expected") == "either":
+                sib = case.get("siblings")
+                if not (isinstance(sib, list) and len(set(sib)) >= 2 and set(sib) <= installed):
+                    fail(group, f"suite-routing case {case.get('id')}: an 'either' case must list the two or more "
+                                f"installed skills it spans as 'siblings', got {sib!r}")
         ok(group, f"suite-routing: {len(spec.get('cases', []))} case(s) over routes {sorted(routes)}")
+        check_routing_variants(group, spec, installed)
+
+
+def check_routing_variants(group: str, suite: dict, installed: set[str]) -> None:
+    """The attachment diagnostic's variant files (evals/README.md, "The attachment
+    diagnostic") are output of `evals/routing_variants.py`, never edited. Each is
+    held to the suite's route rules, its ids to ones no suite case uses, each
+    variant to the suite case it names, and the whole file to what the generator
+    writes from the committed suite, so a hand edit, or a suite edit not
+    regenerated, fails here rather than measuring something no script made."""
+    import routing_variants  # evals/, on the path above
+    try:
+        built = routing_variants.build(suite)
+    except SystemExit as exc:
+        fail(group, f"evals/routing_variants.py cannot build from the suite: {exc}")
+        return
+    by_id = {c.get("id"): c for c in suite.get("cases", [])}
+    for name, text in built.items():
+        path = REPO / "evals" / name
+        if not path.exists():
+            fail(group, f"evals/{name} is missing — run python evals/routing_variants.py")
+            continue
+        try:
+            spec = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            fail(group, f"evals/{name} does not parse: {exc}")
+            continue
+        routes = set(spec.get("routes", []))
+        if not installed <= routes:
+            fail(group, f"evals/{name} routes {sorted(routes)} do not cover every skill: {sorted(installed)}")
+        for case in spec.get("cases", []):
+            n, source = case.get("id"), by_id.get(case.get("derived_from"))
+            if case.get("expected") not in routes:
+                fail(group, f"evals/{name} case {n}: expected '{case.get('expected')}' is not a declared route")
+            if n in by_id:
+                fail(group, f"evals/{name} case {n}: its id collides with a suite case's")
+            if source is None:
+                fail(group, f"evals/{name} case {n}: derived_from {case.get('derived_from')!r} is no suite case")
+            elif case.get("expected") != source.get("expected"):
+                fail(group, f"evals/{name} case {n}: expected '{case.get('expected')}', but suite case "
+                            f"{source.get('id')} expects '{source.get('expected')}'")
+        if path.read_text(encoding="utf-8") != text:
+            fail(group, f"evals/{name} is not what evals/routing_variants.py generates from the suite — "
+                        f"regenerate it, never edit it")
+        else:
+            ok(group, f"{name}: {len(spec.get('cases', []))} variant(s), as generated from the suite")
 
 
 def check_triggers() -> None:
@@ -2090,11 +2141,13 @@ def answer_key_spans(text: str) -> tuple[list[tuple[int, str]], str]:
 
 def fixture_haystack(cases: list[dict]) -> list[tuple[str, str]]:
     """(where, text) for everything a clean room shows the model of this skill's
-    fixtures: each prompt, and each canned research page's title and text."""
+    fixtures: each prompt, and each canned page's title and text — research pages
+    and the pages served at links the user gave to read."""
     out = []
     for case in cases:
         out.append((f"eval {case.get('id')}'s prompt", case.get("prompt", "")))
-        for page in (case.get("research") or {}).get("pages", []) or []:
+        research = case.get("research") or {}
+        for page in [*(research.get("pages") or []), *(research.get("user_pages") or [])]:
             out.append((f"eval {case.get('id')}'s page {page.get('url', '?')}",
                         f"{page.get('title', '')}\n{page.get('text', '')}"))
     return out
@@ -2207,7 +2260,10 @@ def check_fixtures() -> None:
     "known" or "unknown" leaves the hard-gates closing clause unjudged; a
     `research.declined` with no decline in the prompt makes lazy no-call
     `unavailable` rows lawful; a `research.user_links` entry that is also a research
-    page takes that page's fetch out of the target accounting; and a research
+    page takes that page's fetch out of the target accounting; a user link a canned
+    room serves no `user_pages` entry for is answered "No page at", which returns
+    and is counted as read; a user page's `canary` that its page lacks, or that the
+    prompt or another page also carries, proves nothing about the read; and a research
     target's `terms` decide which calls were aimed at it, so a sample of another
     target that is aimed at an `n/a` or `skipped` one — by its terms, or in a canned
     room by a page the server returns — fails a correct row, and a target whose terms
@@ -2281,6 +2337,56 @@ def check_fixtures() -> None:
                 elif any(output_checks.same_url(c.get("page") or "", link) for c in canaries if c.get("page")):
                     fail(group, f"{label}: user link {link} is a canary's page — a user link is never research")
 
+            # The page a canned room serves at a user link (`research.user_pages`), by
+            # fetch alone. A link with none is answered "No page at …", which returns,
+            # so a run would be credited with reading a page it never saw. A user
+            # page's `canary` is a fact only that page carries: on the page, and in
+            # neither the prompt nor any other page, or its reaching the response
+            # proves nothing about the read.
+            upages = research.get("user_pages")
+            if upages is not None and not isinstance(upages, list):
+                fail(group, f"{label}: research.user_pages is {type(upages).__name__}, not a list")
+                upages = []
+            for upage in upages or []:
+                if not isinstance(upage, dict):
+                    fail(group, f"{label}: research.user_pages holds {str(upage)[:60]!r}, not a page")
+            upages = [u for u in upages or [] if isinstance(u, dict)]
+            declared_links = [link for link in links or [] if isinstance(link, str) and link.strip()]
+            for upage in upages:
+                linted += 1
+                url = str(upage.get("url") or "")
+                if not url.strip() or not str(upage.get("text") or "").strip():
+                    fail(group, f"{label}: a research.user_pages entry has no url or no text")
+                    continue
+                if not any(output_checks.same_url(url, link) for link in declared_links):
+                    fail(group, f"{label}: user page {url} is not one of research.user_links — the room would "
+                                f"serve it and the checks would count its read as research")
+                spellings = upage.get("canary") or []
+                spellings = [s for s in ([spellings] if isinstance(spellings, str) else spellings) if str(s).strip()]
+                if not spellings:
+                    continue
+
+                def holds(text: str) -> list[str]:
+                    body = output_checks.normalise_ws(output_checks.unify_dashes(text))
+                    return [sp for sp in spellings if output_checks.canary_in(
+                        output_checks.normalise_ws(output_checks.unify_dashes(sp)), body)]
+                if not holds(f"{upage.get('title', '')} {upage.get('text', '')}"):
+                    fail(group, f"{label}: no spelling of the canary of user link {url} is on its page")
+                elsewhere = [("the prompt", case.get("prompt", ""))] + [
+                    (f"page {p.get('url')}", f"{p.get('title', '')} {p.get('text', '')}")
+                    for p in pages + [u for u in upages if u is not upage]]
+                for where, text in elsewhere:
+                    hit = holds(text)
+                    if hit:
+                        fail(group, f"{label}: the canary of user link {url} ({hit[0]!r}) is also in {where} — "
+                                    f"a canary is a fact only its page carries")
+            if "canned" in modes:
+                for link in declared_links:
+                    if not any(output_checks.same_url(str(u.get("url") or ""), link) for u in upages):
+                        fail(group, f"{label}: user link {link} has no page in research.user_pages — a canned room "
+                                    f"answers \"No page at\" it, which returns, and the run would be credited with "
+                                    f"reading a page it never saw")
+
             for canary in canaries:
                 linted += 1
                 n, page = canary.get("target"), canary.get("page")
@@ -2307,8 +2413,11 @@ def check_fixtures() -> None:
             no_call = bool(research.get("zero_calls")) or declined is True
             targets = research.get("targets") or []
             # The room aimed_at reads a search for the company by name in: the
-            # request and every target (output_checks.identity_search).
-            room = {"prompt": case.get("prompt", ""), "targets": targets}
+            # request, with every declared user link read as a correct run reads it,
+            # and every target (output_checks.identity_search).
+            room = {"prompt": output_checks.request_text(case.get("prompt", ""), research,
+                                                         research.get("user_links")),
+                    "targets": targets}
 
             def aimed(query: str, target: dict, mode: str) -> bool:
                 return output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode, room)
@@ -2389,8 +2498,8 @@ def check_fixtures() -> None:
     if linted == 0:
         fail(group, "no fixture field read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
-        ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links "
-                  f"and research targets agree with what the harness reads")
+        ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links, "
+                  f"user pages and research targets agree with what the harness reads")
 
 
 class SentenceRule:

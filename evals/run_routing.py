@@ -22,6 +22,7 @@ Usage:
     python evals/run_routing.py                 # all cases, 3 runs each
     python evals/run_routing.py --runs 1        # quick pass
     python evals/run_routing.py --case 9 --case 10
+    python evals/run_routing.py --cases evals/routing-arm-b.json   # another case file
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
+SUITE = REPO / "evals" / "suite-routing.json"
 
 
 def install_skills(root: Path, run_id: str,
@@ -104,6 +106,39 @@ def write_attachments(root: Path, case: dict) -> None:
     """
     for name, content in (case.get("attachments") or {}).items():
         (root / name).write_text(content)
+
+
+def case_project(tmp: Path, case: dict, run_id: str,
+                 overrides: dict[str, Path] | None = None) -> tuple[Path, dict[str, str]]:
+    """One throwaway project per case: the skills, and that case's attachments only.
+
+    The runner used to write every case's attachments into one shared root, on the
+    stated assumption that file names were distinct across cases. They were not:
+    five cases attach a `jd.txt`, so in a run of several cases each saw the last
+    case's posting, and a self-contained case ran beside documents no prompt of
+    its own mentioned. A project per case shows each prompt exactly its own files.
+    """
+    root = tmp / f"case-{case['id']}"
+    root.mkdir()
+    names = install_skills(root, run_id, overrides)
+    write_attachments(root, case)
+    return root, names
+
+
+def load_cases(path: Path, ids: list[int] | None = None) -> list[dict]:
+    """The cases of a routing case file, limited to `ids` when given.
+
+    A variant file (`--cases`) has the suite's shape. An id asked for that the
+    file does not hold is an error, not an empty selection: a typo would
+    otherwise report "0/0 passed" as a clean run.
+    """
+    cases = json.loads(Path(path).read_text(encoding="utf-8"))["cases"]
+    if ids:
+        missing = sorted(set(ids) - {c["id"] for c in cases})
+        if missing:
+            raise SystemExit(f"{path}: no case with id {missing}")
+        cases = [c for c in cases if c["id"] in ids]
+    return cases
 
 
 def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None) -> str:
@@ -225,8 +260,9 @@ def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, mo
     return "neither"
 
 
-def verdict(expected: str, fired: list[str]) -> tuple[bool, str]:
-    """An 'either' case passes when exactly one sibling fires, consistently.
+def verdict(expected: str, fired: list[str], siblings: list[str] | None = None) -> tuple[bool, str]:
+    """A spanning ('either') case passes when every run that reached a verdict fired
+    one of the skills it spans — its `siblings` in the suite — whichever one.
 
     Timed-out and errored runs are set aside rather than counted as negatives,
     and reported alongside the verdict so a case decided on one surviving run
@@ -240,9 +276,11 @@ def verdict(expected: str, fired: list[str]) -> tuple[bool, str]:
     suffix = (" [" + ", ".join(f"{n} {kind}" for kind, n in aborted.items()) + "]") if aborted else ""
     unique = set(fired)
     if expected == "either":
-        if unique <= {"job-underwriter", "mock-interview"} and unique:
-            return True, f"one sibling fired every run ({'/'.join(sorted(unique))}){suffix}"
-        return False, f"a spanning request must reach a sibling; got {sorted(unique)}{suffix}"
+        if not siblings:
+            raise ValueError("an 'either' case must declare the skills it spans as 'siblings'")
+        if unique <= set(siblings):
+            return True, f"a sibling fired every run ({'/'.join(sorted(unique))}){suffix}"
+        return False, f"a spanning request must reach one of {sorted(siblings)}; got {sorted(unique)}{suffix}"
     if unique == {expected}:
         return True, f"{expected} on every run{suffix}"
     if expected in unique:
@@ -250,9 +288,37 @@ def verdict(expected: str, fired: list[str]) -> tuple[bool, str]:
     return False, f"routed to {sorted(unique)}, expected {expected}{suffix}"
 
 
-def main() -> int:
+def reach(cases: list[dict], fired_by_case: dict[int, list[str]]) -> dict:
+    """How often the runs reached a skill at all, and how often the wrong one.
+
+    The attachment diagnostic (evals/README.md) is decided on this rate, not on
+    pass counts: a case that fires its skill on four runs of five fails, and is
+    four reaches. Timed-out and errored runs are set aside, never counted as
+    misses. A wrong skill is one that is not the case's route — for an `either`
+    case, not one of the `siblings` it declares.
+    """
+    decided = reached = wrong = 0
+    by_skill: dict[str, int] = {}
+    for case in cases:
+        for got in fired_by_case.get(case["id"], []):
+            if got in ("timeout", "error"):
+                continue
+            decided += 1
+            if got in SKILLS:
+                reached += 1
+                by_skill[got] = by_skill.get(got, 0) + 1
+                allowed = case.get("siblings", []) if case["expected"] == "either" else [case["expected"]]
+                if got not in allowed:
+                    wrong += 1
+    return {"decided": decided, "reached": reached, "wrong_skill": wrong, "by_skill": by_skill,
+            "set_aside": sum(len(fired_by_case.get(c["id"], [])) for c in cases) - decided}
+
+
+def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=3, help="runs per case (routing is probabilistic)")
+    ap.add_argument("--cases", type=Path, default=SUITE, metavar="FILE",
+                    help="the case file to run (default: evals/suite-routing.json)")
     ap.add_argument("--case", type=int, action="append", help="limit to case id(s)")
     ap.add_argument("--model", default=None)
     ap.add_argument("--timeout", type=int, default=240)
@@ -260,30 +326,27 @@ def main() -> int:
     ap.add_argument("--json-out", default=None, help="write full results here")
     ap.add_argument("--skill-md", action="append", default=[], metavar="SKILL=PATH",
                     help="substitute a SKILL.md for one skill, to A/B a description generation")
-    args = ap.parse_args()
+    return ap
 
-    spec = json.loads((REPO / "evals" / "suite-routing.json").read_text())
-    cases = [c for c in spec["cases"] if not args.case or c["id"] in args.case]
+
+def main() -> int:
+    args = parser().parse_args()
+    cases = load_cases(args.cases, args.case)
 
     with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
         overrides = {}
         for item in args.skill_md:
             skill, _, path = item.partition("=")
             if skill not in SKILLS or not path:
                 raise SystemExit(f"--skill-md expects one of {SKILLS} as SKILL=PATH, got {item!r}")
             overrides[skill] = Path(path)
-        names = install_skills(root, uuid.uuid4().hex[:8], overrides)
-
-        # Attachments are written once into the shared project root; filenames are
-        # distinct across cases so they do not collide.
-        for case in cases:
-            write_attachments(root, case)
+        run_id = uuid.uuid4().hex[:8]
+        projects = {c["id"]: case_project(Path(tmp), c, run_id, overrides) for c in cases}
 
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             outcomes = list(pool.map(
-                lambda job: which_fired(job[0]["prompt"], root, names, args.timeout, args.model),
+                lambda job: which_fired(job[0]["prompt"], *projects[job[0]["id"]], args.timeout, args.model),
                 jobs,
             ))
 
@@ -294,16 +357,22 @@ def main() -> int:
     results, passed = [], 0
     for case in cases:
         fired = fired_by_case[case["id"]]
-        ok, note = verdict(case["expected"], fired)
+        ok, note = verdict(case["expected"], fired, case.get("siblings"))
         passed += ok
         results.append({"id": case["id"], "expected": case["expected"],
+                        **{k: case[k] for k in ("derived_from", "arm") if k in case},
                         "fired": fired, "passed": ok, "note": note})
         print(f"{'PASS' if ok else 'FAIL'}  case {case['id']:>2}  expected {case['expected']:<16} {note}")
 
-    print(f"\n{passed}/{len(cases)} routing cases passed ({args.runs} run(s) each)")
+    print(f"\n{passed}/{len(cases)} routing cases passed ({args.runs} run(s) each, from {args.cases})")
+    summary = reach(cases, fired_by_case)
+    rate = f"{100 * summary['reached'] / summary['decided']:.0f}%" if summary["decided"] else "n/a"
+    print(f"reached a skill on {summary['reached']}/{summary['decided']} decided runs ({rate}); "
+          f"wrong skill on {summary['wrong_skill']}; {summary['set_aside']} timed out or errored, set aside")
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(
-            {"runs_per_case": args.runs, "passed": passed, "total": len(cases), "results": results},
+            {"cases_file": str(args.cases), "model": args.model, "runs_per_case": args.runs,
+             "passed": passed, "total": len(cases), "reach": summary, "results": results},
             indent=2) + "\n")
     return 0 if passed == len(cases) else 1
 

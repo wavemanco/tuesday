@@ -178,6 +178,48 @@ def break_routing_route(root: Path) -> str:
     return "is not a declared route"
 
 
+def break_routing_variant_edited(root: Path) -> str:
+    """Hand-edit a generated variant's message: the diagnostic would measure a
+    prompt no committed script produced."""
+    path = root / "evals/routing-arm-b.json"
+    data = json.loads(path.read_text())
+    data["cases"][0]["prompt"] += " Thanks!"
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return "regenerate it, never edit it"
+
+
+def break_routing_suite_not_regenerated(root: Path) -> str:
+    """Change an attachment in the suite and leave the variant files as they were:
+    arm B would paste the old document beside the new file."""
+    path = root / "evals/suite-routing.json"
+    data = json.loads(path.read_text())
+    case = next(c for c in data["cases"] if c.get("attachments"))
+    name = next(iter(case["attachments"]))
+    case["attachments"][name] += "\nRemote-first."
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return "is not what evals/routing_variants.py generates"
+
+
+def break_routing_variant_id_collides(root: Path) -> str:
+    """Give a variant a suite case's id: `--case` and the results would conflate the two."""
+    path = root / "evals/routing-arm-c.json"
+    data = json.loads(path.read_text())
+    data["cases"][0]["id"] = data["cases"][0]["derived_from"]
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return "collides with a suite case's"
+
+
+def break_routing_either_without_siblings(root: Path) -> str:
+    """Drop the skills a spanning case spans: its verdict would fall back to a guess,
+    and case 21 scored a correct resume-tailor fire as a miss that way."""
+    path = root / "evals/suite-routing.json"
+    data = json.loads(path.read_text())
+    case = next(c for c in data["cases"] if c.get("expected") == "either")
+    case.pop("siblings", None)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return "must list the two or more installed skills it spans"
+
+
 def break_undeclared_parameter(root: Path) -> str:
     """Drop one declared output-discipline parameter from a skill."""
     path = root / "skills/resume-tailor/SKILL.md"
@@ -1927,6 +1969,58 @@ def break_user_links_not_list(root: Path) -> str:
     return "research.user_links is str, not a list"
 
 
+# Job-underwriter eval 6: a posting the user linked, which the canned room serves
+# from `research.user_pages` by fetch alone.
+JU6_LINK = "https://jobs.tallyboard.example/quillfield/revenue-operations-lead-2291"
+
+
+def break_user_link_no_page(root: Path) -> str:
+    """A canned room answers "No page at" a link it serves nothing for, which returns:
+    the run would be credited with reading a page it never saw."""
+    mutate_case(root, JU, 6, lambda c: c["research"].pop("user_pages"))
+    return f"user link {JU6_LINK} has no page in research.user_pages"
+
+
+def break_user_page_undeclared(root: Path) -> str:
+    """A served page that is no declared link: its read would be counted as research."""
+    other = "https://jobs.tallyboard.example/quillfield/revenue-operations-lead-2292"
+    mutate_case(root, JU, 6, lambda c: c["research"]["user_pages"][0].update(url=other))
+    return f"user page {other} is not one of research.user_links"
+
+
+def break_user_page_canary_off_page(root: Path) -> str:
+    mutate_case(root, JU, 6, lambda c: c["research"]["user_pages"][0].update(canary=["59,000"]))
+    return f"no spelling of the canary of user link {JU6_LINK} is on its page"
+
+
+def break_user_page_canary_on_research_page(root: Path) -> str:
+    """A fact a research page also carries proves nothing about the user's link."""
+    mutate_case(root, JU, 6, lambda c: c["research"]["user_pages"][0].update(canary=["Bristol"]))
+    return "is also in page https://quillfield.co.uk/about"
+
+
+def break_user_page_canary_in_prompt(root: Path) -> str:
+    mutate_case(root, JU, 6, lambda c: c["research"]["user_pages"][0].update(canary=["Salesforce"]))
+    return f"the canary of user link {JU6_LINK} ('Salesforce') is also in the prompt"
+
+
+def break_user_pages_not_list(root: Path) -> str:
+    mutate_case(root, JU, 6, lambda c: c["research"].update(user_pages=c["research"]["user_pages"][0]))
+    return "research.user_pages is dict, not a list"
+
+
+def break_answer_key_user_page(root: Path) -> str:
+    """The page at a user's link is shown to the model too, so quoting it is an answer key."""
+    path = root / "skills/job-underwriter/references/evidence-model.md"
+    path.write_text(path.read_text() + '\n\nA posting may say "own our CRM and billing data" and nothing more.\n')
+    return f"page {JU6_LINK}"
+
+
+def keep_user_link_written_another_way(root: Path) -> None:
+    """The declared link with a trailing slash is the same link (norm_url): it still has its page."""
+    mutate_case(root, JU, 6, lambda c: c["research"].update(user_links=[JU6_LINK + "/"]))
+
+
 def break_collision_canned_page(root: Path) -> str:
     """NP-4: a skipped target's page shares a keyword with another target's sample, so
     in a canned room the server returns it and the call is aimed at the skipped target."""
@@ -2666,6 +2760,7 @@ def keep_warning_signs_elsewhere(root: Path) -> None:
 
 
 PASSES = [
+    ("fixtures", "a user link written with a trailing slash, its page still found", keep_user_link_written_another_way),
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
     ("sections", "a bare section written \"of this spec\" beside another file's name", keep_self_reference_of_this_spec),
     ("sections", "a statute citation", keep_statute_citation),
@@ -2871,6 +2966,10 @@ CASES: list[tuple[str, str, callable]] = [
     ("evals", "eval with no expectations", break_evals_empty_expectations),
     ("evals", "duplicate eval ids", break_evals_duplicate_ids),
     ("evals", "routing case with an undeclared route", break_routing_route),
+    ("evals", "a generated routing variant edited by hand", break_routing_variant_edited),
+    ("evals", "a suite attachment changed without regenerating its variants", break_routing_suite_not_regenerated),
+    ("evals", "a routing variant id that is a suite id", break_routing_variant_id_collides),
+    ("evals", "a spanning routing case with no siblings", break_routing_either_without_siblings),
     ("triggers", "description lost its reserved boundary", break_trigger_boundary),
     ("ledger", "a duplicated ledger entry", break_ledger_duplicate),
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
@@ -3082,6 +3181,13 @@ CASES: list[tuple[str, str, callable]] = [
     ("fixtures", "a user link that is a research page", break_user_link_is_page),
     ("fixtures", "a user link that is a canary's page", break_user_link_is_canary_page),
     ("fixtures", "user_links that is not a list", break_user_links_not_list),
+    ("fixtures", "a canned user link with no page", break_user_link_no_page),
+    ("fixtures", "a user page that is no declared user link", break_user_page_undeclared),
+    ("fixtures", "a user page's canary its page lacks", break_user_page_canary_off_page),
+    ("fixtures", "a user page's canary a research page also carries", break_user_page_canary_on_research_page),
+    ("fixtures", "a user page's canary the prompt also carries", break_user_page_canary_in_prompt),
+    ("fixtures", "user_pages that is not a list", break_user_pages_not_list),
+    ("answer-keys", "a user page's sentence quoted", break_answer_key_user_page),
     ("fixtures", "a skipped target's page returned for another target's sample", break_collision_canned_page),
     ("evals", "an expectation naming an unknown clause", break_clause_unknown),
     ("evals", "a clause nothing uses", break_clause_unused),

@@ -639,7 +639,8 @@ def write_research_files(case: dict, paths: dict) -> None:
     research = case.get("research") or {}
     paths["corpus"].parent.mkdir(parents=True, exist_ok=True)
     paths["corpus"].write_text(json.dumps({"entity_tokens": research.get("entity_tokens", []),
-                                           "pages": research.get("pages", [])}, indent=1))
+                                           "pages": research.get("pages", []),
+                                           "user_pages": research.get("user_pages", [])}, indent=1))
     paths["mcp"].write_text(json.dumps({"mcpServers": {"web": {
         "type": "stdio", "command": "python3",
         "args": ["-I", str(SERVER), str(paths["corpus"]), str(paths["calls"])]}}}, indent=1))

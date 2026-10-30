@@ -34,6 +34,7 @@ and never a skill failure it was not.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -47,6 +48,7 @@ import ledger_rules  # noqa: E402  (ci/, put on the path by output_checks)
 import recurring
 import run_fixtures
 import run_routing
+import routing_variants
 
 FAILURES: list[str] = []
 SERVER = Path(__file__).resolve().parent / "research_server.py"
@@ -97,10 +99,132 @@ def test_routing_declines() -> None:
 
     ok, _ = run_routing.verdict("neither", ["neither"] * 3)
     check("a clean negative passes", ok, True)
-    ok, _ = run_routing.verdict("either", ["job-underwriter", "mock-interview", "job-underwriter"])
+    ju_mi = ["job-underwriter", "mock-interview"]
+    ok, _ = run_routing.verdict("either", ["job-underwriter", "mock-interview", "job-underwriter"], ju_mi)
     check("a spanning case passes when some sibling fires every run", ok, True)
-    ok, _ = run_routing.verdict("either", ["job-underwriter", "neither", "job-underwriter"])
+    ok, _ = run_routing.verdict("either", ["job-underwriter", "neither", "job-underwriter"], ju_mi)
     check("a spanning case fails when a run reaches neither sibling", ok, False)
+    # Case 21 spans job-underwriter and resume-tailor. A hard-coded pair once scored
+    # its correct resume-tailor fires as misses; the case's own siblings decide now.
+    ju_rt = ["job-underwriter", "resume-tailor"]
+    ok, _ = run_routing.verdict("either", ["resume-tailor", "job-underwriter", "resume-tailor"], ju_rt)
+    check("a spanning case passes on any of its own siblings", ok, True)
+    ok, _ = run_routing.verdict("either", ["mock-interview", "job-underwriter", "job-underwriter"], ju_rt)
+    check("a skill the spanning case does not span fails it", ok, False)
+    try:
+        run_routing.verdict("either", ["job-underwriter"])
+        check("an 'either' verdict without siblings is refused", False, True)
+    except ValueError:
+        check("an 'either' verdict without siblings is refused", True, True)
+
+
+def test_routing_cases() -> None:
+    print("\nrouting: --cases picks the case file, and each case runs in a project of its own")
+    suite_path = Path(__file__).resolve().parent / "suite-routing.json"
+    suite = json.loads(suite_path.read_text())
+    default = run_routing.parser().parse_args([])
+    check("without --cases the runner reads the suite", default.cases.resolve(), suite_path)
+    check("and runs every suite case, in the suite's order",
+          run_routing.load_cases(default.cases, default.case), suite["cases"])
+    check("--case still limits the suite to the ids asked for",
+          [c["id"] for c in run_routing.load_cases(default.cases, [9, 3])], [3, 9])
+    try:
+        run_routing.load_cases(default.cases, [3, 999])
+        check("an id the file does not hold is an error, not an empty run", "no error", "SystemExit")
+    except SystemExit as exc:
+        check_true("an id the file does not hold is an error, not an empty run", "999" in str(exc))
+    arm_b = Path(__file__).resolve().parent / routing_variants.OUTPUTS["B"]
+    args = run_routing.parser().parse_args(["--cases", str(arm_b), "--case", "203"])
+    picked = run_routing.load_cases(args.cases, args.case)
+    check("--cases reads another file, and --case selects within it",
+          [(c["id"], c["derived_from"]) for c in picked], [(203, 3)])
+
+    # Five suite cases attach a jd.txt. One shared project root, as the runner had,
+    # showed every case the last case's posting.
+    cases = [{"id": 1, "attachments": {"jd.txt": "first posting"}},
+             {"id": 2, "attachments": {"jd.txt": "second posting"}}, {"id": 3}]
+    with tempfile.TemporaryDirectory() as tmp:
+        made = {c["id"]: run_routing.case_project(Path(tmp), c, "ab12cd34") for c in cases}
+        check("two cases attaching the same file name each see their own",
+              [(made[n][0] / "jd.txt").read_text() for n in (1, 2)], ["first posting", "second posting"])
+        check("a case with no attachment sees no other case's",
+              sorted(p.name for p in made[3][0].iterdir()), [".claude"])
+        check("every project installs every skill under this run's names",
+              [sorted(p.name for p in (made[n][0] / ".claude" / "skills").iterdir()) for n in (1, 3)],
+              [sorted(f"{s}-ab12cd34" for s in run_routing.SKILLS)] * 2)
+        check("and the runner is told those names", made[1][1],
+              {s: f"{s}-ab12cd34" for s in run_routing.SKILLS})
+
+    summary = run_routing.reach(
+        [{"id": 1, "expected": "job-underwriter"},
+         {"id": 2, "expected": "either", "siblings": ["job-underwriter", "mock-interview"]}],
+        {1: ["job-underwriter", "neither", "resume-tailor", "timeout", "error"],
+         2: ["mock-interview", "resume-tailor", "neither"]})
+    check("the reach rate counts decided runs only; a wrong skill is one off the case's route or siblings",
+          {k: summary[k] for k in ("decided", "reached", "wrong_skill", "set_aside")},
+          {"decided": 6, "reached": 4, "wrong_skill": 2, "set_aside": 2})
+    check("and fires are listed by skill",
+          summary["by_skill"], {"job-underwriter": 1, "resume-tailor": 2, "mock-interview": 1})
+
+
+def test_routing_variants() -> None:
+    print("\nrouting: the diagnostic's variant files are the generator's output")
+    here = Path(__file__).resolve().parent
+    suite = json.loads((here / "suite-routing.json").read_text())
+    built = routing_variants.build(suite)
+    check("each committed variant file is exactly what the generator writes from the suite",
+          {name: (here / name).read_text() == text for name, text in built.items()},
+          {name: True for name in routing_variants.OUTPUTS.values()})
+    by_id = {c["id"]: c for c in suite["cases"]}
+    arms = {arm: json.loads(built[name])["cases"] for arm, name in routing_variants.OUTPUTS.items()}
+    check("arm B derives from the six attachment cases, arm C from the nine self-contained positives",
+          {arm: [c["derived_from"] for c in cases] for arm, cases in arms.items()},
+          {"B": [3, 9, 15, 17, 18, 21], "C": [1, 2, 4, 5, 6, 7, 8, 10, 16]})
+    every = [c for cases in arms.values() for c in cases]
+    check("no variant id is a suite id, and none repeats",
+          (sorted(set(by_id) & {c["id"] for c in every}), len({c["id"] for c in every}) == len(every)), ([], True))
+    check("every variant keeps its source's route", [c["id"] for c in every
+                                                     if c["expected"] != by_id[c["derived_from"]]["expected"]], [])
+    check_true("arm B: the message opens with the suite's, carries each attachment verbatim, and the files stay",
+               all(c["prompt"].startswith(by_id[c["derived_from"]]["prompt"] + "\n\n")
+                   and c["attachments"] == by_id[c["derived_from"]]["attachments"]
+                   and all(f"{name}:\n{text}" in c["prompt"] for name, text in c["attachments"].items())
+                   for c in arms["B"]))
+    words = lambda text: text.split()  # noqa: E731
+    lead = routing_variants.ATTACHED_SENTENCE
+    moved = [c for c in arms["C"] if "unchanged" not in c]
+    check_true("arm C: the message is the fixed sentence and intent spans, the file the rest — "
+               "together exactly the suite's words",
+               all(c["prompt"].startswith(lead + " ") and sorted(c["attachments"]) == [routing_variants.ATTACHED_FILE]
+                   and not set(c["attachments"]) & set(by_id[c["derived_from"]].get("attachments") or {})
+                   for c in moved)
+               and all(sorted(words(c["prompt"][len(lead):]) + words(c["attachments"][routing_variants.ATTACHED_FILE]))
+                       == sorted(words(by_id[c["derived_from"]]["prompt"])) for c in moved))
+    check("parity: every arm-A message, and every arm-C message, names what its ask is about",
+          {arm: [n for n in ids if not routing_variants.topic_nouns(text(n))] for arm, ids, text in
+           (("A", routing_variants.ARM_B_CASES, lambda n: by_id[n]["prompt"]),
+            ("C", [c["id"] for c in arms["C"]], lambda n: next(c for c in arms["C"] if c["id"] == n)["prompt"]))},
+          {"A": [], "C": []})
+    check_true("and a moved message keeps its topic noun from its own spans, not from the fixed sentence",
+               all(routing_variants.topic_nouns(c["prompt"][len(lead):]) for c in moved)
+               and not routing_variants.topic_nouns(lead))
+    check("arm C: only case 8, which carries no domain content, runs as it stands",
+          [(c["derived_from"], c["prompt"] == by_id[c["derived_from"]]["prompt"], "attachments" in c)
+           for c in arms["C"] if "unchanged" in c], [(8, True, False)])
+    # Arms A and D run suite cases by hand-typed --case lists in the README; each must
+    # pick the cases its paired variant arm derives from, or the per-case pairing breaks.
+    readme = (here / "README.md").read_text()
+    typed = {arm.upper(): [int(n) for n in re.findall(r"--case (\d+)", ids)] for arm, ids in
+             re.findall(r"--json-out arm-([ad])\.json \\\n((?:\s*--case \d+)+)", readme)}
+    check("the README's arm A and D commands run exactly the cases arms B and C derive from",
+          typed, {"A": list(routing_variants.ARM_B_CASES), "D": list(routing_variants.ARM_C_CASES)})
+    edited = json.loads(json.dumps(suite))
+    next(c for c in edited["cases"] if c["id"] == 6)["prompt"] = "How should I tailor my answers to her?"
+    try:
+        routing_variants.build(edited)
+        check("a suite edit that breaks an intent span stops the generator", "built", "SystemExit")
+    except SystemExit as exc:
+        check_true("a suite edit that breaks an intent span stops the generator", "case 6" in str(exc))
 
 
 # --- Decline path 3: the CLI declining to answer is not a short answer ---
@@ -220,9 +344,9 @@ CORPUS = {
 }
 
 
-def drive_server(requests: list[dict], tmp: Path) -> tuple[list[dict], Path, Path]:
+def drive_server(requests: list[dict], tmp: Path, served: dict | None = None) -> tuple[list[dict], Path, Path]:
     corpus = tmp / "corpus.json"
-    corpus.write_text(json.dumps(CORPUS))
+    corpus.write_text(json.dumps(served or CORPUS))
     log = tmp / "calls.jsonl"
     cwd = tmp / "cwd"
     cwd.mkdir()
@@ -2122,6 +2246,130 @@ def test_user_links() -> None:
                "from the record", "2 result(s): https://kestrel.test/values, https://kestrel.test/careers" in shown)
 
 
+def test_user_link_fixture() -> None:
+    print("\nchecks: job-underwriter eval 6, a posting the user linked, read in a canned room")
+    case = fixture("job-underwriter", 6)
+    research, prompt = case["research"], case["prompt"]
+    link = research["user_links"][0]
+    check_true("ju 6 declares one user link, the room serves a page at it, and the prompt carries the link "
+               "and none of its canary", len(research["user_links"]) == 1 and link in prompt
+               and [u["url"] for u in research["user_pages"]] == [link]
+               and not any(output_checks.canary_in(s, prompt) for s in research["user_pages"][0]["canary"]))
+
+    # The room: the page at the user's link is served by fetch, never by search,
+    # and carries no target, so the record never charges it to one.
+    def call(i, tool, **args):
+        return {"jsonrpc": "2.0", "id": i, "method": "tools/call", "params": {"name": tool, "arguments": args}}
+    served = {"entity_tokens": research["entity_tokens"], "pages": research["pages"],
+              "user_pages": research["user_pages"]}
+    with tempfile.TemporaryDirectory() as tmp:
+        replies, log_path, _ = drive_server(
+            [{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+             call(1, "fetch", url=link), call(2, "search", query="Quillfield revenue operations lead posting salary"),
+             call(3, "fetch", url="https://jobs.tallyboard.example/quillfield")], Path(tmp), served)
+        by_id = {r["id"]: r["result"]["content"][0]["text"] for r in replies if r.get("id") in (1, 2, 3)}
+        lines = {l["id"]: l for l in map(json.loads, log_path.read_text().splitlines()) if l.get("id") in (1, 2, 3)}
+        check_true("a fetch of the user's link returns its page, canary and all", "£61,500" in by_id[1])
+        check("and is logged as a hit tagged with no target", (lines[1]["outcome"], lines[1]["targets"]), ("hit", []))
+        check_true("a search carrying the posting's own words never returns it",
+                   link not in by_id[2] and link not in lines[2]["returned_urls"])
+        check("the board's parent path is no user page: the room says so", lines[3]["outcome"], "fetch_miss")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        room = out / "rooms" / "job-underwriter-6-canned-ab12cd34"
+        room.mkdir(parents=True)
+        paths = run_fixtures.research_paths(out, room, "a")
+        run_fixtures.write_research_files(case, paths)
+        check("the runner writes the user's page into the room's corpus",
+              json.loads(paths["corpus"].read_text())["user_pages"], research["user_pages"])
+
+    read = entry(link, kind="fetch", urls=[link])
+    calls = [entry("Quillfield about", targets=[1], urls=["https://quillfield.co.uk/about"]),
+             entry("revenue operations lead salary UK 2026", targets=[2],
+                   urls=["https://ledgerline.example/2026-uk-revenue-operations-pay-guide"]),
+             entry("Tamsin Achebe Quillfield", targets=[3], urls=["https://www.linkedin.example/in/tamsin-achebe"])]
+    rows = {1: "yes", 2: "yes", 3: "yes"}
+    line = "Research tier: L1 — searches 3 of 5, fetches 0 of 2; user links read 1"
+    said = "The posting's own range, £61,500–£67,000, sits around Ledgerline's median."
+
+    def judge(tally=line, body=said, log=(read, *calls), mode="canned", extra=""):
+        return output_checks.check_accounting(accounting(rows, tally, body + extra), research, mode,
+                                              None if log is None else list(log), prompt)
+    names = ("tally_user_links", "tally_searches", "tally_fetches")
+    canary = lambda got: verdict_of(got, "user_link_canary", "user link")  # noqa: E731
+
+    good = judge()
+    check("must pass: the link read once, named on the line, in neither count, its canary carried",
+          [verdict_of(good, n) for n in names] + [canary(good)]
+          + [verdict_of(good, "yes_has_call", n) for n in (1, 2, 3)],
+          ["PASS"] * 7)
+    check("and no call is unattributed, so no off-target row is owed",
+          (verdict_of(good, "off_target_shown"), any("unattributed call" in i for i in good["info"])), (None, False))
+    check("must pass: the link fetched twice is still one link read",
+          verdict_of(judge(log=(read, read, *calls)), "tally_user_links"), "PASS")
+    check("must pass: a figure spelled \"61.5k\" carries the canary",
+          canary(judge(body="The posting pays from £61.5k.")), "PASS")
+    check("must fail: the line leaves the read off", verdict_of(judge(line.split(";")[0]), "tally_user_links"),
+          "FAIL")
+    check("must fail: the read counted as one of the skill's own fetches",
+          [verdict_of(judge("Research tier: L1 — searches 3 of 5, fetches 1 of 2; user links read 1"), n)
+           for n in ("tally_fetches", "tally_user_links")], ["FAIL", "PASS"])
+    check("must fail: the read counted as a fetch instead of a user link",
+          [verdict_of(judge("Research tier: L1 — searches 3 of 5, fetches 1 of 2"), n)
+           for n in ("tally_fetches", "tally_user_links")], ["FAIL", "FAIL"])
+    check("must fail: the read counted as one of the skill's own searches",
+          verdict_of(judge("Research tier: L1 — searches 4 of 5, fetches 0 of 2; user links read 1"),
+                     "tally_searches"), "FAIL")
+    check("must fail: the link read and its canary missing from the response",
+          canary(judge(body="The posting's range sits around Ledgerline's median.")), "FAIL")
+    check("must fail: a near figure is not the canary (\"161,500\")",
+          canary(judge(body="It pays £161,500.")), "FAIL")
+    board = entry("https://jobs.tallyboard.example/quillfield", kind="fetch")
+    got = judge(log=(read, board, *calls))
+    check("must fail: a fetch of the board's parent path is research, so a line that leaves it out fails "
+          "and the call is unattributed", (verdict_of(got, "tally_fetches"), verdict_of(got, "off_target_shown")),
+          ("FAIL", "FAIL"))
+    got = judge(log=calls)
+    check("the link never fetched: \"read 1\" fails, and its canary is not asked for",
+          (verdict_of(got, "tally_user_links"), canary(got)), ("FAIL", None))
+    got = judge(line.split(";")[0], body="", log=(entry(link, "refused", kind="fetch"), *calls))
+    check("a read the host refused: not counted, the canary not asked for",
+          (verdict_of(got, "tally_user_links"), canary(got),
+           any("user link not opened" in i for i in got["info"])), ("PASS", None, True))
+    got = judge(log=None)
+    check("no research log: the canary is unchecked, not passed",
+          (canary(got), "user_link_canary" in got["unchecked"]), (None, True))
+    for body, want in ((said, "FAIL"), ("", "PASS")):
+        got = judge(line.split(";")[0], body=body, log=[], mode="denied")
+        check(f"a denied room, where no fetch can return: the canary {'present fails' if body else 'absent passes'}",
+              verdict_of(got, "user_link_canary_absent", "user link"), want)
+    # A search for the company by name in the posting's own words: the posting is part
+    # of the request once its link was read, and not before (`request_text`).
+    by_name = entry("Quillfield revenue operations lead Bristol hybrid")
+    got = judge(log=(read, by_name, *calls[1:]))
+    check("must pass: once the link was read, a search by name in the posting's words is target 1's",
+          (verdict_of(got, "yes_has_call", 1), verdict_of(got, "off_target_shown")), ("PASS", None))
+    got = judge(line.split(";")[0], log=(by_name, *calls[1:]))
+    check("must fail: with the link never read, the same search is aimed at no target",
+          (verdict_of(got, "yes_has_call", 1), verdict_of(got, "off_target_shown")), ("FAIL", "FAIL"))
+    room = {"prompt": output_checks.request_text(prompt, research, [link]), "targets": research["targets"]}
+    check("a posting-only word joins the name as a prompt word would: \"Quillfield CFO\" is target 1's, "
+          "not shown as off-target (identity_search's docstring)",
+          [t["n"] for t in research["targets"] if output_checks.aimed_at(entry("Quillfield CFO"), t, [], "canned", room)],
+          [1])
+    check("an unread or undeclared link adds nothing to the request",
+          [output_checks.request_text(prompt, research, links) for links in ([], ["https://jobs.tallyboard.example"])],
+          [prompt, prompt])
+    block = run_fixtures.observed_block({"research_log": [read, *calls]}, research)
+    check_true("the grader's record counts three searches, no fetch, and lists the link as a user link read",
+               block.startswith("Recorded: 3 research call(s) — 3 search(es), 0 fetch(es)")
+               and "User links read: 1 link(s)" in block and block.index(link) > block.index("User links read"))
+    shown = [[link in text for text in output_checks.room_pages_text(
+        [*research["pages"], *research["user_pages"]], log)] for log in ([read], calls)]
+    check("a canned room's quotable text holds the user's page once it was read, and not before",
+          [any(s) for s in shown], [True, False])
+
+
 def test_budget_spent_unavailable() -> None:
     print("\nchecks: with research not declined, `unavailable` with no call is lawful only when the budget went on "
           "higher-priority targets")
@@ -2694,7 +2942,7 @@ def test_watch_out() -> None:
 
 
 def main() -> int:
-    for test in (test_routing_declines, test_cli_refusal, test_parse_stream,
+    for test in (test_routing_declines, test_routing_cases, test_routing_variants, test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
                  test_classification, test_missing_response,
                  test_declined_grade_prints_no_score, test_artifact_collection,
@@ -2702,7 +2950,7 @@ def main() -> int:
                  test_execute_nudge, test_parse_accounting, test_check_accounting,
                  test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
-                 test_user_links,
+                 test_user_links, test_user_link_fixture,
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
                  test_audit_ledger, test_watch_out):

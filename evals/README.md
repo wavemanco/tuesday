@@ -8,8 +8,9 @@ honest home inside any one skill — hence this directory.
 ## Routing
 
 `suite-routing.json` holds realistic requests and the route each should take:
-a named skill, `either` (a genuinely spanning request), or `neither` (a
-near-miss that must pull no skill at all). The near-misses matter most — they
+a named skill, `either` (a genuinely spanning request, which lists the skills
+it spans as `siblings` and passes when every run fires one of them), or
+`neither` (a near-miss that must pull no skill at all). The near-misses matter most — they
 share the domain's whole vocabulary and are where over-triggering shows up.
 
 `run_routing.py` puts every skill in front of the model at once and records
@@ -31,7 +32,11 @@ which one it reaches for. Four properties keep it honest:
   a skill on 22% of runs against 55% for self-contained prose), and re-running the
   affected cases afterwards moved the number not at all: 22% before, 22% after,
   every case identical. The correlation was real and the explanation was wrong.
-  Keep it for honesty of the fixture, not for the score.
+  Keep it for honesty of the fixture, not for the score. Each case now runs in a
+  project of its own holding only its own files: the runner used to write every
+  case's documents into one shared project, on the assumption that their names
+  were distinct, and five cases attach a `jd.txt`, so in a run of several cases
+  each was shown the last one's posting — the "after" measurement among them.
 - **A negative has to be a negative the harness actually read.** The first read
   loop broke out the moment the CLI process exited, discarding whatever was
   still sitting unparsed in the pipe — so a run that fired a skill and finished
@@ -47,7 +52,14 @@ python evals/run_routing.py                    # every case, 3 runs each
 python evals/run_routing.py --runs 1           # quick pass
 python evals/run_routing.py --case 9 --case 10 # just the spanning cases
 python evals/run_routing.py --workers 1        # serial, if rate-limited
+python evals/run_routing.py --cases evals/routing-arm-b.json  # another case file
 ```
+
+`--cases` runs another file of the suite's shape in place of
+`suite-routing.json`; without it the suite runs as before, each case in its own
+project (above). A `--case` id the file lacks is an error. Every run ends with
+its reach rate — the share of decided runs that reached any skill — and the
+number that reached a skill other than a named-route case's own.
 
 To A/B a description generation against the one that ships, substitute a
 `SKILL.md` without touching the working tree:
@@ -65,6 +77,54 @@ Routing is probabilistic, so a single run proves little; the default of three
 runs per case is the minimum that distinguishes "routes here" from "routes here
 sometimes". Cases are scored on consistency — a case that fires the right skill
 on two runs of three is a *fail*, because that is what a user meets.
+
+### The attachment diagnostic
+
+The six cases that claim attached files (suite ids 3, 9, 15, 17, 18, 21) reach a
+skill far less often than self-contained prose, and materialising the files did
+not move them (above; the root README's Tracked-work ledger holds the finding).
+The hypothesis under test: routing is decided from the message text before any
+file is opened, and those are the cases whose message carries no domain content.
+It is tested as a 2×2, fixed before running:
+
+| Arm | Cases | Message | Prediction if the hypothesis holds |
+|---|---|---|---|
+| A | the six attachment cases, as they are | intent; the documents attached | baseline |
+| B | the same six (`routing-arm-b.json`) | the documents also pasted in; still attached | rises toward D |
+| C | positives 1, 2, 4, 5, 6, 7, 8, 10, 16 (`routing-arm-c.json`) | domain content moved into an attached file, intent left, after one fixed sentence claiming the file | falls toward A |
+| D | those nine, as they are | self-contained | baseline |
+
+Every arm runs on one pinned model, five runs per case.
+`routing_variants.py` writes arms B and C from the suite and says, case by case,
+which words of each message are its intent, keeping in each the event or
+document it is about, as every arm-A message does; its files are regenerated, never
+edited, and `check_skills.py --only evals` fails one that differs from what the
+script writes. A variant's id is its arm's offset plus the suite id
+(`derived_from` records it): 2xx in B, 3xx in C. Case 8's message is all intent,
+with no domain content to move, so it runs unchanged in C, identical to D.
+Every other C message opens with "Details are in the attached file.", the only
+text the variants add: every arm-A message claims its files, and without a claim
+nothing in the message points at the file. It is a second difference between C
+and D, so D − C measures the claim and the content's removal together. The
+control that would separate them, a fifth arm of D's message plus that sentence
+and a file holding the same text, is not part of the 2×2.
+
+```bash
+M=<one pinned model id>
+python evals/run_routing.py --model $M --runs 5 --json-out arm-a.json \
+  --case 3 --case 9 --case 15 --case 17 --case 18 --case 21
+python evals/run_routing.py --model $M --runs 5 --json-out arm-b.json --cases evals/routing-arm-b.json
+python evals/run_routing.py --model $M --runs 5 --json-out arm-c.json --cases evals/routing-arm-c.json
+python evals/run_routing.py --model $M --runs 5 --json-out arm-d.json \
+  --case 1 --case 2 --case 4 --case 5 --case 6 --case 7 --case 8 --case 10 --case 16
+```
+
+Report the reach rate per arm and per case, and the wrong-skill count, which
+must stay 0. **The decision rule:** if B − A ≥ 20 points and D − C ≥ 20 points,
+the hypothesis holds, the README finding is updated with the mechanism, and the
+fix — description wording that names the attached-files case, or a front-door
+architecture — goes back to the owner as a decision. If either difference falls
+short, the hypothesis is recorded as falsified, as the last one was.
 
 ## Clean-room fixtures
 
@@ -197,8 +257,9 @@ denied, as every fixture always has.
   itself (job-underwriter's target 1, mock-interview's target 3) declares
   `identity`, the company's distinctive name tokens (never `entity_tokens`,
   which hold generic words): a search aims there when it carries the name, every
-  other word but a function word is one the request uses, and it carries no
-  other target's term (`output_checks.identity_search`). `stray_samples` are
+  other word but a function word is one the request uses (the prompt, and the
+  page at any declared user link the run read), and it carries no other
+  target's term (`output_checks.identity_search`). `stray_samples` are
   queries a run might send that serve no target ("Brindlemoor layoffs
   glassdoor"); CI fails one that any target's terms or identity claim, and an
   `identity` no stray sample tests. Each target also lists `on_target_samples`,
@@ -211,6 +272,15 @@ denied, as every fixture always has.
   check.
 - `user_links`: the links the user gave the skill to read (absent means none).
   A URL the prompt names only as the source of text the user pasted is not one.
+  In a canned room each has its page in `user_pages` (`url`, `title`, `text`),
+  which the room serves by fetch alone and no search returns, so reading it stays
+  an input and is never charged to a target. Without one the room would answer
+  "No page at …", which returns, and the run would be credited with a read of a
+  page it never saw, so CI fails a canned user link with no page, and a page that
+  is no declared link. A user page may carry a `canary`, under the rule below:
+  CI fails one its page lacks, or one the prompt or any other page also carries,
+  since its appearing would then prove nothing about the read. job-underwriter
+  eval 6 is the fixture that declares one.
 - `declined`: `true` when the user's prompt declines research or chooses L0
   (absent means false). It is the fixture's word, never inferred from the run.
   With it, `declined_phrase` quotes the prompt's own words that decline research
@@ -249,9 +319,10 @@ in for it.
   measured. A search that returns anything, or any MCP server in the room, makes
   the run harness-invalid as a mode mismatch, because a user setting could
   otherwise turn a denied room live without a trace.
-- **canned** serves the fixture's own pages through `research_server.py`, a
-  stdlib MCP server with deterministic search and fetch, and removes the built-in
-  web tools so the only search the skill can reach is the fixture's. Pages score
+- **canned** serves the fixture's own pages, and the pages at its user links,
+  through `research_server.py`, a stdlib MCP server with deterministic search
+  and fetch, and removes the built-in web tools so the only search the skill can
+  reach is the fixture's. Pages score
   on their own keywords with the company's name removed, so the name alone
   surfaces nothing and what a call returned says what it was aimed at; the
   prototype scored on page text, and a run that searched only the company's name
@@ -353,7 +424,11 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   fixture's pages for its target; anything else fails as a fixture error, never
   waived. A `yes` row's canary must then appear when the room returned that page
   to some call. A page never returned is not asked for, and is noted; a run with
-  no research record leaves the canary unchecked.
+  no research record leaves the canary unchecked. A user page's canary rests on
+  no row, since reading the link is not research: it must appear when a fetch of
+  its link returned (`user_link_canary`), and never in a denied room, where no
+  fetch can return (`user_link_canary_absent`); a link no fetch of which returned
+  is not asked for, and a run with no research record leaves it unchecked.
 - **Fit ledger** (`fit_ledger`): job-underwriter's ledger must be an exact
   projection of the evidence map — every row once, under its own tier and fit,
   each row below `direct` with its Requirement's own words — and the decision

@@ -1,0 +1,106 @@
+{
+  "suite": "tuesday",
+  "purpose": "Routing diagnostic arm C: the self-contained positive suite cases with their domain content moved into an attached file and the message reduced to its intent.",
+  "generated_by": "evals/routing_variants.py from evals/suite-routing.json — regenerate, never edit",
+  "routes": [
+    "job-underwriter",
+    "mock-interview",
+    "resume-tailor",
+    "either",
+    "neither"
+  ],
+  "cases": [
+    {
+      "id": 301,
+      "derived_from": 1,
+      "arm": "C",
+      "expected": "job-underwriter",
+      "prompt": "Details are in the attached file. found this posting on a job board last night and i keep going back and forth on it. worth applying or am i kidding myself",
+      "attachments": {
+        "details.txt": "Senior Data Engineer at a Series B fintech, 5+ yrs, dbt/Airflow/Snowflake, they want someone who's owned a migration end to end. i've got 6 years but only ~2 on dbt and i've never led a migration, i was one of four people on ours."
+      }
+    },
+    {
+      "id": 302,
+      "derived_from": 2,
+      "arm": "C",
+      "expected": "job-underwriter",
+      "prompt": "Details are in the attached file. Something about this listing feels off and I can't put my finger on it. Am I being paranoid?",
+      "attachments": {
+        "details.txt": "'Head of Community (contract-to-hire) — own community, content, social, partnerships and events. Fast-paced! Wear many hats! Comp DOE. Must be available across US and EU hours.' No company name on the posting, recruiter emailed me from a gmail address."
+      }
+    },
+    {
+      "id": 304,
+      "derived_from": 4,
+      "arm": "C",
+      "expected": "job-underwriter",
+      "prompt": "Details are in the attached file. before I spend a saturday on the portfolio case study they want, is this actually a real opportunity worth that time?",
+      "attachments": {
+        "details.txt": "my recruiter friend forwarded me a Staff Designer opening at a company I've never heard of. here's the posting: [link]"
+      }
+    },
+    {
+      "id": 305,
+      "derived_from": 5,
+      "arm": "C",
+      "expected": "mock-interview",
+      "prompt": "Details are in the attached file. first real round after the recruiter screen. can you get me ready — i always freeze on the 'walk me through a time you disagreed with an engineer' type stuff",
+      "attachments": {
+        "details.txt": "got a call with the hiring manager at Datadog on thursday for a Solutions Architect role. 45 mins,"
+      }
+    },
+    {
+      "id": 306,
+      "derived_from": 6,
+      "arm": "C",
+      "expected": "mock-interview",
+      "prompt": "Details are in the attached file. I'm interviewing How do I tailor what I say for her specifically?",
+      "attachments": {
+        "details.txt": "with a woman named Priya who runs the platform team — found her talks on YouTube, she's very big on 'boring technology'. Role is Senior Backend, I'm currently at a startup that rewrites things constantly."
+      }
+    },
+    {
+      "id": 307,
+      "derived_from": 7,
+      "arm": "C",
+      "expected": "mock-interview",
+      "prompt": "Details are in the attached file. final round no idea what that means or how to not sound rehearsed. help",
+      "attachments": {
+        "details.txt": "next week, four back-to-back sessions, one of them is described as 'values deep dive'."
+      }
+    },
+    {
+      "id": 308,
+      "derived_from": 8,
+      "arm": "C",
+      "expected": "mock-interview",
+      "prompt": "can you actually play the interviewer and grill me on my resume gaps? i want to practice out loud before friday, not just read a list of questions",
+      "unchanged": "Its whole message is the ask: no role, company, posting or resume text is in it, so there is no domain content to move, and attaching an empty file would claim a document the suite never wrote. It runs in arm C as it stands, identical to arm D."
+    },
+    {
+      "id": 310,
+      "derived_from": 10,
+      "arm": "C",
+      "expected": "either",
+      "siblings": [
+        "job-underwriter",
+        "mock-interview"
+      ],
+      "prompt": "Details are in the attached file. I have an interview Not sure whether to prep properly or cancel.",
+      "attachments": {
+        "details.txt": "Thursday for a role I'm genuinely not sure I want. The scope sounds inflated for the title and the comp band is below what I'm on now, but I said yes to the call."
+      }
+    },
+    {
+      "id": 316,
+      "derived_from": 16,
+      "arm": "C",
+      "expected": "resume-tailor",
+      "prompt": "Details are in the attached file. quick one — for this posting [pasted], which of my bullets should I lead with?",
+      "attachments": {
+        "details.txt": "my resume's below. i've got about 20 bullets across 3 roles and i think the order is wrong."
+      }
+    }
+  ]
+}

@@ -349,13 +349,32 @@ IDENTITY_STOP = {"a", "an", "the", "and", "or", "of", "for", "in", "on", "at", "
                  "what", "who", "does", "do"}
 
 
+def request_text(prompt: str, research: dict | None, links_read) -> str:
+    """The request a search for the company by name is read against (`identity_search`):
+    the prompt, plus the text of each page at a link the user gave to read
+    (`research.user_pages`) whose link is in `links_read`. A posting behind a link is
+    part of the request once it was read, as a posting pasted into the prompt is; an
+    unread link adds nothing. Only declared links count (`is_user_link`), so a run
+    cannot widen the request by fetching a page of its own choosing."""
+    read = {norm_url(str(u)) for u in links_read or []}
+    upages = (research or {}).get("user_pages")
+    pages = [str(u.get("text") or "") for u in (upages if isinstance(upages, list) else [])
+             if isinstance(u, dict) and norm_url(str(u.get("url") or "")) in read]
+    return " ".join([str(prompt or ""), *pages])
+
+
 def identity_search(asked: str, target: dict, room: dict) -> bool:
     """A search for the company itself, by name and the request's own description of
     it ("Brindlemoor insurtech pet insurance"): the sweep of the target that declares
     `identity`, the company's distinctive name tokens. Every query carries the name,
     so the name alone cannot be a term; it aims here only when the query (a) carries
     one of those names, (b) has no other content word, function words aside, that the
-    request does not use, and (c) carries no other target's term."""
+    request does not use, and (c) carries no other target's term.
+
+    The request is `room["prompt"]`, built by `request_text`: the prompt plus any
+    posting the user linked and the run read. So any word the request uses joins the
+    name: "Quillfield CFO", with "CFO" only in a linked posting, is this target's,
+    not shown as off-target, exactly as a word of the prompt would make it."""
     names = [str(n).lower() for n in target.get("identity") or []]
     if not names or not any(term_in(n, asked) for n in names):
         return False
@@ -456,9 +475,11 @@ def check_accounting(response: str, research: dict, mode: str,
     def describe(e: dict, width: int = 60) -> str:
         return f"{e.get('tool')} {str(e.get('query_or_url'))[:width]!r} {e.get('outcome')}"
 
-    # The room a call is read in: the request (for a search for the company by name,
-    # `identity_search`) and every declared target.
-    room = {"prompt": prompt or "", "targets": targets} if prompt is not None else None
+    # The room a call is read in: the request, with any posting the user linked and
+    # the run read (for a search for the company by name, `identity_search`), and
+    # every declared target.
+    room = ({"prompt": request_text(prompt, research, links_read), "targets": targets}
+            if prompt is not None else None)
     aimed = {t["n"]: [e for e in log if aimed_at(e, t, pages, mode, room)] for t in targets}
     stray = [e for e in log if not any(aimed_at(e, t, pages, mode, room) for t in targets)]
     if have_log:
@@ -722,6 +743,35 @@ def check_accounting(response: str, research: dict, mode: str,
                               f"row {n} reads `yes` and the room returned {page}, so what that "
                               f"page alone says should reach the response; the canary "
                               f"{'appears' if present else 'does not appear'}"))
+    # A user link's canary: a fact only the page at a link the user gave to read
+    # carries (`research.user_pages`). Reading that link is an input, not research,
+    # so the canary rests on no row: it is asked for when a fetch of the link
+    # returned, and in a denied room, where no fetch can return, it must not appear.
+    for upage in research.get("user_pages") or []:
+        spellings = upage.get("canary") or []
+        spellings = [spellings] if isinstance(spellings, str) else list(spellings)
+        if not any(str(s).strip() for s in spellings):
+            continue
+        link = upage.get("url", "")
+        present = any(canary_in(normalise_ws(unify_dashes(s)), unify_dashes(said)) for s in spellings if s.strip())
+        if mode == "denied":
+            checks.append(finding("user_link_canary_absent", "user link", not present,
+                                  f"no fetch can return in this room, so the canary of the user's link {link} "
+                                  f"must not appear; it {'does' if present else 'does not'}"))
+            continue
+        if mode != "canned":
+            continue
+        if not have_log:
+            unchecked_once("user_link_canary")
+            info.append(f"canary of the user's link {link}: no research log, so whether the link was read is "
+                        f"unknown; not checked")
+            continue
+        if norm_url(link) not in links_read:
+            info.append(f"canary of the user's link {link}: no fetch of it returned, so it is not asked for")
+            continue
+        checks.append(finding("user_link_canary", "user link", present,
+                              f"a fetch of the user's link {link} returned, so what that page alone says should "
+                              f"reach the response; the canary {'appears' if present else 'does not appear'}"))
     info.append(f"recorded attempts: {searches} search, {fetches} fetch, {len(links_read)} user link(s) "
                 f"read, {len(links_unread)} user link(s) not opened"
                 if have_log else "recorded attempts: not recorded")
@@ -1502,7 +1552,8 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     if "fit_ledger" in wanted:
         parts.append(check_fit_ledger(response, case.get("candidate_constraints"), fixture=True))
     if "quotes" in wanted:
-        corpus = room_pages_text((research or {}).get("pages", []), research_log) if mode == "canned" else []
+        corpus = room_pages_text([*(research or {}).get("pages", []), *(research or {}).get("user_pages", [])],
+                                 research_log) if mode == "canned" else []
         parts.append(check_quotes(response, case.get("prompt", ""), corpus, case.get("candidate_text")))
     if watch_out:
         parts.append(check_watch_out(response, watch_out))

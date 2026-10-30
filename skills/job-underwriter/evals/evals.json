@@ -766,6 +766,201 @@
       "checks": [
         "fit_ledger"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "Can you read this posting and tell me whether I should go for it? https://jobs.tallyboard.example/quillfield/revenue-operations-lead-2291 — it's the Revenue Operations Lead role at Quillfield, the invoicing software company. The recruiter told me the hiring manager is Tamsin Achebe. MY BACKGROUND (call me Joss): 5 years in sales operations at a B2B payments company, the last 2 running revenue operations for the UK team. Salesforce admin certified; I rebuilt our pipeline and renewal dashboards. SQL weekly, Excel daily. I run the monthly pipeline review with our sales director. I've never owned the company forecast — finance did that — and I've never worked on billing data.",
+      "expected_output": "A full first-pass underwriting of a posting the user linked rather than pasted. The skill reads the link as an input, not research: the requirements and the posting's own salary range come from that page, the Research tier line ends '; user links read 1', and the fetch of the link is in neither its searches nor its fetches, nor presented in any Evidence status row as a search or fetch. The employer's own pages, the pay guide and the hiring manager's profile are researched as usual, and every target reads yes.",
+      "files": [],
+      "expectations": [
+        "{{first_pass}}",
+        "{{accounting}} Here no input answers any target and the hiring manager was named, so no row is skipped or n/a. {{accounting_counts}}. Here the posting is a link the user gave to read: where a fetch of it returned, the Research tier line ends `; user links read 1`, that fetch is counted in neither the line's searches nor its fetches, and no Evidence status row presents that read as a search or fetch (a row may still cite the posting as an input it rests on) — reading the user's link is not one of the skill's own searches or fetches",
+        "{{not_attributable}}. {{failed_attribution}}",
+        "{{market_line}}. Here, where the sweep returned the pay guide, the line cites its figure and names the guide as its basis, and the posting's own £61,500–£67,000, which only the linked page carries, is stated and compared against it",
+        "{{map_vocab}}. Here the requirements come from the linked posting, which the request does not paste: 4+ years in revenue or sales operations or a similar analytics role at a B2B software company, HubSpot or Salesforce administration, SQL and spreadsheet modelling, owning a forecast, and working with finance on billing or revenue data",
+        "{{ledger_counts}}. {{hard_gates_line}}. Here Joss states no constraints or non-negotiables of his own, so the candidate's constraints were not given and the line must end with its 'candidate constraints not given' clause",
+        "{{no_score}}",
+        "{{closing}}",
+        "{{generic_scope}}"
+      ],
+      "research": {
+        "modes": [
+          "canned"
+        ],
+        "budget": {
+          "tier": "L1",
+          "searches": 5,
+          "fetches": 2
+        },
+        "user_links": [
+          "https://jobs.tallyboard.example/quillfield/revenue-operations-lead-2291"
+        ],
+        "user_pages": [
+          {
+            "url": "https://jobs.tallyboard.example/quillfield/revenue-operations-lead-2291",
+            "title": "Revenue Operations Lead — Quillfield | Tallyboard Jobs",
+            "text": "Revenue Operations Lead, Quillfield. Bristol, hybrid: two days a week in the office. Salary £61,500–£67,000 plus share options. You will own our CRM and billing data, build the pipeline and renewal reporting our sales and finance teams run on, and run the quarterly revenue forecast with the CFO. Requirements: 4+ years in revenue operations, sales operations or a similar analytics role at a B2B software company; HubSpot or Salesforce administration; strong SQL and spreadsheet modelling; experience owning a forecast; experience working with finance on billing or revenue data.",
+            "canary": [
+              "61,500",
+              "61.5k",
+              "61.5K",
+              "67,000",
+              "67k",
+              "67K"
+            ]
+          }
+        ],
+        "entity_tokens": [
+          "quillfield",
+          "revenue",
+          "operations",
+          "lead"
+        ],
+        "targets": [
+          {
+            "n": 1,
+            "name": "company site and careers page",
+            "terms": [
+              "about",
+              "careers",
+              "career",
+              "jobs at",
+              "job opening",
+              "openings",
+              "vacancy",
+              "vacancies",
+              "posting",
+              "company",
+              "employees",
+              "headcount",
+              "funding",
+              "headquarters",
+              "founded",
+              "overview"
+            ],
+            "identity": [
+              "quillfield"
+            ],
+            "accept": [
+              "yes"
+            ],
+            "on_target_samples": [
+              "Quillfield about",
+              "Quillfield invoicing software employees funding",
+              "Quillfield Series A headquarters Bristol",
+              "Quillfield invoicing software",
+              "\"Quillfield\" invoicing software company",
+              "Quillfield Bristol hybrid"
+            ]
+          },
+          {
+            "n": 2,
+            "name": "role-family sweep",
+            "terms": [
+              "salary",
+              "salaries",
+              "pay",
+              "compensation",
+              "band",
+              "range",
+              "levels",
+              "market",
+              "survey",
+              "benchmark",
+              "typical",
+              "norms"
+            ],
+            "accept": [
+              "yes"
+            ],
+            "on_target_samples": [
+              "revenue operations lead salary UK 2026",
+              "revenue operations pay guide UK",
+              "revenue operations lead salary benchmark B2B software"
+            ]
+          },
+          {
+            "n": 3,
+            "name": "hiring manager's public footprint",
+            "terms": [
+              "tamsin",
+              "achebe"
+            ],
+            "accept": [
+              "yes"
+            ],
+            "on_target_samples": [
+              "Tamsin Achebe Quillfield",
+              "Tamsin Achebe Head of Revenue Operations",
+              "Tamsin Achebe revenue operations talk"
+            ]
+          }
+        ],
+        "pages": [
+          {
+            "url": "https://quillfield.co.uk/about",
+            "title": "About Quillfield",
+            "target": 1,
+            "keywords": [
+              "about",
+              "company",
+              "employees",
+              "headquarters",
+              "founded",
+              "funding",
+              "series",
+              "team",
+              "who",
+              "invoicing",
+              "software"
+            ],
+            "text": "Quillfield makes invoicing and payments software for UK builders' merchants. Founded 2018 in Bristol; 96 employees. Series A (£11M) closed in April 2025."
+          },
+          {
+            "url": "https://ledgerline.example/2026-uk-revenue-operations-pay-guide",
+            "title": "Ledgerline 2026 UK Revenue Operations Pay Guide",
+            "target": 2,
+            "keywords": [
+              "band",
+              "benchmark",
+              "compensation",
+              "guide",
+              "ledgerline",
+              "levels",
+              "market",
+              "pay",
+              "range",
+              "salaries",
+              "salary",
+              "survey"
+            ],
+            "text": "Ledgerline 2026: revenue operations lead, UK B2B software (n=438) — median base £64,200; interquartile range £57,800 to £70,400."
+          },
+          {
+            "url": "https://www.linkedin.example/in/tamsin-achebe",
+            "title": "Tamsin Achebe — Head of Revenue Operations, Quillfield",
+            "target": 3,
+            "keywords": [
+              "achebe",
+              "head",
+              "linkedin",
+              "profile",
+              "speaker",
+              "talk",
+              "tamsin"
+            ],
+            "text": "Tamsin Achebe, Head of Revenue Operations at Quillfield. Previously sales operations manager at Corvane Payments for four years."
+          }
+        ],
+        "stray_samples": [
+          "Quillfield glassdoor reviews",
+          "Quillfield layoffs"
+        ]
+      },
+      "candidate_constraints": "unknown",
+      "checks": [
+        "fit_ledger"
+      ]
     }
   ]
 }

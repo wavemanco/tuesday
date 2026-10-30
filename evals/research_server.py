@@ -119,7 +119,10 @@ def search(corpus: dict, query: str) -> tuple[str, list[dict]]:
 
 
 def fetch(corpus: dict, url: str) -> tuple[str, list[dict]]:
-    for page in corpus.get("pages", []):
+    """A research page, or a page at a link the user gave to read (`user_pages`).
+    A user page is served by fetch alone and no search returns it: reading it is
+    reading an input, and a search that found it would make it research."""
+    for page in [*corpus.get("pages", []), *corpus.get("user_pages", [])]:
         if same_url(page.get("url", ""), url):
             return f"{page.get('title', '')}\n{page.get('url', '')}\n\n{page.get('text', '')}", [page]
     return f"No page at {url}", []
