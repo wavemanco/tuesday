@@ -374,9 +374,10 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   by lemma — partnering is partner — through a closed table of the abbreviations
   a Requirement is written in, `ledger_rules.ABBREVIATIONS`, with a lone "+" or
   "&" read as "and"), on one item grammar, `ledger_rules.ITEM_WORDS`. One
-  set-claim reader, `ledger_rules.set_claims`, reads every set claim over the
-  map, here and in CI; what it reads of evidence-model.md's rule ("The row is
-  the unit") and what it leaves to the grader are stated once, in the comment
+  set-claim reader, `ledger_rules.set_claims`, reads the set claims over the
+  map in the snapshot and `decision.summary`, here and in CI; what it reads of
+  evidence-model.md's rule ("The row is the unit") and what it leaves to the
+  grader, agreement with the map included, are stated once, in the comment
   above `Claim` in `ci/ledger_rules.py`. Checks: `ledger_wording` (no numeral,
   quantifier or count in the ledger's own lines, named or not),
   `ledger_sentence` (the set claims of the one sentence after the ledger, and no

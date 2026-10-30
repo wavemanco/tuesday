@@ -11,11 +11,12 @@ changed for both, and a rule cannot be checked one way in CI and another in the
 harness.
 
 What is a rule here, and where it is written:
-- a statement about a set of map rows names every row of it, exactly, and an
-  exclusive quantifier fails whatever it names — job-underwriter
-  references/evidence-model.md, "The row is the unit" (its quoted lists are the
-  rule's words; INCLUSIVE, EXCLUSIVE and AFTER_LEDGER_ONLY hold exactly them, list by
-  list, as rule_quantifier_scopes() reads them, and CI checks that they do); how
+- a statement about a set of map rows agrees with the map, and in the snapshot and
+  decision.summary names every row of it, and a complement fails there whatever it
+  names — job-underwriter references/evidence-model.md, "The row is the unit" (its
+  quoted lists are the rule's words; NAMED_SET, COMPLEMENT and AFTER_LEDGER_ONLY hold
+  exactly them, list by list, as rule_quantifier_scopes() reads them, and CI checks
+  that they do); how
   prose is read for it (years, map words that are also ordinary English, row names,
   articles, parentheses) is stated once, above MAP_WORDS, and what the check reads
   of the rule and what it leaves to the grader, above Claim (set_claims);
@@ -120,6 +121,8 @@ TIER_WORDS = (r"(?:hard[_ -]?gates?|must[_ -]?haves?|requirements?|rows?|gates|"
               + _map_word(r"(?:important|preferred)", "adjective") + r"|" + _map_word("gate", "compound") + r")")
 FIT_WORDS = (r"(?:adjacent|unclear|hard[_ -]?gate[_ -]?fails?|" + _map_word("direct", "adjective") + r"|"
              + _map_word("absent", "preposition") + r")")
+# The plural map nouns: a set of rows, never one.
+_PLURAL_MAP_NOUNS = r"(?:hard[_ -]?gates|must[_ -]?haves|requirements|rows|gates|gaps)"
 MAP_WORDS = r"(?:" + TIER_WORDS + r"|" + FIT_WORDS + r"|gaps|" + _map_word("gap", "compound") + r")"
 # A singular map noun right after a row ID is that row's name, not a counted word.
 _NAMED = "".join(rf"(?<!R{d}{x} )(?<!R{d}{x}` )" for d in (r"\d", r"\d\d") for x in ("", "[a-z]"))
@@ -147,19 +150,25 @@ MAP_COUNT = re.compile(
     r"(?:" + _COUNT + r"(?:\s+of)?(?:\s+(?:the|my|its|these|those|our|your|their))?(?:\s+" + _NUMBER + r"\b)?"
     + r"|" + FRACTION.pattern + r")" + r"(?:" + _REACH + r")?" + _COUNTED_MAP_WORDS + r"\b", re.I)
 
-# The quantifiers of the rule, in evidence-model.md's own lists ("The row is the
-# unit"), which state them once, in three scopes. INCLUSIVE may stand over a set of
-# rows the sentence names; EXCLUSIVE fails whatever it names, because it speaks for
-# the rows it does not name; AFTER_LEDGER_ONLY, a bare "none", is exclusive in the
-# one sentence after the fit ledger only, because the slots elsewhere require "none
-# failed" and "none found", and the token `none` in backticks is a band or a gap
-# type, never a quantifier. ci/check_skills.py holds each scope to the lists as
-# rule_quantifier_scopes() reads them, so a word added to any of them there fails CI
-# until it is added here.
-INCLUSIVE = ("N of M", "every", "all", "each of", "none of", "both", "neither", "no `must_have` row")
-EXCLUSIVE = ("only", "the one", "the rest", "no other", "any other", "none of the others", "all but")
+# The words of the rule, in evidence-model.md's own lists ("The row is the unit"),
+# which state them once, in three scopes. NAMED_SET, the named-set words, may stand
+# over a set of rows the sentence names; COMPLEMENT, the complements, fail whatever
+# they name, because they describe a set by the rows they leave out; AFTER_LEDGER_ONLY,
+# a bare "none", is a complement in the one sentence after the fit ledger only,
+# because the slots elsewhere require "none failed" and "none found", and the token
+# `none` in backticks is a band or a gap type, never a quantifier. ci/check_skills.py
+# holds each scope to the lists as rule_quantifier_scopes() reads them, so a word
+# added to any of them there fails CI until it is added here.
+NAMED_SET = ("N of M", "every", "all", "each of", "none of", "both", "neither", "no `must_have` row", "only",
+             "the one")
+COMPLEMENT = ("the rest", "the others", "everything else", "nothing else", "no other", "any other",
+              "none of the others", "all but", "all except")
 AFTER_LEDGER_ONLY = ("none",)
-QUANTIFIERS = INCLUSIVE + EXCLUSIVE + AFTER_LEDGER_ONLY
+QUANTIFIERS = NAMED_SET + COMPLEMENT + AFTER_LEDGER_ONLY
+# Where each list starts, in evidence-model.md's bullet and in a grader clause that
+# speaks of them: the first "named-set words" and the first plural "complements".
+NAMED_SET_MARK = re.compile(r"\bnamed-set words\b", re.I)
+COMPLEMENT_MARK = re.compile(r"\bcomplements\b", re.I)
 
 
 def _phrase(phrase: str) -> str:
@@ -179,10 +188,14 @@ def _phrase(phrase: str) -> str:
     if phrase == "none of the others":
         # "none of the other must-haves" too: it speaks for the rows it does not name.
         return r"\bnone\s+of\s+the\s+others?\b"
+    if phrase == "the others":
+        # "the other must-haves" too, before a plural map noun; the singular "the other
+        # hard gate, R9" names one row and is not read.
+        return r"\bthe\s+other(?:s\b|(?=(?:\s+[\w`*-]+){0,2}?\s+[`*_]*" + _PLURAL_MAP_NOUNS + r"\b))"
     if phrase == "all":
         return r"\ball\b(?!\s+(?:but|except)\b)"
-    if phrase == "all but":
-        return r"\ball\s+(?:but|except)\b"
+    if phrase in ("all but", "all except"):
+        return r"\ball\s+" + phrase.split()[1] + r"\b"
     return r"\b" + r"\s+".join(map(re.escape, phrase.split())) + r"\b"
 
 
@@ -193,29 +206,28 @@ def rule_quantifiers(evidence_model: str) -> list[str]:
     return [q for scope in rule_quantifier_scopes(evidence_model) for q in scope]
 
 
-# Where evidence-model.md's exclusive list turns from the whole map to the one
+# Where evidence-model.md's complement list turns from the whole snapshot to the one
 # sentence after the ledger: "— and in the one sentence after the snapshot's fit
 # ledger, … a bare "none" too."
 SCOPE_TURN = re.compile(r"\bin the one sentence after\b[^\"]*")
 
 
 def rule_quantifier_scopes(evidence_model: str) -> tuple[list[str], list[str], list[str]]:
-    """evidence-model.md's lists in their three scopes: (the inclusive quantifiers,
-    the exclusive ones, the further ones it makes exclusive in the sentence after
-    the fit ledger only). For the drift check that holds them to INCLUSIVE,
-    EXCLUSIVE and AFTER_LEDGER_ONLY. All empty when the bullet or a list cannot be
-    found."""
+    """evidence-model.md's lists in their three scopes: (the named-set words, the
+    complements, the further ones it makes a complement in the sentence after the
+    fit ledger only). For the drift check that holds them to NAMED_SET, COMPLEMENT
+    and AFTER_LEDGER_ONLY. All empty when the bullet or a list cannot be found."""
     bullet = next((line for line in evidence_model.splitlines()
                    if line.lstrip("- ").startswith("**The row is the unit")), "")
-    inclusive = re.search(r"\binclusive quantifiers\b[^:]*:\s*(.*?)\.(?:\s|$)", bullet)
-    exclusive = re.search(r"\bexclusive quantifiers\b[^:]*:\s*(.*?)\.(?:\s|$)", bullet)
-    if not inclusive or not exclusive:
+    named = re.search(NAMED_SET_MARK.pattern + r"[^:]*:\s*(.*?)\.(?:\s|$)", bullet, re.I)
+    complement = re.search(COMPLEMENT_MARK.pattern + r"[^:]*:\s*(.*?)\.(?:\s|$)", bullet, re.I)
+    if not named or not complement:
         return [], [], []
-    turn = SCOPE_TURN.search(exclusive.group(1))
-    cut = turn.start() if turn else len(exclusive.group(1))
-    return (re.findall(r'"([^"]+)"', inclusive.group(1)),
-            re.findall(r'"([^"]+)"', exclusive.group(1)[:cut]),
-            re.findall(r'"([^"]+)"', exclusive.group(1)[cut:]))
+    turn = SCOPE_TURN.search(complement.group(1))
+    cut = turn.start() if turn else len(complement.group(1))
+    return (re.findall(r'"([^"]+)"', named.group(1)),
+            re.findall(r'"([^"]+)"', complement.group(1)[:cut]),
+            re.findall(r'"([^"]+)"', complement.group(1)[cut:]))
 
 
 # --- Sentences ---------------------------------------------------------------------
@@ -305,56 +317,75 @@ def _all_ratios(text: str) -> list[re.Match]:
 
 # --- Set claims ----------------------------------------------------------------------
 #
-# The rule is evidence-model.md's "The row is the unit": a statement about a set of
-# map rows names every row of the set by ID, in the same sentence; named, it may
-# count or quantify, and it must be exact; unnamed, it fails even when accurate; an
-# exclusive quantifier fails whatever it names. The ledger_counts clause in
-# job-underwriter's evals/evals.json states the whole rule to the grader. The
-# functions below — set_claims, and map_claim and after_ledger_claim over it, the one
-# reader CI and the harness call — enforce the part of it a pattern can decide, and
-# leave the rest to the grader. This is the one statement of that boundary.
+# The rule is evidence-model.md's "The row is the unit": anywhere in the response, a
+# statement about a set of map rows agrees with the map; in the decision snapshot and
+# decision.summary it also names every row of the set by ID, in the same sentence —
+# unnamed there, it fails even when accurate — and a complement fails there whatever
+# it names. The ledger_counts clause in job-underwriter's evals/evals.json states the
+# whole rule to the grader. The functions below — set_claims, and map_claim and
+# after_ledger_claim over it, the one reader CI and the harness call — enforce the
+# part of it a pattern can decide, and leave the rest to the grader. This is the one
+# statement of that boundary.
 #
-# What the check reads:
+# Where it reads: the naming rule's scope only — the snapshot's prose, its status line
+# included (map_claim over snapshot_prose), the one sentence after the fit ledger
+# (after_ledger_claim), and decision.summary (map_claim).
+#
+# What the check reads there:
 # - Which sentences make a set claim, in the map's own vocabulary: its tiers, fits,
 #   rows, requirements, gaps and gates (MAP_WORDS), read as the comment above
-#   MAP_WORDS says — a word of INCLUSIVE with a map word in reach, "no" before a
+#   MAP_WORDS says — a word of NAMED_SET with a map word in reach, "no" before a
 #   tier, a count with a map word in reach (MAP_COUNT), or a ratio that counts rows
-#   (_ratios).
+#   (_ratios). "only" and "the one" are named-set words: "the only" and "the one" are
+#   read before any noun when a map word is in reach, so "the only path past the gate"
+#   is a set claim, unnamed until it names its row ("the only path past R1"); bare
+#   "only" is read only before a row ID, "the" or a number ("only R4", "only two
+#   gaps"), never where it qualifies ("only adjacent evidence").
 # - Presence: such a claim passes when its sentence names at least one row ID, any
 #   row ID, and fails as an unnamed set claim when it names none. A sentence is one of
 #   sentences() inside one paragraph, list item, heading or table row
 #   (_claim_sentences).
-# - Exclusive words: a word of EXCLUSIVE fails whether or not rows are named — with a
-#   map word in reach, standing directly over a row ID ("only R1–R5", "only the R4
-#   and R5 rows"; not "only the employer can change R1"), and "all but" and "all
-#   except" wherever they stand.
-# - The one sentence after the fit ledger (after_ledger_claim), which is about the
-#   map by construction: every word of the lists, every ratio and a bare "none" are
-#   set claims there wherever they stand and whatever they are about, and the
-#   verdict is the same — a bare "none" and the exclusive words fail; the inclusive
-#   words and the ratios pass when the sentence names a row. A second sentence there
-#   fails.
+# - Complements: a word of COMPLEMENT fails whether or not rows are named — with a
+#   map word in reach ("the rest are `direct`", "no other row is open"), standing
+#   directly over a row ID ("none of the others, R1 to R3"), and "all but" and "all
+#   except" wherever they stand. "the others" and "none of the others" are read in
+#   their noun form before a plural map noun too ("the other must-haves").
+# - The one sentence after the fit ledger, which is about the map by construction:
+#   every word of the lists, every ratio and a bare "none" are set claims there
+#   wherever they stand and whatever they are about, and the verdict is the same — a
+#   bare "none" and the complements fail; the named-set words and the ratios pass
+#   when the sentence names a row. A second sentence there fails.
 #
 # What it leaves to the grader, which reads the rule in its own terms:
-# - whether the rows a named claim gives are the whole set it describes: which set
-#   that is (it follows the sentence's subject), a row left out, an ID the map
-#   lacks, a range or a split row's parent ID written for its rows;
-# - N and M: whether a count or an "N of M" gives the map's numbers;
-# - whether what the sentence says of the rows it names is true of each;
+# - agreement, everywhere: whether what a set statement says is true of the map — the
+#   rows it covers, N and M in a count or an "N of M", and what it says of them. That
+#   is exactness, which the check does not read: in the snapshot a named claim passes
+#   on its row IDs, true or false, so "R5b and R8 are the only rows below `direct`"
+#   under a ledger listing a third passes the check and fails the grader;
+# - which set a statement describes (it follows its subject), a row left out, an ID
+#   the map lacks, a range or a split row's parent ID written for its rows;
 # - an exception written in words other than "all but" and "all except" ("every
-#   must-have but R4");
+#   must-have but R4"), and a complement written in words not on the list ("every
+#   other must-have", "all other rows", "the remaining gaps", a singular "the other
+#   gate");
+# - outside the sentence after the ledger, a word of the lists with no map word in
+#   the reach the comment above MAP_WORDS gives ("R1 and R2 fail and nothing else in
+#   the map can offset that" in the status line);
 # - outside the sentence after the ledger, sets in the candidate's vocabulary rather
 #   than the map's — "both of your hard constraints", "your non-negotiables", "your
 #   claims" — and a set by gap type written without "gap" or "gaps" ("none of them is
 #   a capability problem"), which the check does not read, named or not. Gap type is a
 #   column of the map; written with "gap" or "gaps" it is a map word and is read, so
-#   "none of them is a capability gap" fails unnamed.
+#   "none of them is a capability gap" fails unnamed;
+# - every set statement outside the snapshot and decision.summary — the gap queue, the
+#   application plan, evidence status, the upgrade menu — which the rule holds to
+#   agreement alone.
 # Each of these is read from English, which a pattern reads stricter than the rule
 # in one sentence and looser in the next; so the check does not read them.
 
 @dataclass
 class Claim:
-    """A set claim over the map in one sentence. `kind` is "inclusive", "exclusive",
+    """A set claim over the map in one sentence. `kind` is "named_set", "complement",
     "count" or, from after_ledger_claim alone, "sentence"; `why` is the problem when
     it fails, "" when it passes."""
     text: str
@@ -393,34 +424,30 @@ _ONLY = r"\bthe\s+only\b|\bonly(?=\s+(?:R\d|the\b|" + _NUMBER + r"\b))"
 def _prose_patterns() -> list[tuple[str, re.Pattern]]:
     """(kind, pattern) for the words of the lists read in prose, built from the lists
     themselves so the two cannot drift: a word with a map word in reach; "no" before
-    a tier; an exclusive word also directly over a row ID; and "all but" and "all
-    except" anywhere.
+    a tier; "only", "the one" and a complement also directly over a row ID; and "all
+    but" and "all except" anywhere.
     "only" is read where it picks rows out ("the only", "only R4", "only two"), not
     where it qualifies one ("only adjacent")."""
     out = []
-    for phrase in INCLUSIVE:
-        if phrase == "N of M":
-            continue                      # a count: MAP_COUNT and _ratios read it
-        if phrase == "no `must_have` row":
-            out.append(("inclusive", re.compile(_phrase(phrase), re.I)))
-            continue
-        out.append(("inclusive", re.compile(r"(?:" + _phrase(phrase) + r")(?:" + _REACH + r")?" + MAP_WORDS + r"\b",
-                                            re.I)))
-    for phrase in EXCLUSIVE:
-        if phrase == "all but":
-            out.append(("exclusive", re.compile(_phrase(phrase), re.I)))
-            continue
-        q = _ONLY if phrase == "only" else _phrase(phrase)
-        out.append(("exclusive", re.compile(r"(?:" + q + r")(?:" + _REACH + r")?" + MAP_WORDS + r"\b", re.I)))
-        out.append(("exclusive", re.compile(r"(?:" + q + r")" + _SEP + r"(?:the\s+)?(?:rows?\s+)?(?<![A-Za-z])"
-                                            + ROW_ID + r"\b", re.I)))
+    for kind, phrases in (("named_set", NAMED_SET), ("complement", COMPLEMENT)):
+        for phrase in phrases:
+            if phrase == "N of M":
+                continue                      # a count: MAP_COUNT and _ratios read it
+            if phrase in ("no `must_have` row", "all but", "all except"):
+                out.append((kind, re.compile(_phrase(phrase), re.I)))
+                continue
+            q = _ONLY if phrase == "only" else _phrase(phrase)
+            out.append((kind, re.compile(r"(?:" + q + r")(?:" + _REACH + r")?" + MAP_WORDS + r"\b", re.I)))
+            if kind == "complement" or phrase in ("only", "the one"):
+                out.append((kind, re.compile(r"(?:" + q + r")" + _SEP + r"(?:the\s+)?(?:rows?\s+)?(?<![A-Za-z])"
+                                             + ROW_ID + r"\b", re.I)))
     return out
 
 
 PROSE_QUANTIFIERS = _prose_patterns()
 # The sentence after the ledger: every word of the lists, in any sense, a bare
-# "none" exclusive.
-AFTER_LEDGER_WORDS = [("inclusive" if phrase in INCLUSIVE else "exclusive", re.compile(_phrase(phrase), re.I))
+# "none" a complement.
+AFTER_LEDGER_WORDS = [("named_set" if phrase in NAMED_SET else "complement", re.compile(_phrase(phrase), re.I))
                       for phrase in QUANTIFIERS if phrase != "N of M"]
 
 
@@ -431,8 +458,8 @@ def _words(sentence: str, hit: re.Match) -> str:
 
 
 def _hits(sentence: str, after_ledger: bool) -> list[tuple[int, str, str]]:
-    """(start, kind, words) for every set claim in one sentence, in order, an
-    exclusive reading first where two start at one place."""
+    """(start, kind, words) for every set claim in one sentence, in order, a
+    complement reading first where two start at one place."""
     found = [(h.start(), kind, _words(sentence, h)) for kind, pattern in PROSE_QUANTIFIERS
              for h in _finds(pattern, sentence)]
     found += [(h.start(), "count", _words(sentence, h)) for h in _finds(MAP_COUNT, sentence)]
@@ -440,21 +467,22 @@ def _hits(sentence: str, after_ledger: bool) -> list[tuple[int, str, str]]:
     if after_ledger:
         found += [(h.start(), kind, h.group(0)) for kind, pattern in AFTER_LEDGER_WORDS
                   for h in pattern.finditer(sentence)]
-    return sorted(set(found), key=lambda h: (h[0], h[1] != "exclusive", -len(h[2])))
+    return sorted(set(found), key=lambda h: (h[0], h[1] != "complement", -len(h[2])))
 
 
 def set_claims(text: str, after_ledger: bool = False) -> list[Claim]:
     """Every set claim over the map in `text`, one sentence at a time, each judged as
-    the comment above Claim says: an exclusive word fails, and an inclusive word or a
-    count fails when its sentence names no row. `after_ledger` reads `text` as the
-    sentence after the fit ledger."""
+    the comment above Claim says: a complement fails, and a named-set word or a count
+    fails when its sentence names no row. `after_ledger` reads `text` as the sentence
+    after the fit ledger."""
     out = []
     for sentence in _claim_sentences(text):
         named = _ROW_NAMED.search(sentence) is not None
         for _, kind, words in _hits(sentence, after_ledger):
             claim = Claim(text=words, kind=kind, sentence=sentence)
-            if kind == "exclusive":
-                claim.why = f"\"{words}\" is an exclusive quantifier: it speaks for the rows it does not name"
+            if kind == "complement":
+                claim.why = (f"\"{words}\" is a complement: it describes its set by the rows it leaves out, "
+                             f"so it never names them")
             elif not named:
                 claim.why = f"\"{words}\" is a set claim over the map that names no row"
             out.append(claim)
@@ -462,8 +490,8 @@ def set_claims(text: str, after_ledger: bool = False) -> list[Claim]:
 
 
 def map_claim(text: str) -> Claim | None:
-    """The first set claim that fails, in any prose that reads the map: the snapshot's
-    prose and decision.summary. Counts that are not about map rows — the candidate's
+    """The first set claim that fails, in the prose the naming rule covers: the
+    snapshot's prose and decision.summary. Counts that are not about map rows — the candidate's
     own figures, "two of three squads", "24/7 on-call", the Research tier line — are
     outside it, and bare "none" is read only after the ledger, because the slots
     require "none failed" and "none found". What it reads and what it leaves to the
@@ -473,7 +501,7 @@ def map_claim(text: str) -> Claim | None:
 
 def after_ledger_claim(text: str) -> Claim | None:
     """What rule 2 forbids after the ledger: a set claim that fails, every word of the
-    lists and every ratio read as one wherever it stands, a bare "none" exclusive
+    lists and every ratio read as one wherever it stands, a bare "none" a complement
     there (the comment above Claim); or a second sentence ("at most one sentence").
     For a second sentence the claim is that sentence, of kind "sentence"."""
     hit = next((c for c in set_claims(text, after_ledger=True) if c.why), None)

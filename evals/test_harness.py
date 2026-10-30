@@ -928,14 +928,22 @@ def test_fit_ledger() -> None:
     check("a universal in the sentence after the ledger fails, true or not, when it names no row (probe)",
           ledger_fails(LEDGER_OK.replace("R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
                                          "Every must-have is `direct`.")), ["ledger_sentence", "snapshot_count"])
-    # GRADER (ci/ledger_rules.py, the comment above Claim): "every … but R4" is read as
-    # its inclusive word over a named set.
+    # GRADER (ci/ledger_rules.py, the comment above Claim): the check reads "every" as a
+    # named-set word over a named set and passes it; whether the exception holds is the grader's.
     check("GRADER: \"every … but R4\" after the ledger names R4, and passes the check", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
         "Every must-have but R4 is `direct`.")), [])
-    check("\"the only rows below\" fails there too (canned probe)", ledger_fails(LEDGER_OK.replace(
+    # GRADER (round 9): the canned probe's "only" names its rows, so the check passes it;
+    # that R7 is below `direct` too is agreement, the grader's (the comment above Claim).
+    check("GRADER: a named \"the only rows below\" passes the check there, false or not (canned probe)",
+          ledger_fails(LEDGER_OK.replace("R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+                                         "R4 and R5 are the only rows below `direct`.")), [])
+    check("and exact, it passes", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
-        "R4 and R5 are the only rows below `direct`.")), ["ledger_sentence", "snapshot_count"])
+        "R4, R5 and R7 are the only rows below `direct`.")), [])
+    check("unnamed, \"the only rows below\" fails there", ledger_fails(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "The only rows below `direct` have credible bridges.")), ["ledger_sentence", "snapshot_count"])
     check("a next slot directly after the ledger is no sentence to judge", ledger_fails(LEDGER_OK.replace(
         "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
         "**Opportunity ledger.** RR1 is asserted and not evidenced.")), [])
@@ -1505,17 +1513,18 @@ def test_shared_ledger_rules() -> None:
     check("and every quantifier in them is in the shared set", sorted(set(rule) - set(ledger_rules.QUANTIFIERS)), [])
     model = (Path(__file__).resolve().parent.parent / "skills" / "job-underwriter" / "references" /
              "evidence-model.md").read_text(encoding="utf-8")
-    check("and the shared set sorts them as the rule does: inclusive, exclusive, after the ledger only",
-          ledger_rules.rule_quantifier_scopes(model),
-          (list(ledger_rules.INCLUSIVE), list(ledger_rules.EXCLUSIVE), list(ledger_rules.AFTER_LEDGER_ONLY)))
+    check("and the shared set sorts them as the rule does: named-set words, complements, after the ledger only",
+          tuple(sorted(scope) for scope in ledger_rules.rule_quantifier_scopes(model)),
+          tuple(sorted(scope) for scope in (ledger_rules.NAMED_SET, ledger_rules.COMPLEMENT,
+                                            ledger_rules.AFTER_LEDGER_ONLY)))
     check("the harness uses the module CI imports", output_checks.ledger_rules is ledger_rules, True)
     # The sentence after the ledger is read twice: by rule 2's own check, which reads
     # every word of the lists there as about the map, and as snapshot prose, which
     # reads a list word as about the map with a map word within four words. Both
     # hold it to the one rule (evidence-model.md, "The row is the unit"): a set it
-    # names passes, an unnamed one and an exclusive word fail.
+    # names passes, an unnamed one and a complement fail.
     for sentence, also in (("R4 is the gap; no other row is.", True),
-                           ("R4 and R5 are the only rows below `direct`.", True),
+                           ("The only rows below `direct` have credible bridges.", True),
                            ("R4 and R5 sit below `direct`; none is a gate.", False),
                            ("Both of them sit below `direct`.", True)):
         check(f"after the ledger, {sentence!r} fails", ledger_fails(LEDGER_OK.replace(
@@ -1525,7 +1534,10 @@ def test_shared_ledger_rules() -> None:
                      "Each of R4 and R5 needs an artifact.", "R4 and R5 both sit below `direct`.",
                      # GRADER (the comment above Claim): "no <tier> … but R4" is read as
                      # "no <tier>" over a named set
-                     "No `must_have` row sits below adjacent but R4."):
+                     "No `must_have` row sits below adjacent but R4.",
+                     # GRADER (round 9): a named "only", false of R7 — agreement is the grader's
+                     "R4 and R5 are the only rows below `direct`.",
+                     "R4, R5 and R7 are the only rows below `direct`.", "R4 is the one must-have below `direct`."):
         check(f"after the ledger, {sentence!r} names its set and passes", ledger_fails(LEDGER_OK.replace(
             "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", sentence)), [])
     check("the v0.1 count after an intact ledger fails, as the sentence and as snapshot prose",
@@ -1572,9 +1584,14 @@ def test_shared_ledger_rules() -> None:
     # without backticks.
     sentence = "R4 has a credible bridge, and R3 (`medium`) waits on an artifact."
     for count in ("Four of the seven material requirements are `direct`.", "Four rows are `direct`.",
-                  "Four direct, and the stretch has a bridge.", "R4 is the only gap that matters."):
+                  "Four direct, and the stretch has a bridge.", "The only gap that matters has a bridge."):
         check(f"after the ledger, {count!r} fails as the sentence and as prose",
               ledger_fails(LEDGER_OK.replace(sentence, count)), ["ledger_sentence", "snapshot_count"])
+    # GRADER (round 9): "only" over a named row is a named-set word; whether R4 is the
+    # only gap that matters is agreement, the grader's.
+    check("GRADER: after the ledger, 'R4 is the only gap that matters.' names R4 and passes the check",
+          (read_as("R4 is the only gap that matters.", True), ledger_fails(LEDGER_OK.replace(
+              sentence, "R4 is the only gap that matters."))), ("named", []))
     # GRADER (the comment above Claim): the same count beside a row ID is read, names a
     # row, and passes; that it gives four and names one is the grader's.
     check("GRADER: after the ledger, 'Four direct, and R4 has a bridge.' is read as a count and passes",
@@ -1604,6 +1621,10 @@ def test_shared_ledger_rules() -> None:
     # exception in its words is the grader's.
     check("GRADER: \"every … but R4\" in another slot names R4, and passes the check", ledger_fails(LEDGER_OK.replace(
         "**Worth applying to.", "**Worth applying to: every must_have requirement is direct but R4.")), [])
+    # Round 9: no row ID here, so this pins that bare "only" is not read where it
+    # qualifies, now that a named "only" passes the check anyway.
+    check("\"only\" qualifying evidence before a map word, no row named, is not read in prose",
+          ledger_rules.map_claim("The CV is only adjacent evidence for the sector gap."), None)
     check("\"only\" qualifying one row is not a quantifier outside the sentence after the ledger",
           ledger_fails(LEDGER_OK.replace("**Opportunity ledger.** Authority",
                                          "**Opportunity ledger.** R4 is only adjacent. Authority")), [])
@@ -1673,9 +1694,9 @@ def test_shared_ledger_rules() -> None:
             ("no claim", []))
     for prose in ("five must-haves", "Six of nine material requirements", "only two direct", "all read direct",
                   "one adjacent one", "Two hard gates fail", "the one gap", "five important", "every requirement",
-                  "two have a gap", "only R4 has a gap", "the one gap a reference would close", "two direct rows",
+                  "two have a gap", "the one gap a reference would close", "two direct rows",
                   "both gates are met", "two soft spots are `important`", "the one preferred item",
-                  "only the R4 gap is open", "no important rows",
+                  "no important rows",
                   # round 5 N1: plural gates and gaps are map words wherever they stand,
                   # and a singular gate or a fit word before a verb or a fit noun counts
                   "Two gates fail", "Both gates fail",
@@ -1698,6 +1719,13 @@ def test_shared_ledger_rules() -> None:
               (bool(ledger_rules.map_claim(prose)), ledger_fails(LEDGER_OK.replace(
                   "**Opportunity ledger.** Authority", f"**Opportunity ledger.** RR2: {prose}. Authority"))),
               (True, ["snapshot_count"]))
+    # Round 9: "only" over a row ID is a named-set word; the sentence names the row, so
+    # it passes — whether R4 is the whole set is agreement, the grader's.
+    for prose in ("only R4 has a gap", "only the R4 gap is open"):
+        check(f"GRADER: a named \"only\" is read as a set claim and passes: {prose!r}",
+              (read_as(prose), ledger_fails(LEDGER_OK.replace(
+                  "**Opportunity ledger.** Authority", f"**Opportunity ledger.** RR2: {prose}. Authority"))),
+              ("named", []))
     # GRADER (ci/ledger_rules.py, the comment above Claim): the same readings beside a
     # row ID. Each is still read as a set claim over the map — the rounds 5-6 readings
     # these cases guard — and names a row, so it passes the check; whether the rows it
@@ -1718,12 +1746,12 @@ def test_shared_ledger_rules() -> None:
 def read_as(sentence: str, after: bool = False) -> str:
     """How the shared reader takes one sentence: "no claim" (no set claim read),
     "named" (set claims read, and every one passes on its sentence's row IDs),
-    "unnamed" or "exclusive" (the first failing claim's kind)."""
+    "unnamed" or "complement" (the first failing claim's kind)."""
     claims = ledger_rules.set_claims(sentence, after_ledger=after)
     bad = next((c for c in claims if c.why), None)
     if not claims:
         return "no claim"
-    return "named" if bad is None else ("exclusive" if bad.kind == "exclusive" else "unnamed")
+    return "named" if bad is None else ("complement" if bad.kind == "complement" else "unnamed")
 
 
 # What the check reads and what it leaves to the grader: the comment above Claim in
@@ -1733,7 +1761,7 @@ PROSE_AND_AFTER = (False, True)
 
 
 def test_named_set_claims() -> None:
-    print("\nchecks: a set claim over the map names a row; an exclusive quantifier fails whatever it names")
+    print("\nchecks: a set claim in the snapshot names a row; a complement fails there whatever it names")
     # The measured sentences in the map's vocabulary: unnamed, they fail everywhere.
     for sentence in ("You clear every must-have directly.", "Four of the seven material requirements are `direct`.",
                      "Five of seven requirements are direct."):
@@ -1768,26 +1796,58 @@ def test_named_set_claims() -> None:
                      "Both R4 and R9 sit below `direct`."):             # the map has no R9
         check(f"GRADER: named, whether exact or not, {sentence!r} passes the check",
               (read_as(sentence, True), ledger_rules.map_claim(sentence)), ("named", None))
-    for sentence in ("R5b and R8 are the only rows below `direct`.", "P1 names only R1–R5.",
-                     "R4 is the one gap; R5 and R7 are not.", "Direct on all but R4.",
-                     "R4 waits on RR2, and no other row is open.",
-                     "None of the others — R1, R2, R3, R6 — is below `direct`.",
+    # Round 9: "only" and "the one" are named-set words. Named, they pass the check;
+    # whether the rows named are the whole set is agreement, the grader's (GRADER where
+    # the measured map had a further row: R5b and R8 under a ledger listing a third).
+    for sentence in ("R6, R7 and R8 are the only rows below `direct`.",   # measured, exact
+                     "R5b and R8 are the only rows below `direct`.",      # GRADER: measured, a third row below
+                     "P1 names only R1–R5.", "R4 is the one gap; R5 and R7 are not.",
                      "R1 and R2, the only failed gates, rule it out."):
         for after in PROSE_AND_AFTER:
+            check(f"named-set word, named, {'after the ledger' if after else 'in prose'}, {sentence!r} passes",
+                  read_as(sentence, after), "named")
+    for sentence in ("The only rows below `direct` have bridges.", "The one gap is a must-have.",
+                     "Only two rows sit below `direct`."):
+        for after in PROSE_AND_AFTER:
+            check(f"named-set word, unnamed, {'after the ledger' if after else 'in prose'}, {sentence!r} fails",
+                  read_as(sentence, after), "unnamed")
+    # Every complement fails whatever it names, in prose and after the ledger.
+    for phrase, sentence in (("the rest", "R4 waits on an artifact; the rest are `direct`."),
+                             ("the others", "R4 waits on an artifact; the others are `direct`."),
+                             ("everything else", "R4 waits on an artifact; everything else is `direct`."),
+                             ("nothing else", "R4 waits on an artifact; nothing else is below `direct`."),
+                             ("no other", "R4 waits on RR2, and no other row is open."),
+                             ("any other", "R4 waits on an artifact longer than any other row."),
+                             ("none of the others", "None of the others — R1, R2, R3, R6 — is below `direct`."),
+                             ("all but", "Direct on all but R4."), ("all except", "All except R4 are direct."),
+                             # Round 9: "the others" in its noun form, before a plural map noun
+                             ("the other must-haves", "R4 is the one real gap; the other must-haves land `direct`."),
+                             ("the other must-haves", "The other must-haves are `direct`."),
+                             ("the other rows", "R4 is open; the other rows are `direct`.")):
+        for after in PROSE_AND_AFTER:
             got = (ledger_rules.after_ledger_claim if after else ledger_rules.map_claim)(sentence)
-            check(f"exclusive, {'after the ledger' if after else 'in prose'}, {sentence!r} fails whatever it names",
-                  bool(got) and "exclusive" in got.why, True)
-    # GRADER (the comment above Claim): "every … but R4" is read as its inclusive word;
-    # "all except", like "all but", is exclusive.
+            check(f"complement {phrase!r}, {'after the ledger' if after else 'in prose'}, fails whatever it names: "
+                  f"{sentence!r}", (read_as(sentence, after), bool(got) and "is a complement" in got.why),
+                  ("complement", True))
+    # Measured after the ledger: named rows, then a complement. In prose, with no map
+    # word in reach, it is the grader's (the comment above Claim).
+    measured = "R1 and R2 fail outright and nothing else in the map can offset that — a gate is met or it isn't."
+    check("the measured \"nothing else in the map\" fails after the ledger, and in prose is the grader's",
+          (read_as(measured, True), read_as(measured)), ("complement", "no claim"))
+    # GRADER (the comment above Claim): "every … but R4" is read as its named-set word;
+    # "all except", like "all but", is a complement.
     check("GRADER: \"every … but R4\" is read as \"every\" over a named set, and passes the check",
           (read_as("Every must-have but R4 is `direct`."), read_as("Every must-have but R4 is `direct`.", True)),
           ("named", "named"))
-    check("\"all except\" is exclusive in prose and after the ledger, as the comment above Claim says",
+    check("the singular \"the other hard gate\" names one row, and is not \"the others\"",
+          (read_as("R1 fails; the other hard gate, R9, is met."),
+           read_as("R1 fails; the other hard gate, R9, is met.", True)), ("no claim", "no claim"))
+    check("\"all except\" is a complement in prose and after the ledger, as the comment above Claim says",
           (read_as("All except R4 are direct."), read_as("All except R4 are direct.", True)),
-          ("exclusive", "exclusive"))
-    check("a bare \"none\" is exclusive in the sentence after the ledger, and not read elsewhere",
+          ("complement", "complement"))
+    check("a bare \"none\" is a complement in the sentence after the ledger, and not read elsewhere",
           (read_as("R4 and R5 sit below `direct`; none is a gate.", True),
-           ledger_rules.map_claim("R4 and R5 sit below `direct`; none is a gate.")), ("exclusive", None))
+           ledger_rules.map_claim("R4 and R5 sit below `direct`; none is a gate.")), ("complement", None))
     # GRADER: a count naming fewer rows than it gives, and a named universal that
     # leaves a row out, pass the check on presence.
     for sentence in ("Every must-have — R2 and R3 — is `direct`.", "Four direct fits: R1 and R2."):
@@ -1799,7 +1859,12 @@ def test_named_set_claims() -> None:
                         # GRADER: R4 is a must-have the sentence leaves out
                         ("Every must-have — R2 and R3 — is `direct`.", []),
                         ("You clear every must-have directly.", ["ledger_sentence", "snapshot_count"]),
-                        ("R4 and R5 are the only rows below `direct`.", ["ledger_sentence", "snapshot_count"])):
+                        # GRADER: named, and R7 is below `direct` too
+                        ("R4 and R5 are the only rows below `direct`.", []),
+                        ("The only rows below `direct` have bridges.", ["ledger_sentence", "snapshot_count"]),
+                        ("R4 waits on an artifact; the rest are `direct`.", ["ledger_sentence", "snapshot_count"]),
+                        ("R1 and R2 fail outright and nothing else in the map can offset that.",
+                         ["ledger_sentence"])):
         check(f"after the ledger, {text!r} {'fails' if fails else 'passes'}",
               ledger_fails(LEDGER_OK.replace(sentence, text)), fails)
     for status, fails in (("No — R1, a hard gate, fails. Status: `no_go`.", []),
@@ -1816,7 +1881,12 @@ def test_named_set_claims() -> None:
                           ("Go: none of them is a capability problem.", "PASS"),
                           # with "gap" it is a map word, read, and unnamed
                           ("Go: none of them is a capability gap.", "FAIL"),
-                          ("Go: R4 is the only must-have below direct.", "FAIL"),
+                          # round 9: a named "only", here exact
+                          ("Go: R4 is the only must-have below direct.", "PASS"),
+                          # GRADER: a named "only", false of R5 and R7
+                          ("Go: R4 is the only row below direct.", "PASS"),
+                          ("Go: the only must-have below direct has a bridge.", "FAIL"),
+                          ("Go: R4 waits on an artifact, and the rest are direct.", "FAIL"),
                           # GRADER: R4 is a must-have the sentence leaves out
                           ("Go: every must-have — R2 and R3 — is direct.", "PASS")):
         check(f"decision.summary {text!r} is {verdict}", verdict_of(output_checks.check_fit_ledger(summary(text)),
@@ -1828,7 +1898,7 @@ def test_named_set_claims() -> None:
 def test_set_claim_subjects() -> None:
     print("\nchecks: which set a claim describes, and whether it is exact, are the grader's (round 7's cases)")
     # Round 7 judged each of these against a map holding a further row of the class
-    # the sentence's rows belong to. The check reads presence and exclusive words
+    # the sentence's rows belong to. The check reads presence and complements
     # only; the comment marks what the grader decides.
     for sentence, after_only in (
             ("R3 and R4 are both `direct`.", False), ("R3 and R4 both are `direct`.", False),
@@ -1870,8 +1940,8 @@ def test_set_claim_subjects() -> None:
         for after in ((True,) if after_only else PROSE_AND_AFTER):
             check(f"read as a named set claim, {'after the ledger' if after else 'in prose'}: {sentence!r}",
                   read_as(sentence, after), "named")
-    # Not a set claim the check reads: the candidate's constraints, and exclusive words
-    # that restrict something other than rows.
+    # Not a set claim the check reads: the candidate's constraints, and named-set words
+    # and complements that restrict something other than rows.
     for sentence in ("Arjun states no constraints or non-negotiables of his own, so checks against them are unknown.",
                      "No hard constraints were stated, so checks against them are unknown.",
                      "None of your constraints were stated.",
@@ -1891,11 +1961,13 @@ def test_set_claim_subjects() -> None:
         for after in PROSE_AND_AFTER:
             check(f"unnamed, {'after the ledger' if after else 'in prose'}, fails: {sentence!r}",
                   read_as(sentence, after), "unnamed")
+    # Round 9: named-set words over the rows they name; whether those are the whole set
+    # is the grader's (GRADER: R5b and R8 under a ledger listing a third).
     for sentence in ("P1 names only R1–R5.", "R5b and R8 are the only rows below `direct`.",
                      "Only the R4 and R5b rows need work."):
         for after in PROSE_AND_AFTER:
-            check(f"exclusive, {'after the ledger' if after else 'in prose'}, fails: {sentence!r}",
-                  read_as(sentence, after), "exclusive")
+            check(f"named \"only\", {'after the ledger' if after else 'in prose'}, passes the check: {sentence!r}",
+                  read_as(sentence, after), "named")
     # End to end, in the slots the harness reads.
     sentence = "R4 has a credible bridge, and R3 (`medium`) waits on an artifact."
     for text, fails in (("R2 and R3 are both `direct`, and that doesn't move R4.", []),

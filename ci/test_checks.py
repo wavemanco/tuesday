@@ -1224,11 +1224,19 @@ def break_ledger_count_beside(root: Path) -> str:
     return 'the snapshot\'s prose: "Five of seven material requirements" is a set claim over the map that names no row'
 
 
-def break_ledger_sentence_only(root: Path) -> str:
-    """The first probe runs' shape: "the only rows below `direct`", under a ledger listing more."""
+def keep_ledger_sentence_only(root: Path) -> None:
+    """GRADER (round 9): the first probe runs' shape, "the only row below `direct`" under
+    a ledger listing more, names R4: "only" is a named-set word, and whether R4 is the
+    whole set is agreement, the grader's (the comment above Claim in ci/ledger_rules.py)."""
     swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
-              "R4 is the only row below `direct` that matters,", "break_ledger_sentence_only")
-    return 'the sentence after the fit ledger: "the only row" is an exclusive quantifier'
+              "R4 is the only row below `direct` that matters,", "keep_ledger_sentence_only")
+
+
+def break_ledger_sentence_only_unnamed(root: Path) -> str:
+    """The same "only", its rows unnamed: it fails as an unnamed set claim."""
+    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on "
+              "an artifact.", "The only rows below `direct` have credible bridges.", "break_ledger_sentence_only_unnamed")
+    return 'the sentence after the fit ledger: "The only rows" is a set claim over the map that names no row'
 
 
 def break_ledger_summary_universal(root: Path) -> str:
@@ -1326,7 +1334,7 @@ def break_ledger_bare_count(root: Path) -> str:
 def break_ledger_second_paragraph(root: Path) -> str:
     """The first paragraph after the ledger is clean; the second one quantifies."""
     swap_once(root, DOSSIER, AFTER_LEDGER, AFTER_LEDGER + "\n\nThe rest are `direct`.", "break_ledger_second_paragraph")
-    return "the sentence after the fit ledger: \"The rest are `direct`\" is an exclusive quantifier"
+    return "the sentence after the fit ledger: \"The rest are `direct`\" is a complement"
 
 
 def break_ledger_two_sentences(root: Path) -> str:
@@ -1366,7 +1374,7 @@ def keep_ledger_universal_but_in_verdict(root: Path) -> None:
 def break_ledger_summary_all_but(root: Path) -> str:
     swap_once(root, DOSSIER, '"summary": "Fit as evidence_map reads it,', '"summary": "Direct on all but R4;',
               "break_ledger_summary_all_but")
-    return 'decision.summary: "all but" is an exclusive quantifier'
+    return 'decision.summary: "all but" is a complement'
 
 
 def break_ledger_summary_bare_count(root: Path) -> str:
@@ -1490,7 +1498,7 @@ def break_quantifier_drift_rule(root: Path) -> str:
     """The rule's list gains a word the shared set does not hold (D6)."""
     swap_once(root, "skills/job-underwriter/references/evidence-model.md", '"each of", ', '"each of", "most", ',
               "break_quantifier_drift_rule")
-    return "ci/ledger_rules.py lacks ['most'] from evidence-model.md's inclusive quantifiers"
+    return "ci/ledger_rules.py lacks ['most'] from evidence-model.md's named-set words"
 
 
 def break_quantifier_drift_grader(root: Path) -> str:
@@ -1505,10 +1513,31 @@ def break_quantifier_drift_grader(root: Path) -> str:
     return "lists quantifiers without ['neither']"
 
 
+def break_quantifier_drift_grader_extra_complement(root: Path) -> str:
+    """A grader clause lists a complement the rule does not (round 9)."""
+    clause_swap(root, JU, "ledger_counts", "'all but', 'all except')", "'all but', 'all except', 'every other')",
+                 "break_quantifier_drift_grader_extra_complement")
+    return "lists ['every other'] among the complements, which evidence-model.md's list does not"
+
+
+def break_quantifier_drift_grader_extra_named(root: Path) -> str:
+    """A grader clause lists a named-set word the rule does not (round 9)."""
+    clause_swap(root, JU, "ledger_counts", "'only', 'the one')", "'only', 'the one', 'just')",
+                 "break_quantifier_drift_grader_extra_named")
+    return "lists ['just'] among the named-set words, which evidence-model.md's list does not"
+
+
 def keep_ledger_only_adverb(root: Path) -> None:
     """"only" qualifying one row, outside the sentence after the ledger, is no quantifier."""
     swap_once(root, DOSSIER, "One entry runs the other way", "R4 is only adjacent. One entry runs the other way",
               "keep_ledger_only_adverb")
+
+
+def keep_ledger_only_adverb_unnamed(root: Path) -> None:
+    """"only" qualifying evidence before a map word, with no row ID in the sentence: a
+    pin that fails if bare "only" is read anywhere (round 9)."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "Some of the CV is only adjacent evidence. " + SNAPSHOT_PROSE,
+              "keep_ledger_only_adverb_unnamed")
 
 
 # Round 5: one count reader (N4), plural gates and gaps and the map's predicates
@@ -2161,16 +2190,16 @@ def break_set_unnamed_count(root: Path) -> str:
             "map that names no row")
 
 
-def break_set_exclusive_named(root: Path) -> str:
-    """The measured plan note: "only" names its rows and speaks for the rest."""
+def keep_set_only_named(root: Path) -> None:
+    """GRADER (round 9): the measured plan note — "only" over the rows it names is a
+    named-set word, and whether W1 covers no other row is agreement, the grader's."""
     swap_once(root, DOSSIER, "(3) the retrofit bridge", "(3) W1 covers only R3 and R4; (4) the retrofit bridge",
-              "break_set_exclusive_named")
-    return "the snapshot's prose: \"only R3\" is an exclusive quantifier"
+              "keep_set_only_named")
 
 
 def break_set_bare_none_after(root: Path) -> str:
     swap_once(root, DOSSIER, AFTER_LEDGER, "R4 and R5 sit below `direct`, and none is a gate.", "break_set_bare_none_after")
-    return "the sentence after the fit ledger: \"none\" is an exclusive quantifier"
+    return "the sentence after the fit ledger: \"none\" is a complement"
 
 
 def keep_set_false_universal(root: Path) -> None:
@@ -2228,11 +2257,11 @@ def keep_set_constraints_not_given(root: Path) -> None:
               'contract basis. Fit as evidence_map reads it,', "keep_set_constraints_not_given")
 
 
-def keep_set_exclusive_not_rows(root: Path) -> None:
+def keep_set_only_not_rows(root: Path) -> None:
     """"only" restricting who can act, not which rows."""
     swap_once(root, DOSSIER, "(2) the post confirmed as permanent — R8, RR2;",
               "(2) only the employer can settle R8 — the post confirmed as permanent, RR2;",
-              "keep_set_exclusive_not_rows")
+              "keep_set_only_not_rows")
 
 
 def keep_set_count_verb(root: Path) -> None:
@@ -2286,6 +2315,114 @@ def keep_set_named_gap_type(root: Path) -> None:
               "keep_set_named_gap_type")
 
 
+# Round 9's rule: a statement about a set of map rows agrees with the map everywhere,
+# and names its rows in the snapshot and decision.summary only; "only" and "the one"
+# are named-set words, and the complements fail there whatever they name
+# (evidence-model.md, "The row is the unit"). Agreement is exactness, the grader's
+# (the comment above Claim in ci/ledger_rules.py). The worked map's rows below
+# `direct`: R4, R5, R7, R8.
+
+def keep_set_only_exact_after(root: Path) -> None:
+    """The measured named "only", exact on this map, after the ledger."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4, R5, R7 and R8 are the only rows below `direct`.",
+              "keep_set_only_exact_after")
+
+
+def keep_set_the_one_named(root: Path) -> None:
+    """"the one" over the row it names, in the status line: R4 is the one must-have below `direct`."""
+    swap_once(root, DOSSIER, VERDICT, "**Worth applying to — R4 is the one must-have below `direct`; on the conditions "
+              "below.", "keep_set_the_one_named")
+
+
+def keep_set_only_named_summary(root: Path) -> None:
+    """GRADER: a named "only" in decision.summary, false of the map (R5, R7 and R8 are
+    below `direct` too): exactness is the grader's."""
+    swap_once(root, DOSSIER, SUMMARY, '"summary": "R4 is the only row below direct. Fit as evidence_map reads it,',
+              "keep_set_only_named_summary")
+
+
+def break_set_the_one_unnamed(root: Path) -> str:
+    swap_once(root, DOSSIER, SUMMARY, '"summary": "The one must-have below direct has a bridge. Fit as evidence_map '
+              'reads it,', "break_set_the_one_unnamed")
+    return 'decision.summary: "The one must-have" is a set claim over the map that names no row'
+
+
+def break_set_only_unnamed_status(root: Path) -> str:
+    swap_once(root, DOSSIER, VERDICT, "**Worth applying to — the only rows below `direct` have bridges; on the "
+              "conditions below.", "break_set_only_unnamed_status")
+    return "the snapshot's prose: \"the only rows\" is a set claim over the map that names no row"
+
+
+def break_set_measured_complement(root: Path) -> str:
+    """Measured after the ledger: named rows, then a complement that speaks for the rest."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R1 and R2 fail outright and nothing else in the map can offset that.",
+              "break_set_measured_complement")
+    return "the sentence after the fit ledger: \"nothing else\" is a complement"
+
+
+def break_set_other_plural_unnamed(root: Path) -> str:
+    """Round 9: "the other must-haves" is "the others" in its noun form, a complement named or not."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "The other must-haves are `direct`. " + SNAPSHOT_PROSE,
+              "break_set_other_plural_unnamed")
+    return "the snapshot's prose: \"The other must-haves\" is a complement"
+
+
+def keep_set_other_singular(root: Path) -> None:
+    """Round 9: the singular "the other hard gate" names one row; it is not "the others"."""
+    swap_once(root, DOSSIER, SNAPSHOT_PROSE, "R4 waits on an artifact; the other hard gate, R1, is met. "
+              + SNAPSHOT_PROSE, "keep_set_other_singular")
+
+
+# Each complement, in the snapshot's prose and after the ledger, beside a named row.
+COMPLEMENT_SENTENCES = (
+    ("the rest", "R4 waits on an artifact; the rest are `direct`.", "the rest are `direct`"),
+    ("the others", "R4 waits on an artifact; the others are `direct`.", "the others are `direct`"),
+    ("everything else", "R4 waits on an artifact; everything else is `direct`.", "everything else is `direct`"),
+    ("nothing else", "R4 waits on an artifact; nothing else is below `direct`.", "nothing else is below `direct`"),
+    ("no other", "R4 waits on an artifact; no other row does.", "no other row"),
+    ("any other", "R4 waits on an artifact longer than any other row.", "any other row"),
+    ("none of the others", "R4 waits on an artifact; none of the others is below `direct`.",
+     "none of the others is below `direct`"),
+    ("all but", "Direct on all but R4.", "all but"),
+    ("all except", "Direct on all except R4.", "all except"),
+    # Round 9: "the others" in its noun form, before a plural map noun.
+    ("the other must-haves", "R4 is the one real gap; the other must-haves land `direct`.", "the other must-haves"),
+)
+
+
+def _complement_case(phrase: str, sentence: str, words: str, after: bool):
+    name = f"break_set_complement_{'after' if after else 'prose'}_{phrase.replace(' ', '_')}"
+
+    def mutate(root: Path) -> str:
+        if after:
+            swap_once(root, DOSSIER, AFTER_LEDGER, sentence, name)
+            return f'the sentence after the fit ledger: "{words}" is a complement'
+        swap_once(root, DOSSIER, SNAPSHOT_PROSE, sentence + " " + SNAPSHOT_PROSE, name)
+        return f'the snapshot\'s prose: "{words}" is a complement'
+    mutate.__name__ = name
+    return mutate
+
+
+COMPLEMENT_CASES = [("fit-ledger", f"the complement \"{phrase}\" {'after the ledger' if after else 'in the snapshot'}",
+                     _complement_case(phrase, sentence, words, after))
+                    for phrase, sentence, words in COMPLEMENT_SENTENCES for after in (False, True)]
+
+
+def break_retired_exclusive_word(root: Path) -> str:
+    """Round 9's retired word, back in a grader clause."""
+    clause_swap(root, JU, "no_score", "No single numeric fit score or percentage appears",
+                "No single numeric fit score or percentage appears. An exclusive quantifier fails whatever it names",
+                "break_retired_exclusive_word")
+    return "is the retired word for a list"
+
+
+def break_retired_response_modes(root: Path) -> str:
+    """Round 9: the questions clause back to one response-modes line per question."""
+    clause_swap(root, JU, "questions", "and the questions offer their response modes as prose",
+                "and each offers its response modes as prose", "break_retired_response_modes")
+    return "is the retired placement"
+
+
 # The answer-key check reads fenced code as prose (NP-5).
 
 def break_answer_key_fenced(root: Path) -> str:
@@ -2319,9 +2456,9 @@ def break_quantifier_scope_drift(root: Path) -> str:
 
 def break_quantifier_set_extra(root: Path) -> str:
     """The shared set holds a word the rule does not: set equality, not a subset."""
-    swap_once(root, "ci/ledger_rules.py", '"the one", "the rest",', '"the one", "most", "the rest",',
+    swap_once(root, "ci/ledger_rules.py", '("the rest", "the others",', '("the rest", "most", "the others",',
               "break_quantifier_set_extra")
-    return "holds ['most'] among the exclusive quantifiers, which evidence-model.md's list does not"
+    return "holds ['most'] among the complements, which evidence-model.md's list does not"
 
 
 def clause_swap(root: Path, rel: str, clause: str, old: str, new: str, name: str) -> None:
@@ -2419,6 +2556,9 @@ PASSES = [
     ("fit-ledger", "a severity in its full token beside a register ID", keep_ledger_severity_token),
     ("answer-keys", "a quote from another skill's fixture", keep_answer_key_other_skill),
     ("fit-ledger", "\"only\" qualifying one row outside the sentence after the ledger", keep_ledger_only_adverb),
+    ("fit-ledger", "\"only\" qualifying evidence, no row named, outside the sentence after the ledger",
+     keep_ledger_only_adverb_unnamed),
+    ("fit-ledger", "the singular \"the other hard gate\" naming its row", keep_set_other_singular),
     ("fit-ledger", "a figure with its unit beside a map word", keep_ledger_figure_with_unit),
     ("answer-keys", "a common phrase of rule prose", keep_answer_key_common_phrase),
     ("answer-keys", "the shared contract's own wording", keep_answer_key_contract),
@@ -2439,7 +2579,9 @@ PASSES = [
     ("fit-ledger", "a quantifier over the IDs it names, a verb between", keep_set_ids_link_verb),
     ("fit-ledger", "a named negative universal that is true", keep_set_true_negative),
     ("fit-ledger", "the candidate's constraints, stated as not given", keep_set_constraints_not_given),
-    ("fit-ledger", "\"only\" restricting something other than rows", keep_set_exclusive_not_rows),
+    ("fit-ledger", "\"only\" restricting something other than rows", keep_set_only_not_rows),
+    ("fit-ledger", "a named \"only\" that is exact, after the ledger", keep_set_only_exact_after),
+    ("fit-ledger", "a named \"the one\" in the status line", keep_set_the_one_named),
     ("fit-ledger", "a count whose verb follows its noun", keep_set_count_verb),
     ("fit-ledger", "a noun narrowed by a word the map cannot read", keep_set_narrowed_noun),
     # GRADER: what round 7 failed here and the comment above Claim in ci/ledger_rules.py
@@ -2463,6 +2605,9 @@ PASSES = [
     ("fit-ledger", "GRADER: the candidate's claims, an ID in another clause", keep_set_unresolved_other_clause),
     ("fit-ledger", "GRADER: a range in place of the rows' IDs", keep_set_range),
     ("fit-ledger", "GRADER: \"N of M\" with M not the noun's set", keep_set_ratio_wrong_m),
+    ("fit-ledger", "GRADER: a named \"only\" after the ledger, false of the map", keep_ledger_sentence_only),
+    ("fit-ledger", "GRADER: a named \"only\" in the snapshot's prose (the measured plan note)", keep_set_only_named),
+    ("fit-ledger", "GRADER: a named \"only\" in decision.summary, false of the map", keep_set_only_named_summary),
     ("wording", "the rule that retired the count rule, stated in its words", keep_unnamed_rule_stated),
     ("wording", "the two accounting grounds in the other order", keep_budget_grounds_reversed),
 ]
@@ -2675,7 +2820,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "a name that is not the row's requirement", break_ledger_name),
     ("fit-ledger", "a band the map does not carry", break_ledger_band),
     ("fit-ledger", "a count beside an intact ledger", break_ledger_count_beside),
-    ("fit-ledger", "\"the only row below\" in the sentence after the ledger", break_ledger_sentence_only),
+    ("fit-ledger", "an unnamed \"the only rows below\" in the sentence after the ledger",
+     break_ledger_sentence_only_unnamed),
     ("fit-ledger", "a universal over a tier in decision.summary", break_ledger_summary_universal),
     ("fit-ledger", "a tier with two ledger lines", break_ledger_tier_twice),
     ("fit-ledger", "a hard-gates line missing a gate row", break_ledger_gate_line),
@@ -2715,6 +2861,10 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "constraints not given and no closing clause", break_ledger_constraints_clause),
     ("fit-ledger", "a quantifier the rule lists and the shared set lacks", break_quantifier_drift_rule),
     ("fit-ledger", "a grader clause missing a quantifier of the list", break_quantifier_drift_grader),
+    ("fit-ledger", "a grader clause listing a complement the rule does not",
+     break_quantifier_drift_grader_extra_complement),
+    ("fit-ledger", "a grader clause listing a named-set word the rule does not",
+     break_quantifier_drift_grader_extra_named),
     ("answer-keys", "a fixture sentence with one word changed", break_answer_key_near_quote),
     ("answer-keys", "a fixture sentence in single quotes", break_answer_key_single_quotes),
     ("answer-keys", "the old reframing example, a near-quote", break_answer_key_reframing),
@@ -2767,7 +2917,14 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "an unnamed \"every must-have\" in the status line", break_set_unnamed_status),
     ("fit-ledger", "an unnamed set by gap type written with \"gap\"", break_set_unnamed_gap_word),
     ("fit-ledger", "the v0.1 count, unnamed, after the ledger", break_set_unnamed_count),
-    ("fit-ledger", "\"only\" over rows it names", break_set_exclusive_named),
+    ("fit-ledger", "an unnamed \"the one\" in decision.summary", break_set_the_one_unnamed),
+    ("fit-ledger", "an unnamed \"the only rows\" in the status line", break_set_only_unnamed_status),
+    ("fit-ledger", "the measured complement after the ledger", break_set_measured_complement),
+    ("fit-ledger", "\"the other must-haves\" unnamed in the snapshot", break_set_other_plural_unnamed),
+    *COMPLEMENT_CASES,
+    ("wording", "round 9's retired \"exclusive quantifier\" back in a grader clause", break_retired_exclusive_word),
+    ("wording", "round 9's retired response-modes placement back in the questions clause",
+     break_retired_response_modes),
     ("fit-ledger", "a bare \"none\" after the ledger beside named rows", break_set_bare_none_after),
     ("wording", "the retired count rule back in a grader clause", break_retired_count_rule),
     ("fixtures", "a fit_ledger fixture with no candidate_constraints", break_constraints_missing),

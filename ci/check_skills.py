@@ -1851,17 +1851,17 @@ def check_fit_ledger() -> None:
         summary = json.loads(blocks[-1])["sections"]["decision"]["summary"]
     except (KeyError, TypeError, ValueError):
         summary = ""
-    # Every set claim over the map — in the summary, the sentence after the ledger
-    # and the rest of the snapshot — is read by the one reader the harness calls too
-    # (evidence-model.md, "The row is the unit"; what it reads and what it leaves to
-    # the grader, above Claim in ci/ledger_rules.py).
+    # Every set claim over the map where the rule asks for naming — the summary, the
+    # sentence after the ledger and the rest of the snapshot — is read by the one
+    # reader the harness calls too (evidence-model.md, "The row is the unit"; what it
+    # reads and what it leaves to the grader, above Claim in ci/ledger_rules.py).
     counted = ledger_rules.map_claim(summary)
     if counted:
         fail(group, f"{WORKED_DOSSIER}: decision.summary: {counted.why}")
 
     # Everything between the ledger and the next slot is rule 2's "at most one
     # sentence" (after_ledger_claim), where every word of the lists and every ratio
-    # is read as about the map, and a bare "none" is exclusive. The rest of the
+    # is read as about the map, and a bare "none" is a complement. The rest of the
     # snapshot, like the summary above, is read by map_claim; bare "none" is not
     # read there, because the slots require "none failed" and "none found".
     after = ledger_rules.ledger_sentence(snapshot)
@@ -1919,26 +1919,28 @@ def quantifier_drift(group: str) -> None:
     """D9: the quantifier lists are written once, in evidence-model.md.
 
     Its "The row is the unit" bullet is the rule, with its words in three lists: the
-    inclusive quantifiers, which a named set may carry; the exclusive ones, which fail
-    whatever they name; and the further one — a bare "none" — it makes exclusive in
-    the one sentence after the fit ledger. ci/ledger_rules.py holds exactly those
-    lists (INCLUSIVE, EXCLUSIVE, AFTER_LEDGER_ONLY); risk-and-decision.md's rule 2
-    points to the bullet and spells none of it; and every job-underwriter expectation
-    that speaks of quantifiers quotes each word of the lists, sorted as the rule sorts
-    them — an inclusive word inside the expectation's sentence on the inclusive ones,
-    an exclusive word inside its sentence on the exclusive ones, and the scoped word
-    inside its sentence about the sentence after the ledger and nowhere else — so a
-    grader is never told a named "only" passes, or bare 'none' is exempt.
+    named-set words, which a named set may carry; the complements, which fail in the
+    snapshot whatever they name; and the further one — a bare "none" — it makes a
+    complement in the one sentence after the fit ledger. ci/ledger_rules.py holds
+    exactly those lists (NAMED_SET, COMPLEMENT, AFTER_LEDGER_ONLY); risk-and-decision.md's
+    rule 2 points to the bullet and spells none of it; and every job-underwriter
+    expectation that speaks of quantifiers quotes each word of the lists, sorted as the
+    rule sorts them — a named-set word inside the expectation's sentence on the
+    named-set words, a complement inside its sentence on the complements, and the
+    scoped word inside its sentence about the sentence after the ledger and nowhere
+    else — so a grader is never told a named "the rest" passes, or bare 'none' is
+    exempt.
     """
     refs = REPO / "skills/job-underwriter/references"
-    inclusive, exclusive, after_only = ledger_rules.rule_quantifier_scopes(
+    named, complement, after_only = ledger_rules.rule_quantifier_scopes(
         (refs / "evidence-model.md").read_text(encoding="utf-8"))
-    if not inclusive or not exclusive or not after_only:
-        fail(group, "evidence-model.md's \"The row is the unit\" lists of quantifiers — inclusive, exclusive, and the "
-                    "word scoped to the sentence after the ledger — were not found; the drift check would pass vacuously")
+    if not named or not complement or not after_only:
+        fail(group, "evidence-model.md's \"The row is the unit\" lists — the named-set words, the complements, and "
+                    "the word scoped to the sentence after the ledger — were not found; the drift check would pass "
+                    "vacuously")
         return
-    for label, rule, shared in (("inclusive quantifiers", inclusive, list(ledger_rules.INCLUSIVE)),
-                                ("exclusive quantifiers", exclusive, list(ledger_rules.EXCLUSIVE)),
+    for label, rule, shared in (("named-set words", named, list(ledger_rules.NAMED_SET)),
+                                ("complements", complement, list(ledger_rules.COMPLEMENT)),
                                 ("words scoped to the sentence after the ledger", after_only,
                                  list(ledger_rules.AFTER_LEDGER_ONLY))):
         missing = [q for q in rule if q not in shared]
@@ -1947,7 +1949,7 @@ def quantifier_drift(group: str) -> None:
             fail(group, f"ci/ledger_rules.py lacks {missing} from evidence-model.md's {label}")
         if extra:
             fail(group, f"ci/ledger_rules.py holds {extra} among the {label}, which evidence-model.md's list does not")
-    every = inclusive + exclusive + after_only
+    every = named + complement + after_only
 
     decision = (refs / "risk-and-decision.md").read_text(encoding="utf-8")
     rule2 = re.search(r"^2\. \*\*Fit ledger\*\*.*$", decision, re.MULTILINE)
@@ -1978,26 +1980,36 @@ def quantifier_drift(group: str) -> None:
                 continue
             where = f"job-underwriter eval {case.get('id')} #{n}"
             spans = {name: segment(expectation, marker) for name, marker in (
-                ("inclusive", re.compile(r"\binclusive\b", re.I)), ("exclusive", re.compile(r"\bexclusive\b", re.I)),
+                ("named-set words", ledger_rules.NAMED_SET_MARK), ("complements", ledger_rules.COMPLEMENT_MARK),
                 ("after", ledger_rules.SCOPE_TURN))}
             inside = {name: quoted(expectation[span[0]:span[1]]) if span else set() for name, span in spans.items()}
             everywhere = quoted(expectation)
-            lacking = [q for q in inclusive + exclusive if q not in everywhere]
+            lacking = [q for q in named + complement if q not in everywhere]
             if lacking:
                 fail(group, f"{where} lists quantifiers without {lacking} from evidence-model.md's lists")
-            for name, words, other in (("inclusive", inclusive, exclusive + after_only),
-                                       ("exclusive", exclusive, inclusive)):
+            for name, words, other in (("named-set words", named, complement + after_only),
+                                       ("complements", complement, named)):
                 if spans[name] is None:
-                    fail(group, f"{where} speaks of quantifiers without a sentence on the {name} ones, as "
+                    fail(group, f"{where} speaks of quantifiers without a sentence on the {name}, as "
                                 f"evidence-model.md sorts them")
                     continue
                 astray = [q for q in words if q in everywhere and q not in inside[name]]
                 if astray:
-                    fail(group, f"{where} quotes {astray} outside its sentence on the {name} quantifiers")
+                    fail(group, f"{where} quotes {astray} outside its sentence on the {name}")
                 mixed = [q for q in other if q in inside[name] and q not in inside["after"]]
                 if mixed:
-                    fail(group, f"{where} quotes {mixed} in its sentence on the {name} quantifiers; "
+                    fail(group, f"{where} quotes {mixed} in its sentence on the {name}; "
                                 f"evidence-model.md does not list them there")
+                # The list itself is the sentence's first parenthesis; its examples follow
+                # it, so only the parenthesis is held to the rule's list, word for word.
+                listed = re.search(r"\(([^()]*)\)", expectation[spans[name][0]:spans[name][1]])
+                listed = quoted(listed.group(1)) if listed else set()
+                if not listed:
+                    fail(group, f"{where} has no parenthesised list in its sentence on the {name}; the drift "
+                                f"check would pass vacuously")
+                extra = sorted(listed - set(words))
+                if extra:
+                    fail(group, f"{where} lists {extra} among the {name}, which evidence-model.md's list does not")
             lacking = [q for q in after_only if q not in inside["after"]]
             if lacking:
                 fail(group, f"{where} lists quantifiers without {lacking}, which evidence-model.md's list scopes to "
@@ -2456,8 +2468,18 @@ RETIRED = [
     (SentenceRule(r"\bany\b[^.]{0,80}\bquantifier\b", tail=r"\bfails?,?\s+even when (?:it is )?accurate\b",
                   unless=r"\bunnamed\b|\bnames? no row\b"),
      "a quantifier over the map failing \"even when it is accurate\" whatever it names is the retired count rule — "
-     "a set claim that names its rows passes when exact, and only an unnamed one or an exclusive word fails "
-     "(evidence-model.md, \"The row is the unit\")"),
+     "a set claim that names its rows passes when exact, and only an unnamed one or a complement fails, in the "
+     "snapshot (evidence-model.md, \"The row is the unit\")"),
+    # Round 9's: "only" and "the one" are named-set words, and the words that fail
+    # whatever they name are the complements.
+    (re.compile(r"\bexclusive quantifiers?\b", re.I),
+     "\"exclusive quantifier\" is the retired word for a list that failed \"only\" and \"the one\" whatever they "
+     "named — they are named-set words, lawful in the snapshot when named and exact, and the words that fail there "
+     "whatever they name are the complements (evidence-model.md, \"The row is the unit\")"),
+    # Round 9's response-modes line: once after the last question covers all of them.
+    (re.compile(r"\beach offers its response modes\b", re.I),
+     "\"each offers its response modes\" is the retired placement — the response-modes line comes after each "
+     "question or once after the last for all of them (job-underwriter SKILL.md, the closing order)"),
 ]
 LABELS_DEFINED = re.compile(r"(?=.*\byes\b)(?=.*\bunavailable\b)(?=.*\bcalls?\b)", re.I | re.S)
 

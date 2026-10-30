@@ -42,7 +42,7 @@ R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed bu
 - **Severe red flags:** none found.
 - **Conditions for go:** (1) award authority verifies concrete in interviews — see risk register RR1; (2) the post confirmed as permanent — R8, RR2; (3) the retrofit bridge is framed honestly as adjacent, never as community-energy expertise.
 
-The hard-gates line names the gate rows by ID with their fits, whatever failed (`risk-and-decision.md` rule 4). Had the user needed sponsorship, R1 would be `hard_gate_fail`, the status `no_go` with that gate as its reason, named by ID as rule 1 names a reason about rows — **Not worth applying to — R1, a hard gate, fails. Status: `no_go`.** — and the line would open with the failure: ``- **Hard gates:** failed: R1 (UK work eligibility without sponsorship); unconfirmed: R8 (Permanent contract, not fixed-term); met: R9 `direct` ``. Had the user stated no constraints at all, R8 and R9 would not exist, R1 would be `unclear`, and the line would carry the flag the input contract requires: ``- **Hard gates:** none failed; unconfirmed: R1 (UK work eligibility without sponsorship); candidate constraints not given — checks against them unknown``.
+The hard-gates line names the gate rows by ID with their fits, whatever failed (`risk-and-decision.md` rule 4). Had the user needed sponsorship, R1 would be `hard_gate_fail`, the status `no_go` with that gate as its reason, named by ID as the snapshot names every set of rows it speaks of (rule 1) — **Not worth applying to — R1, a hard gate, fails. Status: `no_go`.** — and the line would open with the failure: ``- **Hard gates:** failed: R1 (UK work eligibility without sponsorship); unconfirmed: R8 (Permanent contract, not fixed-term); met: R9 `direct` ``. Had the user stated no constraints at all, R8 and R9 would not exist, R1 would be `unclear`, and the line would carry the flag the input contract requires: ``- **Hard gates:** none failed; unconfirmed: R1 (UK work eligibility without sponsorship); candidate constraints not given — checks against them unknown``.
 
 ## Role reality
 
@@ -162,9 +162,11 @@ Verified: R1, R2, R3, R4, R6, R8, R9 claims (sources in envelope) — verified i
 
 With no claim verified yet — which is every first response — the line reads
 `Verified: none yet.` and stops: the rows it does not name are simply
-unverified, and "all" or "everything" said of the claims is a set of rows left
-unnamed (`references/evidence-model.md`, "The row is the unit"). Once a claim is
-verified, the line names its rows, as above.
+unverified. The line sits outside the snapshot, so a set claim in it is held to
+agreement with the map, not to naming (`references/evidence-model.md`, "The row
+is the unit"): "all" or "everything" said of the claims is true only when every
+row's claim is verified. Once a claim is verified, the line names its rows, as
+above.
 
 Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1
 

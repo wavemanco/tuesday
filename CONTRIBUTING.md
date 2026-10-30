@@ -267,23 +267,23 @@ line says. Every `severity: x` beside a register ID is that entry's Severity, an
 found". There is one Research tier line, read with the harness's own pattern, its
 L1 budget SKILL.md's and no count above its budget. And the quantifier lists in
 evidence-model.md ("The row is the unit") are the one statement of the words: the
-shared sets hold exactly them, list by list — inclusive, exclusive, and the word
-scoped to the sentence after the ledger; risk-and-decision.md's rule 2 points to
-them and spells none of them; and every job-underwriter expectation that speaks of
-quantifiers quotes each of their words, sorted as the rule sorts them — each
-inclusive word inside the expectation's sentence on the inclusive ones, each
-exclusive word inside its sentence on the exclusive ones, and the scoped word inside
-its sentence about the sentence after the ledger and nowhere else.
+shared sets hold exactly them, list by list — the named-set words, the complements,
+and the word scoped to the sentence after the ledger; risk-and-decision.md's rule 2
+points to them and spells none of them; and every job-underwriter expectation that
+speaks of quantifiers quotes each of their words, sorted as the rule sorts them —
+each named-set word inside the expectation's sentence on the named-set words, each
+complement inside its sentence on the complements, and the scoped word inside its
+sentence about the sentence after the ledger and nowhere else.
 The ledger was a sentence from v0.1 — "five of seven material requirements are
 `direct`" over a map with four — and a dossier whose ledger cannot be parsed fails
 rather than skips. What it does not read: whether the tally's numerators are true
 (the target table records a status per target, not calls); a count or quantifier
 beyond the reach `MAP_WORDS`'s comment gives ("both of them sit, in the end, below
 `direct`" outside the sentence after the ledger), or about the map in words none of
-these ("the hard gates fail"); what the comment above `Claim` leaves to the grader;
-prose about the map outside the snapshot and the summary, such as the gap
-queue, the plan and a closing recap, which the grader reads; and the snapshots and
-summaries runs write, which the harness reads with the same functions.
+these ("the hard gates fail"); what the comment above `Claim` leaves to the grader
+— agreement with the map everywhere, and every set claim outside the snapshot and
+the summary — which that comment states once; and the snapshots and summaries runs
+write, which the harness reads with the same functions.
 
 **A skill's installed text shares no run of words with its own fixtures.**
 `--only answer-keys` reads each skill's `SKILL.md` body and references — the files a

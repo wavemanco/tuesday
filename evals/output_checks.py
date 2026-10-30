@@ -1035,10 +1035,11 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     # The one sentence the slot allows after the ledger is where the count came
     # back: a probe run wrote "R5b and R8 are the only rows below `direct`" under a
     # ledger that listed a third, and another "Every must-have is `direct`". It is
-    # held to the rule everywhere else is (evidence-model.md, "The row is the
-    # unit"), every word of the lists and every ratio in it read as a set claim
-    # (ledger_rules.after_ledger_claim; what it reads and what it leaves to the
-    # grader, above Claim in ci/ledger_rules.py).
+    # held to the rule the rest of the snapshot is (evidence-model.md, "The row is
+    # the unit"), every word of the lists and every ratio in it read as a set claim
+    # (ledger_rules.after_ledger_claim). Whether a named claim is true — the first
+    # of those two — is the grader's: what the check reads and what it leaves to the
+    # grader is stated above Claim in ci/ledger_rules.py.
     after = ledger_rules.ledger_sentence(source_text)
     word = ledger_rules.after_ledger_claim(after) if after else None
     if word and ledger_rules.is_second_sentence(after, word):
@@ -1046,7 +1047,7 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     elif word:
         said = f"in the sentence after the ledger, {word.why}: {after[:120]!r}"
     else:
-        said = "the sentence after the ledger names a row in every set claim it makes, and nothing exclusive"
+        said = "the sentence after the ledger names a row in every set claim it makes, and holds no complement"
     checks.append(finding("ledger_sentence", "all", word is None, said))
 
     # decision.summary is prose that reads the map, read with the one set-claim
@@ -1061,7 +1062,7 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
         checks.append(finding("summary_count", "all", claim is None,
                               f"decision.summary: {claim.why}" if claim
                               else "decision.summary names a row in every set claim it makes over the map, "
-                                   "and holds no exclusive quantifier"))
+                                   "and holds no complement"))
 
     section = snapshot_section(source_text)
     if section is None:
@@ -1080,7 +1081,7 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     checks.append(finding("snapshot_count", "all", count is None,
                           f"the snapshot's prose: {count.why}" if count
                           else "the snapshot's prose names a row in every set claim it makes over the map, "
-                               "and holds no exclusive quantifier"))
+                               "and holds no complement"))
     unknown = (constraints == "unknown" if constraints in CONSTRAINTS else None) if fixture \
         else constraints_unknown(response, constraints)
     if unknown is None:
