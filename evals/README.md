@@ -220,12 +220,15 @@ routing is set aside, since the rest of the turn is where that reach would be.
 Each record also carries `hub_fired` and `reached`, every playbook and hidden
 module the run reached in order, so a run that read a second playbook shows it.
 A tool call's input is what is read: a listing whose output prints a hidden
-module's paths reaches nothing. A playbook is recognised by its file name in a
-call that also names the hub's folder: its full path, or a `cd` into the hub's
-`references/` and a `cat <module>.md` in the same call. Round 2's measurement
-recognised only the full path and scored two runs `tuesday-unrouted` that had read
-the right playbook that way and done its job. No module ships a file of a
-playbook's name, so a file of that name read outside the hub's folder is no route.
+module's paths reaches nothing. A playbook is recognised by its whole file name
+in a call that also names the hub's folder anywhere: its full path, or a path
+relative to the hub's folder after a `cd` into it in the same call, such as
+`cd <hub>/references && cat <module>.md` or `cd <hub> && cat references/<module>.md`.
+Until round 2's measurement only the full path counted, a rule stated here before
+it ran; that measurement scored two runs `tuesday-unrouted` that had read the right
+playbook those ways and done its job, and the rule was changed after it. No module
+ships a file of a playbook's name, so a file of that name in a call that does not
+name the hub's folder is no route.
 Every run records the skill list from the CLI's init event, in both arms. A list
 that shows a Tuesday skill this run did not install, such as a copy synced from
 claude.ai or another run's copy, voids the run, because that copy could take the
