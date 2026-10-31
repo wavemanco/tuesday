@@ -2953,20 +2953,27 @@ def test_watch_out() -> None:
     """The chat ends with the skill's watch-out line, exactly; no produced file holds it."""
     print("\nchecks: the watch-out line (output-discipline.md rule 7)")
     repo = Path(__file__).resolve().parent.parent
-    sentences = {s: output_checks.declared_watch_out((repo / "skills" / s / "SKILL.md").read_text())
-                 for s in run_fixtures.SKILLS}
-    check("every skill declares a watch_out sentence", [s for s, v in sentences.items() if not v], [])
-    sentence = sentences["resume-tailor"]
-    line = output_checks.watch_out_line(sentence)
+    lines = {s: output_checks.declared_watch_out((repo / "skills" / s / "SKILL.md").read_text())
+             for s in run_fixtures.SKILLS}
+    check("every skill declares a watch_out line", [s for s, v in lines.items() if not v], [])
+    check("every declared line is the whole line, label included, so it is copied and never assembled",
+          [s for s, v in lines.items() if not (v or "").startswith(output_checks.WATCH_OUT_LABEL + " ")], [])
+    line = lines["resume-tailor"]
+    sentence = output_checks.watch_out_sentence(line)
+    check("watch_out_sentence is the declared line after its label", (sentence or "").startswith("The words I quote"),
+          True)
+    check("and is None for a line that does not begin with the label",
+          (output_checks.watch_out_sentence(sentence), output_checks.watch_out_sentence("Watch out: " + sentence),
+           output_checks.watch_out_sentence(output_checks.WATCH_OUT_LABEL + " ")), (None, None, None))
     body = "## Edit ledger\n\n| # | Current |\n|---|---|\n| E1 | x |\n\nC1 — What did you own?\nAnswer in text, or say skip.\n"
     marker = "\n----- file the response produced: {} -----\n"
 
     def verdicts(response: str) -> dict:
-        got = output_checks.check_watch_out(response, sentence)
+        got = output_checks.check_watch_out(response, line)
         return {c["target"]: c["verdict"] for c in got["checks"]}
 
     def why(response: str, target: str = "chat") -> str:
-        got = output_checks.check_watch_out(response, sentence)
+        got = output_checks.check_watch_out(response, line)
         return next(c["why"] for c in got["checks"] if c["target"] == target)
 
     check("must pass: the line is the chat's last line", verdicts(body + "\n" + line + "\n"), {"chat": "PASS"})
@@ -2984,8 +2991,8 @@ def test_watch_out() -> None:
     check_true("and says it is not word for word", "not the skill's sentence word for word" in why(para))
     curly = body + "\n" + line.replace("you wrote", "you’d written") + "\n"
     check("must fail: one word changed", verdicts(curly), {"chat": "FAIL"})
-    ju = sentences["job-underwriter"]
-    ju_body = body + "\n" + output_checks.watch_out_line(ju)
+    ju = lines["job-underwriter"]
+    ju_body = body + "\n" + ju
     for label, swapped in (("curly quotes", ju_body.replace('"only"', "“only”")),
                            ("a double hyphen for the dash", ju_body.replace(" — ", " -- "))):
         got = {c["target"]: c["verdict"] for c in output_checks.check_watch_out(swapped + "\n", ju)["checks"]}
@@ -2999,6 +3006,16 @@ def test_watch_out() -> None:
     check_true("and says the line appears once", "the line appears once" in why(twice))
     bare = body + "\n" + sentence + "\n"
     check("must fail: the sentence without its label", verdicts(bare), {"chat": "FAIL"})
+    check_true("and says the label is what is missing", "not under its label" in why(bare))
+    for label, variant in (("Watch out:", "Watch out: "), ("bold Watch out:", "**Watch out:** "),
+                           ("unbolded Watch-out:", "Watch-out: "), ("Watch-outs:", "**Watch-outs:** "),
+                           ("lower-case watch-out:", "**watch-out:** ")):
+        got = body + "\n" + variant + sentence + "\n"
+        check(f"must fail: the exact sentence under a variant label, {label}", verdicts(got), {"chat": "FAIL"})
+        check_true(f"and says the label is not the skill's ({label})", "not under its label" in why(got))
+    para_label = body + "\nWatch out: Check each quote and each new line against your original resume.\n"
+    check("must fail: a paraphrase under a variant label", verdicts(para_label), {"chat": "FAIL"})
+    check_true("and says it is not word for word", "not the skill's sentence word for word" in why(para_label))
     warning_elsewhere = "Warning: this posting has no salary.\n" + body + "\n" + line + "\n"
     check("must pass: a warning elsewhere in the chat is not the slot", verdicts(warning_elsewhere), {"chat": "PASS"})
     resume = "# Priya Shah\n\nProgramme manager.\n\n" + line + "\n"
@@ -3016,9 +3033,12 @@ def test_watch_out() -> None:
     check("must pass: a produced file without it", verdicts(clean), {"chat": "PASS", "pack.md": "PASS"})
 
     case = {"id": 1, "prompt": "p", "expectations": ["e"]}
-    got = output_checks.run_checks(case, "denied", body + "\n" + line + "\n", None, watch_out=sentence)
-    check("run_checks runs it when given the sentence", verdict_of(got, "watch_out", "chat"), "PASS")
-    got = output_checks.run_checks(case, "denied", body, None, watch_out=sentence)
+    got = output_checks.run_checks(case, "denied", body + "\n" + line + "\n", None, watch_out=line)
+    check("run_checks runs it when given the declared line", verdict_of(got, "watch_out", "chat"), "PASS")
+    got = output_checks.run_checks(case, "denied", body + "\n" + sentence + "\n", None, watch_out=line)
+    check("and fails the run whose line drops the label", (verdict_of(got, "watch_out", "chat"), got["status"]),
+          ("FAIL", "fail"))
+    got = output_checks.run_checks(case, "denied", body, None, watch_out=line)
     check("and fails the run without the line", (verdict_of(got, "watch_out", "chat"), got["status"]),
           ("FAIL", "fail"))
     got = output_checks.run_checks(case, "denied", body, None, watch_out="")
@@ -3033,18 +3053,21 @@ def test_watch_out() -> None:
             case = fixture(skill, 1)
             stem = run_fixtures.stem_for(skill, case, "denied", 1)
             (out / f"{stem}.meta.json").write_text(json.dumps({"harness": {"status": "ok", "reasons": []}}))
-            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_line(sentences[skill]) + "\n")
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + lines[skill] + "\n")
             rec = run_fixtures.check_run(skill, case, out, 1, "denied")
-            check(f"check_run holds {skill} eval 1 to its own SKILL.md sentence",
+            check(f"check_run holds {skill} eval 1 to its own SKILL.md line",
                   verdict_of(rec, "watch_out", "chat"), "PASS")
-            other = next(s for s in run_fixtures.SKILLS if s != skill)
-            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_line(sentences[other]) + "\n")
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_sentence(lines[skill]) + "\n")
             rec = run_fixtures.check_run(skill, case, out, 1, "denied")
-            check(f"and fails {skill} on a sibling's sentence", verdict_of(rec, "watch_out", "chat"), "FAIL")
+            check(f"and fails {skill} on its sentence without the label", verdict_of(rec, "watch_out", "chat"), "FAIL")
+            other = next(s for s in run_fixtures.SKILLS if s != skill)
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + lines[other] + "\n")
+            rec = run_fixtures.check_run(skill, case, out, 1, "denied")
+            check(f"and fails {skill} on a sibling's line", verdict_of(rec, "watch_out", "chat"), "FAIL")
     for skill in run_fixtures.SKILLS:
         from fixture_clauses import load_cases
         cases = load_cases(repo / "skills" / skill / "evals" / "evals.json")
-        line_of = output_checks.watch_out_line(sentences[skill])
+        line_of = lines[skill]
         check(f"every {skill} fixture's expectations carry its watch-out line, exactly",
               [c["id"] for c in cases if not any(line_of in e for e in c["expectations"])], [])
 

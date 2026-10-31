@@ -80,7 +80,7 @@ closing_order: upgrade menu, questions, watch-out
 qualifier_fields: none
 sibling_mentions: 1
 provenance_sections: The coverage map, Recovery per gap, A worked ledger
-watch_out: The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line or send the resume, check that quote and the new line against what you actually wrote.
+watch_out: **Watch-out:** The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve a line or send the resume, check that quote and the new line against what you actually wrote.
 ```
 
 `provenance` is not an enum: a Provenance cell leads with one label, and a

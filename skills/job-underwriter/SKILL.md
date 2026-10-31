@@ -85,7 +85,7 @@ it rests on, each page by its title or address. Worked table: Evidence status in
 
 Failed attribution is also a finding about the opportunity: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
 
-**Closing order is fixed: the dossier offer, then the upgrade menu, then the questions, then the watch-out line — and nothing between them or after it.** The watch-out line is the fixed `watch_out` sentence below, placed as `references/output-discipline.md` rule 7 places it. No recap closes the message either, because the snapshot at the top is its one summary (Step 1). The response-modes line is part of the questions — after each question, or once after the last for all of them — not something after them.
+**Closing order is fixed: the dossier offer, then the upgrade menu, then the questions, then the watch-out line — and nothing between them or after it.** The watch-out line is the fixed `watch_out` line below, label included, copied exactly and placed as `references/output-discipline.md` rule 7 places it. No recap closes the message either, because the snapshot at the top is its one summary (Step 1). The response-modes line is part of the questions — after each question, or once after the last for all of them — not something after them.
 
 ### Step 3 — Recovery turns
 
@@ -114,7 +114,7 @@ closing_order: dossier offer, upgrade menu, questions, watch-out
 qualifier_fields: reasoning, hypothesis
 provenance_sections: Role reality, Evidence map, Gap recovery queue, Opportunity risk register, Application plan
 sibling_mentions: 1
-watch_out: A summary line here can contradict the evidence table — before you act on a count, an "only" or an all-clear, check it against the table's rows.
+watch_out: **Watch-out:** A summary line here can contradict the evidence table — before you act on a count, an "only" or an all-clear, check it against the table's rows.
 ```
 
 ## The n + x rule

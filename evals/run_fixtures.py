@@ -1088,9 +1088,9 @@ def check_run(skill: str, case: dict, out: Path, run: int, mode: str) -> dict:
     # Every fixture's turn delivers output, so every run is held to the skill's
     # watch-out line, read from the SKILL.md it declares it in.
     skill_md = REPO / "skills" / skill / "SKILL.md"
-    sentence = output_checks.declared_watch_out(skill_md.read_text()) if skill_md.exists() else None
+    line = output_checks.declared_watch_out(skill_md.read_text()) if skill_md.exists() else None
     record = output_checks.run_checks(case, mode, body, meta.get("research_log"), status, reasons,
-                                      watch_out=sentence or "")
+                                      watch_out=line or "")
     record = {"skill": skill, "id": case["id"], "run": run, "stem": stem, **record}
     (out / f"{stem}.checks.json").write_text(json.dumps(record, indent=2) + "\n")
     return record

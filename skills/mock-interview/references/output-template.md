@@ -67,7 +67,7 @@ Is the person you're meeting your future manager, or a peer on the team? The ans
 **Watch-out:** Suggested answers can make your experience sound bigger than what you told me — rehearse only what you actually did, in your own words.
 ```
 
-The Word offer sits with the other offers. The message's last line is the `watch_out` sentence (rule 7).
+The Word offer sits with the other offers. The message's last line is the `watch_out` line, copied exactly (rule 7).
 
 ## The fit snapshot
 

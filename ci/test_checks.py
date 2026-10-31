@@ -2672,18 +2672,35 @@ MI_WATCH = ("Suggested answers can make your experience sound bigger than what y
             "you actually did, in your own words.")
 RT_WATCH = ("The words I quote as yours beside each edit can differ slightly from what you wrote — before you approve "
             "a line or send the resume, check that quote and the new line against what you actually wrote.")
+# The parameter's value is the whole line, label included (output-discipline.md rule 7).
+MI_PARAM = f"watch_out: **Watch-out:** {MI_WATCH}\n"
 
 
 def break_watch_out_undeclared(root: Path) -> str:
     """The parameter line deleted from a SKILL.md."""
-    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n", "", "break_watch_out_undeclared")
-    return "declares no watch_out sentence"
+    swap_once(root, "skills/mock-interview/SKILL.md", MI_PARAM, "", "break_watch_out_undeclared")
+    return "declares no watch_out line"
+
+
+def break_watch_out_sentence_only(root: Path) -> str:
+    """The parameter back to the sentence alone, leaving the model to assemble the label — the form whose
+    label Haiku dropped."""
+    swap_once(root, "skills/mock-interview/SKILL.md", MI_PARAM, f"watch_out: {MI_WATCH}\n",
+              "break_watch_out_sentence_only")
+    return "watch_out is not the whole line"
+
+
+def break_watch_out_variant_label(root: Path) -> str:
+    """The parameter's label spelled another way — the variant a run wrote."""
+    swap_once(root, "skills/mock-interview/SKILL.md", MI_PARAM, f"watch_out: Watch out: {MI_WATCH}\n",
+              "break_watch_out_variant_label")
+    return "watch_out is not the whole line"
 
 
 def break_watch_out_two_sentences(root: Path) -> str:
     """Extended past one sentence — the standing rule says extend it and keep it one."""
-    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n",
-              f"watch_out: {MI_WATCH} Check the dates too.\n", "break_watch_out_two_sentences")
+    swap_once(root, "skills/mock-interview/SKILL.md", MI_PARAM,
+              MI_PARAM.replace("\n", " Check the dates too.\n"), "break_watch_out_two_sentences")
     return "watch_out is not one sentence"
 
 
@@ -2697,8 +2714,8 @@ def break_watch_out_too_long(root: Path) -> str:
 
 def break_watch_out_pipe(root: Path) -> str:
     """A pipe in the sentence breaks the README's table."""
-    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n",
-              f"watch_out: {MI_WATCH.replace(' — ', ' | ')}\n", "break_watch_out_pipe")
+    swap_once(root, "skills/mock-interview/SKILL.md", MI_PARAM, MI_PARAM.replace(" — ", " | "),
+              "break_watch_out_pipe")
     return "bracket, pipe or code span"
 
 
@@ -2717,10 +2734,18 @@ def break_watch_out_readme_drift(root: Path) -> str:
     return "README.md's watch-out table quotes mock-interview's sentence"
 
 
+def break_watch_out_readme_labelled(root: Path) -> str:
+    """The README's cell carrying the label too: its column header is the label, and the cell is the sentence
+    after it (output-discipline.md rule 7), so one form is held, not either."""
+    swap_once(root, "README.md", f"| mock-interview | {MI_WATCH} |",
+              f"| mock-interview | **Watch-out:** {MI_WATCH} |", "break_watch_out_readme_labelled")
+    return "README.md's watch-out table quotes mock-interview's sentence"
+
+
 def break_watch_out_parameter_drift(root: Path) -> str:
     """The parameter edited and its copies not — the other direction of the same drift."""
-    swap_once(root, "skills/mock-interview/SKILL.md", f"watch_out: {MI_WATCH}\n",
-              f"watch_out: {MI_WATCH.replace('in your own words', 'and say it in your own words')}\n",
+    swap_once(root, "skills/mock-interview/SKILL.md", MI_PARAM,
+              MI_PARAM.replace("in your own words", "and say it in your own words"),
               "break_watch_out_parameter_drift")
     return "README.md's watch-out table quotes mock-interview's sentence"
 
@@ -2736,7 +2761,14 @@ def break_watch_out_fixture_paraphrase(root: Path) -> str:
     swap_once(root, "skills/resume-tailor/evals/evals.json", f"**Watch-out:** {RT_WATCH}",
               "**Watch-out:** Check each quote and each new line against your original resume.",
               "break_watch_out_fixture_paraphrase")
-    return "labels a watch-out line that is not the declared sentence"
+    return "labels a watch-out line that is not the declared line"
+
+
+def break_watch_out_fixture_label_dropped(root: Path) -> str:
+    """A fixture's copy keeping the sentence and dropping the label: the grader would pass a run that did the same."""
+    swap_once(root, "skills/resume-tailor/evals/evals.json", f"**Watch-out:** {RT_WATCH}", RT_WATCH,
+              "break_watch_out_fixture_label_dropped")
+    return "no expectation carries the watch-out line exactly"
 
 
 def break_watch_out_fixture_typography(root: Path) -> str:
@@ -2746,13 +2778,20 @@ def break_watch_out_fixture_typography(root: Path) -> str:
               'before you act on a count, an \\"only\\" or an all-clear, check it against the table\'s rows.`',
               'before you act on a count, an “only” or an all-clear, check it against the table\'s rows.`',
               "break_watch_out_fixture_typography")
-    return "labels a watch-out line that is not the declared sentence"
+    return "labels a watch-out line that is not the declared line"
 
 
 def break_watch_out_example_drift(root: Path) -> str:
     """A worked example's last line no longer the declared one."""
     swap_once(root, "skills/resume-tailor/references/coverage-and-gaps.md", f"**Watch-out:** {RT_WATCH}",
               "**Watch-out:** Check every edit against your original resume.", "break_watch_out_example_drift")
+    return "a watch-out line that is not the declared one"
+
+
+def break_watch_out_example_variant_label(root: Path) -> str:
+    """A worked example's last line with the exact sentence under a variant label."""
+    swap_once(root, "skills/mock-interview/references/output-template.md", f"**Watch-out:** {MI_WATCH}",
+              f"Watch out: {MI_WATCH}", "break_watch_out_example_variant_label")
     return "a watch-out line that is not the declared one"
 
 
@@ -3498,16 +3537,21 @@ CASES: list[tuple[str, str, callable]] = [
     ("evals", "a clause nothing uses", break_clause_unused),
     ("evals", "a clause inside a clause", break_clause_nested),
     ("watch-out", "a SKILL.md with no watch_out", break_watch_out_undeclared),
+    ("watch-out", "a watch_out of the sentence alone, without its label", break_watch_out_sentence_only),
+    ("watch-out", "a watch_out under a variant label", break_watch_out_variant_label),
     ("watch-out", "a watch_out of two sentences", break_watch_out_two_sentences),
     ("watch-out", "a watch_out over the word limit", break_watch_out_too_long),
     ("watch-out", "a pipe in a watch_out", break_watch_out_pipe),
     ("watch-out", "a closing_order not ending with watch-out", break_closing_order_without_watch_out),
     ("watch-out", "the README's copy drifting from the parameter", break_watch_out_readme_drift),
+    ("watch-out", "the README's cell carrying the label its header holds", break_watch_out_readme_labelled),
     ("watch-out", "the parameter drifting from its copies", break_watch_out_parameter_drift),
     ("watch-out", "a skill with no row in the README's table", break_watch_out_readme_row_missing),
     ("watch-out", "a fixture's closing clause paraphrasing the line", break_watch_out_fixture_paraphrase),
     ("watch-out", "a fixture's copy of the line with curly quotes", break_watch_out_fixture_typography),
+    ("watch-out", "a fixture's copy dropping the label", break_watch_out_fixture_label_dropped),
     ("watch-out", "a worked example's watch-out line drifting", break_watch_out_example_drift),
+    ("watch-out", "a worked example's sentence under a variant label", break_watch_out_example_variant_label),
     ("watch-out", "the convention no longer defining the slot", break_watch_out_convention),
     ("watch-out", "a line labelled a warning", break_watch_out_named_warning),
     ("watch-out", "the README calling it a warning", break_watch_out_readme_warning),

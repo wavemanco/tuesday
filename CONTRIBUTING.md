@@ -146,10 +146,12 @@ deterministic failure the rule above makes the second one a change of shape; for
 an intermittent one, recording its rate is not an iteration.
 
 A watch-out has one source, the `watch_out:` parameter in the skill's
-`SKILL.md`, and a change to it is made there. Its copies — the root README's
-watch-out table, each fixture's closing expectation, any worked example that shows
-a response's last line — are never edited on their own: `check_skills.py --only
-watch-out` fails until every copy matches the parameter, so the change reaches
+`SKILL.md` — the whole line, label included — and a change to it is made there.
+Its copies — the root README's watch-out table, each fixture's closing
+expectation, any worked example that shows a response's last line — are never
+edited on their own: `check_skills.py --only watch-out` fails until every copy
+matches the parameter in the form `conventions/output-discipline.md` rule 7 gives
+it, so the change reaches
 them in the same commit. The README says all of this to users in plain words, under "Watch-outs:
 what to double-check".
 
@@ -294,14 +296,15 @@ name no call to action, and subjects other than the response: a pack, a cell or
 a drill turn ends with other things. Three eval expectations had contradicted
 their skill's declaration unnoticed.
 
-**A watch-out is one sentence, and every copy of it is exact.** `--only
-watch-out` holds each skill's `watch_out` parameter to one sentence of at most
-forty words, with no bracket, pipe or code span; checks that `closing_order` ends
-with `watch-out` and that `output-discipline.md` defines the slot; and compares
-every copy with the parameter character for character — any line labelled a
-watch-out in the skill's own `SKILL.md`, README and references, every fixture's
-expanded expectations (each must carry the line, since a grader sees the fixture
-and not `SKILL.md`), and the root README's table, one row per skill. It also
+**A watch-out is one line, and every copy of it is exact.** `--only
+watch-out` holds each skill's `watch_out` parameter to the label `**Watch-out:**`
+and then one sentence of at most forty words, with no bracket, pipe or code span;
+checks that `closing_order` ends with `watch-out` and that `output-discipline.md`
+defines the slot; and compares every copy with the parameter character for
+character — any line labelled a watch-out in the skill's own `SKILL.md`, README
+and references, every fixture's expanded expectations (each must carry the line,
+since a grader sees the fixture and not `SKILL.md`), and the root README's table,
+one row per skill, in the form `output-discipline.md` rule 7 gives it. It also
 fails the standing rule's heading going missing from this file, since the README
 links to it, and a line labelled a warning anywhere a rule is stated or graded.
 It does not read whether a sentence is plain, whether it names the defect the

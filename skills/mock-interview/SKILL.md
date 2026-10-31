@@ -89,7 +89,7 @@ closing_order: upgrade menu, drill and dossier offers, questions, watch-out
 qualifier_fields: gap-and-bridge language
 provenance_sections: The fit snapshot, Question banks
 sibling_mentions: 1
-watch_out: Suggested answers can make your experience sound bigger than what you told me — rehearse only what you actually did, in your own words.
+watch_out: **Watch-out:** Suggested answers can make your experience sound bigger than what you told me — rehearse only what you actually did, in your own words.
 ```
 
 `provenance` is not an enum: a Provenance cell leads with exactly one label, and in the question banks the candidate's own quoted sentences follow it —

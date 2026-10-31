@@ -201,14 +201,15 @@ version of it. A suite with this many real checks can afford to name the gap.
 
 **Invariant.** A response that delivers the skill's output — a first pass, a
 regenerated or revised version, drill feedback, the message presenting a file —
-ends with one line, copied exactly:
+ends with one line: the skill's `watch_out` line, label included, copied exactly as
+one string and never assembled from a label and a sentence:
 
 ```text
-**Watch-out:** <the skill's watch_out sentence>
+**Watch-out:** <the rest of the skill's watch_out line>
 ```
 
 It is the response's last line, after the questions, and the one thing rule 4
-lets follow them. It is the skill's fixed sentence, word for word: not a recap,
+lets follow them. It is the skill's fixed line, word for word: not a recap,
 not a call to action, not written for this run or adapted to it. A sentence
 composed for the run would be the second summary rule 4 exists to prevent; a
 fixed one restates nothing. It names what the user should double-check, because
@@ -228,8 +229,10 @@ Three places it never goes:
 - **On a turn that delivers nothing** — one that only asks for an input the skill
   cannot run without, such as a missing job description.
 
-**Parameter: `watch_out`** — the skill's sentence: one sentence, in plain words a
-user would know, naming what to check and against what. It is stated once, in the
-skill's `SKILL.md`; every copy elsewhere — the root README's watch-out table, the
-fixtures' closing expectations, a worked example — is held equal to it by CI, so
+**Parameter: `watch_out`** — the skill's whole line: `**Watch-out:** ` and then
+one sentence, in plain words a user would know, naming what to check and against
+what. It is stated once, in the skill's `SKILL.md`, label included, so the line
+is copied rather than assembled. Every copy elsewhere — the fixtures' closing expectations, a worked example — is
+that whole line, except the root README's watch-out table, whose column header is
+the label and whose cell is the sentence after it. CI holds each copy equal, so
 changing it means changing the parameter and the copies in one change.

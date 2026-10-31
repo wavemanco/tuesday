@@ -1609,34 +1609,39 @@ WARNING_LABELLED = re.compile(r"^[\s>*_#-]*warnings?[*_\s]*:", re.I)
 
 
 def declared_watch_out(skill_md: str) -> str | None:
-    """The sentence a SKILL.md declares as `watch_out:` under `## Output discipline`.
+    """The whole line a SKILL.md declares as `watch_out:` under `## Output discipline`.
 
-    One reader for the harness and for CI (ci/check_skills.py imports it), so the
-    sentence the runs are held to and the one the copies are held to are the same
-    string. None when the section or the parameter is missing or empty."""
+    The value is the line a delivered response ends with, label included
+    (output-discipline.md rule 7), so it is copied, never assembled. One reader for
+    the harness and for CI (ci/check_skills.py imports it), so the line the runs are
+    held to and the one the copies are held to are the same string. None when the
+    section or the parameter is missing or empty."""
     section = OUTPUT_DISCIPLINE.search(skill_md)
     found = WATCH_OUT_PARAM.search(section.group(1)) if section else None
     return found.group(1) if found and found.group(1) else None
 
 
-def watch_out_line(sentence: str) -> str:
-    """The line a delivered response ends with, exactly."""
-    return f"{WATCH_OUT_LABEL} {sentence}"
+def watch_out_sentence(line: str) -> str | None:
+    """The sentence after the label in a declared line; None when the line does not
+    begin with `**Watch-out:** ` exactly. The README's table quotes this part."""
+    prefix = WATCH_OUT_LABEL + " "
+    return (line[len(prefix):].strip() or None) if line.startswith(prefix) else None
 
 
-def check_watch_out(response: str, sentence: str) -> dict:
+def check_watch_out(response: str, declared: str) -> dict:
     """The chat text ends with the skill's watch-out line, and no produced file holds it.
 
-    Read exactly: the chat's last non-empty line must be `**Watch-out:** ` and the
-    declared sentence, character for character once runs of whitespace are
-    collapsed, and no other chat line may be labelled a watch-out. The chat is the
-    text above the first file marker (split_response); a produced file fails if it
-    holds the sentence or a line labelled a watch-out. A missing line, a line that is
-    not last, a paraphrase, a line labelled a warning and a second labelled line are
-    told apart in the reason, because each has a different fix. A warning elsewhere
-    in the chat is not read: only the last line's label is."""
+    Read exactly: the chat's last non-empty line must be the declared line, label
+    included, character for character once runs of whitespace are collapsed, and no
+    other chat line may be labelled a watch-out. The chat is the text above the first
+    file marker (split_response); a produced file fails if it holds the sentence or a
+    line labelled a watch-out. A missing line, a line that is not last, the sentence
+    under a missing or variant label, a paraphrase, a line labelled a warning and a
+    second labelled line are told apart in the reason, because each has a different
+    fix. A warning elsewhere in the chat is not read: only the last line's label is."""
     checks = []
-    want = " ".join(watch_out_line(sentence).split())
+    want = " ".join(declared.split())
+    flat = " ".join((watch_out_sentence(declared) or declared).split())
     sources = split_response(response)
     lines = [" ".join(line.split()) for line in sources[0][1].splitlines() if line.strip()]
     last = lines[-1] if lines else ""
@@ -1657,6 +1662,10 @@ def check_watch_out(response: str, sentence: str) -> dict:
         checks.append(finding("watch_out", "chat", False,
                               f"the last line is labelled a warning, which the watch-out is never called: "
                               f"{last[:120]!r}, wanted {want[:120]!r}"))
+    elif flat != want and last.endswith(flat):
+        checks.append(finding("watch_out", "chat", False,
+                              f"the last line is the skill's sentence, but not under its label, exactly: "
+                              f"{last[:120]!r}, wanted {want[:120]!r} — the line is copied whole, label included"))
     elif labelled:
         got = lines[labelled[-1]]
         where = "the last line" if labelled[-1] == len(lines) - 1 else \
@@ -1667,7 +1676,6 @@ def check_watch_out(response: str, sentence: str) -> dict:
     else:
         checks.append(finding("watch_out", "chat", False,
                               f"no watch-out line: the chat ends {(last or '(nothing)')[:80]!r}, wanted {want[:80]!r}"))
-    flat = " ".join(sentence.split())
     for name, text in sources[1:]:
         inside = flat in " ".join(text.split()) or any(WATCH_OUT_LABELLED.match(line) for line in text.splitlines())
         checks.append(finding("watch_out", name, not inside,
@@ -1694,7 +1702,7 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
                watch_out: str | None = None) -> dict:
     """Everything this fixture asks for, as one {stem}.checks.json record.
 
-    `watch_out` is the skill's declared sentence. The runner passes it for every
+    `watch_out` is the skill's declared line. The runner passes it for every
     fixture of every skill, because every fixture's turn delivers output
     (run_fixtures.check_run); an empty string means the skill declares none, and
     the check is reported unchecked rather than passed. None leaves it out."""
@@ -1718,7 +1726,7 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
         parts.append(check_watch_out(response, watch_out))
     elif watch_out is not None:
         parts.append({"checks": [], "unchecked": ["watch_out"],
-                      "info": ["the skill declares no watch_out sentence: the watch-out line is unchecked"]})
+                      "info": ["the skill declares no watch_out line: the watch-out line is unchecked"]})
     for part in parts:
         checks += part["checks"]
         info += part["info"]
