@@ -6,15 +6,19 @@ skills (`CLAUDE_CODE_SYNC_SKILLS`), every child loaded them too: 24 catalog skil
 among them a second `mock-interview`, sat in every routing and fixture room this
 repository measured before the variable was dropped here. A routing run that fired
 the synced copy was recorded as no skill; a fixture run that fired it was set aside
-as harness-invalid. The parent's session id goes with it, so a child is its own
-session. `CLAUDECODE` guards interactive terminal nesting; a subprocess run is safe.
+as harness-invalid. The parent's session goes with it, so a child is its own
+session: in a cloud session the CLI takes its session id from
+`CLAUDE_CODE_REMOTE_SESSION_ID` as well as `CLAUDE_CODE_SESSION_ID`, and with either
+inherited every child run shared the parent's id and one transcript file per folder
+(measured: dropping both gives each run its own id; the skill list is unchanged).
+`CLAUDECODE` guards interactive terminal nesting; a subprocess run is safe.
 """
 
 from __future__ import annotations
 
 import os
 
-DROPPED = ("CLAUDECODE", "CLAUDE_CODE_SYNC_SKILLS", "CLAUDE_CODE_SESSION_ID")
+DROPPED = ("CLAUDECODE", "CLAUDE_CODE_SYNC_SKILLS", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_REMOTE_SESSION_ID")
 
 
 def child_env(base: dict[str, str] | None = None) -> dict[str, str]:

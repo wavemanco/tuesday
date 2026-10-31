@@ -67,6 +67,13 @@ SET_ASIDE_LIMIT = 0.10
 HIDDEN_KEY = "disable-model-invocation: true"
 # An E2 run that loaded the named module and reached no other: the explicit case's pass.
 FOCUSED = "focused"
+# Seconds a run gets when --timeout is not given. A skills-arm routing run stops at its
+# first fire; a run read to the end of its turn (the front-door arm, an explicit case)
+# carries the module's whole job, which outlasts that. Round 2's measurement ran its
+# front-door arm at the shorter default by an omitted flag, and six mock-interview runs
+# that had routed right were cut off and set aside (evals/README.md).
+TIMEOUT_FIRST_FIRE = 240
+TIMEOUT_WHOLE_TURN = 900
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import frontdoor  # noqa: E402  (evals/: the hub's references/ generator)
@@ -147,6 +154,14 @@ def foreign_tuesday(listed: list, names: dict[str, str]) -> list[str]:
     ours = set(names.values())
     bases = set(SKILLS) | {HUB}
     return [s for s in listed if isinstance(s, str) and tuesday_base(s) in bases and s.split(":")[-1] not in ours]
+
+
+def timeout_for(arm: str, prompt: str, given: int | None = None) -> int:
+    """The seconds one run gets: `--timeout` when given, else what its reader waits for."""
+    if given:
+        return given
+    whole_turn = arm == "frontdoor" or bool(explicit_command(prompt))
+    return TIMEOUT_WHOLE_TURN if whole_turn else TIMEOUT_FIRST_FIRE
 
 
 def explicit_command(prompt: str) -> str | None:
@@ -752,7 +767,9 @@ def parser() -> argparse.ArgumentParser:
                     help="the case file to run (default: evals/suite-routing.json)")
     ap.add_argument("--case", type=int, action="append", help="limit to case id(s)")
     ap.add_argument("--model", default=None)
-    ap.add_argument("--timeout", type=int, default=240)
+    ap.add_argument("--timeout", type=int, default=None,
+                    help=f"seconds per run (default: {TIMEOUT_WHOLE_TURN} for a run read to the end of its "
+                         f"turn, the front-door arm or an explicit case; {TIMEOUT_FIRST_FIRE} otherwise)")
     ap.add_argument("--workers", type=int, default=3, help="parallel runs; high values invite rate limiting")
     ap.add_argument("--json-out", default=None, help="write full results here")
     ap.add_argument("--skill-md", action="append", default=[], metavar="SKILL=PATH",
@@ -782,7 +799,8 @@ def main() -> int:
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             records = list(pool.map(
-                lambda job: run_once(job[0]["prompt"], *projects[job[0]["id"]], args.timeout, args.model,
+                lambda job: run_once(job[0]["prompt"], *projects[job[0]["id"]],
+                                     timeout_for(args.arm, job[0]["prompt"], args.timeout), args.model,
                                      args.arm),
                 jobs,
             ))
@@ -800,6 +818,7 @@ def main() -> int:
         ok, note = verdict(expected, fired, case.get("siblings"))
         passed += ok
         results.append({"id": case["id"], "expected": expected,
+                        "timeout": timeout_for(args.arm, case["prompt"], args.timeout),
                         **({"command": case["expected"]} if expected == FOCUSED else {}),
                         **{k: case[k] for k in ("derived_from", "arm") if k in case},
                         "fired": fired, "runs": runs_by_case[case["id"]], "passed": ok, "note": note})

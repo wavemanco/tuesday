@@ -173,16 +173,37 @@ def test_child_env() -> None:
     print("\nrooms: a measured session inherits no synced skills and no parent session")
     import child_env
     base = {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy", "CLAUDECODE": "1",
-            "CLAUDE_CODE_SYNC_SKILLS": "1", "CLAUDE_CODE_SESSION_ID": "abc"}
+            "CLAUDE_CODE_SYNC_SKILLS": "1", "CLAUDE_CODE_SESSION_ID": "abc",
+            "CLAUDE_CODE_REMOTE_SESSION_ID": "cse_abc"}
     env = child_env.child_env(base)
-    check("the sync flag, the parent session and the nesting guard are dropped",
-          sorted(k for k in base if k not in env), ["CLAUDECODE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_SYNC_SKILLS"])
+    check("the sync flag, the parent session (local and remote id) and the nesting guard are dropped",
+          sorted(k for k in base if k not in env),
+          ["CLAUDECODE", "CLAUDE_CODE_REMOTE_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_SYNC_SKILLS"])
     check("everything else is kept, the proxy included", {k: env[k] for k in ("PATH", "HTTPS_PROXY")},
           {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy"})
     for runner in ("run_routing.py", "run_fixtures.py"):
         source = (Path(__file__).resolve().parent / runner).read_text()
         check_true(f"{runner} starts its sessions with child_env()", "env = child_env()" in source)
         check_true(f"{runner} builds no environment of its own", "os.environ.items()" not in source)
+
+
+def test_routing_timeouts() -> None:
+    print("\nrouting: a run read to the end of its turn gets the long timeout without a flag")
+    t = run_routing.timeout_for
+    check("skills arm, routing case: stops at its first fire, so the short default",
+          t("skills", "help me decide on this role"), run_routing.TIMEOUT_FIRST_FIRE)
+    check("front-door arm, routing case: read to the end of the turn",
+          t("frontdoor", "help me decide on this role"), run_routing.TIMEOUT_WHOLE_TURN)
+    check("an explicit case is read to the end in either arm",
+          (t("skills", "/mock-interview prep me"), t("frontdoor", "/mock-interview prep me")),
+          (run_routing.TIMEOUT_WHOLE_TURN, run_routing.TIMEOUT_WHOLE_TURN))
+    check("a given --timeout wins everywhere", (t("skills", "x", 30), t("frontdoor", "/mock-interview x", 30)), (30, 30))
+    check("the long default is longer than the short one",
+          run_routing.TIMEOUT_WHOLE_TURN > run_routing.TIMEOUT_FIRST_FIRE, True)
+    check("the parser leaves --timeout unset unless given", run_routing.parser().parse_args([]).timeout, None)
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("every run's timeout comes from timeout_for",
+               "timeout_for(args.arm, job[0][\"prompt\"], args.timeout)" in source and "args.timeout, args.model" not in source)
 
 
 def test_routing_variants() -> None:
@@ -3619,7 +3640,7 @@ def test_watch_out() -> None:
 
 
 def main() -> int:
-    for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_variants, test_frontdoor_generation,
+    for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
                  test_frontdoor_clashes, test_frontdoor_install, test_frontdoor_labels, test_explicit_naming,
                  test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,

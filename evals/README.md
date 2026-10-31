@@ -257,8 +257,13 @@ back to the command, since runs of one case can share a transcript file. An E2
 case's `expected` names the module its command starts; the case passes when
 every run is `focused`. A run cut off by the timeout is set aside even after
 the module loaded, because the rest of the turn is what the case tests and the
-cut-off never showed it. A module's whole run can outlast the routing arms' 240
-seconds, so E1 and E2 both run with `--timeout 900`. The init event's
+cut-off never showed it. A module's whole run outlasts the 240 seconds a
+skills-arm routing run gets, so a run read to the end of its turn — every
+front-door run and every explicit case — gets 900 unless `--timeout` says
+otherwise, and each case's result records the seconds it had. The default
+follows the reader because a flag can be left off: round 2's measurement ran its
+front-door arm at 240, and six mock-interview runs on Sonnet and Opus that had
+routed right were cut off while writing the pack and set aside. The init event's
 slash-command list is recorded with each E2 run.
 
 One run of the measurement, per model (`claude-haiku-5-5`, `claude-sonnet-5-5`,
@@ -267,9 +272,9 @@ One run of the measurement, per model (`claude-haiku-5-5`, `claude-sonnet-5-5`,
 ```bash
 M=claude-sonnet-5-5
 python evals/run_routing.py --arm skills --model $M --runs 5 --json-out e0-$M.json
-python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e1-$M.json --timeout 900
+python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e1-$M.json
 python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e2-$M.json \
-  --cases evals/suite-explicit.json --timeout 900
+  --cases evals/suite-explicit.json
 ```
 
 A front-door results file also records the hub's hash and one hash over the hub
