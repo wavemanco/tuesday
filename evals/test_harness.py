@@ -181,9 +181,15 @@ def test_child_env() -> None:
           ["CLAUDECODE", "CLAUDE_CODE_REMOTE_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_SYNC_SKILLS"])
     check("everything else is kept, the proxy included", {k: env[k] for k in ("PATH", "HTTPS_PROXY")},
           {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy"})
+    check("without a config folder the parent's CLAUDE_CONFIG_DIR is kept, or none set, as before",
+          (child_env.child_env({**base, "CLAUDE_CONFIG_DIR": "/runner"})["CLAUDE_CONFIG_DIR"],
+           "CLAUDE_CONFIG_DIR" in env), ("/runner", False))
+    check("a config folder given (the personal layout) is the child's CLAUDE_CONFIG_DIR, over the parent's",
+          child_env.child_env({**base, "CLAUDE_CONFIG_DIR": "/runner"}, Path("/tmp/x/config/case-1"))["CLAUDE_CONFIG_DIR"],
+          "/tmp/x/config/case-1")
     for runner in ("run_routing.py", "run_fixtures.py"):
         source = (Path(__file__).resolve().parent / runner).read_text()
-        check_true(f"{runner} starts its sessions with child_env()", "env = child_env()" in source)
+        check_true(f"{runner} starts its sessions with child_env()", re.search(r"\benv = child_env\(", source))
         check_true(f"{runner} builds no environment of its own", "os.environ.items()" not in source)
 
 
@@ -805,6 +811,525 @@ def test_explicit_naming() -> None:
           read_events([ours, {"type": "user", "message": {"content": [
               {"type": "tool_result", "content": "mock-interview-ab12cd34"}]}}, DONE], explicit="mock-interview"),
           "unconfirmed")
+
+
+def files_of(folder: Path) -> dict[str, str]:
+    """Every file under a folder, by its path inside it: what an install wrote, file for file."""
+    return {p.relative_to(folder).as_posix(): p.read_text() for p in sorted(folder.rglob("*")) if p.is_file()}
+
+
+def test_layouts_install() -> None:
+    print("\nlayouts: each installs where it says, and nothing but the documents in the case folder outside it")
+    check("--layout defaults to project, the layout every earlier measurement used",
+          run_routing.parser().parse_args([]).layout, "project")
+    check("and accepts the two outside the working folder",
+          [run_routing.parser().parse_args(["--layout", lay]).layout for lay in ("personal", "plugin")],
+          ["personal", "plugin"])
+    case = {"id": 7, "attachments": {"jd.txt": "x"}}
+    with tempfile.TemporaryDirectory() as tmp:
+        made = {}
+        for arm, layout in (("skills", "project"), ("frontdoor", "project"), ("skills", "personal"),
+                            ("frontdoor", "personal"), ("frontdoor", "plugin")):
+            base = Path(tmp) / f"{arm}-{layout}"
+            base.mkdir()
+            made[arm, layout] = (base, *run_routing.case_project(base, case, "ab12cd34", None, arm, layout))
+        for (arm, layout), (base, root, _) in made.items():
+            if layout != "project":
+                check(f"{arm} arm, {layout} layout: the case folder holds the case's documents and nothing else",
+                      sorted(p.relative_to(root).as_posix() for p in root.rglob("*")), ["jd.txt"])
+        project = {arm: made[arm, "project"][1] / ".claude" / "skills" for arm in ("skills", "frontdoor")}
+        base, root, names = made["skills", "personal"]
+        check("personal layout: the skills sit in skills/ of a config folder of the run's own, beside the case folder",
+              files_of(base / "config" / "case-7-0" / "skills"), files_of(project["skills"]))
+        check("each run starts with its own config folder, by its index",
+              [run_routing.config_dir(root, "personal", n) for n in (0, 2)],
+              [base / "config" / "case-7-0", base / "config" / "case-7-2"])
+        check("and the runner is told the names the project layout gives", names,
+              {s: f"{s}-ab12cd34" for s in run_routing.SKILLS})
+        base, root, names = made["frontdoor", "personal"]
+        check("personal layout, front-door arm: the hub and the hidden modules, file for file as the project layout's",
+              files_of(base / "config" / "case-7-0" / "skills"), files_of(project["frontdoor"]))
+        runs = Path(tmp) / "runs"
+        runs.mkdir()
+        root3, _ = run_routing.case_project(runs, case, "ab12cd34", None, "frontdoor", "personal", 3)
+        check("a case of three runs gets three config folders, the same skills in each, and nothing else beside it",
+              ({p.name for p in (runs / "config").iterdir()},
+               [files_of(run_routing.skills_root(root3, "personal", n)) == files_of(project["frontdoor"])
+                for n in range(3)]), ({"case-7-0", "case-7-1", "case-7-2"}, [True] * 3))
+        check("the other layouts keep one folder for every run of a case",
+              [run_routing.skills_root(made["frontdoor", lay][1], lay, 2) == run_routing.skills_root(
+                  made["frontdoor", lay][1], lay) for lay in ("project", "plugin")], [True, True])
+        base, root, names = made["frontdoor", "plugin"]
+        plugin = run_routing.home(root, "plugin")
+        check("plugin layout: the plugin is a folder of the case's own, under a neutral name, beside the case folder",
+              plugin, base / "plugins" / "case-7")
+        check("it holds the manifest and skills/, nothing else",
+              sorted(p.name for p in plugin.iterdir()), [".claude-plugin", "skills"])
+        check("the manifest names the plugin as the hub is installed, tuesday-<run id>",
+              json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["name"], "tuesday-ab12cd34")
+        check("its skills/ holds the hub and the hidden modules, file for file as the project layout's",
+              files_of(plugin / "skills"), files_of(project["frontdoor"]))
+        check("folder and frontmatter names are the project layout's, so the runner is told the same names",
+              names, NAMES)
+        check("its runs keep the runner's config folder", run_routing.config_dir(root, "plugin"), None)
+        for (arm, layout), (base, root, names) in made.items():
+            if arm == "frontdoor":
+                hub = run_routing.skills_root(root, layout) / names["tuesday"]
+                stray = [p for p in base.rglob("*") if p.is_dir() and "tuesday-ab12cd34" in p.as_posix()
+                         and p != hub and hub not in p.parents]
+                check(f"{layout} layout: no folder path carries the hub's name but the hub's own folder", stray, [])
+        check("outside the project layout the reader knows the layout's skills folder for what it is",
+              [bool(run_routing.RunReader(NAMES, "frontdoor", None, lay, made["frontdoor", lay][1]).skills_folder.search(
+                  run_routing.skills_root(made["frontdoor", lay][1], lay).as_posix())) for lay in ("personal", "plugin")],
+              [True, True])
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", None, "skills", "plugin")
+            check("--arm skills --layout plugin is refused", "installed", "refused")
+        except SystemExit as exc:
+            check_true("--arm skills --layout plugin is refused: today's three skills do not ship as a plugin",
+                       "plugin" in str(exc))
+        check("and nothing is installed", list(Path(tmp).iterdir()), [])
+    root = Path("/tmp/tmpab/case-7")
+    today = ["claude", "-p", "/mock-interview-ab12cd34 prep me", "--output-format", "stream-json", "--verbose",
+             "--include-partial-messages", "--model", "m"]
+    check("project layout: the command a run starts is today's",
+          run_routing.child_command("/mock-interview prep me", root, NAMES, "m"), today)
+    check("personal layout: today's command, and leave for Read in the run's own skills folder; the config folder "
+          "travels in the environment",
+          run_routing.child_command("/mock-interview prep me", root, NAMES, "m", "personal", 2),
+          today + ["--allowedTools", "Read(//tmp/tmpab/config/case-7-2/skills/**)"])
+    check("plugin layout: E2 types the namespaced command, the run loads the case's plugin folder, and Read may open "
+          "its skills folder",
+          run_routing.child_command("/mock-interview prep me", root, NAMES, None, "plugin", 2),
+          ["claude", "-p", "/tuesday-ab12cd34:mock-interview-ab12cd34 prep me", "--output-format", "stream-json",
+           "--verbose", "--include-partial-messages", "--plugin-dir", "/tmp/tmpab/plugins/case-7",
+           "--allowedTools", "Read(//tmp/tmpab/plugins/case-7/skills/**)"])
+    check("a routing prompt is sent as written in every layout",
+          [run_routing.child_command("should I apply?", root, NAMES, None, lay)[2] for lay in run_routing.LAYOUTS],
+          ["should I apply?"] * 3)
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("main installs every case in the layout asked for, a config folder for each run, and runs each "
+               "job by its index (test_layout_runs follows one run through)",
+               "case_project(Path(tmp), c, run_id, overrides, args.arm, args.layout, args.runs)" in source
+               and "args.arm, args.layout, job[1])," in source)
+
+
+PLUGIN_SKILLS = "/tmp/tmpab/plugins/case-1/skills"
+PLUGIN_HUB = f"{PLUGIN_SKILLS}/tuesday-ab12cd34"
+QUALIFIED = {m: f"tuesday-ab12cd34:{n}" for m, n in NAMES.items()}
+
+
+def layout_reader(events: list[dict], layout: str = "plugin", explicit: str | None = None,
+                  arm: str = "frontdoor", end: str = "exit") -> tuple[str, "run_routing.RunReader"]:
+    """Feed events to a RunReader of case 1's run 0 in a layout; return the outcome as the runner
+    settles it, and the reader."""
+    names = NAMES if arm == "frontdoor" else {s: NAMES[s] for s in run_routing.SKILLS}
+    reader = run_routing.RunReader(names, arm, explicit, layout, Path("/tmp/tmpab/case-1"))
+    for event in events:
+        outcome = reader.feed(event)
+        if outcome:
+            return outcome, reader
+    return (reader.timed_out() if end == "timeout" else reader.exited()), reader
+
+
+def test_layout_naming() -> None:
+    print("\nlayouts: names, commands and detection hold in every layout")
+    ours = init(*QUALIFIED.values())
+    hub_q = call("Skill", {"skill": QUALIFIED["tuesday"]})
+
+    def outcome_hub(events, **kw):
+        outcome, reader = layout_reader(events, **kw)
+        return outcome, reader.hub_fired
+    check("a module's plugin-qualified id is that module, never a hub fire, though it holds the hub's name",
+          outcome_hub([ours, call("Skill", {"skill": QUALIFIED["mock-interview"]}), DONE]),
+          ("hidden-mock-interview", False))
+    check("so too in the partial stream, where the plugin prefix arrives before the module's name",
+          outcome_hub([ours] + partial("Skill", ['{"skill": "tuesday-ab12cd34', ':mock-interview-', 'ab12cd34"}'])
+                      + [DONE]), ("hidden-mock-interview", False))
+    check("the hub's own id, tuesday-<id>:tuesday-<id>, is the hub firing, and the playbook read next the route",
+          outcome_hub([ours, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/resume-tailor.md"}), DONE]),
+          ("resume-tailor", True))
+    check("and arriving in pieces it is the hub firing too",
+          outcome_hub([ours] + partial("Skill", ['{"skill": "tuesday-ab12cd34', ':tuesday-ab12cd34', '"}']) + [DONE]),
+          ("tuesday-unrouted", True))
+    check("a module's shipped name under the plugin's prefix is that module, no hub fire",
+          outcome_hub([ours, call("Skill", {"skill": "tuesday-ab12cd34:job-underwriter"}), DONE]),
+          ("hidden-job-underwriter", False))
+    check("the hub's shipped name under the prefix is the hub",
+          outcome_hub([ours, call("Skill", {"skill": "tuesday-ab12cd34:tuesday"}), DONE]), ("tuesday-unrouted", True))
+    check("a module's folder in the plugin, reached after routing, is that module",
+          outcome_hub([ours, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/job-underwriter.md"}),
+                       call("Read", {"file_path": f"{PLUGIN_SKILLS}/job-underwriter-ab12cd34/references/"
+                                                  "evidence-model.md"}), DONE]), ("hidden-job-underwriter", True))
+    check("a playbook read by `cd` into the hub's folder in the plugin and `cat` is the route",
+          outcome_hub([ours, hub_q, call("Bash", {"command": f"cd {PLUGIN_HUB}/references && cat mock-interview.md"}),
+                       DONE]), ("mock-interview", True))
+    check("a module's qualified call naming another playbook in its input reaches that module alone: the hub's "
+          "name before a colon opens no playbook",
+          layout_reader([ours, call("Skill", {"skill": QUALIFIED["mock-interview"],
+                                              "args": "then read resume-tailor.md"}), DONE])[1].reached,
+          ["hidden-mock-interview"])
+    config_hub = "/tmp/tmpab/config/case-1-0/skills/tuesday-ab12cd34"
+    personal = init(*NAMES.values())
+    check("personal layout: the hub by its name, then a playbook in the config folder's hub, is the route",
+          outcome_hub([personal, call("Skill", {"skill": "tuesday-ab12cd34"}),
+                       call("Read", {"file_path": f"{config_hub}/references/job-underwriter.md"}), DONE],
+                      layout="personal"), ("job-underwriter", True))
+    check("personal layout: a module's folder beside the hub is that module",
+          outcome_hub([personal, call("Bash", {"command": "cat /tmp/tmpab/config/case-1-0/skills/"
+                                                          "resume-tailor-ab12cd34/SKILL.md"}), DONE],
+                      layout="personal"), ("hidden-resume-tailor", False))
+    check("a Skill call's name is read as the CLI reads it, trimmed and one leading slash dropped: "
+          "a module's shipped name, its qualified id, the hub's bare and qualified ids",
+          [outcome_hub([ours, call("Skill", {"skill": name}), DONE]) for name in
+           ("/mock-interview", " /tuesday-ab12cd34:job-underwriter-ab12cd34", "/tuesday", "/tuesday-ab12cd34:tuesday")],
+          [("hidden-mock-interview", False), ("hidden-job-underwriter", False), ("tuesday-unrouted", True),
+           ("tuesday-unrouted", True)])
+    check("E2: another module's shipped name with a slash is that module; the named module's is no other",
+          [outcome_hub([ours, expansion, call("Skill", {"skill": name}), DONE], explicit="mock-interview")
+           for expansion in [{"type": "user", "message": {"content": "<command-name>/tuesday-ab12cd34:"
+                                                          "mock-interview-ab12cd34</command-name>"}}]
+           for name in ("/job-underwriter", "/mock-interview")],
+          [("hidden-job-underwriter", False), ("focused", False)])
+    expansion_q = {"type": "user", "message": {"content": [{"type": "text", "text":
+                   "<command-name>/tuesday-ab12cd34:mock-interview-ab12cd34</command-name>"}]}}
+    check("E2, plugin layout: another module's qualified id is that module, and no hub fire",
+          outcome_hub([ours, expansion_q, call("Skill", {"skill": QUALIFIED["job-underwriter"]}), DONE],
+                      explicit="mock-interview"), ("hidden-job-underwriter", False))
+    check("E2, plugin layout: the hub's id, then deferring to the named module's playbook, is focused, a hub fire",
+          outcome_hub([ours, expansion_q, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/mock-interview.md"}),
+                       DONE], explicit="mock-interview"), ("focused", True))
+    check("E2, plugin layout: the expansion of the namespaced command is the sign the named module loaded",
+          outcome_hub([ours, expansion_q, DONE], explicit="mock-interview"), ("focused", False))
+
+    names = {s: f"{s}-ab12cd34" for s in run_routing.SKILLS}
+    check("the plugin's prefix is the hub's installed name, in the plugin layout only",
+          [run_routing.plugin_prefix(NAMES, lay) for lay in run_routing.LAYOUTS], [None, None, "tuesday-ab12cd34"])
+    check("E2 types the namespaced command under the plugin's prefix, the rest of the prompt kept",
+          run_routing.explicit_prompt("/mock-interview should I apply?\nPosting below.", names, "tuesday-ab12cd34"),
+          "/tuesday-ab12cd34:mock-interview-ab12cd34 should I apply?\nPosting below.")
+    cases = run_routing.load_cases(Path(__file__).resolve().parent / "suite-explicit.json")
+    check_true("every explicit case is sent under its namespaced command in the plugin layout",
+               all(run_routing.explicit_prompt(c["prompt"], names, "tuesday-ab12cd34")
+                   .startswith(f"/tuesday-ab12cd34:{c['expected']}-ab12cd34 ") for c in cases))
+    check("a prompt with no module command is sent as written under a plugin too",
+          run_routing.explicit_prompt("use /resume-tailor", names, "tuesday-ab12cd34"), "use /resume-tailor")
+    check("E2's reader looks for the command as typed: namespaced in the plugin layout, bare in the others",
+          [run_routing.RunReader(NAMES, "frontdoor", "mock-interview", lay).command for lay in run_routing.LAYOUTS],
+          ["mock-interview-ab12cd34", "mock-interview-ab12cd34", "tuesday-ab12cd34:mock-interview-ab12cd34"])
+
+    check("void rule: this run's own plugin-qualified ids are its own",
+          run_routing.foreign_tuesday(list(QUALIFIED.values()), NAMES), [])
+    check("void rule: another run's plugin, a shipped tuesday plugin's hub and modules, and a synced skill are not",
+          run_routing.foreign_tuesday(["tuesday-ffff0000:mock-interview-ffff0000", "tuesday-ffff0000:tuesday-ffff0000",
+                                       "tuesday:tuesday", "tuesday:job-underwriter",
+                                       "anthropic-skills:resume-tailor"], NAMES),
+          ["tuesday-ffff0000:mock-interview-ffff0000", "tuesday-ffff0000:tuesday-ffff0000",
+           "tuesday:tuesday", "tuesday:job-underwriter", "anthropic-skills:resume-tailor"])
+    check("void rule: a plugin named like the hub that lists no Tuesday skill cannot take the fire",
+          run_routing.foreign_tuesday(["tuesday-ffff0000:pdf", "tuesday:pdf", "example:pdf", "session-start-hook"],
+                                      NAMES), [])
+    check("a plugin-layout run whose init list holds another run's plugin is void",
+          layout_reader([init(*QUALIFIED.values(), "tuesday-ffff0000:mock-interview-ffff0000"), hub_q])[0], "void")
+
+
+def test_layout_transcript() -> None:
+    print("\nlayouts: E2 reads its transcript from the run's own config folder")
+    check("personal layout: the transcript is under the run's config folder, whatever the runner's",
+          run_routing.transcript_path({"session_id": "s1", "cwd": "/tmp/tmpab/case-3"},
+                                      Path("/tmp/tmpab/config/case-3-1")),
+          Path("/tmp/tmpab/config/case-3-1/projects/-tmp-tmpab-case-3/s1.jsonl"))
+
+    def entry(uuid, parent, kind, content, mid=None):
+        message = {"content": content, **({"id": mid} if mid else {})}
+        return json.dumps({"uuid": uuid, "parentUuid": parent, "type": kind, "message": message})
+
+    def transcript(command: str) -> str:
+        return "\n".join([entry("a1", None, "user", f"<command-name>/{command}</command-name>"),
+                          entry("a2", "a1", "assistant", [{"type": "text", "text": "reply"}], "msg_A")]) + "\n"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = f"{tmp}/case-1"
+        folder = re.sub(r"[^A-Za-z0-9]", "-", cwd)
+        runner, case_config = Path(tmp) / "runner", Path(tmp) / "config" / "case-1-1"
+        (runner / "projects" / folder).mkdir(parents=True)
+        (case_config / "projects" / folder).mkdir(parents=True)
+        (runner / "projects" / folder / "p1.jsonl").write_text(
+            transcript("tuesday-ab12cd34:mock-interview-ab12cd34"), encoding="utf-8")
+        (case_config / "projects" / folder / "s1.jsonl").write_text(transcript("mock-interview-ab12cd34"),
+                                                                     encoding="utf-8")
+
+        def recorded(session: str, layout: str, run: int = 1) -> tuple:
+            reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview", layout, Path(cwd), run)
+            for event in [{**init(*NAMES.values()), "session_id": session, "cwd": cwd},
+                          {"type": "assistant", "message": {"id": "msg_A", "content": [{"type": "text", "text": "x"}]}}]:
+                reader.feed(event)
+            rec = reader.record(reader.feed(DONE))
+            return rec["outcome"], rec["loaded"]
+
+        saved = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(runner)
+        try:
+            check("personal layout: the expansion in the run's own config folder confirms the load",
+                  recorded("s1", "personal"), ("focused", True))
+            check("another run's config folder is not this run's: run 0 finds nothing there",
+                  recorded("s1", "personal", 0), ("unconfirmed", False))
+            check("the same run read from the runner's config folder, as before this round, finds nothing",
+                  recorded("s1", "project"), ("unconfirmed", False))
+            check("plugin layout: the runner's transcript, holding the namespaced command, confirms the load",
+                  recorded("p1", "plugin"), ("focused", True))
+            run_routing.keep_transcripts(case_config)
+            check("a personal-layout run's transcripts are copied into the runner's config folder, beside the "
+                  "other layouts' runs, and what was there is kept",
+                  sorted(p.name for p in (runner / "projects" / folder).iterdir()), ["p1.jsonl", "s1.jsonl"])
+            run_routing.keep_transcripts(None)
+            check("a run with no config folder of its own copies nothing",
+                  sorted(p.name for p in (runner / "projects" / folder).iterdir()), ["p1.jsonl", "s1.jsonl"])
+            check("an expansion of the bare name where the namespaced command was typed confirms nothing",
+                  run_routing.command_loaded(transcript("mock-interview-ab12cd34").splitlines(), "msg_A",
+                                             "tuesday-ab12cd34:mock-interview-ab12cd34"), False)
+        finally:
+            if saved is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = saved
+
+
+def test_reported_measures() -> None:
+    print("\nlayouts: measures are recorded per run and summarised per arm, and never scored")
+    ours = init(*QUALIFIED.values())
+    hub_q = call("Skill", {"skill": QUALIFIED["tuesday"]})
+
+    def contact(*events: dict) -> bool:
+        return layout_reader([ours, *events, DONE])[1].hub_path_contact
+    check("the hub's SKILL.md read by its path before any Skill call to the hub is hub_path_contact",
+          contact(call("Read", {"file_path": f"{PLUGIN_HUB}/SKILL.md"})), True)
+    check("so is a playbook read by `cd` into the hub's folder and `cat`, or by a path through `..`, before the "
+          "Skill call",
+          [contact(call("Bash", {"command": f"cd {PLUGIN_HUB}/references && cat job-underwriter.md"}), hub_q),
+           contact(call("Bash", {"command": f"cd {PLUGIN_HUB} && cat SKILL.md"})),
+           contact(call("Read", {"file_path": f"{PLUGIN_SKILLS}/mock-interview-ab12cd34/../tuesday-ab12cd34/"
+                                              "references/resume-tailor.md"}))], [True, True, True])
+    check("a playbook read after the hub fired through the Skill tool is no contact",
+          contact(hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/job-underwriter.md"})), False)
+    check("nor after the hub's Skill call by its shipped name, with a leading slash or without",
+          [contact(call("Skill", {"skill": name}), call("Read", {"file_path": f"{PLUGIN_HUB}/SKILL.md"}))
+           for name in ("tuesday", "/tuesday-ab12cd34", "/tuesday-ab12cd34:tuesday-ab12cd34")], [False] * 3)
+    check("a module's SKILL.md, or a file of the hub's that is no playbook, is no contact with the hub",
+          (contact(call("Read", {"file_path": f"{PLUGIN_SKILLS}/mock-interview-ab12cd34/SKILL.md"})),
+           contact(call("Read", {"file_path": f"{PLUGIN_HUB}/references/evidence-model.md"}))), (False, False))
+    check("a call that names the hub's folder and opens a module's SKILL.md elsewhere is no contact with the hub "
+          "(round 2's `cd <hub> ... cd ../<module>` shape, a listing then a cat, a Grep for the hub's name)",
+          [contact(call("Bash", {"command": f"cd {PLUGIN_HUB} && ls -la references/ 2>/dev/null; "
+                                            "cd ../job-underwriter-ab12cd34 && wc -l SKILL.md && cat SKILL.md | head -5"})),
+           contact(call("Bash", {"command": f"ls {PLUGIN_HUB}/references | head; "
+                                            f"cat {PLUGIN_SKILLS}/mock-interview-ab12cd34/SKILL.md"})),
+           contact(call("Grep", {"pattern": "tuesday-ab12cd34", "path": "/tmp/tmpab/", "glob": "SKILL.md"}))],
+          [False, False, False])
+    check("a module's qualified Skill call is no Skill call to the hub",
+          contact(call("Skill", {"skill": QUALIFIED["resume-tailor"]}),
+                  call("Read", {"file_path": f"{PLUGIN_HUB}/SKILL.md"})), True)
+
+    def named(command: dict, layout: str = "plugin") -> bool:
+        return layout_reader([ours, call(*command.popitem()), DONE], layout=layout)[1].skills_root_named
+    check("the plugin's skills/ named by its path, with or without a trailing slash, is skills_root_named",
+          [named({"Bash": {"command": f"ls {PLUGIN_SKILLS}/"}}), named({"Bash": {"command": f"ls {PLUGIN_SKILLS}"}})],
+          [True, True])
+    check("so is a glob over it, or its path from the case folder",
+          [named({"Bash": {"command": f"ls {PLUGIN_SKILLS}/*/references"}}),
+           named({"Glob": {"pattern": "*/SKILL.md", "path": PLUGIN_SKILLS}}),
+           named({"Bash": {"command": "ls ../plugins/case-1/skills"}})], [True, True, True])
+    check("so is a path that resolves to it: through a skill's folder and `..`, `.` after it, a `cd` before it",
+          [named({"Bash": {"command": f"ls {PLUGIN_HUB}/.."}}),
+           named({"Bash": {"command": f"cd {PLUGIN_HUB}/.. && ls"}}),
+           named({"Bash": {"command": f"cd {PLUGIN_HUB} && ls .."}}),
+           named({"Glob": {"pattern": "*/SKILL.md", "path": f"{PLUGIN_HUB}/.."}}),
+           named({"Bash": {"command": f"ls {PLUGIN_SKILLS}/."}}),
+           named({"Bash": {"command": "cd /tmp/tmpab/plugins/case-1 && ls skills"}})], [True] * 6)
+    check("and another case's skills folder, which holds the same hub and modules",
+          named({"Bash": {"command": "ls ../plugins/case-2/skills"}}), True)
+    check("a path into one skill's folder, or a folder whose name merely starts the same, does not name it",
+          [named({"Read": {"file_path": f"{PLUGIN_HUB}/references/mock-interview.md"}}),
+           named({"Bash": {"command": f"ls {PLUGIN_SKILLS}-old"}})], [False, False])
+    check("nor does a path above it: `find ..` is not counted, so the measure is a lower bound",
+          [named({"Bash": {"command": "find .. -name SKILL.md"}}), named({"Bash": {"command": "ls ../plugins"}})],
+          [False, False])
+    check("personal layout: a run's config folder's skills/ is named, its own or another's; the runner's own "
+          "personal skills are not it",
+          [named({"Bash": {"command": "ls /tmp/tmpab/config/case-1-0/skills/"}}, "personal"),
+           named({"Bash": {"command": "ls ../config/case-2-3/skills"}}, "personal"),
+           named({"Bash": {"command": "ls ~/.claude/skills"}}, "personal")], [True, True, False])
+
+    denials = [{"tool_name": "Bash", "tool_use_id": "t1"}, {"tool_name": "Write", "tool_use_id": "t2"}]
+    _, reader = layout_reader([ours, hub_q, {**DONE, "permission_denials": denials, "usage": {"output_tokens": 812}}])
+    check("refused tool calls and output tokens are read from the result event, and the seconds given are kept",
+          {k: v for k, v in reader.record("tuesday-unrouted", 41.5).items() if k in ("refused", "output_tokens", "seconds")},
+          {"refused": ["Bash", "Write"], "output_tokens": 812, "seconds": 41.5})
+    _, reader = layout_reader([ours, hub_q, DONE])
+    check("a run with a result event and no denial refused none", reader.record("tuesday-unrouted")["refused"], [])
+    _, reader = layout_reader([ours, hub_q], end="timeout")
+    check("a run that never reached its result event has no count and no tokens, never zero",
+          (reader.record("timeout")["refused"], reader.record("timeout")["output_tokens"]), (None, None))
+    read = [ours, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/mock-interview.md"})]
+    outside = [layout_reader(read, layout=lay)[1] for lay in ("plugin", "personal")]
+    check("outside the project layout a CLI that exits non-zero before any result event is error, whatever the "
+          "stream read (a failed sign-in)",
+          [run_routing.exit_outcome(r, code) for r in outside for code in (1, -9)], ["error"] * 4)
+    check("a clean exit, or a status not yet read, is settled from the stream",
+          [run_routing.exit_outcome(r, code) for r in outside for code in (0, None)], ["mock-interview"] * 4)
+    _, project = layout_reader([init(*NAMES.values()), call("Skill", {"skill": "tuesday-ab12cd34"}),
+                                call("Read", {"file_path": "/tmp/tmpab/case-1/.claude/skills/tuesday-ab12cd34/"
+                                                           "references/mock-interview.md"})], layout="project")
+    check("in the project layout a non-zero exit is settled from the stream, as before the layouts",
+          run_routing.exit_outcome(project, 1), "mock-interview")
+    outcome, reader = layout_reader([init(*(NAMES[s] for s in run_routing.SKILLS)),
+                                     call("Skill", {"skill": "job-underwriter-ab12cd34"})],
+                                    layout="personal", arm="skills")
+    check("a skills-arm run stops at its first fire, so its refusals and tokens go unread, and it has no hub to contact",
+          (outcome, reader.record(outcome, 12.0)),
+          ("job-underwriter", {"outcome": "job-underwriter", "init_skills": [NAMES[s] for s in run_routing.SKILLS],
+                               "skills_root_named": False, "refused": None, "output_tokens": None, "seconds": 12.0}))
+    _, reader = layout_reader([ours, hub_q, DONE])
+    check("a front-door run outside the project layout records all five",
+          sorted(k for k in reader.record("tuesday-unrouted") if k in ("hub_path_contact", "skills_root_named", "refused",
+                                                                      "output_tokens", "seconds")),
+          ["hub_path_contact", "output_tokens", "refused", "seconds", "skills_root_named"])
+    _, reader = layout_reader([init(*NAMES.values()), call("Skill", {"skill": "tuesday-ab12cd34"}), DONE],
+                              layout="project")
+    check("a project-layout run records none of them: its record is as before",
+          sorted(reader.record("tuesday-unrouted", 3.0)), ["hub_fired", "init_skills", "outcome", "reached"])
+
+    cases = [{"id": 1, "expected": "job-underwriter", "prompt": "p"}, {"id": 2, "expected": "mock-interview",
+                                                                       "prompt": "/mock-interview x"}]
+    runs_by_case = {1: [{"outcome": "job-underwriter", "hub_path_contact": True, "skills_root_named": True,
+                         "refused": ["Bash", "Bash"], "seconds": 100.0, "output_tokens": 9000},
+                        {"outcome": "hidden-job-underwriter", "hub_path_contact": False, "skills_root_named": True,
+                         "refused": [], "seconds": 60.5, "output_tokens": 7000},
+                        {"outcome": "timeout", "hub_path_contact": True, "skills_root_named": True, "refused": None,
+                         "seconds": 900.0, "output_tokens": None}],
+                    2: [{"outcome": "focused", "hub_path_contact": False, "skills_root_named": False, "refused": None,
+                         "seconds": 20.0, "output_tokens": None}]}
+    measures = run_routing.reported(cases, runs_by_case)
+    check("the arm's summary counts decided runs, routing and explicit cases alike; a set-aside run is not read; "
+          "wall time and tokens are summed, with a median a run, tokens over the runs that read them",
+          measures, {"decided": 3, "hub_path_contact": 1, "skills_root_named": 2, "refused": 2, "runs_refused": 1,
+                     "refused_unread": 1, "seconds": 180.5, "seconds_median": 60.5, "output_tokens": 16000,
+                     "output_tokens_median": 8000.0, "tokens_read": 2})
+    check("an arm with no decided run has no median", run_routing.reported(cases, {})["seconds_median"], None)
+    lines = run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                      run_routing.explicit_summary(cases, runs_by_case), "frontdoor", measures)
+    check("the run prints them as reported, not scored",
+          lines[-1], "reported, not scored: the hub's files reached by path before any Skill call to it on 1/3; "
+                     "the skills folder named on 2/3; 2 tool calls refused, on 1 runs (1 ended before their result "
+                     "event, uncounted); wall time 180.5s, median 60.5s a run; output tokens 16000, median 8000.0 a "
+                     "run, on the 2 runs that reached their result event")
+    check_true("the skills arm's line leaves out the hub, which it does not install",
+               run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                         run_routing.explicit_summary(cases, runs_by_case), "skills",
+                                         measures)[-1].startswith("reported, not scored: the skills folder"))
+    check("and a project-layout run prints no such line",
+          [line for line in run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                                      run_routing.explicit_summary(cases, runs_by_case), "frontdoor")
+           if line.startswith("reported")], [])
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("every results file records its layout, and outside the project layout the reported measures",
+               '"layout": args.layout' in source and '{"reported": measures} if measures is not None' in source
+               and 'measures = reported(cases, runs_by_case) if args.layout != "project" else None' in source)
+
+
+STUB_CLI = r'''#!{python}
+"""A stand-in for the claude CLI: it writes what one run would, from the command and environment it got."""
+import json, os, re, sys, time
+prompt, config, cwd = sys.argv[2], os.environ.get("CLAUDE_CONFIG_DIR", ""), os.getcwd()
+with open(os.environ["STUB_LOG"], "a") as log:
+    log.write(json.dumps({"argv": sys.argv[1:], "config": config}) + "\n")
+
+
+def emit(event):
+    sys.stdout.write(json.dumps(event) + "\n")
+    sys.stdout.flush()
+
+
+emit({"type": "system", "subtype": "init", "skills": [], "session_id": "s1", "cwd": cwd})
+if prompt == "crash":
+    os.close(1)
+    time.sleep(0.5)
+    os._exit(1)
+folder = os.path.join(config, "projects", re.sub(r"[^A-Za-z0-9]", "-", cwd))
+os.makedirs(folder, exist_ok=True)
+with open(os.path.join(folder, "s1.jsonl"), "w") as f:
+    f.write(json.dumps({"uuid": "a1", "parentUuid": None, "type": "user",
+                        "message": {"content": "<command-name>" + prompt.split()[0] + "</command-name>"}}) + "\n")
+    f.write(json.dumps({"uuid": "a2", "parentUuid": "a1", "type": "assistant",
+                        "message": {"id": "msg_A", "content": []}}) + "\n")
+folders = [os.path.relpath(a[len("Read(/"):-len("/**)")], cwd) for a in sys.argv if a.startswith("Read(/")]
+emit({"type": "assistant", "message": {"id": "msg_A", "content": [
+    {"type": "tool_use", "name": "Bash", "input": {"command": "ls " + " ".join(folders)}}]}})
+emit({"type": "result", "subtype": "success", "usage": {"output_tokens": 321},
+      "permission_denials": [{"tool_name": "Bash"}]})
+'''
+
+
+def test_layout_runs() -> None:
+    print("\nlayouts: one run followed through run_once, against a stand-in CLI")
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        stub, runner, log = tmp / "bin", tmp / "runner", tmp / "log.jsonl"
+        stub.mkdir()
+        (stub / "claude").write_text(STUB_CLI.replace("{python}", sys.executable))
+        (stub / "claude").chmod(0o755)
+        saved = {k: os.environ.get(k) for k in ("PATH", "CLAUDE_CONFIG_DIR", "STUB_LOG")}
+        os.environ.update(PATH=f"{stub}{os.pathsep}{os.environ.get('PATH', '')}", CLAUDE_CONFIG_DIR=str(runner),
+                          STUB_LOG=str(log))
+        try:
+            def started() -> dict:
+                return json.loads(log.read_text().splitlines()[-1])
+
+            def run(base: str, case: dict, arm: str, layout: str, index: int = 0, runs: int = 1) -> dict:
+                (tmp / base).mkdir()
+                root, names = run_routing.case_project(tmp / base, case, "ab12cd34", None, arm, layout, runs)
+                return run_routing.run_once(case["prompt"], root, names, 30, None, arm, layout, index)
+
+            e2 = {"id": 1, "prompt": "/mock-interview prep me"}
+            rec = run("personal", e2, "frontdoor", "personal", 1, 2)
+            got = started()
+            check("personal layout, run 1: the CLI starts with that run's config folder, and Read is let into "
+                  "its skills folder",
+                  (got["config"], got["argv"][-2:]),
+                  (str(tmp / "personal/config/case-1-1"),
+                   ["--allowedTools", f"Read(/{tmp}/personal/config/case-1-1/skills/**)"]))
+            check("E2 confirms the load from that run's transcript; the skills folder named from the case folder "
+                  "is read as such; refusals, tokens and a wall time are recorded",
+                  {k: rec.get(k) for k in ("outcome", "loaded", "skills_root_named", "refused", "output_tokens")},
+                  {"outcome": "focused", "loaded": True, "skills_root_named": True, "refused": ["Bash"],
+                   "output_tokens": 321})
+            check_true("the run's seconds are its wall time",
+                       isinstance(rec.get("seconds"), float) and rec["seconds"] >= 0)
+            slug = re.sub(r"[^A-Za-z0-9]", "-", str(tmp / "personal" / "case-1"))
+            check_true("and its transcript is kept in the runner's config folder",
+                       (runner / "projects" / slug / "s1.jsonl").is_file())
+            rec = run("plugin", e2, "frontdoor", "plugin")
+            got = started()
+            check("plugin layout: the runner's config folder, the case's plugin, and Read let into its skills folder",
+                  (got["config"], got["argv"][-4:]),
+                  (str(runner), ["--plugin-dir", str(tmp / "plugin/plugins/case-1"),
+                                 "--allowedTools", f"Read(/{tmp}/plugin/plugins/case-1/skills/**)"]))
+            check("E2 confirms the namespaced command's load from the runner's transcript",
+                  {k: rec.get(k) for k in ("outcome", "loaded", "skills_root_named")},
+                  {"outcome": "focused", "loaded": True, "skills_root_named": True})
+            crash = {"id": 2, "prompt": "crash"}
+            check("a CLI that closes its stream and then exits non-zero is error outside the project layout, "
+                  "read from its exit status once it has exited",
+                  run("crash-personal", crash, "skills", "personal")["outcome"], "error")
+            check("and in the project layout settled from the stream, as before the layouts",
+                  run("crash-project", crash, "skills", "project"), {"outcome": "neither", "init_skills": []})
+        finally:
+            for key, value in saved.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
 
 # --- Decline path 3: the CLI declining to answer is not a short answer ---
@@ -3655,6 +4180,8 @@ def test_watch_out() -> None:
 def main() -> int:
     for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
                  test_frontdoor_clashes, test_frontdoor_install, test_frontdoor_labels, test_explicit_naming,
+                 test_layouts_install, test_layout_naming, test_layout_transcript, test_reported_measures,
+                 test_layout_runs,
                  test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
                  test_classification, test_missing_response,

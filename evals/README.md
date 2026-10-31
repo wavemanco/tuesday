@@ -17,8 +17,9 @@ share the domain's whole vocabulary and are where over-triggering shows up.
 which one it reaches for. Four properties keep it honest:
 
 - **It installs the real skills**, copying each one into a throwaway project's
-  `.claude/skills/`, so they reach the model the way installed skills do and
-  carry the descriptions that actually ship. Nothing is duplicated here.
+  `.claude/skills/` (or outside the project, "Layouts" below), so they reach the
+  model the way installed skills do and carry the descriptions that actually
+  ship. Nothing is duplicated here.
 - **Registration is the production surface.** The first version registered each
   skill as a project *command* instead, which put a caveat under every number it
   produced: commands are addressed to the model as things the user invokes, so
@@ -294,6 +295,113 @@ host whose init list carries a synced Tuesday skill voids every run in both arms
 and an arm scored on what survived would read its empty `hidden` and wrong-skill
 counts as gates met. Before measuring, run one case and check that the recorded
 `init_skills` hold only this run's names.
+
+### Layouts
+
+`--layout` says where a run's skills are installed, in either arm. Every run's
+session starts in its case's own folder. Outside the project layout that folder
+holds the case's documents and nothing else.
+
+| Layout | Where the skills are | What it simulates |
+|---|---|---|
+| `project`, the default | the case folder's `.claude/skills/` | a project install, the layout of every measurement before round 3 |
+| `personal` | `skills/` in a config folder of the run's own, `config/case-<id>-<n>/` for the case's run `n`, beside the case folder; the session starts with `CLAUDE_CONFIG_DIR` set to that folder | a personal install, outside the working folder |
+| `plugin` | `skills/` in a plugin folder of the case's own, `plugins/case-<id>/`, beside the case folder, with the manifest in `.claude-plugin/plugin.json`; the session starts with `--plugin-dir` set to that folder | the Claude Code plugin, outside the working folder |
+
+The plugin layout is for the front-door arm only. The runner refuses
+`--arm skills --layout plugin`, because today's three skills do not ship as a
+plugin.
+
+Outside the project layout the session also starts with
+`--allowedTools "Read(//<skills folder>/**)"`, which lets the Read tool open any
+file in the run's skills folder. A skill opens its own files there: the hub its
+playbooks, a module its references. Under `claude -p` the CLI refuses a read
+outside the working folder that no rule allows. Round 3's review found every
+such read refused without this rule, so no module could run its procedure. A
+project install needs no rule, because its skills sit in the working folder.
+The rule stands for a user who lets the skills read their own files when the
+CLI asks. A read-only Bash command given the folder's path, such as `ls -R`,
+runs under it too (round 3's re-check). A Bash `cd` into the folder is still
+refused, because the CLI allows a `cd` only into a working folder.
+
+The front-door arm installs the same files in every layout, with the folder and
+frontmatter names the project layout gives them. The plugin is named as the hub
+is installed, `tuesday-<run id>`, and the CLI lists each of its skills under
+that name: the hub as `tuesday-<id>:tuesday-<id>`, a module as
+`tuesday-<id>:mock-interview-<id>`. A module's id therefore contains the hub's
+name. The reader counts the hub's name as the hub only where no colon follows
+it, so a call by a module's plugin-qualified id is that module and never a hub
+fire. The folders outside the case folder are named for the case and the run
+alone, so no folder path the model meets carries the hub's name except the
+hub's own folder.
+
+In the plugin layout E2 types each command in the namespaced form a plugin's
+skills take, `/tuesday-<id>:<module>-<id>`; the E2 paragraph above gives the
+form the other layouts type. The CLI records a plugin command's expansion under
+the namespaced command, whichever form was typed. E2 reads the transcript from
+the config folder the run started with: the run's own in the personal layout,
+the runner's in the others.
+
+Each personal-layout run has a config folder of its own because the CLI writes
+the session's transcript and settings there, beside the `skills/` folder whose
+path it gives when the hub fires. In a folder shared by a case's runs, a later
+run could read an earlier run's transcript. When a run ends, the runner copies
+its transcripts into its own config folder's `projects/`, where the other
+layouts' runs write theirs, so they outlast the temporary folder.
+
+The void rule holds under a plugin prefix. A listed skill is read by its name
+after the prefix, so another run's plugin, or a shipped `tuesday` plugin, listing
+a Tuesday skill voids the run.
+
+A config folder of the run's own replaces the runner's, so the personal layout
+drops the host's own personal skills: on the host this harness was built on,
+`session-start-hook`, which the other layouts list. Whether the CLI
+authenticates under a fresh `CLAUDE_CONFIG_DIR` depends on the environment; it
+did in the cloud container where round 3 was probed. Outside the project
+layout, a run whose CLI exits non-zero before its result event is `error`, as a
+run that fails to authenticate can be. In the project layout such a run is
+settled from what its stream showed, as before round 3. An `error` run is set
+aside, so an environment where authentication fails leaves the arm unscored.
+Run the one-case check above in each layout before measuring it.
+
+Outside the project layout each run records five measures, reported and never
+scored. The run prints the first three as counts over the arm's decided runs,
+and the last two summed, with a median a run (`reported` in the results file):
+
+- `hub_path_contact`, in the front-door arm: before any Skill call to the hub,
+  a tool call named the hub's `SKILL.md` or a playbook,
+  `references/<module>.md`, by a path into the hub's folder. In round 2 three
+  of Haiku's four path contacts led to a hidden reach.
+- `skills_root_named`: a tool call named a skills folder of the layout, the
+  plugin's or a config folder's `skills/`, this run's or another's, ending there
+  or at a glob. It is the step before a sibling reach. A path into one skill's
+  folder does not name it, and neither does a path above it, such as
+  `find .. -name SKILL.md`, so the count is a lower bound.
+- `refused`: the tool calls the CLI refused for want of permission, by tool
+  name, from the result event's `permission_denials`.
+- `output_tokens`: from the result event's `usage`.
+- `seconds`: the run's wall time, from its start to its outcome.
+
+The two path measures read every word of a call's input as a path, with `.`
+and `..` resolved: a relative path from the case folder, or from the folder a
+`cd` earlier in the same command moved to. A skills-arm run is read only up to
+its first fire, where a front-door run is read to the end of its turn. So a
+skills-arm run's measures cover the calls before the fire, and its `seconds`
+end there. A run that ended before its result event, a skills-arm run that
+fired or a timed-out one, has no `refused` list and no `output_tokens`
+(`null`), never an empty or zero one.
+
+Every results file records its layout. The round 3 measurement, per model:
+
+```bash
+M=claude-sonnet-5-5
+python evals/run_routing.py --arm skills --layout personal --model $M --runs 5 --json-out e0-$M.json
+for L in plugin personal; do
+  python evals/run_routing.py --arm frontdoor --layout $L --model $M --runs 5 --json-out e1-$L-$M.json
+  python evals/run_routing.py --arm frontdoor --layout $L --model $M --runs 5 --json-out e2-$L-$M.json \
+    --cases evals/suite-explicit.json
+done
+```
 
 ## Clean-room fixtures
 
