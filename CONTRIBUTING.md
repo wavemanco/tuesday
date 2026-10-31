@@ -401,7 +401,9 @@ A fixture that runs the quotes check declares `candidate_text` as a list, and ea
 entry is in the prompt; one that runs the fit_ledger check declares
 `candidate_constraints` as exactly "known" or "unknown". `research.declined`, where
 present, is true or false; a fixture that sets it true does not also set
-`zero_calls`, and its `research.declined_phrase` is in the prompt. Each
+`zero_calls`, and its `research.declined_phrase` is in the prompt. A fixture with
+research runs the `yes_names_page` check exactly when its skill's `SKILL.md` states
+that every `yes` row names its pages (`evals/README.md`, "Deterministic checks"). Each
 `research.user_links` entry is a URL that is no research page and no canary's page.
 Every research target has `on_target_samples`, each aimed at the target in every
 room the fixture runs; a target that accepts `n/a` or `skipped` has `hunt_samples`,

@@ -429,6 +429,32 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   its link returned (`user_link_canary`), and never in a denied room, where no
   fetch can return (`user_link_canary_absent`); a link no fetch of which returned
   is not asked for, and a run with no research record leaves it unchecked.
+- **Page named** (`yes_names_page`), for a fixture whose `checks` name it: every
+  fixture with research of a skill whose `SKILL.md` states that every `yes` row
+  names the queries and pages it rests on, each page by its title or address
+  (job-underwriter, Step 2), and no other
+  (`output_checks.YES_PAGES_RULE` reads that sentence; CI's fixtures group holds
+  fixture and sentence together). Each `yes` row, numbered or un-numbered, must
+  name at least one page the research record shows a call behind it returned. A
+  numbered row's calls are those aimed at its target, by the attribution
+  `yes_has_call` reads (`aimed_at`, with `identity_search` over `request_text`);
+  an un-numbered row's are the calls aimed at no declared target. Every query the
+  run sent is cut out of the row first, as written and word for word, so a query
+  is never read as its page. What is left names a page by its title — whole, or
+  trimmed of one leading or trailing segment at a spaced dash, a pipe or a colon
+  when what is left keeps at least two words and half the title's
+  (`output_checks.title_forms`), case and punctuation ignored — by its address,
+  host and path compared by `norm_url`, or by its bare host. Titles are known for
+  a canned room's pages only; a live room's record holds addresses. A page never
+  returned, or returned only to calls aimed at another target, does not count.
+  Where every call behind the row returned empty, or in a canned room nothing
+  tagged with its target, the row passes if it says so in a form
+  `output_checks.NOTHING_USABLE` lists — "not established", "nothing usable",
+  "returned nothing" and "no results" among them. A row none of whose calls
+  returned is left to `yes_has_call` or `off_target_has_call`, and a run with no
+  research record leaves the check unchecked. What it does not read: whether the
+  page named is the one the row's fact came from. A page named only by
+  description ("the About page", "a pay guide") is not named, and fails.
 - **Fit ledger** (`fit_ledger`): job-underwriter's ledger must be an exact
   projection of the evidence map — every row once, under its own tier and fit,
   each row below `direct` with its Requirement's own words — and the decision

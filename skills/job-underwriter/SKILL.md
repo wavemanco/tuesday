@@ -80,7 +80,7 @@ the target, a Status cell of exactly one of `yes`, `skipped`, `n/a` or
 `unavailable`, and the reason. Each label and its ground are
 `references/interaction-grammar.md` §4's; read it before writing the table.
 Searches go only to declared targets. Every `yes` row names the queries and pages
-it rests on. Worked table: Evidence status in
+it rests on, each page by its title or address. Worked table: Evidence status in
 `references/dossier-worked-report.md`.
 
 Failed attribution is also a finding about the opportunity: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.

@@ -2273,7 +2273,9 @@ def check_fixtures() -> None:
     target's `terms` decide which calls were aimed at it, so a sample of another
     target that is aimed at an `n/a` or `skipped` one — by its terms, or in a canned
     room by a page the server returns — fails a correct row, and a target whose terms
-    match none of its own queries passes every hunt. Each is read here with the
+    match none of its own queries passes every hunt; and a fixture with research, of a
+    skill whose SKILL.md states that every `yes` row names its pages, that does not
+    run `yes_names_page` leaves those pages unjudged. Each is read here with the
     harness's own functions (evals/output_checks.py, evals/research_server.py), in
     every mode the fixture runs (run_fixtures.modes_of), so the lint and the checks
     cannot disagree.
@@ -2281,10 +2283,28 @@ def check_fixtures() -> None:
     group = "fixtures"
     linted = 0
     for skill in skills():
+        # A `yes` row names the pages it rests on: judged (output_checks.YES_PAGES_CHECK)
+        # in every fixture with research of a skill whose SKILL.md states it, and in no
+        # other, so the check can neither go quiet nor judge a rule a skill never gave.
+        states_pages = bool(output_checks.YES_PAGES_RULE.search((skill / "SKILL.md").read_text(encoding="utf-8")))
         for case in load_evals(skill / "evals" / "evals.json") or []:
             label = f"{skill.name} eval {case.get('id')}"
             prompt = output_checks.normalise_quote(case.get("prompt", ""))
             checks = case.get("checks") or []
+            runs_pages = output_checks.YES_PAGES_CHECK in checks
+            if case.get("research"):
+                linted += 1
+                if states_pages and not runs_pages:
+                    fail(group, f"{label}: SKILL.md states that every `yes` row names its pages and this fixture "
+                                f"does not run the {output_checks.YES_PAGES_CHECK} check — its rows' pages would go "
+                                f"unchecked")
+                elif runs_pages and not states_pages:
+                    fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check, and SKILL.md does not "
+                                f"state that every `yes` row names its pages — a rule the skill never gave would "
+                                f"be judged")
+            elif runs_pages:
+                fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check with no research block — "
+                            f"it never runs")
             text = case.get("candidate_text")
             if "quotes" in checks and not isinstance(text, list):
                 fail(group, f"{label}: runs the quotes check and declares no candidate_text list — the evidence "
@@ -2505,7 +2525,7 @@ def check_fixtures() -> None:
         fail(group, "no fixture field read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
         ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links, "
-                  f"user pages and research targets agree with what the harness reads")
+                  f"user pages, research targets and page-naming checks agree with what the harness reads")
 
 
 class SentenceRule:

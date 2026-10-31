@@ -2487,6 +2487,114 @@ def test_off_target_rows() -> None:
           (verdict_of(got, "off_target_shown"), "off_target_shown" in got["unchecked"]), (None, True))
 
 
+def test_yes_names_page() -> None:
+    print("\nchecks: a `yes` row names a page a call aimed at its target returned (yes_names_page)")
+    case = fixture("job-underwriter", 6)
+    research, prompt = case["research"], case["prompt"]
+    about, guide = "https://quillfield.co.uk/about", "https://ledgerline.example/2026-uk-revenue-operations-pay-guide"
+    profile = "https://www.linkedin.example/in/tamsin-achebe"
+    pay_query = "Revenue Operations Lead salary UK B2B software"
+    calls = [entry("Quillfield invoicing software company Bristol", targets=[1], urls=[about]),
+             entry(pay_query, targets=[2], urls=[guide]),
+             entry("Tamsin Achebe Quillfield", targets=[3], urls=[profile])]
+    named = {1: 'Searched "Quillfield invoicing software company Bristol": "About Quillfield" (quillfield.co.uk/about)',
+             2: f'Searched "{pay_query}": "Ledgerline 2026 UK Revenue Operations Pay Guide". Moved the market line',
+             3: 'Searched "Tamsin Achebe Quillfield": "Tamsin Achebe — Head of Revenue Operations, Quillfield"'}
+
+    def judge(why: dict, log=tuple(calls), extra: str = "", on: bool = True):
+        cells = {**named, **why}
+        rows = "".join(f"| {n}. target | yes | {cells[n]} |\n" for n in (1, 2, 3))
+        text = ("Research tier: L1 — searches 3 of 5, fetches 0 of 2\n\n| Target | Status | What it moved |\n"
+                f"|---|---|---|\n{rows}{extra}")
+        return output_checks.check_accounting(text, research, "canned", None if log is None else list(log),
+                                              prompt, yes_pages=on)
+
+    def page(got, target) -> str | None:
+        return verdict_of(got, output_checks.YES_PAGES_CHECK, target)
+
+    got = judge({})
+    check("must pass: each row names its page — by title and address, by title, by a profile's whole title",
+          [page(got, n) for n in (1, 2, 3)], ["PASS", "PASS", "PASS"])
+    check("must pass: a row naming its page by full URL",
+          page(judge({1: f"Searched for the company; read {about}."}), 1), "PASS")
+    check("must pass: a row naming its page by bare host",
+          page(judge({2: f'Searched "{pay_query}"; the guide at Ledgerline.example sets the band'}), 2), "PASS")
+    check("must pass: a title trimmed of its leading segment, case and punctuation aside",
+          page(judge({3: 'Searched "Tamsin Achebe Quillfield": the profile head of revenue operations '
+                         '— quillfield'}), 3), "PASS")
+    empty = [calls[0], entry(pay_query, targets=[2]), calls[2]]
+    check("must pass: every call aimed at the target returned empty, and the row says so",
+          page(judge({2: f'Searched "{pay_query}", which returned nothing usable; the band is [generic]'},
+                     empty), 2), "PASS")
+    elsewhere = [calls[0], entry(pay_query, targets=[2], urls=[about]), calls[2]]
+    check("must pass: in a canned room, the target's calls brought back only another target's page, said so",
+          page(judge({2: f'Searched "{pay_query}": not established'}, elsewhere), 2), "PASS")
+    stray = entry("Quillfield layoffs glassdoor", urls=["https://forum.example/quillfield-layoffs"])
+    off = "| Off-target: Quillfield layoffs | yes | {} |\n"
+    got = judge({}, (*calls, stray),
+                off.format('Searched "Quillfield layoffs glassdoor": forum.example/quillfield-layoffs; moved nothing'))
+    check("must pass: an un-numbered off-target row naming the page its stray call returned",
+          (page(got, "off-target 1"), verdict_of(got, "off_target_shown")), ("PASS", "PASS"))
+
+    check("must fail: a row naming its queries only",
+          page(judge({2: f'Searched "{pay_query}". Moved the market line'}), 2), "FAIL")
+    check("must fail: a page the log never returned",
+          page(judge({2: f'Searched "{pay_query}": "UK RevOps Salary Report" (payscale.example/revops)'}), 2), "FAIL")
+    check("must fail: a page returned only to another target's call",
+          page(judge({2: f'Searched "{pay_query}": "About Quillfield" (quillfield.co.uk/about)'}), 2), "FAIL")
+    check("must fail: a host the query itself carries is not the page",
+          page(judge({1: 'Searched "quillfield.co.uk about"'},
+                     [entry("quillfield.co.uk about", targets=[1], urls=[about]), *calls[1:]]), 1), "FAIL")
+    check("must fail: a page named only by description",
+          page(judge({1: 'Searched "Quillfield invoicing software company Bristol": the About page'}), 1), "FAIL")
+    check("must fail: an empty result the row does not own up to",
+          page(judge({2: f'Searched "{pay_query}". Moved the market line'}, empty), 2), "FAIL")
+    check("must fail: \"not established\" when the target's own page came back",
+          page(judge({2: f'Searched "{pay_query}": not established'}), 2), "FAIL")
+    got = judge({}, (*calls, stray), off.format('Searched "Quillfield layoffs glassdoor"; moved nothing'))
+    check("must fail: an un-numbered row naming only its query", page(got, "off-target 1"), "FAIL")
+    got = judge({}, (*calls, stray), off.format('Searched "Quillfield layoffs glassdoor": "About Quillfield" '
+                                                '(quillfield.co.uk/about)'))
+    check("must fail: an un-numbered row naming a page only a targeted call returned",
+          page(got, "off-target 1"), "FAIL")
+    check("must fail: a person's name heading a profile's title is not, alone, the profile",
+          page(judge({3: 'Searched "Tamsin Achebe Quillfield": Tamsin Achebe has run revenue operations '
+                         'there since 2023'}), 3), "FAIL")
+    check("title_forms keeps no trimmed form under half the title or under two words",
+          (sorted(output_checks.title_forms("Tamsin Achebe — Head of Revenue Operations, Quillfield")),
+           sorted(output_checks.title_forms("Careers — Quillfield"))),
+          (["head of revenue operations quillfield", "tamsin achebe head of revenue operations quillfield"],
+           ["careers quillfield"]))
+    quoted = '"Ledgerline 2026 UK Revenue Operations Pay Guide"'
+    check("must fail: a query sent quoted and written unquoted is still the query, not the page",
+          page(judge({2: "Searched Ledgerline 2026 UK Revenue Operations Pay Guide. Moved the market line"},
+                     [calls[0], entry(quoted, targets=[2], urls=[guide]), calls[2]]), 2), "FAIL")
+
+    got = judge({}, None)
+    check("with no research log the check is unchecked, never a pass",
+          (page(got, 1), output_checks.YES_PAGES_CHECK in got["unchecked"]), (None, True))
+    got = judge({2: f'Searched "{pay_query}"'}, on=False)
+    check("a fixture that does not run the check gets no verdict", page(got, 2), None)
+    refused = [calls[0], entry(pay_query, "refused", targets=[2]), calls[2]]
+    got = judge({2: f'Searched "{pay_query}"'}, refused)
+    check("a row none of whose calls returned is left to yes_has_call",
+          (page(got, 2), verdict_of(got, "yes_has_call", 2)), (None, "FAIL"))
+
+    response = ("Research tier: L1 — searches 3 of 5, fetches 0 of 2\n\n| Target | Status | What it moved |\n"
+                "|---|---|---|\n" + "".join(f"| {n}. target | yes | {named[n]} |\n" for n in (1, 2, 3)))
+    ran = output_checks.run_checks(case, "canned", response, list(calls))
+    check("run_checks runs it for a job-underwriter fixture that names it",
+          [c["verdict"] for c in ran["checks"] if c["check"] == output_checks.YES_PAGES_CHECK], ["PASS"] * 3)
+    mi = fixture("mock-interview", 7)
+    ran = output_checks.run_checks(mi, "canned", response, list(calls))
+    check("and never for a mock-interview fixture, whose skill does not state the rule",
+          [c for c in ran["checks"] if c["check"] == output_checks.YES_PAGES_CHECK], [])
+    for skill, states in (("job-underwriter", True), ("mock-interview", False), ("resume-tailor", False)):
+        text = (Path(__file__).resolve().parent.parent / "skills" / skill / "SKILL.md").read_text()
+        check(f"YES_PAGES_RULE reads {skill}'s SKILL.md as {'stating' if states else 'not stating'} the rule",
+              bool(output_checks.YES_PAGES_RULE.search(text)), states)
+
+
 def test_canary_gate() -> None:
     print("\nchecks: the canary is asked for only of a page the room returned, and its page is checked")
     labels = {1: "yes", 2: "yes", 3: "n/a"}
@@ -2951,7 +3059,8 @@ def main() -> int:
                  test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
                  test_user_links, test_user_link_fixture,
-                 test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
+                 test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_yes_names_page,
+                 test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
                  test_audit_ledger, test_watch_out):
         test()

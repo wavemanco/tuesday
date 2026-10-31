@@ -1914,6 +1914,48 @@ def break_constraints_misspelt(root: Path) -> str:
     return "declares candidate_constraints 'Unknown', not exactly"
 
 
+PAGES = "yes_names_page"
+PAGES_RULE = "Every `yes` row names the queries and pages"
+
+
+def break_pages_check_dropped(root: Path) -> str:
+    """A research fixture of a skill stating the rule that does not run the check: its pages go unjudged."""
+    mutate_case(root, JU, 4, lambda c: c["checks"].remove(PAGES))
+    return "job-underwriter eval 4: SKILL.md states that every `yes` row names its pages and this fixture does not run"
+
+
+def break_pages_check_unstated(root: Path) -> str:
+    """mock-interview states no page-naming rule; running the check there judges one it never gave."""
+    mutate_case(root, MI, 7, lambda c: c["checks"].append(PAGES))
+    return "mock-interview eval 7: runs the yes_names_page check, and SKILL.md does not state"
+
+
+def break_pages_check_without_research(root: Path) -> str:
+    mutate_case(root, JU, 2, lambda c: c["checks"].append(PAGES))
+    return "job-underwriter eval 2: runs the yes_names_page check with no research block"
+
+
+def break_pages_rule_reworded(root: Path) -> str:
+    """The sentence reworded away: every fixture still running the check now judges an unstated rule."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", PAGES_RULE, "Every `yes` row names the queries",
+              "break_pages_rule_reworded")
+    return "job-underwriter eval 6: runs the yes_names_page check, and SKILL.md does not state"
+
+
+def break_pages_rule_formless(root: Path) -> str:
+    """The rule kept but its form dropped: the check reads a page as named only by title or
+    address, so a skill that does not say so would be judged on a reading it never gave."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", "it rests on, each page by its title or address.",
+              "it rests on.", "break_pages_rule_formless")
+    return "job-underwriter eval 6: runs the yes_names_page check, and SKILL.md does not state"
+
+
+def keep_pages_rule_rewrapped(root: Path) -> None:
+    """The rule's sentence hard-wrapped at another word is the same sentence."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", PAGES_RULE, "Every `yes` row names the\nqueries and pages",
+              "keep_pages_rule_rewrapped")
+
+
 DECLINE = "Please don't look anything up — work from what I've given you."
 
 
@@ -3049,6 +3091,7 @@ PASSES = [
     ("wording", "\"no network\" outside an L0 definition", keep_no_network_elsewhere),
     ("answer-keys", "schema fields a dossier fixture repeats, fenced", keep_answer_key_snake_case),
     ("fixtures", "a fixture whose user declines research", keep_declined_fixture),
+    ("fixtures", "the page-naming rule's sentence hard-wrapped at another word", keep_pages_rule_rewrapped),
     ("fit-ledger", "a ratio that counts something other than rows", keep_ledger_ratio_of_other_noun),
     ("fit-ledger", "a ratio that counts something else in decision.summary", keep_summary_ratio_of_other_noun),
     ("fit-ledger", "a ledger name whose Requirement words hold a parenthesis", keep_ledger_nested_name),
@@ -3430,6 +3473,11 @@ CASES: list[tuple[str, str, callable]] = [
     ("wording", "the retired count rule back in a grader clause", break_retired_count_rule),
     ("fixtures", "a fit_ledger fixture with no candidate_constraints", break_constraints_missing),
     ("fixtures", "candidate_constraints misspelt", break_constraints_misspelt),
+    ("fixtures", "a research fixture of a skill stating the page-naming rule without its check", break_pages_check_dropped),
+    ("fixtures", "the page-naming check on a skill that does not state the rule", break_pages_check_unstated),
+    ("fixtures", "the page-naming check on a fixture with no research", break_pages_check_without_research),
+    ("fixtures", "the page-naming rule reworded out of SKILL.md", break_pages_rule_reworded),
+    ("fixtures", "the page-naming rule's form (title or address) dropped from SKILL.md", break_pages_rule_formless),
     ("fixtures", "research.declined that is not a boolean", break_declined_not_bool),
     ("fixtures", "research.declined beside zero_calls", break_declined_and_zero_calls),
     ("fixtures", "research.declined with no declined_phrase", break_declined_no_phrase),

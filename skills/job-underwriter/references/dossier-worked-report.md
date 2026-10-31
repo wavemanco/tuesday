@@ -168,8 +168,8 @@ Research tier: L1 — searches 4 of 5, fetches 1 of 2; user links read 1
 
 | Target | Status | What it moved, or would have |
 |---|---|---|
-| 1. Official site and careers page | yes | Searched "Penhallow Foundation community energy fund" and "Penhallow Foundation jobs senior programme manager"; fetched the jobs page for this role. Role reality: the contradictions row — JD and jobs page agree |
-| 2. Role-family sweep | yes | Searched "senior programme manager grant-making foundation salary" and "grants programme manager endowed foundation scope". Market calibration `[generic]` — its band and its remit — and the norm the scope read is set against |
+| 1. Official site and careers page | yes | Searched "Penhallow Foundation community energy fund" and "Penhallow Foundation jobs senior programme manager"; fetched "Senior Programme Manager, Community Energy Fund — Penhallow Foundation jobs" (penhallow.example/jobs/senior-programme-manager). Role reality: the contradictions row — JD and jobs page agree |
+| 2. Role-family sweep | yes | Searched "senior programme manager grant-making foundation salary", which returned "Foundation staff salary survey" (fundpay.example/foundation-salaries), and "grants programme manager endowed foundation scope", which returned "Grants programme manager: role profile" (charityroles.example/grants-programme-manager). Market calibration `[generic]` — its band from the survey, its remit from the profile — and the norm the scope read is set against |
 | 3. Hiring manager's public footprint | n/a | No name was given, so there was no query to form. The upgrade menu names what a name would unlock |
 
 In a host with no search the same rows read `unavailable`, `unavailable`, `n/a`:
@@ -177,10 +177,14 @@ the first two naming what they would have moved, which the upgrade menu then
 offers, and the third unchanged, because `n/a` and `skipped` are decided from the
 inputs and not from the host.
 
-Rows 1 and 2 name every search and fetch the tier line counts; the end-of-programme
-report the user linked is the read it names as a user link. This run stopped
-at L1: an L2 run adds rows 4 and 5 below row 3, and a search sent outside every
-declared target adds an un-numbered `yes` row after them.
+Rows 1 and 2 name every search and fetch the tier line counts, and the page, by
+title and address, each fact came from; the end-of-programme report the user
+linked is the read the tier line names as a user link. Row 2 once named its
+searches and no page, and row 1 its page only by description, against `SKILL.md`
+Step 2; measured runs copied them, naming their searches and not the page behind
+the fact. This run stopped at L1: an L2 run adds rows 4 and 5 below row 3, and a
+search sent outside every declared target adds an un-numbered `yes` row after
+them.
 
 That is the target accounting specified in `interaction-grammar.md` §4 and applied in `SKILL.md` Step 2. The dossier carries it because it
 renders the same analysis the delivered assessment does — **the spec lives in

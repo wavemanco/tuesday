@@ -164,7 +164,8 @@ def parse_accounting(text: str) -> dict:
                     # un-numbered row could stand in for a declared target's own.
                     if rows and status == "yes":
                         extras.append({"target": first, "raw": raw,
-                                       "why": cells[2].strip() if len(cells) > 2 else ""})
+                                       "why": cells[2].strip() if len(cells) > 2 else "",
+                                       "text": " | ".join(cells)})
                         continue
                     problems.append((None, f"{source}: a row does not start with a target "
                                            f"number: {first[:80]!r} (an un-numbered row is "
@@ -186,7 +187,8 @@ def parse_accounting(text: str) -> dict:
                     problems.append((n, f"{source}: target {n} has two rows"))
                     continue
                 rows[n] = {"label": label, "raw": raw, "target": first,
-                           "why": cells[2].strip() if len(cells) > 2 else ""}
+                           "why": cells[2].strip() if len(cells) > 2 else "",
+                           "text": " | ".join(cells)}
             if rows:
                 parsed.append((source, rows, extras))
                 break                                   # the first readable table per source
@@ -438,8 +440,109 @@ def canary_in(spelling: str, text: str) -> bool:
     return bool(spelling) and re.search(r"(?<![\w])" + re.escape(spelling) + r"(?![\w])", text) is not None
 
 
+# --- 6a'. A `yes` row names the page it rests on ---------------------------------
+#
+# job-underwriter's SKILL.md Step 2: "Every `yes` row names the queries and pages it
+# rests on, each page by its title or address." Graders failed it in about two grades of three on eval 6: rows named
+# their searches and not the page the fact came from, as the skill's own worked
+# row 2 did until it was fixed. A query is not a page, and a page the run was never
+# shown is not one it rests on, so the check reads the row against the record:
+# the row must name a page — by title or by address — that a call aimed at its
+# target returned. evals/README.md ("Deterministic checks") states what it reads.
+
+YES_PAGES_CHECK = "yes_names_page"
+# The rule's own sentence, with the form a page is named in: the check judges that
+# form, so a skill must state it for the check to run. A fixture runs the check (its `checks` list names
+# YES_PAGES_CHECK) exactly when its skill's SKILL.md carries this sentence; CI's
+# fixtures group holds the two together.
+YES_PAGES_RULE = re.compile(r"Every\s+`yes`\s+row\s+names\s+the\s+queries\s+and\s+pages\s+it\s+rests\s+on,"
+                            r"\s+each\s+page\s+by\s+its\s+title\s+or\s+address", re.I)
+# Where a title is trimmed: a spaced hyphen or dash, a pipe, or a colon before a space
+# ("Senior Pricing Analyst — Brindlemoor careers", "Tobias Wrenfield: Patch Notes …").
+TITLE_SEPARATOR = re.compile(r"\s+[-|]\s+|\s*\|\s*|:\s+")
+# An address in a row: a host with an optional path, scheme and `www.` optional.
+ADDRESS = re.compile(r"(?<![\w@.-])(?:https?://)?((?:[a-z0-9-]+\.)+[a-z]{2,})(/[^\s()<>\[\]{}|,;\"'`*]*)?", re.I)
+# How a row says its target's calls brought back nothing to name: interaction-grammar
+# §4's "not established" and the plain forms runs write. Read only where every
+# call aimed at the target returned empty or (in a canned room) nothing tagged with
+# it; anywhere else a row has a page to name.
+NOTHING_USABLE = re.compile(
+    r"\bnot established\b|\bnothing (?:usable|attributable|relevant)\b|\breturned nothing\b|"
+    r"\bno (?:usable |relevant |attributable )?results?\b|\bunattributable\b|\bnot attributable\b|"
+    r"\bcould not be attributed\b", re.I)
+
+
+def plain_words(text: str) -> str:
+    """Words only, casefolded, one space apart: case and punctuation never decide a match."""
+    return " ".join(re.findall(r"[^\W_]+", unify_dashes(str(text or "")).casefold()))
+
+
+def title_forms(title: str) -> set[str]:
+    """A page title as a row may name it: whole, or trimmed of one leading or one
+    trailing segment at a separator ("Senior Pricing Analyst — Brindlemoor careers"
+    is also "Senior Pricing Analyst"), when what is left keeps at least two words
+    and at least half the title's — so a person's name heading a profile's title is
+    not, alone, the profile."""
+    whole = plain_words(title)
+    forms = {whole} if whole else set()
+    parts = [p for p in TITLE_SEPARATOR.split(unify_dashes(str(title or ""))) if p.strip()]
+    if len(parts) > 1:
+        for kept in (parts[1:], parts[:-1]):
+            words = plain_words(" ".join(kept)).split()
+            if len(words) >= 2 and 2 * len(words) >= len(whole.split()):
+                forms.add(" ".join(words))
+    return forms
+
+
+def returned_pages(entries: list[dict], pages: list[dict]) -> list[tuple[str, str]]:
+    """(url, title) for each URL these calls returned, once each after `norm_url`; the
+    title is the fixture page's at that URL, empty where the room has none (a live
+    room records addresses only)."""
+    out: dict[str, tuple[str, str]] = {}
+    for e in entries:
+        if e.get("outcome") != "returned":
+            continue
+        for url in e.get("urls_returned") or []:
+            key = norm_url(str(url))
+            if key and key not in out:
+                out[key] = (str(url), next((str(p.get("title") or "") for p in pages
+                                            if same_url(p.get("url", ""), str(url))), ""))
+    return list(out.values())
+
+
+def page_named(text: str, pool: list[tuple[str, str]], queries: list[str]) -> str | None:
+    """The first page of `pool` the row names, described, or None.
+
+    Every query the run sent is cut out of the row first — as written, and again
+    word for word — so a title or host the query carries ("Searched 'quillfield.co.uk
+    jobs'") is never read as the page. What is left names a page by its title
+    (`title_forms`), by its address (host and path, compared by `norm_url`), or by
+    its bare host, which names any page of that host the pool holds."""
+    sent = sorted({q.strip() for q in queries if q and q.strip()}, key=len, reverse=True)
+    pieces = [str(text or "")]
+    for q in sent:
+        pieces = [part for piece in pieces for part in re.split(re.escape(q), piece, flags=re.I)]
+    plain = [plain_words(p) for p in pieces]
+    for q in sorted({plain_words(q) for q in sent} - {""}, key=len, reverse=True):
+        plain = [part for piece in plain for part in re.split(r"(?<!\S)" + re.escape(q) + r"(?!\S)", piece)]
+    for url, title in pool:
+        for form in title_forms(title):
+            if any(f" {form} " in f" {piece} " for piece in plain):
+                return f"the page titled {title!r} ({url})"
+    for piece in pieces:
+        for m in ADDRESS.finditer(piece):
+            path = (m.group(2) or "").rstrip(".:!?")
+            said = norm_url(m.group(1) + path)
+            for url, title in pool:
+                if (said == norm_url(url) if path.strip("/") else
+                        said == norm_url(url).split("/", 1)[0].split("?", 1)[0]):
+                    return f"the address {m.group(0)!r} ({url})"
+    return None
+
+
 def check_accounting(response: str, research: dict, mode: str,
-                     research_log: list | None, prompt: str | None = None) -> dict:
+                     research_log: list | None, prompt: str | None = None,
+                     yes_pages: bool = False) -> dict:
     """Judge the accounting against what the harness recorded. Returns findings.
 
     Attribution is per target, because a run-level check passed the failure the
@@ -447,7 +550,9 @@ def check_accounting(response: str, research: dict, mode: str,
     run that had made other calls. A refused call counts as a call — the budget
     is spent on what was sent, and a target searched and refused was not skipped.
     The rule judged here is interaction-grammar §4; each check below is that rule
-    and no stricter.
+    and no stricter. `yes_pages` adds one rule §4 does not state and job-underwriter's
+    SKILL.md Step 2 does — a `yes` row names the pages it rests on — for a fixture
+    whose `checks` name YES_PAGES_CHECK.
     """
     checks, info, unchecked = [], [], []
     table = parse_accounting(response)
@@ -621,6 +726,59 @@ def check_accounting(response: str, research: dict, mode: str,
             info.append(f"{len(extras)} off-target row(s), and every recorded call is aimed at a "
                         f"declared target by its terms, page or result; not judged, since the "
                         f"rows are not matched to calls by their wording")
+
+    if yes_pages and not have_log:
+        unchecked_once(YES_PAGES_CHECK)
+        info.append(f"{YES_PAGES_CHECK}: no research log, so which pages the run was shown is "
+                    f"unknown; not checked")
+    elif yes_pages:
+        # Each `yes` row, numbered or not, against the pages the calls behind it
+        # returned: a numbered row's are the calls aimed at its target (the same
+        # `aimed` that yes_has_call reads), an off-target row's the calls aimed at no
+        # declared target (`stray`), since rows are not matched to calls by wording.
+        sent = [str(e.get("query_or_url") or "") for e in full if e.get("kind") == "search"]
+
+        def names_page(row: dict, calls: list[dict], key: str, whose: str, n=None) -> None:
+            if not any(e.get("outcome") == "returned" for e in calls):
+                info.append(f"{YES_PAGES_CHECK} for {key}: no call {whose} returned, so there is no "
+                            f"page to name (yes_has_call or off_target_has_call judges the row)")
+                return
+            pool = returned_pages(calls, pages)
+            named = page_named(row.get("text") or row.get("why", ""), pool, sent)
+            if named:
+                checks.append(finding(YES_PAGES_CHECK, key, True,
+                                      f"the row names {named}, which a call {whose} returned"))
+                return
+            own = [u for u, _ in pool if n is None or mode != "canned" or any(
+                same_url(p.get("url", ""), u) and p.get("target") == n for p in pages)]
+            said = NOTHING_USABLE.search(row.get("text") or "")
+            shown = "; ".join(f"{t!r} {u}" if t else u for u, t in pool[:4]) or "none, every one empty"
+            if not own and said:
+                checks.append(finding(YES_PAGES_CHECK, key, True,
+                                      f"every call {whose} returned nothing {'' if pool else 'at all '}"
+                                      f"attributable to it, and the row says so ({said.group(0)!r}); "
+                                      f"pages returned: {shown}"))
+                return
+            checks.append(finding(
+                YES_PAGES_CHECK, key, False,
+                f"a `yes` row names the queries and pages it rests on, each page by its title or address "
+                f"(job-underwriter SKILL.md Step 2): "
+                f"this row names no page, by title or address, that a call {whose} returned"
+                + (" — and those calls brought back nothing attributable to it, which it does not say"
+                   if not own else "")
+                + f"; pages returned: {shown}"))
+
+        for target in targets:
+            n = target["n"]
+            row = table["rows"].get(n)
+            if row and row["label"] == "yes":
+                names_page(row, aimed[n], str(n), f"aimed at target {n}", n)
+        for i, extra in enumerate(extras, 1):
+            if stray:
+                names_page(extra, stray, f"off-target {i}", "aimed at no declared target")
+            else:
+                info.append(f"{YES_PAGES_CHECK} for off-target {i}: no recorded call is aimed at no "
+                            f"declared target, so its pages are not judged")
 
     searches = len(searches_sent)
     fetches = sum(1 for e in log if e.get("kind") == "fetch")
@@ -1548,7 +1706,8 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
     wanted = case.get("checks", [])
     parts = []
     if research:
-        parts.append(check_accounting(response, research, mode, research_log, case.get("prompt", "")))
+        parts.append(check_accounting(response, research, mode, research_log, case.get("prompt", ""),
+                                      yes_pages=YES_PAGES_CHECK in wanted))
     if "fit_ledger" in wanted:
         parts.append(check_fit_ledger(response, case.get("candidate_constraints"), fixture=True))
     if "quotes" in wanted:

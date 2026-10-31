@@ -6,7 +6,7 @@
     "closing": "The response offers a tuesday-dossier.md in one sentence, without pressure, rather than emitting or forcing one, and its upgrade menu names what each missing input would unlock. The response closes with the dossier offer, then the upgrade menu, then the questions, then the watch-out line, with nothing between or beneath them — the response-modes line is part of the questions, after each question or once after the last for all of them, not something beneath them; the watch-out line is the response's last line, after the questions, is in no file the response produced, and is exactly this line, which the harness checks character for character: `**Watch-out:** A summary line here can contradict the evidence table — before you act on a count, an \"only\" or an all-clear, check it against the table's rows.`; the decision snapshot that opens it is its one summary, and no 'bottom line', recap or closing summary restates it anywhere",
     "generic_scope": "No clause asserting something about the employer specifically — its team, stage, product, pay or practices — rests on a [generic] label: a [generic] row or cell states a role-family pattern, and any clause in it naming this employer or this candidate carries its own [grounded] or [inferred] basis. The standing failed-attribution risk entry, which labels a pattern and says it is not a claim about this company, is correct and does not fail this",
     "accounting": "Evidence status carries the Research tier line and one row per declared L1 target, numbered in the declared order — the company's site and careers page, the role-family sweep, the hiring manager's public footprint — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned a result (an empty or unattributable one included) and unavailable only if every call was refused or errored, because an error returns nothing; it is never skipped or n/a. A target no call was sent for is n/a only when no name at all was given to form its query (a first name with a title and the company is a name), skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved; in a room that could search, unavailable with no call sent is right only when the user chose L0 or declined research (and the tally then reads L0 — no searches), or when the search budget was fully spent and every search went to a lower-numbered (higher-priority) target. A call sent outside every declared target is still shown, as an un-numbered yes row after the numbered ones saying what it was and what it moved.",
-    "accounting_counts": "Every yes row, numbered or un-numbered, names the queries and pages it rests on, and the Research tier line's counts agree with the research calls the harness observed, refused ones included. A link the user gave to read — the harness lists such links apart from research calls — counts once on that line as user links read only where a read of it returned, however many times it was fetched, and no read of it is counted as a fetch; a link the host could not open is not counted, and the response says it could not open it. A fetch of a URL the user named only as the source of text they pasted is a research call like any other",
+    "accounting_counts": "Every yes row, numbered or un-numbered, names the queries and pages it rests on, each page by its title or address, and the Research tier line's counts agree with the research calls the harness observed, refused ones included. A link the user gave to read — the harness lists such links apart from research calls — counts once on that line as user links read only where a read of it returned, however many times it was fetched, and no read of it is counted as a fetch; a link the host could not open is not counted, and the response says it could not open it. A fetch of a URL the user named only as the source of text they pasted is a research call like any other",
     "ledger_counts": "Anywhere in the response, every section and the dossier included, a statement about a set of evidence-map rows — a count, a quantifier, a ratio, 'only', a range, a set described by the rows it leaves out — agrees with the map: the rows it covers, any number it gives, and what it says of them are true of the map's rows, where 'must-have' means the must_have tier, a split row is two rows, and outside the snapshot a range covers every row between its endpoints. One that disagrees fails, named or not ('all four must-haves land direct' over a map with six must-haves, five of them direct). Which set a statement describes follows its subject: 'R1 and R2 both fail' is about R1 and R2, and passes where both fail, whatever else fails; 'every must-have — R1, R2 and R3 — is direct' is about the must_have tier, and fails where the map has another must-have or one it names is not `direct`. In the decision snapshot (its status line, the sentence after the fit ledger and its other lines) and in decision.summary, a statement about a set of rows also names every row of the set by ID, in the same sentence, each ID written out (a range names only its endpoints; a split row's parent ID names neither row); unnamed there, it fails even when accurate ('you clear every must-have', 'both of your hard constraints fail'). The named-set words ('N of M', 'every', 'all', 'each of', 'none of', 'both', 'neither', 'no `must_have` row', 'only', 'the one') and any count may carry a named set there, and pass when exact ('R6, R7 and R8 are the only rows below `direct`' passes where those are the rows below direct, and 'R5b and R8 are the only rows below `direct`' fails under a ledger that lists a third). The complements ('the rest', 'the others', 'everything else', 'nothing else', 'no other', 'any other', 'none of the others', 'all but', 'all except') fail in the snapshot and decision.summary whatever they name, because they describe a set by the rows they leave out and never name it ('R1 and R2 fail outright and nothing else in the map can offset that'); in the one sentence after the fit ledger, which is about the map by construction, every listed word and every 'N of M' is read as about the map wherever it stands and whatever it counts ('covers only the PII side' fails there when the sentence names no row), and a bare 'none' fails too, because it speaks for the rows that sentence does not name. Plain 'no' and the token `none` in backticks, a band or a gap type, are not quantifiers, and the hard-gates line's 'none failed (…)', which lists every row it covers, is allowed. A confidence band the snapshot attaches to a row is that row's Confidence. The severe-red-flags line names every severity: high register entry by ID with the full token, as in 'RR5 (`severity: high`)', or says 'none found', and passes when true; a severity written as a bare band token, as in 'RR5 (`high`)', fails, because a bare band token is a confidence band. Every other count that is not about map rows — the candidate's own figures ('9 years', in that sentence too), the Research tier line, items in a list the response itself shows — is out of scope",
     "hard_gates_line": "The hard-gates line is the snapshot's bullet slot '- **Hard gates:** …' — prose that mentions hard gates is not it — and every snapshot carries that slot, gate rows or not; a snapshot without it fails. It names every hard_gate row, with its fit, in every case, in this order: the hard_gate_fail rows first, after 'failed:'; then the unclear gate rows, after 'unconfirmed:'; each of those followed by a few of its Requirement's own words in parentheses, as in 'failed: R1 (UK work eligibility without sponsorship)' and 'unconfirmed: R8 (Permanent contract, not fixed-term)' — the conflict itself, what the candidate has against the gate, belongs in what would change this, not in the parentheses; then the met rows, which are the `direct` rows, with their fit, as in 'met: R9 `direct`'. When no gate row failed the line opens 'none failed', with the met rows in its parentheses, as in 'none failed (R1 `direct`, R9 `direct`); unconfirmed: R8 (Permanent contract, not fixed-term)'. Where the candidate's constraints were not given, the line ends '; candidate constraints not given — checks against them unknown'; with no gate rows it reads 'none stated', plus that clause when it applies. The line fails if it is missing, if it leaves out a gate row, if the rows in its failed clause are not exactly the hard_gate_fail rows, or if it opens 'none failed' while a gate row failed",
     "questions": "At most three questions are asked across the whole message, ranked toward what could change the decision, and the questions offer their response modes as prose — answer in text, paste a voice transcript, attach a document, drop a link, or say skip — placed as the expectation on how the response closes allows, with no bracketed pseudo-buttons; zero questions is acceptable where the decision is already stable",
@@ -163,7 +163,8 @@
       },
       "candidate_constraints": "unknown",
       "checks": [
-        "fit_ledger"
+        "fit_ledger",
+        "yes_names_page"
       ]
     },
     {
@@ -325,7 +326,8 @@
       },
       "candidate_constraints": "known",
       "checks": [
-        "fit_ledger"
+        "fit_ledger",
+        "yes_names_page"
       ]
     },
     {
@@ -565,7 +567,8 @@
       },
       "candidate_constraints": "unknown",
       "checks": [
-        "fit_ledger"
+        "fit_ledger",
+        "yes_names_page"
       ]
     },
     {
@@ -764,7 +767,8 @@
       },
       "candidate_constraints": "unknown",
       "checks": [
-        "fit_ledger"
+        "fit_ledger",
+        "yes_names_page"
       ]
     },
     {
@@ -959,7 +963,8 @@
       },
       "candidate_constraints": "unknown",
       "checks": [
-        "fit_ledger"
+        "fit_ledger",
+        "yes_names_page"
       ]
     }
   ]
