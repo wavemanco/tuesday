@@ -331,19 +331,24 @@ class RunReader:
                     self.loaded = True
                 else:
                     self.reach(f"hidden-{module}")
+        named = []
         for module in self.names:
             if module == self.explicit:
                 continue
-            if self.explicit:
-                # Any mention of another playbook's file name: through the hub's
-                # path, or a Bash `cat` from inside its folder.
-                hit = re.search(rf"(?<![\w-]){re.escape(module)}\.md(?![\w-])", blob)
-            else:
-                hit = self.hub and f"{self.hub}/references/{module}.md" in blob
-            if hit:
-                self.reach(module)
-                if not self.explicit and self.routed is None:
-                    self.routed = module
+            # A playbook's file name, whole. In E2, any mention of another playbook:
+            # through the hub's path, or a Bash `cat` from inside its folder. In the
+            # front-door arm the call must also name the hub's folder: its full path,
+            # or `cd` into it and `cat <module>.md` in one call, the form round 2's
+            # measurement scored unrouted twice (evals/README.md). No module ships a
+            # file of a playbook's name, so the hub's folder is where one is read.
+            hit = re.search(rf"(?<![\w-]){re.escape(module)}\.md(?![\w-])", blob)
+            if hit and (self.explicit or (self.hub and self.hub in blob)):
+                named.append((hit.start(), module))
+        # One call can name two playbooks: the first named is the first reached.
+        for _, module in sorted(named):
+            self.reach(module)
+            if not self.explicit and self.routed is None:
+                self.routed = module
         return None
 
     def skill_named(self, given) -> str | None:

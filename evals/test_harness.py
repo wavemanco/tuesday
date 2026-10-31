@@ -487,6 +487,19 @@ def test_frontdoor_labels() -> None:
     check("a playbook path arriving in pieces is read once whole",
           read_events([ours, fire] + partial("Read", ['{"file_path": "' + HUB_DIR, "/references/mock-",
                                                       'interview.md"}'])), "mock-interview")
+    # Round 2: Opus and Haiku read the right playbook with `cd <hub>/references && cat <m>.md`
+    # and did its job; a reader that knew only the full path scored both tuesday-unrouted.
+    check("a playbook read by `cat` after a `cd` into the hub's folder, in one call, is the route",
+          read_events([ours, fire, call("Bash", {"command": f"cd {HUB_DIR}/references && cat mock-interview.md"}),
+                       DONE]), "mock-interview")
+    check("and so is one read by a path relative to the hub's folder",
+          read_events([ours, fire, call("Bash", {"command": f"cd {HUB_DIR} && ls -R references && "
+                                                             "cat references/resume-tailor.md"}), DONE]), "resume-tailor")
+    check("a playbook's file name with no hub folder in the call is no route",
+          read_events([ours, fire, call("Bash", {"command": "cat resume-tailor.md"}), DONE]), "tuesday-unrouted")
+    check("one call naming two playbooks routes to the first it names",
+          read_events([ours, fire, call("Bash", {"command": f"cd {HUB_DIR}/references && cat resume-tailor.md "
+                                                             "job-underwriter.md"}), DONE]), "resume-tailor")
     check("a renamed clash file is not its module's playbook",
           read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter-rationale.md"}),
                        DONE]), "tuesday-unrouted")
