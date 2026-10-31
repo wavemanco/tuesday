@@ -469,7 +469,9 @@ third-person verb, read as a word ending in "s", where a word ending in "ss"
 `SKILL.md` as `references/<name>`, the path that resolves in the installed skill.
 The frontmatter group holds the guidance's other frontmatter limits: only the six
 keys the spec allows (claude.ai rejects any other), a description of at most 1,024
-characters, and no angle brackets. Rationale and measurement history a `SKILL.md`
+characters, no angle brackets, and no unquoted value a strict YAML parser misreads
+(a `: ` or ` #` inside it, or a leading indicator), since Claude Code's lenient
+reader takes what an upload refuses. Rationale and measurement history a `SKILL.md`
 sheds to stay under the estimate go to that skill's `references/rationale.md`,
 which is never required reading. What it does not read: whether a contents list
 matches the file's headings, whether a description stays in the third person past

@@ -120,6 +120,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import output_checks  # noqa: E402
+from child_env import child_env  # noqa: E402
 from fixture_clauses import load_cases  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -286,8 +287,8 @@ def claude(prompt: str, cwd: Path, timeout: int, extra_args=(), output: str = "s
     fmt = {"stream": ["--output-format", "stream-json", "--verbose"],
            "json": ["--output-format", "json"]}[output]
     cmd = ["claude", "-p", *fmt, *extra_args]
-    # CLAUDECODE guards interactive terminal nesting; a subprocess run is safe.
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    # Only the room's own skills: no synced account skills, no parent session (child_env).
+    env = child_env()
     try:
         proc = subprocess.run(cmd, input=prompt, cwd=str(cwd), env=env,
                               capture_output=True, text=True, timeout=timeout)

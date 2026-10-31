@@ -1,0 +1,35 @@
+{
+  "suite": "tuesday",
+  "purpose": "Explicit focus (sub-arm E2 of the front-door measurement): each prompt starts with a module's slash command and must load that module only, with no tuesday fire and no other playbook read, whatever the rest of the message reads like. The runner renames the command to the installed copy's per-run name; run with --arm frontdoor.",
+  "routes": [
+    "job-underwriter",
+    "mock-interview",
+    "resume-tailor"
+  ],
+  "cases": [
+    {
+      "id": 1,
+      "expected": "mock-interview",
+      "prompt": "/mock-interview should I even apply to this one? Staff Data Engineer at a logistics scale-up: they want 7+ years and Kafka at scale, and I've got 5 years, mostly batch pipelines in Airflow. Worth my time, or am I reaching?",
+      "why": "The named module is mock-interview; the message reads as job-underwriter's apply-or-not question. The command decides, not the content."
+    },
+    {
+      "id": 2,
+      "expected": "job-underwriter",
+      "prompt": "/job-underwriter I've got the final round on Friday for a Product Marketing Manager role at Fernhill Analytics: four back-to-back sessions, one of them a 20-minute launch presentation. Can you prep me and throw some practice questions at me?",
+      "why": "The named module is job-underwriter; the message reads as mock-interview's interview prep."
+    },
+    {
+      "id": 3,
+      "expected": "resume-tailor",
+      "prompt": "/resume-tailor is this role even worth applying to? Posting and my resume are below.\n\nPosting:\nSenior Backend Engineer — Quarry Lane Payments\nBuild and run the services behind our merchant payouts. Go and Postgres in production, event-driven systems, on-call for the services you own.\nRequirements: 5+ years backend engineering; production Go; Postgres at scale; experience with payments or ledgers a plus.\n\nMy resume:\nBackend Engineer, Tidewell Logistics (2021–present)\n- Built the shipment-tracking API in Go, now serving 40 partner integrations\n- Own the Postgres schema and migrations for the tracking service\n- On the on-call rotation for three services\nSoftware Engineer, Brackley Retail (2019–2021)\n- Maintained the Python order pipeline\n- Moved nightly batch jobs to an event queue",
+      "why": "The named module is resume-tailor; the message reads as job-underwriter's apply-or-not question, and carries the posting and resume it names."
+    },
+    {
+      "id": 4,
+      "expected": "mock-interview",
+      "prompt": "/mock-interview here's the posting and my CV.\n\nPosting:\nCustomer Success Manager — Ashgrove Learning\nOwn a book of 60 mid-market accounts: onboarding, adoption, renewals and expansion. Partner with sales on upsell and with product on feedback.\nRequirements: 3+ years in customer success or account management; SaaS experience; renewal ownership; clear written communication.\n\nMy CV:\nAccount Manager, Northbank Software (2022–present): look after 45 accounts, run quarterly business reviews, own renewals worth about $1.2M a year.\nSupport Specialist, Northbank Software (2020–2022): tier-two support, wrote the onboarding guides customers still use.",
+      "why": "The named module is mock-interview; the message states no intent, the case the routing table sends to job-underwriter."
+    }
+  ]
+}

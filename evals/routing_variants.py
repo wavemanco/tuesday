@@ -107,8 +107,8 @@ INTENT: dict[int, tuple[str, ...]] = {
     # The quoted posting and the recruiter's address move.
     2: ("Something about this listing feels off and I can't put my finger on it.",
         "Am I being paranoid?"),
-    # The role, its source and the link move; the question names only the case
-    # study the posting asks for, which is the user's cost, not the role.
+    # The role, its source and the pasted posting move; the question names only
+    # the case study the posting asks for, which is the user's cost, not the role.
     4: ("before I spend a saturday on the portfolio case study they want, is this actually a real "
         "opportunity worth that time?",),
     # The company, role, interviewer and day move; the round stays, as what the
@@ -122,7 +122,8 @@ INTENT: dict[int, tuple[str, ...]] = {
     7: ("final round", "no idea what that means or how to not sound rehearsed.", "help"),
     # The interview day, the scope and the comp band move; that it is an interview stays.
     10: ("I have an interview", "Not sure whether to prep properly or cancel.",),
-    # The resume's shape moves; "[pasted]" stays, as the suite wrote it.
+    # The resume's shape, the pasted posting and the bullets move; "[pasted]"
+    # stays, as the suite wrote it.
     16: ("quick one — for this posting [pasted], which of my bullets should I lead with?",),
 }
 

@@ -37,7 +37,7 @@
       "expected": "job-underwriter",
       "prompt": "Details are in the attached file. before I spend a saturday on the portfolio case study they want, is this actually a real opportunity worth that time?",
       "attachments": {
-        "details.txt": "my recruiter friend forwarded me a Staff Designer opening at a company I've never heard of. here's the posting: [link]"
+        "details.txt": "my recruiter friend forwarded me a Staff Designer opening at a company I've never heard of. here's the posting: Staff Product Designer — Larkspur Systems Remote (US or EU time zones). Lead design for our scheduling platform: own the end-to-end experience for two product areas, set the bar for craft across a team of six designers, and partner with product and engineering leads on the roadmap. Requirements: 8+ years of product design, 2+ at staff level or above; a portfolio showing systems-level work; experience building or evolving a design system. How to apply: send your CV and complete our portfolio case study — redesign a multi-step onboarding flow and present your process (expect 6 to 8 hours). Compensation: competitive, discussed at offer stage."
       }
     },
     {
@@ -99,7 +99,7 @@
       "expected": "resume-tailor",
       "prompt": "Details are in the attached file. quick one — for this posting [pasted], which of my bullets should I lead with?",
       "attachments": {
-        "details.txt": "my resume's below. i've got about 20 bullets across 3 roles and i think the order is wrong."
+        "details.txt": "my resume's below. i've got about 20 bullets across 3 roles and i think the order is wrong. the posting: Senior Product Analyst — Corvel Health Own analytics for our patient-scheduling product. Define and track the product's core metrics, design and read A/B tests, partner with product managers on roadmap calls, and build self-serve dashboards for the product team. Requirements: 4+ years in product or data analytics; strong SQL; experiment design and analysis; clear communication with non-technical stakeholders. Nice to have: Python or R; healthcare experience. my resume: Data Analyst, Brightline Retail (2022–present) - Build and maintain the weekly trading report for the merchandising team - Migrated 40 legacy Excel reports to Looker - Write SQL against our Snowflake warehouse daily - Answer ad hoc data requests from buyers and store operations - Ran the analysis for 12 checkout A/B tests with the e-commerce product manager - Designed the test plan for a free-delivery threshold experiment that raised basket size 6% - Built the self-serve conversion dashboard the product team uses in its weekly review - Mentor two junior analysts Business Analyst, Okafor Logistics (2020–2022) - Produced monthly KPI packs for the operations director - Documented requirements for a route-planning tool rollout - Cleaned and reconciled depot data across 14 sites - Built a Python script that cut the month-end reconciliation from two days to three hours - Presented delivery-time findings to the regional leadership team - Defined on-time delivery metrics with the product owner of the driver app - Trained depot managers on the new reporting portal Reporting Analyst, Meridian Insurance (2018–2020) - Maintained claims dashboards in Tableau - Wrote SQL extracts for the actuarial team - Automated the quarterly regulatory return - Answered data requests from the claims and underwriting teams - Joined the data-quality working group"
       }
     }
   ]

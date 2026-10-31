@@ -43,6 +43,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import backfill_tools
+import frontdoor
 import output_checks
 import ledger_rules  # noqa: E402  (ci/, put on the path by output_checks)
 import recurring
@@ -167,6 +168,22 @@ def test_routing_cases() -> None:
           summary["by_skill"], {"job-underwriter": 1, "resume-tailor": 2, "mock-interview": 1})
 
 
+def test_child_env() -> None:
+    print("\nrooms: a measured session inherits no synced skills and no parent session")
+    import child_env
+    base = {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy", "CLAUDECODE": "1",
+            "CLAUDE_CODE_SYNC_SKILLS": "1", "CLAUDE_CODE_SESSION_ID": "abc"}
+    env = child_env.child_env(base)
+    check("the sync flag, the parent session and the nesting guard are dropped",
+          sorted(k for k in base if k not in env), ["CLAUDECODE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_SYNC_SKILLS"])
+    check("everything else is kept, the proxy included", {k: env[k] for k in ("PATH", "HTTPS_PROXY")},
+          {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy"})
+    for runner in ("run_routing.py", "run_fixtures.py"):
+        source = (Path(__file__).resolve().parent / runner).read_text()
+        check_true(f"{runner} starts its sessions with child_env()", "env = child_env()" in source)
+        check_true(f"{runner} builds no environment of its own", "os.environ.items()" not in source)
+
+
 def test_routing_variants() -> None:
     print("\nrouting: the diagnostic's variant files are the generator's output")
     here = Path(__file__).resolve().parent
@@ -225,6 +242,366 @@ def test_routing_variants() -> None:
         check("a suite edit that breaks an intent span stops the generator", "built", "SystemExit")
     except SystemExit as exc:
         check_true("a suite edit that breaks an intent span stops the generator", "case 6" in str(exc))
+
+
+# --- The front-door arm: generation, clashes, install, labels, explicit naming ---
+
+def module_tree(root: Path, files: dict[str, dict[str, str]], bodies: dict[str, str] | None = None) -> Path:
+    """A synthetic skills/ folder: module -> {reference name: text}."""
+    for module, refs in files.items():
+        (root / module / "references").mkdir(parents=True)
+        text = (bodies or {}).get(module, f"# {module}\n\nRead `references/{next(iter(refs))}`.\n")
+        (root / module / "SKILL.md").write_text(f"---\nname: {module}\ndescription: Does {module}.\n---\n\n{text}")
+        for name, ref in refs.items():
+            (root / module / "references" / name).write_text(ref)
+    return root
+
+
+def test_frontdoor_generation() -> None:
+    print("\nfront door: references/ is generated, deterministically, from the module sources")
+    repo = Path(__file__).resolve().parent.parent
+    files = frontdoor.generate()
+    check("generating twice gives the same files", files == frontdoor.generate(), True)
+    check("a playbook per module", sorted(n for n in files if n[:-3] in run_routing.SKILLS),
+          [f"{s}.md" for s in run_routing.SKILLS])
+    for module in run_routing.SKILLS:
+        source = (repo / "skills" / module / "SKILL.md").read_text()
+        playbook = files[f"{module}.md"]["text"]
+        check(f"{module}'s playbook is its SKILL.md body with the frontmatter stripped, its contents listed, "
+              f"and only clash paths moved",
+              playbook, frontdoor.with_contents(
+                  frontdoor.body(source).replace("references/rationale.md", f"references/{module}-rationale.md")))
+        lines = playbook.splitlines()
+        check(f"{module}'s playbook opens with '## Contents' directly under its H1, as a file over 100 lines must",
+              [line for line in lines[:3] if line.strip()], [lines[0], "## Contents"])
+        headings = [line.lstrip("#").strip() for line in frontdoor.body(source).splitlines()
+                    if line.startswith(("## ", "### "))]
+        listed = [line.strip()[2:] for line in playbook.partition("## Contents\n\n")[2].split("\n\n", 1)[0].splitlines()]
+        check(f"{module}'s contents list names its ## and ### headings, in order", listed, headings)
+        check_true(f"{module}'s playbook names only files the hub carries",
+                   set(frontdoor.LINK.findall(playbook)) <= set(files))
+        check(f"{module}'s rationale.md, which clashes, is carried as {module}-rationale.md, unchanged",
+              files[f"{module}-rationale.md"]["text"],
+              (repo / "skills" / module / "references" / "rationale.md").read_text())
+    check("no file is carried under its clashing name", "rationale.md" in files, False)
+    mirror = (repo / "skills" / "resume-tailor" / "references" / "citations.md").read_text()
+    check("a convention mirror is one byte-identical file", files["citations.md"]["text"], mirror)
+    check("every distinct module reference and mirror is carried once, beside one playbook per module",
+          len(files), len({(p.name, p.read_text()) for p in (repo / "skills").glob("*/references/*.md")})
+          + len(run_routing.SKILLS))
+    hub = frontdoor.HUB.read_text()
+    check("the committed hub links every generated file directly, and nothing else",
+          frontdoor.hub_links(hub), set(files))
+
+
+def test_frontdoor_clashes() -> None:
+    print("\nfront door: a name clash is resolved by renaming, or refused")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = module_tree(Path(tmp) / "a", {
+            "alpha": {"notes.md": "alpha's notes", "shared.md": "same text", "own.md": "see rationale and notes.md"},
+            "beta": {"notes.md": "beta's notes", "shared.md": "same text"}},
+            bodies={"alpha": "# Alpha\n\nRead `references/notes.md`, then `references/own.md` and "
+                             "`references/shared.md`; not `conventions/notes.md`.\n"})
+        files = frontdoor.generate(root)
+        check("different text under one name: each module's copy gets its module's prefix",
+              {n: files[n]["text"] for n in ("alpha-notes.md", "beta-notes.md")},
+              {"alpha-notes.md": "alpha's notes", "beta-notes.md": "beta's notes"})
+        check("the same text under one name is one shared file", files["shared.md"]["text"], "same text")
+        check("the playbook's path moves to its own module's copy; other paths are untouched",
+              files["alpha.md"]["text"],
+              "# Alpha\n\nRead `references/alpha-notes.md`, then `references/own.md` and "
+              "`references/shared.md`; not `conventions/notes.md`.\n")
+        check("a module's own file that names a clashing file points at that module's copy",
+              files["own.md"]["text"], "see rationale and alpha-notes.md")
+
+        bad = module_tree(Path(tmp) / "b", {
+            "alpha": {"notes.md": "a", "shared.md": "read notes.md"},
+            "beta": {"notes.md": "b", "shared.md": "read notes.md"}})
+        try:
+            frontdoor.generate(bad)
+            check("a shared file naming a clashing file is refused, not guessed", "generated", "refused")
+        except SystemExit as exc:
+            check_true("a shared file naming a clashing file is refused, not guessed", "cannot be resolved" in str(exc))
+
+        collide = module_tree(Path(tmp) / "c", {
+            "alpha": {"notes.md": "a", "alpha-notes.md": "already here"},
+            "beta": {"notes.md": "b"}})
+        try:
+            frontdoor.generate(collide)
+            check("a renamed file that would overwrite another is refused", "generated", "refused")
+        except SystemExit as exc:
+            check_true("a renamed file that would overwrite another is refused", "already is" in str(exc))
+
+        playbook_name = module_tree(Path(tmp) / "d", {"alpha": {"beta.md": "alpha's note on beta"},
+                                                     "beta": {"x.md": "x"}})
+        files = frontdoor.generate(playbook_name)
+        check("a module file named like a playbook is renamed, so the playbook keeps its name",
+              (files["alpha-beta.md"]["text"], files["beta.md"]["from"]),
+              ("alpha's note on beta", "skills/beta/SKILL.md (body)"))
+
+        fenced = module_tree(Path(tmp) / "f", {"alpha": {"x.md": "x"}},
+                             bodies={"alpha": "# Alpha\n\nIntro.\n\n## One\n\n```text\n## not a heading\n```\n\n"
+                                              "### One a\n\n## Two\n"})
+        check("a playbook's contents list its ## and ### headings, ### nested, and skip fenced code",
+              frontdoor.generate(fenced)["alpha.md"]["text"],
+              "# Alpha\n\n## Contents\n\n- One\n  - One a\n- Two\n\nIntro.\n\n## One\n\n```text\n"
+              "## not a heading\n```\n\n### One a\n\n## Two\n")
+        listed = "# Alpha\n\n## Contents\n\n- One\n\n## One\n"
+        check("a playbook that already opens with its contents is left as it is",
+              frontdoor.with_contents(listed), listed)
+
+        dangling = module_tree(Path(tmp) / "e", {"alpha": {"x.md": "x"}},
+                               bodies={"alpha": "Read `references/missing.md`.\n"})
+        try:
+            frontdoor.generate(dangling)
+            check("a playbook naming a file the hub would not carry is refused", "generated", "refused")
+        except SystemExit as exc:
+            check_true("a playbook naming a file the hub would not carry is refused", "missing.md" in str(exc))
+
+
+def test_frontdoor_install() -> None:
+    print("\nfront door: the arm installs the hub and the three modules, hidden")
+    repo = Path(__file__).resolve().parent.parent
+    with tempfile.TemporaryDirectory() as tmp:
+        root, names = run_routing.case_project(Path(tmp), {"id": 7, "attachments": {"jd.txt": "x"}},
+                                               "ab12cd34", None, "frontdoor")
+        installed = root / ".claude" / "skills"
+        check("the hub and every module are installed under this run's names",
+              sorted(p.name for p in installed.iterdir()),
+              sorted([f"{s}-ab12cd34" for s in run_routing.SKILLS] + ["tuesday-ab12cd34"]))
+        check("and the runner is told those names", names,
+              {**{s: f"{s}-ab12cd34" for s in run_routing.SKILLS}, "tuesday": "tuesday-ab12cd34"})
+        for skill in run_routing.SKILLS:
+            copy = (installed / f"{skill}-ab12cd34" / "SKILL.md").read_text().splitlines()
+            source = (repo / "skills" / skill / "SKILL.md").read_text().splitlines()
+            source[source.index(f"name: {skill}")] = f"name: {skill}-ab12cd34"
+            check(f"{skill}'s copy differs from its source by its name and one added line, the hiding key",
+                  [line for line in copy if line not in source], [run_routing.HIDDEN_KEY])
+            check_true(f"{skill}'s hiding key sits inside its frontmatter",
+                       copy.index(run_routing.HIDDEN_KEY) < copy.index("---", 1))
+        hub = installed / "tuesday-ab12cd34"
+        check("the hub's frontmatter name is renamed to match its folder",
+              (hub / "SKILL.md").read_text().splitlines()[1], "name: tuesday-ab12cd34")
+        check("its references/ are the generator's output, file for file",
+              {p.name: p.read_text() for p in (hub / "references").iterdir()},
+              {n: e["text"] for n, e in frontdoor.generate().items()})
+        check("and the case's attachment is written beside them", (root / "jd.txt").read_text(), "x")
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", {"job-underwriter": Path("x")}, "frontdoor")
+        check("--skill-md is refused in the front-door arm", "installed", "refused")
+    except SystemExit:
+        check("--skill-md is refused in the front-door arm", True, True)
+
+
+NAMES = {**{s: f"{s}-ab12cd34" for s in run_routing.SKILLS}, "tuesday": "tuesday-ab12cd34"}
+
+
+def read_events(events: list[dict], arm: str = "frontdoor", explicit: str | None = None,
+                end: str = "exit") -> str:
+    """Feed events to a RunReader as the runner does; settle as the process would end."""
+    reader = run_routing.RunReader(NAMES if arm == "frontdoor" else
+                                   {s: NAMES[s] for s in run_routing.SKILLS}, arm, explicit)
+    for event in events:
+        outcome = reader.feed(event)
+        if outcome:
+            return outcome
+    return reader.timed_out() if end == "timeout" else reader.exited()
+
+
+def call(name: str, given: dict) -> dict:
+    return {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": given}]}}
+
+
+def partial(name: str, chunks: list[str]) -> list[dict]:
+    """A tool call as the partial stream delivers it: start, input in pieces, stop."""
+    return ([{"type": "stream_event", "event": {"type": "content_block_start",
+                                                "content_block": {"type": "tool_use", "name": name}}}]
+            + [{"type": "stream_event", "event": {"type": "content_block_delta",
+                                                  "delta": {"type": "input_json_delta", "partial_json": c}}}
+               for c in chunks]
+            + [{"type": "stream_event", "event": {"type": "content_block_stop"}}])
+
+
+def init(*skills: str) -> dict:
+    return {"type": "system", "subtype": "init", "skills": list(skills), "slash_commands": list(skills)}
+
+
+DONE = {"type": "result", "subtype": "success"}
+HUB_DIR = "/tmp/case-1/.claude/skills/tuesday-ab12cd34"
+
+
+def test_frontdoor_labels() -> None:
+    print("\nfront door: every run gets exactly one of the arm's labels")
+    ours = init(*NAMES.values())
+    fire = call("Skill", {"skill": "tuesday-ab12cd34"})
+    check("the playbook read first after tuesday fires is the route",
+          read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/citations.md"}),
+                       call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"}),
+                       call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"})]), "resume-tailor")
+    check("a playbook path arriving in pieces is read once whole",
+          read_events([ours, fire] + partial("Read", ['{"file_path": "' + HUB_DIR, "/references/mock-",
+                                                      'interview.md"}'])), "mock-interview")
+    check("a renamed clash file is not its module's playbook",
+          read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter-rationale.md"}),
+                       DONE]), "tuesday-unrouted")
+    check("tuesday firing with no playbook read is tuesday-unrouted, a miss",
+          read_events([ours, fire, DONE]), "tuesday-unrouted")
+    check("a hidden module reached for by name is hidden-<module>",
+          read_events([ours, call("Skill", {"skill": "mock-interview-ab12cd34"})]), "hidden-mock-interview")
+    check("so is a hidden module's file read directly, even after tuesday fired",
+          read_events([ours, fire, call("Read", {"file_path": "/tmp/case-1/.claude/skills/"
+                                                              "job-underwriter-ab12cd34/references/evidence-model.md"})]),
+          "hidden-job-underwriter")
+    check("a hidden module called by its shipped name, with no run suffix, is hidden-<module>",
+          read_events([ours, call("Skill", {"skill": "job-underwriter"}), DONE]), "hidden-job-underwriter")
+    check("and so when it is called after the hub fired, before any playbook read",
+          read_events([ours, fire, call("Skill", {"skill": "resume-tailor"}),
+                       call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]), "hidden-resume-tailor")
+    check("a shipped-name call read from the partial stream is the same call",
+          read_events([ours] + partial("Skill", ['{"skill": "job-', 'underwriter"}'])), "hidden-job-underwriter")
+    check("the hub called by its shipped name is the hub firing",
+          read_events([ours, call("Skill", {"skill": "tuesday"}), DONE]), "tuesday-unrouted")
+    check("a hidden module reached for after the routing decision is not read: the run ends at the playbook",
+          read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}),
+                       call("Skill", {"skill": "resume-tailor-ab12cd34"})]), "job-underwriter")
+    check("the skills arm reads Skill names as it did at e1e6a13: a shipped name it did not install is no fire",
+          read_events([init(*(NAMES[s] for s in run_routing.SKILLS)), call("Skill", {"skill": "job-underwriter"}),
+                       DONE], arm="skills"), "neither")
+    check("no fire at all is neither", read_events([ours, DONE]), "neither")
+    check("an errored run is error, even after tuesday fired",
+          read_events([ours, fire, {"type": "result", "is_error": True}]), "error")
+    check("a run cut off by the timeout is timeout, even after tuesday fired",
+          read_events([ours, fire], end="timeout"), "timeout")
+    check("a run that lists a synced Tuesday skill it did not install is void",
+          read_events([init(*NAMES.values(), "anthropic-skills:mock-interview"), fire]), "void")
+    check("so is one listing another run's copy",
+          read_events([init(*NAMES.values(), "tuesday-ffff0000"), fire]), "void")
+    check("an unrelated skill in the list is not a Tuesday skill",
+          read_events([init(*NAMES.values(), "pdf", "skill-creator"), fire, DONE]), "tuesday-unrouted")
+    check("the skills arm still labels the module whose name a call carries",
+          read_events([init(*(NAMES[s] for s in run_routing.SKILLS)),
+                       call("Skill", {"skill": "resume-tailor-ab12cd34"})], arm="skills"), "resume-tailor")
+    check("and calls a void run void too",
+          read_events([init("job-underwriter")], arm="skills"), "void")
+    reader = run_routing.RunReader(NAMES, "frontdoor")
+    reader.feed(init("tuesday-ab12cd34", "pdf"))
+    check("the init skill list is recorded with the outcome",
+          reader.record("neither"), {"outcome": "neither", "init_skills": ["tuesday-ab12cd34", "pdf"]})
+
+    ok, note = run_routing.verdict("job-underwriter", ["job-underwriter", "void", "job-underwriter"])
+    check("a void run is set aside like a timeout, and reported", (ok, "1 void" in note), (True, True))
+    ok, _ = run_routing.verdict("neither", ["neither", "tuesday-unrouted", "neither"])
+    check("tuesday firing on a negative fails it, routed or not", ok, False)
+    ok, _ = run_routing.verdict("job-underwriter", ["job-underwriter", "hidden-job-underwriter"])
+    check("a hidden module firing fails the case even when it is the right module", ok, False)
+    cases21 = [{"id": n, "expected": "neither"} for n in range(1, 22)]
+    all_void = run_routing.reach(cases21, {n: ["void"] * 4 + ["neither"] for n in range(1, 22)})
+    check("a mostly-void arm is not scored, though its hidden and wrong counts read zero",
+          (all_void["hidden"], all_void["wrong_skill"], bool(run_routing.set_aside_problem(all_void))), (0, 0, True))
+    check_true("and the reason names void with timeouts and errors",
+               "timed out, errored or were void" in (run_routing.set_aside_problem(all_void) or ""))
+    check("one set-aside run in ten is within the bar; two are over it",
+          [bool(run_routing.set_aside_problem(run_routing.reach(
+              [{"id": 1, "expected": "neither"}], {1: ["void"] * k + ["neither"] * (10 - k)}))) for k in (1, 2)],
+          [False, True])
+    check("an arm with no runs has nothing to set aside",
+          run_routing.set_aside_problem(run_routing.reach([], {})), None)
+    summary = run_routing.reach([{"id": 1, "expected": "job-underwriter"}],
+                                {1: ["job-underwriter", "tuesday-unrouted", "hidden-mock-interview",
+                                     "mock-interview", "void", "neither"]})
+    check("reach counts playbook reads as reaches, and unrouted, hidden and void runs apart",
+          {k: summary[k] for k in ("decided", "reached", "wrong_skill", "tuesday_unrouted", "reached_tuesday",
+                                   "hidden", "set_aside")},
+          {"decided": 5, "reached": 2, "wrong_skill": 1, "tuesday_unrouted": 1, "reached_tuesday": 3,
+           "hidden": 1, "set_aside": 1})
+
+
+def test_explicit_naming() -> None:
+    print("\nfront door: E2 types the installed name, and reads only the named module as a pass")
+    here = Path(__file__).resolve().parent
+    names = {s: f"{s}-ab12cd34" for s in run_routing.SKILLS}
+    check("a leading slash command is renamed to the installed copy's name, the rest kept",
+          run_routing.explicit_prompt("/mock-interview should I apply?\nPosting below.", names),
+          "/mock-interview-ab12cd34 should I apply?\nPosting below.")
+    check("a prompt with no module command is sent as written",
+          [run_routing.explicit_prompt(p, names) for p in ("should I apply?", "/mock-interviewer x", "use /resume-tailor")],
+          ["should I apply?", "/mock-interviewer x", "use /resume-tailor"])
+    cases = run_routing.load_cases(here / "suite-explicit.json")
+    check("suite-explicit holds design §6's four cases, each expecting the module its command names",
+          [(run_routing.explicit_command(c["prompt"]), c["expected"]) for c in cases],
+          [("mock-interview", "mock-interview"), ("job-underwriter", "job-underwriter"),
+           ("resume-tailor", "resume-tailor"), ("mock-interview", "mock-interview")])
+    check_true("and every one is sent under the installed name",
+               all(run_routing.explicit_prompt(c["prompt"], names).startswith(f"/{c['expected']}-ab12cd34 ")
+                   for c in cases))
+    ours = init(*NAMES.values())
+    expansion = {"type": "user", "message": {"content": [{"type": "text", "text":
+                 "<command-name>/mock-interview-ab12cd34</command-name>"}]}}
+    own = call("Read", {"file_path": "/tmp/case-1/.claude/skills/mock-interview-ab12cd34/references/personas.md"})
+    reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+    check("E2: the named module's own files opened does not end the run: what follows is the case",
+          [reader.feed(ours), reader.feed(own)], [None, None])
+    check("E2: the named module's own files opened, then a clean end, is a pass",
+          read_events([ours, own, DONE], explicit="mock-interview"), "mock-interview")
+    check("E2: its own files opened, then tuesday firing, fails it",
+          read_events([ours, own, call("Skill", {"skill": "tuesday-ab12cd34"}), DONE], explicit="mock-interview"),
+          "tuesday")
+    check("E2: its own files opened, then another playbook read through the hub, fails it",
+          read_events([ours, own, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}), DONE],
+                      explicit="mock-interview"), "tuesday")
+    check("E2: the timeout is set aside even after its own files opened: the rest of the turn was never seen",
+          (read_events([ours, own], explicit="mock-interview", end="timeout"),
+           read_events([ours], explicit="mock-interview", end="timeout")), ("timeout", "timeout"))
+    check("E2: the command's expansion seen, then a clean end, is a pass",
+          read_events([ours, expansion, DONE], explicit="mock-interview"), "mock-interview")
+    check("E2: a clean end with no sign the command loaded is unconfirmed, not a pass",
+          read_events([ours, DONE], explicit="mock-interview"), "unconfirmed")
+    check("E2: tuesday firing fails it, whatever was loaded",
+          read_events([ours, expansion, call("Skill", {"skill": "tuesday-ab12cd34"})], explicit="mock-interview"),
+          "tuesday")
+    check("E2: another module's playbook read through the hub fails it as tuesday",
+          read_events([ours, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"})],
+                      explicit="mock-interview"), "tuesday")
+    check("E2: another module reached for by name fails it",
+          read_events([ours, call("Skill", {"skill": "job-underwriter-ab12cd34"})], explicit="mock-interview"),
+          "hidden-job-underwriter")
+    check("E2: another module called by its shipped name, no run suffix, fails it too",
+          read_events([ours, call("Skill", {"skill": "job-underwriter"}), DONE], explicit="mock-interview"),
+          "hidden-job-underwriter")
+    check("E2: so does the hub called by its shipped name, or another module under a plugin prefix",
+          (read_events([ours, call("Skill", {"skill": "tuesday"}), DONE], explicit="mock-interview"),
+           read_events([ours, call("Skill", {"skill": "anthropic-skills:resume-tailor"}), DONE],
+                       explicit="mock-interview")), ("tuesday", "hidden-resume-tailor"))
+    check("E2: the named module called by its shipped name loads nothing, and neither passes nor fails",
+          read_events([ours, call("Skill", {"skill": "mock-interview"}), DONE], explicit="mock-interview"),
+          "unconfirmed")
+    # The CLI's stream-json never carries the expansion: a smoke run whose transcript
+    # holds it streamed none. The transcript is read instead, by the run's own reply.
+    def entry(uuid, parent, kind, content, mid=None):
+        message = {"content": content, **({"id": mid} if mid else {})}
+        return json.dumps({"uuid": uuid, "parentUuid": parent, "type": kind, "message": message})
+    shared = [entry("a1", None, "user", "<command-message>mock-interview-ab12cd34</command-message>\n"
+                                        "<command-name>/mock-interview-ab12cd34</command-name>"),
+              entry("b1", None, "user", "a run of the same case whose command did not expand"),
+              entry("a2", "a1", "user", [{"type": "text", "text": "Base directory for this skill: …"}]),
+              entry("b2", "b1", "assistant", [{"type": "text", "text": "reply"}], "msg_B"),
+              entry("a3", "a2", "assistant", [{"type": "text", "text": "reply"}], "msg_A")]
+    check("E2 transcript: the expansion on this run's own chain confirms the load",
+          run_routing.command_loaded(shared, "msg_A", "mock-interview-ab12cd34"), True)
+    check("E2 transcript: another run's expansion in the same file does not",
+          run_routing.command_loaded(shared, "msg_B", "mock-interview-ab12cd34"), False)
+    check("E2 transcript: nor does an expansion of another installed name, or a reply not in the file",
+          (run_routing.command_loaded(shared, "msg_A", "mock-interview-ffff0000"),
+           run_routing.command_loaded(shared, "msg_C", "mock-interview-ab12cd34")), (False, False))
+    check("E2 transcript: found under the cwd with every non-alphanumeric character turned to '-'",
+          run_routing.transcript_path({"session_id": "s1", "cwd": "/tmp/tmpab_1/case-3"}).parts[-2:],
+          ("-tmp-tmpab-1-case-3", "s1.jsonl"))
+    check("E2 transcript: no session in the init event, no path", run_routing.transcript_path({}), None)
+    check("E2: a tool result echoing the name is not the expansion",
+          read_events([ours, {"type": "user", "message": {"content": [
+              {"type": "tool_result", "content": "mock-interview-ab12cd34"}]}}, DONE], explicit="mock-interview"),
+          "unconfirmed")
 
 
 # --- Decline path 3: the CLI declining to answer is not a short answer ---
@@ -3073,7 +3450,9 @@ def test_watch_out() -> None:
 
 
 def main() -> int:
-    for test in (test_routing_declines, test_routing_cases, test_routing_variants, test_cli_refusal, test_parse_stream,
+    for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_variants, test_frontdoor_generation,
+                 test_frontdoor_clashes, test_frontdoor_install, test_frontdoor_labels, test_explicit_naming,
+                 test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
                  test_classification, test_missing_response,
                  test_declined_grade_prints_no_score, test_artifact_collection,

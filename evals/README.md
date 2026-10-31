@@ -78,6 +78,19 @@ runs per case is the minimum that distinguishes "routes here" from "routes here
 sometimes". Cases are scored on consistency — a case that fires the right skill
 on two runs of three is a *fail*, because that is what a user meets.
 
+A case carries every document its message names. Cases 4 and 16 did not: case 4
+ended on a placeholder where its posting should be, and case 16 promised a
+pasted posting and a resume below it and held neither. A run that asked for the
+missing material was answering correctly and scored as a miss, so neither case
+measured routing. Each now carries what it names, pasted into the message: case
+4 a short posting in place of the placeholder, case 16 the posting and the
+bullets after its last sentence. Each intent sentence is unchanged word for
+word; case 4 loses only its `[link]` placeholder, which the posting replaces, and
+case 16 keeps its bracketed marker, which `routing_variants.py` keeps as the
+suite wrote it. Results for those two cases
+from before the change measured a different prompt and do not compare with
+results after it.
+
 ### The attachment diagnostic
 
 The six cases that claim attached files (suite ids 3, 9, 15, 17, 18, 21) reach a
@@ -125,6 +138,117 @@ the hypothesis holds, the README finding is updated with the mechanism, and the
 fix — description wording that names the attached-files case, or a front-door
 architecture — goes back to the owner as a decision. If either difference falls
 short, the hypothesis is recorded as falsified, as the last one was.
+
+### The front-door arm
+
+The front door is a prototype: one skill, `tuesday`, that routes each request to
+one module and runs it from a copy of that module's instructions. The
+measurement compares it with the three skills as they ship, so the harness has
+two arms. `--arm skills`, the default, installs the three modules as before.
+`--arm frontdoor` installs the hub and the three modules, each module copy with
+`disable-model-invocation: true` added to its frontmatter and nothing else
+changed, so a module keeps its slash command and leaves the listing. That key
+is Claude Code's alone and a claude.ai upload refuses it, which is why it is
+added in the throwaway copies and never in `skills/`.
+
+The hub is hand-written, at `evals/arms/frontdoor/SKILL.md`, outside `skills/`,
+so nothing packages or ships it. Its `references/` folder is generated at
+install time by `frontdoor.py` from the module sources in the same working tree,
+and never edited:
+
+- **Playbooks.** `references/<module>.md` is that module's SKILL.md with its
+  frontmatter stripped and a `## Contents` list of its `##` and `###` headings
+  generated under its title. A playbook is read in full and runs past 100 lines,
+  where the guidance asks a reference file to open with its contents; a SKILL.md
+  body carries none, so the generator adds it rather than the module sources.
+  A playbook and its files still say SKILL.md where they mean the module's own;
+  the hub's section 3 tells the model that SKILL.md there means the playbook it
+  is running, so no third transform rewrites them.
+- **Copies.** Every file in a module's `references/` is carried in the hub's one
+  flat `references/`. A file several modules carry with identical text, as every
+  convention mirror is, is carried once.
+- **Name clashes.** Where two modules carry one file name with different text,
+  or a module file is named like a playbook, each module's copy is carried as
+  `<module>-<name>`. Every mention of the old name in that module's playbook and
+  its own files, bare or under `references/`, is rewritten to the new one. Today
+  that is the per-module `rationale.md`, carried as `job-underwriter-rationale.md`,
+  `mock-interview-rationale.md` and `resume-tailor-rationale.md`. The module
+  sources keep their own names; only the generated copies move.
+- **Refusals.** Generation stops rather than guess when a shared file names a
+  clashing file, when a renamed file would overwrite another, or when a playbook
+  names a file the hub would not carry.
+
+`python evals/frontdoor.py` lists each generated file and where it came from,
+and `--out DIR` writes the assembled hub for reading. The hub links every
+generated file directly, by its `references/` path, and links nothing else.
+`check_skills.py --only frontdoor` holds it to that, both ways, so a module
+reference added or renamed is a hub edit in the same change. The same group
+holds the hub's frontmatter to the keys and limits a shipped skill meets, every
+unquoted value to what a strict YAML parser reads (no `: ` and no ` #`; a
+claude.ai upload parses strictly, where Claude Code falls back to a lenient
+reader), and every generated file over 100 lines to opening with its contents.
+
+What a front-door run is scored on is the playbook read first after `tuesday`
+fires. Its labels:
+
+| Label | Meaning |
+|---|---|
+| `<module>` | that module's playbook was read first after the hub fired |
+| `tuesday-unrouted` | the hub fired and the run ended with no playbook read: a miss |
+| `hidden-<module>` | a hidden module was called, by its installed name or its shipped one, or one of its own files read, before the routing decision |
+| `neither` | nothing fired |
+| `timeout`, `error` | no verdict reached; set aside, as in the skills arm |
+| `void` | the run could see a Tuesday skill it did not install; set aside |
+
+A run is read up to its routing decision, the first playbook read, and stopped
+there, so `hidden-<module>` and the gate on it cover a hidden module reached for
+before routing, not one reached for later in the module's own run. Every run
+records the skill list from the CLI's init event, in both arms. A list
+that shows a Tuesday skill this run did not install, such as a copy synced from
+claude.ai or another run's copy, voids the run, because that copy could take the
+fire meant for this one.
+
+**Explicit focus (sub-arm E2).** `suite-explicit.json` holds prompts that open
+with a module's slash command, each reading like another module's job, or like
+nothing in particular. The runner suffixes every installed skill with the run's
+id, so it rewrites each prompt's command to the installed name, `/mock-interview`
+to `/mock-interview-<run id>`, before sending it. The rest of the prompt is sent
+as written. An E2 run is read to its end, because what the case tests is what
+happens after the module loads. It fails as `tuesday` the moment the hub fires,
+which includes any playbook read through it, and as `hidden-<module>` the moment
+another module is reached for, by its installed name or its shipped one. A run
+that ends with neither passes on the named module if its own files were opened
+or the CLI expanded the command. The CLI's stream does not carry that expansion,
+so the runner reads it from the session's transcript, following the run's own
+reply back to the command, since runs of one case can share a transcript file. A
+run that ends with no sign the command loaded is `unconfirmed`, which is not a
+pass. A run cut off by the timeout is set aside even after the module loaded,
+because the rest of the turn is what the case tests and the cut-off never showed
+it. A module's whole run can outlast the routing arms' 240 seconds, so E2 runs
+with `--timeout 900`. The init event's slash-command list is recorded with each
+E2 run.
+
+One run of the measurement, per model (`claude-haiku-5-5`, `claude-sonnet-5-5`,
+`claude-opus-5-5`):
+
+```bash
+M=claude-sonnet-5-5
+python evals/run_routing.py --arm skills --model $M --runs 5 --json-out e0-$M.json
+python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e1-$M.json
+python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e2-$M.json \
+  --cases evals/suite-explicit.json --timeout 900
+```
+
+A front-door results file also records the hub's hash and one hash over the hub
+and every generated file, so a result names the exact text it measured.
+
+An arm with more than 10% of its runs set aside is re-run, and void runs count
+toward that share with timeouts and errors. The runner prints a warning, records
+the reason as `unscored` in the results file, and exits `3` when it is over: a
+host whose init list carries a synced Tuesday skill voids every run in both arms,
+and an arm scored on what survived would read its empty `hidden` and wrong-skill
+counts as gates met. Before measuring, run one case and check that the recorded
+`init_skills` hold only this run's names.
 
 ## Clean-room fixtures
 

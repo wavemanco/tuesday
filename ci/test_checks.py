@@ -3087,6 +3087,104 @@ def keep_frontmatter_allowed_tools_key(root: Path) -> None:
               "name: mock-interview\nallowed-tools: Read Write\n", "keep_frontmatter_allowed_tools_key")
 
 
+HUB_MD = "evals/arms/frontdoor/SKILL.md"
+
+
+def break_frontdoor_unlinked(root: Path) -> str:
+    """Drop one generated file's line from the hub's index: it would be reachable
+    only through a playbook, the nested pattern the guidance warns against."""
+    path = root / HUB_MD
+    text = path.read_text()
+    line = next(l for l in text.splitlines() if l.startswith("- `references/personas.md`"))
+    path.write_text(text.replace(line + "\n", ""))
+    return "references/personas.md (skills/mock-interview/references/personas.md) is generated but not linked"
+
+
+def break_frontdoor_new_clash(root: Path) -> str:
+    """Give a second module a file named like one of job-underwriter's, with other
+    text: the generator renames both copies, and a hub still linking the old name
+    links a file that is no longer there, and misses the two that are."""
+    (root / "skills/mock-interview/references/evidence-model.md").write_text("# Mock-interview's own model\n")
+    return "references/job-underwriter-evidence-model.md (skills/job-underwriter/references/evidence-model.md) " \
+           "is generated but not linked"
+
+
+def break_frontdoor_dangling(root: Path) -> str:
+    """Link a file the generator does not write."""
+    path = root / HUB_MD
+    path.write_text(path.read_text() + "\n- `references/scoring-guide.md`: read before scoring\n")
+    return "the hub links references/scoring-guide.md, which the generator does not produce"
+
+
+def break_frontdoor_unresolvable(root: Path) -> str:
+    """Make a shared mirror name a file whose name clashes between modules: which
+    module's copy it means cannot be decided, so generation stops."""
+    for skill in ("job-underwriter", "mock-interview", "resume-tailor"):
+        path = root / f"skills/{skill}/references/citations.md"
+        path.write_text(path.read_text() + "\nSee rationale.md.\n")
+    return "names rationale.md, which differs between modules"
+
+
+def break_frontdoor_claude_code_key(root: Path) -> str:
+    """Hide the hub with a Claude Code-only key: a claude.ai upload would refuse it."""
+    path = root / HUB_MD
+    path.write_text(path.read_text().replace("name: tuesday\n", "name: tuesday\ndisable-model-invocation: true\n", 1))
+    return "frontmatter key(s) a claude.ai upload rejects: disable-model-invocation"
+
+
+def break_frontdoor_explicit_expects_other(root: Path) -> str:
+    """An E2 case expecting a module other than the one its command names."""
+    path = root / "evals/suite-explicit.json"
+    data = json.loads(path.read_text())
+    data["cases"][0]["expected"] = "job-underwriter"
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return "invokes /mock-interview but expects 'job-underwriter'"
+
+
+def break_frontdoor_yaml_colon(root: Path) -> str:
+    """Put a ': ' back in the hub's unquoted description, as the design draft had it:
+    Claude Code's lenient reader takes it, a strict YAML parser does not."""
+    path = root / HUB_MD
+    text = path.read_text()
+    path.write_text(text.replace("runs only that module — job-underwriter", "runs only that module: job-underwriter", 1))
+    return "the hub's frontmatter description is an unquoted YAML value that holds a ':' before a space"
+
+
+def break_frontmatter_yaml_comment(root: Path) -> str:
+    """A ' #' in a module's unquoted description: a strict parser drops the rest as a comment."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    line = next(l for l in text.splitlines() if l.startswith("description: "))
+    path.write_text(text.replace(line, line.replace(" a ", " #1 a ", 1), 1))
+    return "resume-tailor: frontmatter description is an unquoted YAML value that holds ' #'"
+
+
+def keep_frontmatter_colon_without_space(root: Path) -> None:
+    """A colon with no space after it (a time, a URL) is legal in a plain YAML scalar."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    text = path.read_text()
+    line = next(l for l in text.splitlines() if l.startswith("description: "))
+    path.write_text(text.replace(line, line.replace(" a ", " a 9:00 ", 1), 1))
+
+
+def break_frontdoor_playbook_contents(root: Path) -> str:
+    """The generator stops listing a playbook's contents: the playbooks run past 100
+    lines and are read in full, so each must open with its list."""
+    path = root / "evals/frontdoor.py"
+    text = path.read_text()
+    path.write_text(text.replace("text = with_contents(rewrite(", "text = (rewrite(", 1))
+    return "generated references/job-underwriter.md (skills/job-underwriter/SKILL.md (body)) is"
+
+
+def keep_frontdoor_new_reference_linked(root: Path) -> None:
+    """A module gains a reference file and the hub links it in the same change."""
+    (root / "skills/resume-tailor/references/summary-lines.md").write_text("# Summary lines\n")
+    path = root / HUB_MD
+    text = path.read_text()
+    anchor = "- `references/dossier-consumption.md`: read when a dossier is present\n"
+    path.write_text(text.replace(anchor, anchor + "- `references/summary-lines.md`: read before a summary line\n"))
+
+
 PASSES = [
     ("fixtures", "a user link written with a trailing slash, its page still found", keep_user_link_written_another_way),
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
@@ -3189,6 +3287,10 @@ PASSES = [
     ("frontmatter", "the allowed-tools key, one of the six", keep_frontmatter_allowed_tools_key),
     ("guidance", "a SKILL.md body of 19,999 chars, one token under the estimate", keep_body_one_token_under),
     ("guidance", "a SKILL.md body of 499 lines", keep_body_499_lines),
+    ("frontdoor", "a module reference added and linked from the hub in the same change",
+     keep_frontdoor_new_reference_linked),
+    ("frontmatter", "a colon with no space after it in an unquoted description",
+     keep_frontmatter_colon_without_space),
 ]
 
 
@@ -3572,6 +3674,15 @@ CASES: list[tuple[str, str, callable]] = [
     ("guidance", "a mirror SKILL.md never names", break_reference_unlinked_mirror),
     ("guidance", "a reference named only in the frontmatter, not the body", break_reference_named_only_in_frontmatter),
     ("frontmatter", "a Claude Code-only frontmatter key in source", break_frontmatter_extra_key),
+    ("frontdoor", "a generated file the hub does not link", break_frontdoor_unlinked),
+    ("frontdoor", "a new name clash the hub's links do not follow", break_frontdoor_new_clash),
+    ("frontdoor", "a hub link to a file the generator does not write", break_frontdoor_dangling),
+    ("frontdoor", "a shared mirror naming a clashing file", break_frontdoor_unresolvable),
+    ("frontdoor", "a Claude Code-only key in the hub's frontmatter", break_frontdoor_claude_code_key),
+    ("frontdoor", "an explicit case expecting another module", break_frontdoor_explicit_expects_other),
+    ("frontdoor", "a ': ' in the hub's unquoted description", break_frontdoor_yaml_colon),
+    ("frontmatter", "a ' #' in a module's unquoted description", break_frontmatter_yaml_comment),
+    ("frontdoor", "a generated playbook with no contents list", break_frontdoor_playbook_contents),
 ]
 
 
