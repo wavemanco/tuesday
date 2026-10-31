@@ -287,6 +287,44 @@ def break_trigger_boundary(root: Path) -> str:
     return "reserved boundary"
 
 
+def break_command_pointer_missing(root: Path) -> str:
+    """Delete the line pointing to the slash-command rule from one SKILL.md."""
+    path = root / "skills/mock-interview/SKILL.md"
+    lines = path.read_text().split("\n")
+    path.write_text("\n".join(line for line in lines if "`/mock-interview`" not in line))
+    return "mock-interview: SKILL.md has 0 lines above its first heading"
+
+
+def break_command_pointer_buried(root: Path) -> str:
+    """Move the pointer below the body's first heading, where a command reads it late."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    lines = path.read_text().split("\n")
+    pointer = next(line for line in lines if "`/resume-tailor`" in line)
+    lines.remove(pointer)
+    at = next(i for i, line in enumerate(lines) if line.startswith("## Workflow"))
+    lines[at + 1:at + 1] = ["", pointer]
+    path.write_text("\n".join(lines))
+    return "resume-tailor: SKILL.md has 0 lines above its first heading"
+
+
+def break_command_pointer_unanchored(root: Path) -> str:
+    """Point the line at the wrong section of the grammar, where the rule is not."""
+    path = root / "skills/job-underwriter/SKILL.md"
+    lines = path.read_text().split("\n")
+    at = next(i for i, line in enumerate(lines) if "`/job-underwriter`" in line)
+    lines[at] = lines[at].replace("`references/interaction-grammar.md` §6", "`references/interaction-grammar.md` §7")
+    path.write_text("\n".join(lines))
+    return "job-underwriter: SKILL.md has 0 lines above its first heading"
+
+
+def break_command_rule_missing(root: Path) -> str:
+    """Drop the slash-command rule's paragraph from the grammar's §6."""
+    path = root / "conventions/interaction-grammar.md"
+    text = path.read_text()
+    path.write_text(re.sub(r"^\*\*A skill started by its own slash command[^\n]*\n", "", text, flags=re.MULTILINE))
+    return "states the slash-command rule under 0 bold labels"
+
+
 def break_qualifier_column_missing(root: Path) -> str:
     """Delete the column a skill's qualifier_fields points at.
 
@@ -3172,7 +3210,7 @@ def break_frontdoor_playbook_contents(root: Path) -> str:
     lines and are read in full, so each must open with its list."""
     path = root / "evals/frontdoor.py"
     text = path.read_text()
-    path.write_text(text.replace("text = with_contents(rewrite(", "text = (rewrite(", 1))
+    path.write_text(text.replace("with_paths_note(with_contents(", "with_paths_note((", 1))
     return "generated references/job-underwriter.md (skills/job-underwriter/SKILL.md (body)) is"
 
 
@@ -3412,6 +3450,10 @@ CASES: list[tuple[str, str, callable]] = [
     ("evals", "a routing variant id that is a suite id", break_routing_variant_id_collides),
     ("evals", "a spanning routing case with no siblings", break_routing_either_without_siblings),
     ("triggers", "description lost its reserved boundary", break_trigger_boundary),
+    ("triggers", "a skill's pointer to the slash-command rule deleted", break_command_pointer_missing),
+    ("triggers", "the pointer moved below the body's first heading", break_command_pointer_buried),
+    ("triggers", "the pointer naming another section of the grammar", break_command_pointer_unanchored),
+    ("triggers", "the slash-command rule dropped from the grammar's §6", break_command_rule_missing),
     ("ledger", "a duplicated ledger entry", break_ledger_duplicate),
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),

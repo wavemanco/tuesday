@@ -19,7 +19,8 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   evals        every evals JSON parses, its clauses expand, and it carries the
                fields the runners read
   triggers     each skill's description carries the negative boundary the
-               interaction grammar's trigger-hygiene table reserves for it
+               interaction grammar's trigger-hygiene table reserves for it, and
+               its SKILL.md points to the grammar's slash-command rule at its top
   parameters   declared output-discipline parameters, and restatements of them
   columns      qualifier, provenance and enum declarations name real columns
   citations, sections, counts, readmes, ledger
@@ -472,10 +473,47 @@ def check_routing_variants(group: str, suite: dict, installed: set[str]) -> None
             ok(group, f"{name}: {len(spec.get('cases', []))} variant(s), as generated from the suite")
 
 
+# The slash-command rule's label: the grammar's §6 states the rule under it, and
+# each skill's pointer names it. A command reads SKILL.md first, so the pointer sits
+# above the body's first heading, where it is read before anything else is decided.
+COMMAND_RULE = "keeps the turn"
+
+
+def command_rule_problems(grammar: str, skill_texts: dict[str, str]) -> list[str]:
+    """Why the slash-command rule is not stated once in the grammar's §6 and pointed to
+    from the top of every skill's SKILL.md body; empty when it is."""
+    problems = []
+    section = re.search(r"^## 6\..*?(?=^## 7\.|\Z)", grammar, re.MULTILINE | re.DOTALL)
+    labels = re.findall(r"^\*\*([^*]+)\*\*", section.group(0), re.MULTILINE) if section else []
+    stated = [lab for lab in labels if COMMAND_RULE in lab and "slash command" in lab]
+    if len(stated) != 1:
+        problems.append(f"interaction-grammar.md §6 states the slash-command rule under {len(stated)} bold labels "
+                        f"carrying '{COMMAND_RULE}' and 'slash command' — it is stated there once")
+    for name, text in sorted(skill_texts.items()):
+        top = skill_body(text).split("\n## ", 1)[0]
+        pointers = [line for line in top.splitlines()
+                    if f"`/{name}`" in line and COMMAND_RULE in line
+                    and "`references/interaction-grammar.md` §6" in line]
+        if len(pointers) != 1:
+            problems.append(f"{name}: SKILL.md has {len(pointers)} lines above its first heading naming `/{name}`, "
+                            f"'{COMMAND_RULE}' and `references/interaction-grammar.md` §6 — a command loads "
+                            f"SKILL.md first, so the pointer to the slash-command rule is one line there")
+    return problems
+
+
 def check_triggers() -> None:
-    """The grammar's trigger-hygiene table reserves an explicit non-goal per skill."""
+    """The grammar's trigger-hygiene table reserves an explicit non-goal per skill, and
+    its slash-command rule is pointed to from the top of every SKILL.md body
+    (command_rule_problems)."""
     group = "triggers"
     grammar = (CONVENTIONS / "interaction-grammar.md").read_text(encoding="utf-8")
+    problems = command_rule_problems(grammar, {s.name: (s / "SKILL.md").read_text(encoding="utf-8")
+                                               for s in skills()})
+    for problem in problems:
+        fail(group, problem)
+    if not problems:
+        ok(group, f"the slash-command rule is stated once in the grammar's §6 and pointed to from the top of "
+                  f"each of {len(skills())} SKILL.md bodies")
     table = {}
     for row in re.finditer(r"^\|\s*`(?P<skill>[a-z0-9-]+)`\s*\|[^|]*\|\s*(?P<boundary>[^|]+?)\s*\|", grammar, re.MULTILINE):
         table[row.group("skill")] = row.group("boundary")

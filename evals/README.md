@@ -59,7 +59,11 @@ python evals/run_routing.py --cases evals/routing-arm-b.json  # another case fil
 `suite-routing.json`; without it the suite runs as before, each case in its own
 project (above). A `--case` id the file lacks is an error. Every run ends with
 its reach rate — the share of decided runs that reached any skill — and the
-number that reached a skill other than a named-route case's own.
+number that reached a skill other than a named-route case's own. In the
+front-door arm a second line counts the runs in which the hub fired, read from
+each run's `hub_fired`, so a run that routed and then reached a hidden module
+counts. An explicit case (E2, below) is not a routing case and is left out of
+both: its runs end with an `explicit:` line instead.
 
 To A/B a description generation against the one that ships, substitute a
 `SKILL.md` without touching the working tree:
@@ -164,6 +168,13 @@ and never edited:
   A playbook and its files still say SKILL.md where they mean the module's own;
   the hub's section 3 tells the model that SKILL.md there means the playbook it
   is running, so no third transform rewrites them.
+- **Paths note.** After the contents list, each playbook gets one generated
+  line, `PATHS_NOTE` in `frontdoor.py`: every `references/` path in it means the
+  folder that holds the playbook, never a module's own skill folder, pointing to
+  the hub's section 3, which states that rule. The hidden modules' folders sit
+  beside the hub holding files of the same names, and a listing of the project
+  shows them; round 2's diagnosis found Haiku, after routing correctly, reading
+  a playbook's files from the hidden module's own folder.
 - **Copies.** Every file in a module's `references/` is carried in the hub's one
   flat `references/`. A file several modules carry with identical text, as every
   convention mirror is, is carried once.
@@ -189,21 +200,29 @@ claude.ai upload parses strictly, where Claude Code falls back to a lenient
 reader), and every generated file over 100 lines to opening with its contents.
 
 What a front-door run is scored on is the playbook read first after `tuesday`
-fires. Its labels:
+fires, unless a hidden module was reached anywhere in the turn. Its labels:
 
 | Label | Meaning |
 |---|---|
-| `<module>` | that module's playbook was read first after the hub fired |
+| `<module>` | that module's playbook was read first after the hub fired, and no hidden module was reached |
 | `tuesday-unrouted` | the hub fired and the run ended with no playbook read: a miss |
-| `hidden-<module>` | a hidden module was called, by its installed name or its shipped one, or one of its own files read, before the routing decision |
+| `hidden-<module>` | a hidden module was called, by its installed name or its shipped one, or a tool call named its folder, at any point in the turn |
 | `neither` | nothing fired |
 | `timeout`, `error` | no verdict reached; set aside, as in the skills arm |
 | `void` | the run could see a Tuesday skill it did not install; set aside |
 
-A run is read up to its routing decision, the first playbook read, and stopped
-there, so `hidden-<module>` and the gate on it cover a hidden module reached for
-before routing, not one reached for later in the module's own run. Every run
-records the skill list from the CLI's init event, in both arms. A list
+A front-door run is read to its end. It used to stop at the routing decision,
+the first playbook read; round 2's diagnosis found the hidden module reached
+after it — a Bash call into the hidden module's own `references/` — in a run
+that reader scored as a clean route. So a run routed right that later reaches a
+hidden module is `hidden-<module>`, and a run cut off by the timeout after
+routing is set aside, since the rest of the turn is where that reach would be.
+Each record also carries `hub_fired` and `reached`, every playbook and hidden
+module the run reached in order, so a run that read a second playbook shows it.
+A tool call's input is what is read: a listing whose output prints a hidden
+module's paths reaches nothing. A playbook is recognised by its full path under
+the hub, so a Bash `cat` of one from inside the hub's folder is not a route.
+Every run records the skill list from the CLI's init event, in both arms. A list
 that shows a Tuesday skill this run did not install, such as a copy synced from
 claude.ai or another run's copy, voids the run, because that copy could take the
 fire meant for this one.
@@ -214,19 +233,33 @@ nothing in particular. The runner suffixes every installed skill with the run's
 id, so it rewrites each prompt's command to the installed name, `/mock-interview`
 to `/mock-interview-<run id>`, before sending it. The rest of the prompt is sent
 as written. An E2 run is read to its end, because what the case tests is what
-happens after the module loads. It fails as `tuesday` the moment the hub fires,
-which includes any playbook read through it, and as `hidden-<module>` the moment
-another module is reached for, by its installed name or its shipped one. A run
-that ends with neither passes on the named module if its own files were opened
-or the CLI expanded the command. The CLI's stream does not carry that expansion,
-so the runner reads it from the session's transcript, following the run's own
-reply back to the command, since runs of one case can share a transcript file. A
-run that ends with no sign the command loaded is `unconfirmed`, which is not a
-pass. A run cut off by the timeout is set aside even after the module loaded,
-because the rest of the turn is what the case tests and the cut-off never showed
-it. A module's whole run can outlast the routing arms' 240 seconds, so E2 runs
-with `--timeout 900`. The init event's slash-command list is recorded with each
-E2 run.
+happens after the module loads. Its outcome:
+
+| Label | Meaning |
+|---|---|
+| `focused` | the named module loaded and no other module was reached: the pass |
+| `hidden-<module>` | another module was the first reached: called by any name (refused or not), or its folder named in a tool call |
+| `<module>` | another module's playbook was the first reached: its file name, `<module>.md`, in a tool call, through the hub's path or a Bash `cat` |
+| `unconfirmed` | no other module was reached, and nothing showed the command loaded: not a pass |
+| `timeout`, `error`, `void` | set aside |
+
+The hub firing is not an outcome. Round 2's diagnosis found that it fires in
+E2 because the model uses it as a router after the command loads, and that in
+every such run it deferred to the named module and read no other playbook; a
+run that defers is `focused`, and one that routes on is scored on the playbook
+it reads. Hub fires are counted and reported apart (`hub_fired` on each run,
+and the `explicit` summary), never scored. Each E2 record also carries
+`loaded`, whether the named module loaded, and `reached`, every other module
+reached in order. The module loaded if its own files were opened or the CLI
+expanded the command. The CLI's stream does not carry that expansion, so the
+runner reads it from the session's transcript, following the run's own reply
+back to the command, since runs of one case can share a transcript file. An E2
+case's `expected` names the module its command starts; the case passes when
+every run is `focused`. A run cut off by the timeout is set aside even after
+the module loaded, because the rest of the turn is what the case tests and the
+cut-off never showed it. A module's whole run can outlast the routing arms' 240
+seconds, so E1 and E2 both run with `--timeout 900`. The init event's
+slash-command list is recorded with each E2 run.
 
 One run of the measurement, per model (`claude-haiku-5-5`, `claude-sonnet-5-5`,
 `claude-opus-5-5`):
@@ -234,7 +267,7 @@ One run of the measurement, per model (`claude-haiku-5-5`, `claude-sonnet-5-5`,
 ```bash
 M=claude-sonnet-5-5
 python evals/run_routing.py --arm skills --model $M --runs 5 --json-out e0-$M.json
-python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e1-$M.json
+python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e1-$M.json --timeout 900
 python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e2-$M.json \
   --cases evals/suite-explicit.json --timeout 900
 ```

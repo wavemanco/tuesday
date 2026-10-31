@@ -9,6 +9,8 @@ Build a prep pack a candidate can actually rehearse from. Two axes organize ever
 
 Everything in the pack is either traceable to a provided document, traceable to research, or explicitly labeled as generic.
 
+**Started by its own command, `/mock-interview`, this skill keeps the turn:** `references/interaction-grammar.md` §6 says what that rules out — read it before reaching for any other skill.
+
 ## Before sending
 
 Copy this list and check the response against it. Each item points to its rule and restates none; rules 1, 5 and 7 are in `references/output-discipline.md`.

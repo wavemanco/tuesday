@@ -1,6 +1,6 @@
 ---
 name: tuesday
-description: Routes a candidate's job-search request to one module and runs only that module — job-underwriter decides whether a specific role is worth applying to (fit by requirement, recoverable gaps, posting red flags, go or no-go) and vets suspicious postings; resume-tailor tailors an existing resume or CV to a named role as an edit ledger the candidate approves; mock-interview builds an interview prep pack and runs live mock drills. Use whenever someone shares a job posting, resume or CV, attached or pasted, even with no question, or asks whether to apply, whether a posting is legit, which bullets to lead with, how to tailor a resume to a role, or how to prepare for a recruiter screen, hiring-manager round, panel or final round, even when no module is named, and when a message names a module. Candidate-side only; not for employers screening applicants, job-market questions, networking messages, resume design, proofreading, or shortening a resume with no target role.
+description: Routes a candidate's job-search request to one module and runs only that module — job-underwriter decides whether a specific role is worth applying to (fit by requirement, recoverable gaps, posting red flags, go/no-go) and vets suspicious postings; resume-tailor tailors an existing resume or CV to a named role as an approve-first edit ledger; mock-interview builds an interview prep pack and runs live mock drills. Use whenever someone shares a job posting, resume or CV, attached or pasted, even with no question, or asks whether to apply, whether a posting is legit, which bullets to lead with, how to tailor a resume to a role, or how to prepare for a recruiter screen, hiring-manager round, panel or final round, whether or not a message names a module. Not for a conversation already running a module that its own slash command started. Candidate-side only; not for employers screening applicants, job-market questions, networking messages, resume design, proofreading, or shortening a resume with no target role.
 ---
 
 # Tuesday
@@ -41,8 +41,11 @@ nothing was asked for, the documents-only row applies.
    module's complete instructions. Follow it as if that module were the skill:
    where it says "this skill", it means that module, and where it or any file
    under `references/` says SKILL.md, it means that playbook, not this file.
-2. Read each file it names at the step that names it. Every one of them is in
-   `references/`, linked directly in section 5.
+2. Read each file it names at the step that names it. Every `references/` path
+   in a playbook, or in a file it names, means this skill's own `references/`
+   folder, the one beside this SKILL.md, linked directly in section 5. The
+   modules' own skill folders can sit beside this one, holding files of the
+   same names: never read from them, even when a listing shows them.
 3. Read no other module's playbook in the same turn.
 
 ## 4. What holds across modules
@@ -105,4 +108,5 @@ needs at the step that needs them.
 
 Everything under `references/` is generated from the three module skills' own
 files and never edited here. A playbook is its module's SKILL.md body, with a
-contents list of its headings generated under its title.
+contents list of its headings generated under its title and, after it, a line
+pointing its paths at this skill's own `references/` (section 3).

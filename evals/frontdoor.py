@@ -31,6 +31,15 @@ HUB_NAME = "tuesday"
 FRONTMATTER = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
 LINK = re.compile(r"references/([A-Za-z0-9._-]+\.md)")
 CONTENTS = "## Contents"
+# Where a playbook's paths resolve, said in the playbook itself: its mentions of
+# `references/<file>` were written for the module's own folder, and the hidden
+# modules' folders sit beside the hub holding files of the same names. Haiku,
+# having listed them, once read a playbook's files from the hidden module's own
+# folder (round 2's diagnosis). The hub's section 3 states the rule; this line,
+# generated into every playbook, points to it where the paths are read.
+PATHS_NOTE = ("**Paths.** The front door runs this playbook: every `references/` path in it, and in the "
+              "files it names, means the folder that holds this file, never a module's own skill folder, "
+              "even one a listing shows (the front door's own instructions, section 3).")
 
 
 class GenerationError(SystemExit):
@@ -79,6 +88,30 @@ def with_contents(text: str) -> str:
     if not items:
         return text
     return "\n".join(lines[:h1 + 1] + ["", CONTENTS, ""] + items + lines[h1 + 1:])
+
+
+def with_paths_note(text: str) -> str:
+    """The playbook with PATHS_NOTE as its first paragraph after its H1 and its contents list.
+
+    After the contents list, not above it: a file over 100 lines opens with its
+    contents directly under its H1. A playbook with no H1 gets the line first.
+    """
+    lines = text.split("\n")
+    h1 = next((i for i, line in enumerate(lines) if line.startswith("# ")), None)
+    if h1 is None:
+        return f"{PATHS_NOTE}\n\n{text}"
+    at = h1 + 1
+    i = at
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    if i < len(lines) and lines[i].strip() == CONTENTS:
+        i += 1
+        while i < len(lines) and not lines[i].strip():
+            i += 1
+        while i < len(lines) and lines[i].lstrip().startswith("- "):
+            i += 1
+        at = i
+    return "\n".join(lines[:at] + ["", PATHS_NOTE] + lines[at:])
 
 
 def renamed(module: str, name: str) -> str:
@@ -150,9 +183,10 @@ def generate(skills_dir: Path = SKILLS_DIR) -> dict[str, dict]:
             put(renames[m][name], rewrite(by_name[name][m], renames[m]),
                 f"skills/{m}/references/{name}", "renamed (name clash)")
     for m in mods:
-        text = with_contents(rewrite(body((skills_dir / m / "SKILL.md").read_text(encoding="utf-8")), renames[m]))
+        text = with_paths_note(with_contents(
+            rewrite(body((skills_dir / m / "SKILL.md").read_text(encoding="utf-8")), renames[m])))
         put(f"{m}.md", text, f"skills/{m}/SKILL.md (body)",
-            "frontmatter stripped, contents listed" + (", clash paths rewritten" if renames[m] else ""))
+            "frontmatter stripped, contents listed, paths note" + (", clash paths rewritten" if renames[m] else ""))
 
     for m in mods:
         missing = sorted({n for n in LINK.findall(out[f"{m}.md"]["text"]) if n not in out})

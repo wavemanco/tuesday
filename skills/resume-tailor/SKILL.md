@@ -9,6 +9,8 @@ Tailor a resume so that every sentence is defensible by the person whose name is
 
 Reorganize, re-emphasize, retitle, compress, cut, surface. Never introduce a fact, widen a scope, upgrade a verb, or import the JD's vocabulary for the candidate's own history. Where the JD wants something the evidence does not hold, say so and offer to go looking — never write around the gap.
 
+**Started by its own command, `/resume-tailor`, this skill keeps the turn:** `references/interaction-grammar.md` §6 says what that rules out — read it before reaching for any other skill.
+
 ## Before sending
 
 Copy this list and check the response against it. Each item points to its rule and restates none; rules 1, 5 and 7 are in `references/output-discipline.md`.

@@ -162,6 +162,8 @@ A third skill makes every boundary a three-way question rather than a two-way on
 
 When a request genuinely spans both ("should I apply, and prep me if yes"), the invoked skill does its own job fully and names the sibling in one sentence — it does not attempt the sibling's job.
 
+**A skill started by its own slash command keeps the turn.** When a message opens with a skill's command (`/mock-interview …`), that skill does its own job for that turn, whatever the rest of the message reads like, and starts no other skill — not a front door that routes between the skills, not a sibling by its name or its command — and does not go looking for one. Where the request reads like a sibling's job, it says so in one sentence, as the paragraph above says, and still does its own: the user chose the skill, and choosing another is theirs.
+
 ## 7. Voice, buttons, and host honesty
 
 Response-mode affordances are phrased as prose offers in text hosts ("answer in text, paste a voice transcript, attach a document, drop a link, or say skip") — never rendered as fake buttons. Interactive review surfaces are host-specific renderers of the same structured output (see the UI note in `dossier-schema.md`); the reasoning never lives in the UI.

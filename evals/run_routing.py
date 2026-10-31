@@ -65,6 +65,8 @@ SET_ASIDE = ("timeout", "error", "void")
 # whatever survived, and its zero counts read as gates met.
 SET_ASIDE_LIMIT = 0.10
 HIDDEN_KEY = "disable-model-invocation: true"
+# An E2 run that loaded the named module and reached no other: the explicit case's pass.
+FOCUSED = "focused"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import frontdoor  # noqa: E402  (evals/: the hub's references/ generator)
@@ -229,7 +231,7 @@ def load_cases(path: Path, ids: list[int] | None = None) -> list[dict]:
 
 
 class RunReader:
-    """One run's stream events in, its outcome out, as soon as one is decided.
+    """One run's stream events in, its outcome out, once the stream has decided one.
 
     Its reading is pure, so every label has a test (CONTRIBUTING.md, "Harnesses
     report three outcomes, not two"); only `record`, for an explicit run, reads a
@@ -239,27 +241,36 @@ class RunReader:
 
     The labels, by arm:
 
-    - `skills`: the module whose installed name a Skill or Read call carries.
+    - `skills`: the module whose installed name a Skill or Read call carries. The
+      run is read up to that call and no further.
     - `frontdoor`: the module whose playbook, `tuesday-<id>/references/<m>.md`, is
       read first after the hub fires; `tuesday-unrouted` when the hub fired and the
-      run ended with no playbook read; `hidden-<m>` when a hidden module is called
-      or read before that, which the arm exists to prevent. The run is read up to
-      its routing decision, the first playbook read, and no further.
+      run ended with no playbook read; `hidden-<m>` when a hidden module is called,
+      or any tool call names its folder, at any point in the turn, which the arm
+      exists to prevent. The run is read to its end: round 2 found a hidden
+      module's files read after the routing decision, where a reader that stopped
+      at the decision never looked.
     - explicit (a prompt that starts with `/<m>`, either arm): read to the end of
-      the run, since what the case tests is what happens after the module loads.
-      `tuesday` as soon as the hub fires and `hidden-<other>` as soon as another
-      module is called or read; otherwise, at the end, `<m>` when the named
-      module's files were opened or its command was seen expanded, and
-      `unconfirmed` when nothing showed the command loaded. The CLI's stream-json
-      does not carry the expansion (measured: none in a run whose transcript holds
-      it), so `record` looks for it in the session transcript (`command_loaded`)
-      before settling. A timeout is set aside even after a confirmed load, so E2
-      runs with a longer `--timeout` (evals/README.md).
+      the run. `focused` when the named module loaded and no other module was
+      reached; otherwise the first other module reached — `hidden-<other>` when
+      it was called by any name or its folder named, `<other>` when its playbook
+      was named (`<other>.md`, read through the hub or not) — or `unconfirmed`
+      when nothing showed the command loaded. The hub firing is not a failure in
+      itself: it is recorded apart (`hub_fired`), since what it does next is
+      what the case tests. The CLI's stream-json does not carry the command's
+      expansion (measured: none in a run whose transcript holds it), so `record`
+      looks for it in the session transcript (`command_loaded`) before settling.
+      A timeout is set aside even after a confirmed load, so E2 runs with a
+      longer `--timeout` (evals/README.md).
     - a Skill call is read by the name it gives, too (`skill_named`): a module or
       the hub called by its shipped name, with no run suffix, or under a plugin
       prefix, is that module or the hub, in the front-door arm and in E2.
     - every arm: `neither`, `timeout`, `error`, and `void` when the init event lists
       a Tuesday skill this run did not install.
+
+    In the front-door arm and in E2, `record` also carries `hub_fired` and
+    `reached`, every other module reached in the order reached (the labels
+    above), and in E2 `loaded`, whether the named module loaded.
     """
 
     def __init__(self, names: dict[str, str], arm: str = "skills", explicit: str | None = None):
@@ -272,61 +283,72 @@ class RunReader:
         self.hub_fired = False
         self.expanded = False
         self.loaded = False
+        self.reached: list[str] = []
+        self.routed: str | None = None
         self.session: dict = {}
         self.message_ids: list[str] = []
         self.pending: str | None = None
         self.accumulated = ""
+        self._transcript: bool | None = None
+
+    @property
+    def whole_turn(self) -> bool:
+        """Whether the run is read to its end rather than to its first fire."""
+        return bool(self.explicit) or self.arm == "frontdoor"
+
+    def reach(self, label: str) -> None:
+        if label not in self.reached:
+            self.reached.append(label)
 
     def match(self, blob: str) -> str | None:
-        """The outcome a tool call's input decides, if any; may record that the hub fired."""
-        if self.explicit:
-            if self.hub and self.hub in blob:
-                return HUB
-            for module, name in self.names.items():
-                if name in blob:
-                    if module != self.explicit:
-                        return f"hidden-{module}"
-                    # The named module loading is not the end of the case: a hub
-                    # fire or another playbook later in the turn still fails it.
-                    self.loaded = True
-            return None
-        if self.arm != "frontdoor":
+        """Read one tool call's input: return the outcome it decides in the skills arm;
+        in the front-door arm and in E2, record what it reached and return None."""
+        if not self.whole_turn:
             for module, name in self.names.items():
                 if name in blob:
                     return module
             return None
+        if self.hub and self.hub in blob:
+            self.hub_fired = True
         for module, name in self.names.items():
             if name in blob:
-                return f"hidden-{module}"
+                if module == self.explicit:
+                    self.loaded = True
+                else:
+                    self.reach(f"hidden-{module}")
         for module in self.names:
-            if f"{self.hub}/references/{module}.md" in blob:
-                return module
-        if self.hub in blob:
-            self.hub_fired = True
+            if module == self.explicit:
+                continue
+            if self.explicit:
+                # Any mention of another playbook's file name: through the hub's
+                # path, or a Bash `cat` from inside its folder.
+                hit = re.search(rf"(?<![\w-]){re.escape(module)}\.md(?![\w-])", blob)
+            else:
+                hit = self.hub and f"{self.hub}/references/{module}.md" in blob
+            if hit:
+                self.reach(module)
+                if not self.explicit and self.routed is None:
+                    self.routed = module
         return None
 
     def skill_named(self, given) -> str | None:
-        """The outcome a Skill call decides by the name it gives, when that name is not
-        this run's installed copy: the shipped name (`job-underwriter`), a plugin's
+        """Read a Skill call by the name it gives, when that name is not this run's
+        installed copy: the shipped name (`job-underwriter`), a plugin's
         (`anthropic-skills:job-underwriter`) or another run's. `match` finds only this
         run's suffixed names, so a call by the name the hub's own table uses went
-        unseen. The skills arm, outside E2, reads names as it always has."""
+        unseen. The skills arm, outside E2, reads names as it always has. Records
+        what it reached; decides no outcome."""
         skill = given.get("skill") if isinstance(given, dict) else None
-        if not isinstance(skill, str) or (self.arm != "frontdoor" and not self.explicit):
+        if not isinstance(skill, str) or not self.whole_turn:
             return None
         if skill.split(":")[-1] in self.all_names.values():
             return None
         base = tuesday_base(skill)
         if base == HUB:
-            if self.explicit:
-                return HUB
             self.hub_fired = True
-            return None
-        if base in self.names:
-            if self.explicit:
-                # The named module by another name loads nothing; it neither passes nor fails.
-                return None if base == self.explicit else f"hidden-{base}"
-            return f"hidden-{base}"
+        elif base in self.names and base != self.explicit:
+            # The named module by another name loads nothing; it neither passes nor fails.
+            self.reach(f"hidden-{base}")
         return None
 
     def feed(self, event: dict) -> str | None:
@@ -389,24 +411,46 @@ class RunReader:
         return None
 
     def settle(self) -> str:
-        """The outcome of a run that ended without a deciding tool call."""
+        """The outcome of a run read to its end (or, in the skills arm, of one that
+        ended without a deciding tool call)."""
         if self.explicit:
-            return self.explicit if self.expanded or self.loaded else "unconfirmed"
+            if self.reached:
+                return self.reached[0]
+            return FOCUSED if self.expanded or self.loaded else "unconfirmed"
+        hidden = [r for r in self.reached if r.startswith("hidden-")]
+        if hidden:
+            return hidden[0]
+        if self.routed:
+            return self.routed
         return "tuesday-unrouted" if self.hub_fired else "neither"
 
     def exited(self) -> str:
         return self.settle()
 
     def timed_out(self) -> str:
-        """A run cut off is set aside, an E2 run whose module had loaded included: what
-        the case tests is the rest of the turn, which the cut-off never showed."""
+        """A run cut off is set aside, an E2 run whose module had loaded and an E1 run
+        already routed included: the rest of the turn, which the cut-off never showed,
+        is where a hidden reach or another module's playbook would be."""
         return "timeout"
 
+    def transcript_loaded(self) -> bool:
+        """Whether the session transcript shows the named command expanded (cached)."""
+        if self._transcript is None:
+            self._transcript = transcript_confirms(self)
+        return self._transcript
+
     def record(self, outcome: str) -> dict:
+        rec = {"outcome": outcome, "init_skills": self.init_skills}
         if self.explicit:
-            outcome = confirm_explicit(self, outcome)
-        return {"outcome": outcome, "init_skills": self.init_skills,
-                **({"slash_commands": self.slash_commands} if self.explicit else {})}
+            loaded = self.expanded or self.loaded
+            if not loaded and outcome not in SET_ASIDE:
+                loaded = self.transcript_loaded()
+            if outcome == "unconfirmed" and loaded:
+                outcome = FOCUSED
+            rec.update(outcome=outcome, slash_commands=self.slash_commands, loaded=loaded)
+        if self.whole_turn:
+            rec.update(hub_fired=self.hub_fired, reached=list(self.reached))
+        return rec
 
 
 def command_loaded(lines: list[str], message_id: str, installed: str) -> bool:
@@ -450,17 +494,16 @@ def transcript_path(session: dict) -> Path | None:
     return config / "projects" / re.sub(r"[^A-Za-z0-9]", "-", session["cwd"]) / f"{session['session_id']}.jsonl"
 
 
-def confirm_explicit(reader: "RunReader", outcome: str) -> str:
-    """An E2 run the stream left `unconfirmed` passes if its transcript shows the command expanded."""
-    if outcome != "unconfirmed" or not reader.message_ids:
-        return outcome
+def transcript_confirms(reader: "RunReader") -> bool:
+    """Whether an E2 run's transcript shows its command expanded, found by the run's own reply."""
+    if not reader.message_ids:
+        return False
     path = transcript_path(reader.session)
     try:
         lines = path.read_text(encoding="utf-8").splitlines() if path else []
     except OSError:
-        return outcome
-    installed = reader.names[reader.explicit]
-    return reader.explicit if command_loaded(lines, reader.message_ids[0], installed) else outcome
+        return False
+    return command_loaded(lines, reader.message_ids[0], reader.names[reader.explicit])
 
 
 def run_once(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None,
@@ -473,8 +516,10 @@ def run_once(prompt: str, root: Path, names: dict[str, str], timeout: int, model
     say nothing about routing; folding any of them into 'neither' lets the
     harness manufacture negatives that look like findings.
 
-    Watches partial stream events so the verdict lands as soon as the model
-    reaches for a skill, rather than after the skill's work completes.
+    Watches partial stream events so, in the skills arm, the verdict lands as soon
+    as the model reaches for a skill, rather than after the skill's work
+    completes. A front-door or explicit run is read to the end of its turn
+    (`RunReader`), so it needs the longer `--timeout` evals/README.md gives.
     """
     explicit = explicit_command(prompt)
     reader = RunReader(names, arm, explicit)
@@ -582,8 +627,8 @@ def verdict(expected: str, fired: list[str], siblings: list[str] | None = None) 
     return False, f"routed to {sorted(unique)}, expected {expected}{suffix}"
 
 
-def reach(cases: list[dict], fired_by_case: dict[int, list[str]]) -> dict:
-    """How often the runs reached a skill at all, and how often the wrong one.
+def reach(cases: list[dict], runs_by_case: dict[int, list[dict]]) -> dict:
+    """How often the runs of the routing cases reached a skill at all, and how often the wrong one.
 
     The attachment diagnostic (evals/README.md) is decided on this rate, not on
     pass counts: a case that fires its skill on four runs of five fails, and is
@@ -591,18 +636,27 @@ def reach(cases: list[dict], fired_by_case: dict[int, list[str]]) -> dict:
     as misses. A wrong skill is one that is not the case's route — for an
     `either` case, not one of the `siblings` it declares. In the front-door arm a
     reach is a playbook read; the hub firing with none read (`tuesday_unrouted`)
-    and a hidden module firing (`hidden`) are counted apart, and
-    `reached_tuesday` is every run that fired the hub, routed or not.
+    and a hidden module reached (`hidden`) are counted apart, and
+    `reached_tuesday` counts the runs whose record says the hub fired
+    (`hub_fired`), whatever their outcome: a run that routed and then reached a
+    hidden module is `hidden-<m>`, and the hub still fired in it. An explicit
+    case (a prompt opening with a module's command) is not a routing case: its
+    runs are summarised by `explicit_summary`, and none is counted here.
     """
-    decided = reached = wrong = unrouted = hidden = 0
+    decided = reached = wrong = unrouted = hidden = hub = set_aside = 0
     by_skill: dict[str, int] = {}
     for case in cases:
-        for got in fired_by_case.get(case["id"], []):
+        if explicit_command(case["prompt"]):
+            continue
+        for run in runs_by_case.get(case["id"], []):
+            got = run["outcome"]
             if got in SET_ASIDE:
+                set_aside += 1
                 continue
             decided += 1
             unrouted += got == "tuesday-unrouted"
             hidden += got.startswith("hidden-")
+            hub += bool(run.get("hub_fired"))
             if got in SKILLS:
                 reached += 1
                 by_skill[got] = by_skill.get(got, 0) + 1
@@ -610,8 +664,69 @@ def reach(cases: list[dict], fired_by_case: dict[int, list[str]]) -> dict:
                 if got not in allowed:
                     wrong += 1
     return {"decided": decided, "reached": reached, "wrong_skill": wrong, "by_skill": by_skill,
-            "tuesday_unrouted": unrouted, "reached_tuesday": reached + unrouted, "hidden": hidden,
-            "set_aside": sum(len(fired_by_case.get(c["id"], [])) for c in cases) - decided}
+            "tuesday_unrouted": unrouted, "reached_tuesday": hub, "hidden": hidden, "set_aside": set_aside}
+
+
+def passes_on(case: dict) -> str:
+    """The label every run of a case must carry to pass: `focused` for an explicit
+    case (its `expected` names the module its command starts), else `expected`."""
+    return FOCUSED if explicit_command(case["prompt"]) else case["expected"]
+
+
+def explicit_summary(cases: list[dict], runs_by_case: dict[int, list[dict]]) -> dict:
+    """E2 across its explicit cases: focused runs, hub fires and other modules reached.
+
+    Set-aside runs (timeout, error, void) are counted apart and nothing else is
+    read from them. A hub fire is reported, never scored: the run is scored on
+    whether another module was reached, which `reached` already holds whether it
+    went through the hub or not. `other_reached` counts runs by the first other
+    module each reached (their outcome); `reached_any` counts every label any run
+    reached, so a run that reached two modules shows in both.
+    """
+    out = {"decided": 0, "focused": 0, "unconfirmed": 0, "hub_fired": 0, "hub_fired_focused": 0,
+           "other_reached": {}, "reached_any": {}, "set_aside": 0}
+    for case in cases:
+        if not explicit_command(case["prompt"]):
+            continue
+        for run in runs_by_case.get(case["id"], []):
+            got = run["outcome"]
+            if got in SET_ASIDE:
+                out["set_aside"] += 1
+                continue
+            out["decided"] += 1
+            out["focused"] += got == FOCUSED
+            out["unconfirmed"] += got == "unconfirmed"
+            hub = bool(run.get("hub_fired"))
+            out["hub_fired"] += hub
+            out["hub_fired_focused"] += hub and got == FOCUSED
+            if got not in (FOCUSED, "unconfirmed"):
+                out["other_reached"][got] = out["other_reached"].get(got, 0) + 1
+            for label in run.get("reached") or []:
+                out["reached_any"][label] = out["reached_any"].get(label, 0) + 1
+    return out
+
+
+def summary_lines(summary: dict, explicit: dict, arm: str) -> list[str]:
+    """The lines a run prints after its cases: the reach lines for the routing cases,
+    the `explicit:` line for the explicit ones, each only when its suite had runs,
+    so a passing E2 never prints a reach rate of 0."""
+    lines = []
+    if summary["decided"] or summary["set_aside"]:
+        rate = f"{100 * summary['reached'] / summary['decided']:.0f}%" if summary["decided"] else "n/a"
+        lines.append(f"reached a skill on {summary['reached']}/{summary['decided']} decided runs ({rate}); "
+                     f"wrong skill on {summary['wrong_skill']}; "
+                     f"{summary['set_aside']} timed out, errored or void, set aside")
+        if arm == "frontdoor":
+            lines.append(f"tuesday fired on {summary['reached_tuesday']}/{summary['decided']} "
+                         f"({summary['tuesday_unrouted']} unrouted); hidden modules reached {summary['hidden']}")
+    if explicit["decided"] or explicit["set_aside"]:
+        lines.append(f"explicit: focused on {explicit['focused']}/{explicit['decided']} decided runs; "
+                     f"another module reached on {sum(explicit['other_reached'].values())} "
+                     f"{dict(sorted(explicit['other_reached'].items()))}; unconfirmed {explicit['unconfirmed']}; "
+                     f"the hub fired on {explicit['hub_fired']} (reported, not scored; "
+                     f"{explicit['hub_fired_focused']} of them focused); "
+                     f"{explicit['set_aside']} timed out, errored or void, set aside")
+    return lines
 
 
 def set_aside_problem(summary: dict) -> str | None:
@@ -681,30 +796,31 @@ def main() -> int:
     results, passed = [], 0
     for case in cases:
         fired = fired_by_case[case["id"]]
-        ok, note = verdict(case["expected"], fired, case.get("siblings"))
+        expected = passes_on(case)
+        ok, note = verdict(expected, fired, case.get("siblings"))
         passed += ok
-        results.append({"id": case["id"], "expected": case["expected"],
+        results.append({"id": case["id"], "expected": expected,
+                        **({"command": case["expected"]} if expected == FOCUSED else {}),
                         **{k: case[k] for k in ("derived_from", "arm") if k in case},
                         "fired": fired, "runs": runs_by_case[case["id"]], "passed": ok, "note": note})
-        print(f"{'PASS' if ok else 'FAIL'}  case {case['id']:>2}  expected {case['expected']:<16} {note}")
+        print(f"{'PASS' if ok else 'FAIL'}  case {case['id']:>2}  expected {expected:<16} {note}")
 
     print(f"\n{passed}/{len(cases)} routing cases passed ({args.runs} run(s) each, arm {args.arm}, "
           f"from {args.cases})")
-    summary = reach(cases, fired_by_case)
-    rate = f"{100 * summary['reached'] / summary['decided']:.0f}%" if summary["decided"] else "n/a"
-    print(f"reached a skill on {summary['reached']}/{summary['decided']} decided runs ({rate}); "
-          f"wrong skill on {summary['wrong_skill']}; {summary['set_aside']} timed out, errored or void, set aside")
-    if args.arm == "frontdoor":
-        print(f"tuesday fired on {summary['reached_tuesday']}/{summary['decided']} "
-              f"({summary['tuesday_unrouted']} unrouted); hidden modules fired {summary['hidden']}")
-    unscored = set_aside_problem(summary)
+    summary = reach(cases, runs_by_case)
+    explicit = explicit_summary(cases, runs_by_case)
+    for line in summary_lines(summary, explicit, args.arm):
+        print(line)
+    unscored = set_aside_problem({k: summary[k] + explicit[k] for k in ("decided", "set_aside")})
     if unscored:
         print(f"\nWARNING: {unscored}")
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(
             {"cases_file": str(args.cases), "arm": args.arm, **frozen, "model": args.model,
              "runs_per_case": args.runs, "unscored": unscored,
-             "passed": passed, "total": len(cases), "reach": summary, "results": results},
+             "passed": passed, "total": len(cases), "reach": summary,
+             **({"explicit": explicit} if explicit["decided"] or explicit["set_aside"] else {}),
+             "results": results},
             indent=2) + "\n")
     if unscored:
         return 3

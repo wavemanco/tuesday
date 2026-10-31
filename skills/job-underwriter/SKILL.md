@@ -7,6 +7,8 @@ description: Decides whether a specific job is worth applying to, and what the r
 
 Underwrite an opportunity on evidence, with the reasoning shown. **Evidence before language** — a polished phrase is not evidence; every material conclusion traces to a source or is labeled as inference. **Candidate fit versus opportunity quality** — the two verdicts live on separate ledgers and are never averaged together.
 
+**Started by its own command, `/job-underwriter`, this skill keeps the turn:** `references/interaction-grammar.md` §6 says what that rules out — read it before reaching for any other skill.
+
 ## Before sending
 
 Copy this list and check the response against it. Each item points to its rule and restates none; rules 1, 5 and 7 are in `references/output-discipline.md`.

@@ -34,6 +34,7 @@ and never a skill failure it was not.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -157,10 +158,10 @@ def test_routing_cases() -> None:
               {s: f"{s}-ab12cd34" for s in run_routing.SKILLS})
 
     summary = run_routing.reach(
-        [{"id": 1, "expected": "job-underwriter"},
-         {"id": 2, "expected": "either", "siblings": ["job-underwriter", "mock-interview"]}],
-        {1: ["job-underwriter", "neither", "resume-tailor", "timeout", "error"],
-         2: ["mock-interview", "resume-tailor", "neither"]})
+        [{"id": 1, "expected": "job-underwriter", "prompt": "p"},
+         {"id": 2, "expected": "either", "siblings": ["job-underwriter", "mock-interview"], "prompt": "p"}],
+        {1: runs("job-underwriter", "neither", "resume-tailor", "timeout", "error"),
+         2: runs("mock-interview", "resume-tailor", "neither")})
     check("the reach rate counts decided runs only; a wrong skill is one off the case's route or siblings",
           {k: summary[k] for k in ("decided", "reached", "wrong_skill", "set_aside")},
           {"decided": 6, "reached": 4, "wrong_skill": 2, "set_aside": 2})
@@ -269,8 +270,11 @@ def test_frontdoor_generation() -> None:
         playbook = files[f"{module}.md"]["text"]
         check(f"{module}'s playbook is its SKILL.md body with the frontmatter stripped, its contents listed, "
               f"and only clash paths moved",
-              playbook, frontdoor.with_contents(
-                  frontdoor.body(source).replace("references/rationale.md", f"references/{module}-rationale.md")))
+              playbook, frontdoor.with_paths_note(frontdoor.with_contents(
+                  frontdoor.body(source).replace("references/rationale.md", f"references/{module}-rationale.md"))))
+        listing_end = playbook.index("\n\n", playbook.index("## Contents\n\n") + len("## Contents\n\n"))
+        check(f"{module}'s playbook says where its paths resolve, first thing after its contents list",
+              playbook[listing_end:listing_end + 2 + len(frontdoor.PATHS_NOTE)], "\n\n" + frontdoor.PATHS_NOTE)
         lines = playbook.splitlines()
         check(f"{module}'s playbook opens with '## Contents' directly under its H1, as a file over 100 lines must",
               [line for line in lines[:3] if line.strip()], [lines[0], "## Contents"])
@@ -292,6 +296,16 @@ def test_frontdoor_generation() -> None:
     hub = frontdoor.HUB.read_text()
     check("the committed hub links every generated file directly, and nothing else",
           frontdoor.hub_links(hub), set(files))
+    # Round 2: Haiku read a playbook's files from the hidden module's own folder.
+    section3 = hub.partition("## 3. Run the chosen module")[2].partition("\n## ")[0]
+    check_true("the hub's section 3, which the paths note points to, says whose references/ a path means "
+               "and rules out the modules' own folders",
+               "this skill's own `references/`" in section3 and "never read from them" in " ".join(section3.split()))
+    check_true("the paths note names no references/ file, so it adds no link the hub must carry",
+               not frontdoor.LINK.findall(frontdoor.PATHS_NOTE))
+    check_true("the paths note points to the hub without saying SKILL.md, which section 3 item 1 says "
+               "means the playbook inside one",
+               "SKILL.md" not in frontdoor.PATHS_NOTE and "section 3" in frontdoor.PATHS_NOTE)
 
 
 def test_frontdoor_clashes() -> None:
@@ -309,8 +323,8 @@ def test_frontdoor_clashes() -> None:
         check("the same text under one name is one shared file", files["shared.md"]["text"], "same text")
         check("the playbook's path moves to its own module's copy; other paths are untouched",
               files["alpha.md"]["text"],
-              "# Alpha\n\nRead `references/alpha-notes.md`, then `references/own.md` and "
-              "`references/shared.md`; not `conventions/notes.md`.\n")
+              "# Alpha\n\n" + frontdoor.PATHS_NOTE + "\n\nRead `references/alpha-notes.md`, then "
+              "`references/own.md` and `references/shared.md`; not `conventions/notes.md`.\n")
         check("a module's own file that names a clashing file points at that module's copy",
               files["own.md"]["text"], "see rationale and alpha-notes.md")
 
@@ -344,11 +358,16 @@ def test_frontdoor_clashes() -> None:
                                               "### One a\n\n## Two\n"})
         check("a playbook's contents list its ## and ### headings, ### nested, and skip fenced code",
               frontdoor.generate(fenced)["alpha.md"]["text"],
-              "# Alpha\n\n## Contents\n\n- One\n  - One a\n- Two\n\nIntro.\n\n## One\n\n```text\n"
-              "## not a heading\n```\n\n### One a\n\n## Two\n")
+              "# Alpha\n\n## Contents\n\n- One\n  - One a\n- Two\n\n" + frontdoor.PATHS_NOTE + "\n\nIntro.\n\n"
+              "## One\n\n```text\n## not a heading\n```\n\n### One a\n\n## Two\n")
         listed = "# Alpha\n\n## Contents\n\n- One\n\n## One\n"
         check("a playbook that already opens with its contents is left as it is",
               frontdoor.with_contents(listed), listed)
+        check("the paths note goes after an existing contents list, under a bare H1, or first with no H1",
+              (frontdoor.with_paths_note(listed), frontdoor.with_paths_note("# A\n\nBody.\n"),
+               frontdoor.with_paths_note("Body.\n")),
+              (f"# Alpha\n\n## Contents\n\n- One\n\n{frontdoor.PATHS_NOTE}\n\n## One\n",
+               f"# A\n\n{frontdoor.PATHS_NOTE}\n\nBody.\n", f"{frontdoor.PATHS_NOTE}\n\nBody.\n"))
 
         dangling = module_tree(Path(tmp) / "e", {"alpha": {"x.md": "x"}},
                                bodies={"alpha": "Read `references/missing.md`.\n"})
@@ -431,6 +450,11 @@ DONE = {"type": "result", "subtype": "success"}
 HUB_DIR = "/tmp/case-1/.claude/skills/tuesday-ab12cd34"
 
 
+def runs(*outcomes: str, hub: bool = False) -> list[dict]:
+    """Run records as `run_once` returns them, one per outcome, for `reach`."""
+    return [{"outcome": o, "hub_fired": hub} for o in outcomes]
+
+
 def test_frontdoor_labels() -> None:
     print("\nfront door: every run gets exactly one of the arm's labels")
     ours = init(*NAMES.values())
@@ -462,9 +486,25 @@ def test_frontdoor_labels() -> None:
           read_events([ours] + partial("Skill", ['{"skill": "job-', 'underwriter"}'])), "hidden-job-underwriter")
     check("the hub called by its shipped name is the hub firing",
           read_events([ours, call("Skill", {"skill": "tuesday"}), DONE]), "tuesday-unrouted")
-    check("a hidden module reached for after the routing decision is not read: the run ends at the playbook",
-          read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}),
-                       call("Skill", {"skill": "resume-tailor-ab12cd34"})]), "job-underwriter")
+    # Round 2: Haiku routed right, then read the playbook's files from the hidden
+    # module's own folder, which a listing had shown it. A reader that stopped at
+    # the routing decision scored that run job-underwriter.
+    routed = [ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"})]
+    check("the run is read past the routing decision: a hidden module reached for later is hidden-<module>",
+          read_events(routed + [call("Skill", {"skill": "resume-tailor-ab12cd34"}), DONE]), "hidden-resume-tailor")
+    check("and so is the routed module's own hidden folder, entered by Bash to read the playbook's files",
+          read_events(routed + [call("Bash", {"command": "cd /tmp/case-21/.claude/skills/job-underwriter-ab12cd34/"
+                                                         "references && cat risk-and-decision.md"}), DONE]),
+          "hidden-job-underwriter")
+    reader = run_routing.RunReader(NAMES, "frontdoor")
+    check("the routing decision is not settled until the turn ends: the reader returns nothing at the playbook",
+          [reader.feed(e) for e in routed], [None, None, None])
+    check("a listing that merely prints hidden paths reaches nothing: only a tool call's input is read",
+          read_events(routed + [{"type": "user", "message": {"content": [{"type": "tool_result", "content":
+                       "./.claude/skills/job-underwriter-ab12cd34/references/risk-and-decision.md"}]}}, DONE]),
+          "job-underwriter")
+    check("a run routed and then cut off by the timeout is set aside: the rest of the turn was never seen",
+          read_events(routed, end="timeout"), "timeout")
     check("the skills arm reads Skill names as it did at e1e6a13: a shipped name it did not install is no fire",
           read_events([init(*(NAMES[s] for s in run_routing.SKILLS)), call("Skill", {"skill": "job-underwriter"}),
                        DONE], arm="skills"), "neither")
@@ -486,8 +526,19 @@ def test_frontdoor_labels() -> None:
           read_events([init("job-underwriter")], arm="skills"), "void")
     reader = run_routing.RunReader(NAMES, "frontdoor")
     reader.feed(init("tuesday-ab12cd34", "pdf"))
-    check("the init skill list is recorded with the outcome",
-          reader.record("neither"), {"outcome": "neither", "init_skills": ["tuesday-ab12cd34", "pdf"]})
+    check("the init skill list is recorded with the outcome, with the hub fire and what was reached",
+          reader.record("neither"), {"outcome": "neither", "init_skills": ["tuesday-ab12cd34", "pdf"],
+                                     "hub_fired": False, "reached": []})
+    reader = run_routing.RunReader(NAMES, "frontdoor")
+    for event in routed + [call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]:
+        reader.feed(event)
+    check("every playbook a front-door run reads is recorded in order; the first is the route",
+          (reader.feed(DONE), reader.record("job-underwriter")["reached"], reader.hub_fired),
+          ("job-underwriter", ["job-underwriter", "resume-tailor"], True))
+    reader = run_routing.RunReader({s: NAMES[s] for s in run_routing.SKILLS}, "skills")
+    reader.feed(init(*(NAMES[s] for s in run_routing.SKILLS)))
+    check("the skills arm records only the outcome and the init list, as before",
+          sorted(reader.record("neither")), ["init_skills", "outcome"])
 
     ok, note = run_routing.verdict("job-underwriter", ["job-underwriter", "void", "job-underwriter"])
     check("a void run is set aside like a timeout, and reported", (ok, "1 void" in note), (True, True))
@@ -495,26 +546,48 @@ def test_frontdoor_labels() -> None:
     check("tuesday firing on a negative fails it, routed or not", ok, False)
     ok, _ = run_routing.verdict("job-underwriter", ["job-underwriter", "hidden-job-underwriter"])
     check("a hidden module firing fails the case even when it is the right module", ok, False)
-    cases21 = [{"id": n, "expected": "neither"} for n in range(1, 22)]
-    all_void = run_routing.reach(cases21, {n: ["void"] * 4 + ["neither"] for n in range(1, 22)})
+    cases21 = [{"id": n, "expected": "neither", "prompt": "p"} for n in range(1, 22)]
+    all_void = run_routing.reach(cases21, {n: runs(*["void"] * 4, "neither") for n in range(1, 22)})
     check("a mostly-void arm is not scored, though its hidden and wrong counts read zero",
           (all_void["hidden"], all_void["wrong_skill"], bool(run_routing.set_aside_problem(all_void))), (0, 0, True))
     check_true("and the reason names void with timeouts and errors",
                "timed out, errored or were void" in (run_routing.set_aside_problem(all_void) or ""))
     check("one set-aside run in ten is within the bar; two are over it",
           [bool(run_routing.set_aside_problem(run_routing.reach(
-              [{"id": 1, "expected": "neither"}], {1: ["void"] * k + ["neither"] * (10 - k)}))) for k in (1, 2)],
+              [{"id": 1, "expected": "neither", "prompt": "p"}], {1: runs(*["void"] * k, *["neither"] * (10 - k))})))
+           for k in (1, 2)],
           [False, True])
     check("an arm with no runs has nothing to set aside",
           run_routing.set_aside_problem(run_routing.reach([], {})), None)
-    summary = run_routing.reach([{"id": 1, "expected": "job-underwriter"}],
-                                {1: ["job-underwriter", "tuesday-unrouted", "hidden-mock-interview",
-                                     "mock-interview", "void", "neither"]})
+    summary = run_routing.reach([{"id": 1, "expected": "job-underwriter", "prompt": "p"}],
+                                {1: runs("job-underwriter", "tuesday-unrouted", "mock-interview", hub=True)
+                                    + runs("hidden-mock-interview", "void", "neither")})
     check("reach counts playbook reads as reaches, and unrouted, hidden and void runs apart",
           {k: summary[k] for k in ("decided", "reached", "wrong_skill", "tuesday_unrouted", "reached_tuesday",
                                    "hidden", "set_aside")},
           {"decided": 5, "reached": 2, "wrong_skill": 1, "tuesday_unrouted": 1, "reached_tuesday": 3,
            "hidden": 1, "set_aside": 1})
+    # Round 2's case 21 on Haiku: the hub fired and routed on every run, and one run
+    # then reached the hidden module. Hub fires are read from `hub_fired`, not outcomes.
+    case21 = [{"id": 21, "expected": "either", "siblings": ["job-underwriter", "resume-tailor"], "prompt": "p"}]
+    summary = run_routing.reach(case21, {21: runs(*["job-underwriter"] * 4, "hidden-job-underwriter", hub=True)})
+    check("tuesday fired counts every run whose record says the hub fired, a hidden reach after routing included",
+          (summary["reached_tuesday"], summary["hidden"], summary["decided"]), (5, 1, 5))
+    check("a hidden reach with no hub fire is not counted as one",
+          run_routing.reach(case21, {21: runs("hidden-job-underwriter")})["reached_tuesday"], 0)
+    explicit_cases = [{"id": 1, "expected": "mock-interview", "prompt": "/mock-interview x"}]
+    explicit_runs = {1: runs(*["focused"] * 5, hub=True)}
+    summary = run_routing.reach(explicit_cases, explicit_runs)
+    check("an explicit case is not a routing case: reach counts none of its runs",
+          (summary["decided"], summary["reached"], summary["set_aside"]), (0, 0, 0))
+    lines = run_routing.summary_lines(summary, run_routing.explicit_summary(explicit_cases, explicit_runs),
+                                      "frontdoor")
+    check_true("so a fully focused E2 prints its explicit line and no reach rate of 0",
+               len(lines) == 1 and lines[0].startswith("explicit: focused on 5/5 decided runs"))
+    lines = run_routing.summary_lines(run_routing.reach(case21, {21: runs("job-underwriter", hub=True)}),
+                                      run_routing.explicit_summary(case21, {}), "frontdoor")
+    check("a routing suite prints the reach and tuesday lines, and no explicit line",
+          [line.split(" on ")[0] for line in lines], ["reached a skill", "tuesday fired"])
 
 
 def test_explicit_naming() -> None:
@@ -542,40 +615,90 @@ def test_explicit_naming() -> None:
     reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
     check("E2: the named module's own files opened does not end the run: what follows is the case",
           [reader.feed(ours), reader.feed(own)], [None, None])
-    check("E2: the named module's own files opened, then a clean end, is a pass",
-          read_events([ours, own, DONE], explicit="mock-interview"), "mock-interview")
-    check("E2: its own files opened, then tuesday firing, fails it",
-          read_events([ours, own, call("Skill", {"skill": "tuesday-ab12cd34"}), DONE], explicit="mock-interview"),
-          "tuesday")
-    check("E2: its own files opened, then another playbook read through the hub, fails it",
-          read_events([ours, own, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}), DONE],
-                      explicit="mock-interview"), "tuesday")
+    check("E2: the named module's own files opened, then a clean end, is focused",
+          read_events([ours, own, DONE], explicit="mock-interview"), "focused")
+    check("E2: a focused case passes; one run that reached another module fails it",
+          (run_routing.verdict(run_routing.passes_on({"prompt": "/mock-interview x", "expected": "mock-interview"}),
+                               ["focused"] * 5)[0],
+           run_routing.verdict("focused", ["focused"] * 4 + ["job-underwriter"])[0]), (True, False))
+    check("a routing case still passes on its expected label",
+          run_routing.passes_on({"prompt": "should I apply?", "expected": "job-underwriter"}), "job-underwriter")
+    # Round 2: every run in which the hub fired deferred to the named module and read
+    # no other playbook. The hub firing is reported apart; what it does next is scored.
+    hub_fire = call("Skill", {"skill": "tuesday-ab12cd34"})
+    own_via_hub = call("Read", {"file_path": f"{HUB_DIR}/references/mock-interview.md"})
+    check("E2: the hub firing, then deferring to the named module's own playbook, is focused",
+          read_events([ours, expansion, hub_fire, own_via_hub,
+                       call("Read", {"file_path": f"{HUB_DIR}/references/output-discipline.md"}), DONE],
+                      explicit="mock-interview"), "focused")
+    check("E2: so is the hub called by its shipped name",
+          read_events([ours, expansion, call("Skill", {"skill": "tuesday"}), DONE], explicit="mock-interview"),
+          "focused")
+    check("E2: the hub firing, then another playbook read through it, is that playbook",
+          read_events([ours, own, hub_fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}),
+                       DONE], explicit="mock-interview"), "job-underwriter")
+    check("E2: another playbook named in a Bash call from inside the hub's folder is reached too",
+          read_events([ours, expansion, hub_fire,
+                       call("Bash", {"command": f"cd {HUB_DIR}/references && cat job-underwriter.md"}), DONE],
+                      explicit="mock-interview"), "job-underwriter")
+    check("E2: a renamed clash file is not its module's playbook, and the named module's own playbook is not another's",
+          read_events([ours, expansion, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter-rationale.md"}),
+                       call("Bash", {"command": f"wc -c {HUB_DIR}/references/mock-interview.md"}), DONE],
+                      explicit="mock-interview"), "focused")
     check("E2: the timeout is set aside even after its own files opened: the rest of the turn was never seen",
           (read_events([ours, own], explicit="mock-interview", end="timeout"),
            read_events([ours], explicit="mock-interview", end="timeout")), ("timeout", "timeout"))
-    check("E2: the command's expansion seen, then a clean end, is a pass",
-          read_events([ours, expansion, DONE], explicit="mock-interview"), "mock-interview")
+    check("E2: the command's expansion seen, then a clean end, is focused",
+          read_events([ours, expansion, DONE], explicit="mock-interview"), "focused")
     check("E2: a clean end with no sign the command loaded is unconfirmed, not a pass",
           read_events([ours, DONE], explicit="mock-interview"), "unconfirmed")
-    check("E2: tuesday firing fails it, whatever was loaded",
-          read_events([ours, expansion, call("Skill", {"skill": "tuesday-ab12cd34"})], explicit="mock-interview"),
-          "tuesday")
-    check("E2: another module's playbook read through the hub fails it as tuesday",
-          read_events([ours, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"})],
-                      explicit="mock-interview"), "tuesday")
-    check("E2: another module reached for by name fails it",
-          read_events([ours, call("Skill", {"skill": "job-underwriter-ab12cd34"})], explicit="mock-interview"),
-          "hidden-job-underwriter")
+    check("E2: another module reached for by name fails it, whatever was loaded",
+          read_events([ours, expansion, call("Skill", {"skill": "job-underwriter-ab12cd34"}), DONE],
+                      explicit="mock-interview"), "hidden-job-underwriter")
     check("E2: another module called by its shipped name, no run suffix, fails it too",
           read_events([ours, call("Skill", {"skill": "job-underwriter"}), DONE], explicit="mock-interview"),
           "hidden-job-underwriter")
-    check("E2: so does the hub called by its shipped name, or another module under a plugin prefix",
-          (read_events([ours, call("Skill", {"skill": "tuesday"}), DONE], explicit="mock-interview"),
-           read_events([ours, call("Skill", {"skill": "anthropic-skills:resume-tailor"}), DONE],
-                       explicit="mock-interview")), ("tuesday", "hidden-resume-tailor"))
+    check("E2: so does another module under a plugin prefix",
+          read_events([ours, call("Skill", {"skill": "anthropic-skills:resume-tailor"}), DONE],
+                      explicit="mock-interview"), "hidden-resume-tailor")
+    check("E2: so does another module's folder named in a Bash call",
+          read_events([ours, expansion, call("Bash", {"command": "ls .claude/skills/job-underwriter-ab12cd34/"}), DONE],
+                      explicit="mock-interview"), "hidden-job-underwriter")
+    check("E2: listing the skills folder without naming a module reaches nothing",
+          read_events([ours, expansion, call("Bash", {"command": "ls .claude/skills/ .claude/skills/*/"}), DONE],
+                      explicit="mock-interview"), "focused")
+    check("E2: the first other module reached is the outcome",
+          read_events([ours, expansion, call("Skill", {"skill": "resume-tailor"}), hub_fire,
+                       call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}), DONE],
+                      explicit="mock-interview"), "hidden-resume-tailor")
     check("E2: the named module called by its shipped name loads nothing, and neither passes nor fails",
           read_events([ours, call("Skill", {"skill": "mock-interview"}), DONE], explicit="mock-interview"),
           "unconfirmed")
+    reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+    for event in [ours, expansion, hub_fire, call("Skill", {"skill": "job-underwriter-ab12cd34"}),
+                  call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]:
+        reader.feed(event)
+    outcome = reader.feed(DONE)
+    check("E2: the record carries whether the named module loaded, the hub fire, and every module reached, "
+          "in order",
+          {k: v for k, v in reader.record(outcome).items() if k not in ("init_skills", "slash_commands")},
+          {"outcome": "hidden-job-underwriter", "loaded": True, "hub_fired": True,
+           "reached": ["hidden-job-underwriter", "resume-tailor"]})
+    runs = {1: [{"outcome": "focused", "hub_fired": True, "reached": []},
+                {"outcome": "focused", "hub_fired": False, "reached": []},
+                {"outcome": "hidden-job-underwriter", "hub_fired": True,
+                 "reached": ["hidden-job-underwriter", "job-underwriter"]},
+                {"outcome": "timeout", "hub_fired": True, "reached": ["job-underwriter"]}],
+            2: [{"outcome": "unconfirmed", "hub_fired": False, "reached": []}],
+            3: [{"outcome": "job-underwriter", "hub_fired": False, "reached": ["job-underwriter"]}]}
+    summary = run_routing.explicit_summary(
+        [{"id": 1, "prompt": "/mock-interview x"}, {"id": 2, "prompt": "/resume-tailor y"},
+         {"id": 3, "prompt": "should I apply?"}], runs)
+    check("E2 summary: focused, unconfirmed and hub fires counted over decided runs, a set-aside run apart, "
+          "a routing case not read",
+          summary, {"decided": 4, "focused": 2, "unconfirmed": 1, "hub_fired": 2, "hub_fired_focused": 1,
+                    "other_reached": {"hidden-job-underwriter": 1},
+                    "reached_any": {"hidden-job-underwriter": 1, "job-underwriter": 1}, "set_aside": 1})
     # The CLI's stream-json never carries the expansion: a smoke run whose transcript
     # holds it streamed none. The transcript is read instead, by the run's own reply.
     def entry(uuid, parent, kind, content, mid=None):
@@ -598,6 +721,52 @@ def test_explicit_naming() -> None:
           run_routing.transcript_path({"session_id": "s1", "cwd": "/tmp/tmpab_1/case-3"}).parts[-2:],
           ("-tmp-tmpab-1-case-3", "s1.jsonl"))
     check("E2 transcript: no session in the init event, no path", run_routing.transcript_path({}), None)
+    # End to end: Sonnet's streams never carry the expansion, so a run whose hub fired and
+    # deferred is `focused` only through `record` reading the transcript (round 2, case 1
+    # runs 2 and 4). The reader finds the file from the init event and its own reply.
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = f"{tmp}/case-1"
+        folder = Path(tmp) / "config" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", cwd)
+        folder.mkdir(parents=True)
+        (folder / "s1.jsonl").write_text("\n".join(shared) + "\n", encoding="utf-8")
+        (folder / "s2.jsonl").write_text("\n".join(shared[1:]) + "\n", encoding="utf-8")
+
+        def transcript_run(session: str, mid: str, *events: dict) -> run_routing.RunReader:
+            reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+            for event in [{**ours, "session_id": session, "cwd": cwd},
+                          {"type": "assistant", "message": {"id": mid, "content": [{"type": "text", "text": "x"}]}},
+                          *events]:
+                reader.feed(event)
+            return reader
+
+        def recorded(reader: run_routing.RunReader, outcome: str) -> tuple:
+            rec = reader.record(outcome)
+            return rec["outcome"], rec["loaded"]
+
+        saved = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(Path(tmp) / "config")
+        try:
+            hub_then_own = transcript_run("s1", "msg_A", hub_fire, own_via_hub)
+            check("E2 record: a stream with no expansion settles unconfirmed",
+                  (hub_then_own.feed(DONE), hub_then_own.expanded, hub_then_own.loaded),
+                  ("unconfirmed", False, False))
+            check("E2 record: the transcript showing the command expanded turns unconfirmed into focused",
+                  recorded(hub_then_own, "unconfirmed"), ("focused", True))
+            check("E2 record: a run that reached another module keeps that outcome, now marked loaded",
+                  recorded(transcript_run("s1", "msg_A", hub_fire), "hidden-job-underwriter"),
+                  ("hidden-job-underwriter", True))
+            check("E2 record: no expansion on this run's chain, or no transcript at all, stays unconfirmed",
+                  (recorded(transcript_run("s1", "msg_B"), "unconfirmed"),
+                   recorded(transcript_run("s2", "msg_A"), "unconfirmed"),
+                   recorded(transcript_run("s9", "msg_A"), "unconfirmed")),
+                  (("unconfirmed", False),) * 3)
+            check("E2 record: a set-aside run is not rescued by the transcript",
+                  recorded(transcript_run("s1", "msg_A"), "timeout"), ("timeout", False))
+        finally:
+            if saved is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = saved
     check("E2: a tool result echoing the name is not the expansion",
           read_events([ours, {"type": "user", "message": {"content": [
               {"type": "tool_result", "content": "mock-interview-ab12cd34"}]}}, DONE], explicit="mock-interview"),
