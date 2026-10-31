@@ -115,20 +115,31 @@ it is verified by the graders naming a surface that no longer exists.
 
 A standing rule, set by the owner. An issue that two fix iterations have not
 closed — each iteration a change made to close it, then reviewed or measured — is
-not iterated a third time. Work on it stops, and one of two things happens:
+not iterated a third time on its own. Work on it stops and it goes to the owner
+as a decision, with its measurement: the rate, what each iteration changed, and
+what each option would cost.
 
-- **If the user can protect themselves by checking something,** the issue is
-  covered by that skill's watch-out: the one sentence every delivered output of the
-  skill ends with (`conventions/output-discipline.md` rule 7). If the sentence
-  does not already cover the issue, extend it — and keep it one sentence, because
-  the slot holds one line and a list of cautions is read as none. The issue is
-  recorded as open in the README's Tracked-work ledger, with its measurement,
-  and added, with its rate and a link to that entry, to the skill's "Why it's
-  there" cell in the README's watch-out table — which CI does not read, so it is
-  also updated by hand when an issue the cell explains is closed.
-- **If the user cannot protect themselves** — the skill does not fire at all, say,
-  so there is no output for them to check — it goes to the owner as an open
-  decision.
+Modules shape up differently, so the owner decides case by case, among three
+options:
+
+- **A watch-out,** if the user can protect themselves by checking something: the
+  issue is covered by that skill's watch-out, the one sentence every delivered
+  output of the skill ends with (`conventions/output-discipline.md` rule 7). If
+  the sentence does not already cover the issue, extend it — and keep it one
+  sentence, because the slot holds one line and a list of cautions is read as
+  none. The issue is added, with its rate and a link to its ledger entry, to the
+  skill's "Why it's there" cell in the README's watch-out table — which CI does
+  not read, so it is also updated by hand when an issue the cell explains is
+  closed.
+- **Another round,** with its own bar fixed before it runs.
+- **Left open,** recorded with its rate.
+
+An issue the user cannot protect themselves from — the skill does not fire at
+all, say, so there is no output to check — can only be another round or left
+open. Whatever the owner decides, the issue's entry in the README's Tracked-work
+ledger records it as "Owner's decision after two iterations: …", with the
+measurement. When most of those decisions are "a watch-out", say so to the owner:
+the rule may then go back to adding the watch-out without asking.
 
 Any two changes made to close an issue count, whatever their kind. For a
 deterministic failure the rule above makes the second one a change of shape; for
