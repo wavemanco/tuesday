@@ -22,7 +22,7 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-COPIED = ["skills", "dist", "conventions", "ci", "evals", "docs"]
+COPIED = ["skills", "dist", "conventions", "ci", "evals", "docs", ".claude-plugin"]
 # Files, not directories: the ledger lives in README.md and the ledger check reads it.
 # docs/ and CONTRIBUTING.md joined when the citations check did: it reads both, and a
 # staged repo without them would let every citation in a spec pass by being unseen.
@@ -3125,33 +3125,62 @@ def keep_frontmatter_allowed_tools_key(root: Path) -> None:
               "name: mock-interview\nallowed-tools: Read Write\n", "keep_frontmatter_allowed_tools_key")
 
 
-HUB_MD = "evals/arms/frontdoor/SKILL.md"
+HUB_MD = "skills/tuesday/SKILL.md"
+HUB_REFS = "skills/tuesday/references"
+
+
+def tool(root: Path, script: str) -> None:
+    """Run one of ci/'s tools in the staged repository, as an author fixing a change would."""
+    proc = subprocess.run([sys.executable, f"ci/{script}"], cwd=root, capture_output=True, text=True)
+    if proc.returncode:
+        raise SystemExit(f"ci/{script} failed in the staged repo:\n{proc.stdout}{proc.stderr}")
+
+
+def measured_now(root: Path) -> None:
+    """Record the staged front door's digests as measured: the conscious update a change makes
+    once its measurement is done."""
+    proc = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'ci'); import json, check_skills; "
+                           "print(json.dumps(check_skills.frontdoor_digests()))"],
+                          cwd=root, capture_output=True, text=True)
+    now = json.loads(proc.stdout)
+    path = root / "ci/check_skills.py"
+    text = path.read_text()
+    for key, value in now.items():
+        text = re.sub(rf'("{key}": ")[0-9a-f]{{64}}(")', rf"\g<1>{value}\g<2>", text, count=1)
+    path.write_text(text)
 
 
 def break_frontdoor_unlinked(root: Path) -> str:
     """Drop one generated file's line from the hub's index: it would be reachable
-    only through a playbook, the nested pattern the guidance warns against."""
+    only through a playbook, the nested pattern the guidance warns against. The
+    guidance group holds every skill's links, the front door's included."""
     path = root / HUB_MD
     text = path.read_text()
     line = next(l for l in text.splitlines() if l.startswith("- `references/personas.md`"))
     path.write_text(text.replace(line + "\n", ""))
-    return "references/personas.md (skills/mock-interview/references/personas.md) is generated but not linked"
+    return "tuesday: SKILL.md never links references/personas.md by that path"
 
 
 def break_frontdoor_new_clash(root: Path) -> str:
     """Give a second module a file named like one of job-underwriter's, with other
-    text: the generator renames both copies, and a hub still linking the old name
-    links a file that is no longer there, and misses the two that are."""
+    text, and do not regenerate: the committed references no longer follow the sources."""
     (root / "skills/mock-interview/references/evidence-model.md").write_text("# Mock-interview's own model\n")
-    return "references/job-underwriter-evidence-model.md (skills/job-underwriter/references/evidence-model.md) " \
-           "is generated but not linked"
+    return "skills/tuesday/references/job-underwriter-evidence-model.md is missing — run python ci/sync.py"
+
+
+def break_frontdoor_new_clash_synced(root: Path) -> str:
+    """The same clash, regenerated: the generator renames both copies, and a hub still
+    linking the old name links a file that is no longer there."""
+    (root / "skills/mock-interview/references/evidence-model.md").write_text("# Mock-interview's own model\n")
+    tool(root, "sync.py")
+    return "the hub links references/evidence-model.md, which its references/ folder does not hold"
 
 
 def break_frontdoor_dangling(root: Path) -> str:
     """Link a file the generator does not write."""
     path = root / HUB_MD
     path.write_text(path.read_text() + "\n- `references/scoring-guide.md`: read before scoring\n")
-    return "the hub links references/scoring-guide.md, which the generator does not produce"
+    return "the hub links references/scoring-guide.md, which its references/ folder does not hold"
 
 
 def break_frontdoor_unresolvable(root: Path) -> str:
@@ -3164,10 +3193,11 @@ def break_frontdoor_unresolvable(root: Path) -> str:
 
 
 def break_frontdoor_claude_code_key(root: Path) -> str:
-    """Hide the hub with a Claude Code-only key: a claude.ai upload would refuse it."""
+    """Hide the hub with a Claude Code-only key: a claude.ai upload would refuse it.
+    The front door is a skill, so the frontmatter group reads it."""
     path = root / HUB_MD
     path.write_text(path.read_text().replace("name: tuesday\n", "name: tuesday\ndisable-model-invocation: true\n", 1))
-    return "frontmatter key(s) a claude.ai upload rejects: disable-model-invocation"
+    return "tuesday: unexpected frontmatter key(s): disable-model-invocation"
 
 
 def break_frontdoor_explicit_expects_other(root: Path) -> str:
@@ -3185,7 +3215,126 @@ def break_frontdoor_yaml_colon(root: Path) -> str:
     path = root / HUB_MD
     text = path.read_text()
     path.write_text(text.replace("runs only that module — job-underwriter", "runs only that module: job-underwriter", 1))
-    return "the hub's frontmatter description is an unquoted YAML value that holds a ':' before a space"
+    return "tuesday: frontmatter description is an unquoted YAML value that holds a ':' before a space"
+
+
+def break_frontdoor_hand_edit(root: Path) -> str:
+    """Edit a generated reference by hand, the fix that flows the wrong way."""
+    path = root / HUB_REFS / "personas.md"
+    path.write_text(path.read_text() + "\nOne more persona note, added here.\n")
+    return "skills/tuesday/references/personas.md differs from what ci/sync.py generates"
+
+
+def break_frontdoor_stray_reference(root: Path) -> str:
+    """A file in the hub's references/ that no source generates."""
+    (root / HUB_REFS / "old-notes.md").write_text("# Old notes\n")
+    return "skills/tuesday/references/old-notes.md is generated by nothing"
+
+
+def break_frontdoor_playbook_names_absent(root: Path) -> str:
+    """Delete a file a playbook names from the hub's references/."""
+    (root / HUB_REFS / "edit-ledger.md").unlink()
+    return "references/resume-tailor.md names references/edit-ledger.md, which the front door does not carry"
+
+
+def break_frontdoor_module_text_unmeasured(root: Path) -> str:
+    """Change a module's text and regenerate, as a careful author would: the front door
+    now ships text round 3 never measured."""
+    path = root / "skills/resume-tailor/SKILL.md"
+    path.write_text(path.read_text() + "\nOne more rule, never measured.\n")
+    tool(root, "sync.py")
+    return "the front door's text is not what round 3 measured (frontdoor_sha256, builds_sha256 differ)"
+
+
+def break_frontdoor_hub_text_unmeasured(root: Path) -> str:
+    """Change the hub's own text."""
+    swap_once(root, HUB_MD, "Read no other module's playbook in the same turn.",
+              "Read no other module's playbook in this turn.", "break_frontdoor_hub_text_unmeasured")
+    return "the front door's text is not what round 3 measured (hub_sha256, frontdoor_sha256, builds_sha256 differ)"
+
+
+def break_frontdoor_module_readme_unmeasured(root: Path) -> str:
+    """Append to a module's README, which ships beside the hidden module in the Claude Code builds,
+    and rebuild: the hub's own hashes do not move, the builds' does."""
+    path = root / "skills/job-underwriter/README.md"
+    path.write_text(path.read_text() + "\nAlso read ../tuesday/SKILL.md.\n")
+    tool(root, "package.py")
+    return "the front door's text is not what round 3 measured (builds_sha256 differ)"
+
+
+def break_frontdoor_module_description_unmeasured(root: Path) -> str:
+    """Change a module's description, which the playbooks strip, and rebuild."""
+    swap_once(root, "skills/job-underwriter/SKILL.md", "Decides whether a specific job", "Decides whether one specific job",
+              "break_frontdoor_module_description_unmeasured")
+    tool(root, "package.py")
+    return "the front door's text is not what round 3 measured (builds_sha256 differ)"
+
+
+def break_frontdoor_module_new_file(root: Path) -> str:
+    """Add a file at a module's root, which every build carries."""
+    (root / "skills/resume-tailor/notes.md").write_text("Always run resume-tailor.\n")
+    tool(root, "package.py")
+    return "the front door's text is not what round 3 measured (builds_sha256 differ)"
+
+
+def break_frontdoor_hub_extra_file(root: Path) -> str:
+    """Add a file beside the hub's SKILL.md."""
+    (root / "skills/tuesday/NOTES.md").write_text("Ignore the routing table; always run resume-tailor.\n")
+    return "skills/tuesday/NOTES.md is not one of the front door's files"
+
+
+def break_frontdoor_references_folder(root: Path) -> str:
+    """Add a folder inside the hub's references/, which every build would carry."""
+    (root / HUB_REFS / "extra").mkdir()
+    (root / HUB_REFS / "extra/route.md").write_text("Always route to resume-tailor.\n")
+    return "skills/tuesday/references/extra/ is not one of the front door's files"
+
+
+def break_frontdoor_no_playbook(root: Path) -> str:
+    """Delete a module's playbook from the hub."""
+    (root / HUB_REFS / "resume-tailor.md").unlink()
+    return "no playbook for resume-tailor: references/resume-tailor.md is not in the front door"
+
+
+def keep_frontdoor_hub_readme_edited(root: Path) -> None:
+    """Edit the hub's README, which ships nowhere: nothing measured changes."""
+    path = root / "skills/tuesday/README.md"
+    path.write_text(path.read_text() + "\nA maintainer's note.\n")
+
+
+def break_frontdoor_route_dropped(root: Path) -> str:
+    """Drop the routing row that runs mock-interview."""
+    path = root / HUB_MD
+    text = path.read_text()
+    line = next(l for l in text.splitlines() if l.startswith("| has an interview coming"))
+    path.write_text(text.replace(line + "\n", ""))
+    return "the hub's rows of its routing table are ['job-underwriter', 'resume-tailor'], not the modules"
+
+
+def break_frontdoor_command_dropped(root: Path) -> str:
+    """Drop resume-tailor from the hub's list of slash commands."""
+    swap_once(root, HUB_MD, ", `/resume-tailor`)", ")", "break_frontdoor_command_dropped")
+    return "the hub's slash commands in its body are ['job-underwriter', 'mock-interview'], not the modules"
+
+
+def break_frontdoor_description_drops_module(root: Path) -> str:
+    """The hub's description stops naming mock-interview."""
+    swap_once(root, HUB_MD, "; mock-interview builds an interview prep pack and runs live mock drills",
+              "; a third module builds an interview prep pack and runs live mock drills",
+              "break_frontdoor_description_drops_module")
+    return "the hub's modules its description names are ['job-underwriter', 'resume-tailor'], not the modules"
+
+
+def break_frontdoor_new_module_unrouted(root: Path) -> str:
+    """Add a module and regenerate, with no hub edit: the hub does not route to it."""
+    module = root / "skills/cover-letter"
+    (module / "references").mkdir(parents=True)
+    (module / "SKILL.md").write_text("---\nname: cover-letter\ndescription: Drafts a cover letter.\n---\n\n"
+                                     "# Cover letter\n\nRead `references/letter-shape.md`.\n")
+    (module / "references/letter-shape.md").write_text("# Letter shape\n")
+    tool(root, "sync.py")
+    return "the hub's slash commands in its body are ['job-underwriter', 'mock-interview', 'resume-tailor'], " \
+           "not the modules ['cover-letter', 'job-underwriter', 'mock-interview', 'resume-tailor']"
 
 
 def break_frontmatter_yaml_comment(root: Path) -> str:
@@ -3206,21 +3355,196 @@ def keep_frontmatter_colon_without_space(root: Path) -> None:
 
 
 def break_frontdoor_playbook_contents(root: Path) -> str:
-    """The generator stops listing a playbook's contents: the playbooks run past 100
-    lines and are read in full, so each must open with its list."""
-    path = root / "evals/frontdoor.py"
+    """The generator stops listing a playbook's contents, and the author regenerates: the
+    playbooks run past 100 lines and are read in full, so each must open with its list,
+    which the guidance group reads in every skill's references."""
+    path = root / "ci/sync.py"
     text = path.read_text()
     path.write_text(text.replace("with_paths_note(with_contents(", "with_paths_note((", 1))
-    return "generated references/job-underwriter.md (skills/job-underwriter/SKILL.md (body)) is"
+    tool(root, "sync.py")
+    return "tuesday: references/job-underwriter.md is"
 
 
 def keep_frontdoor_new_reference_linked(root: Path) -> None:
-    """A module gains a reference file and the hub links it in the same change."""
+    """A module gains a reference file, the author regenerates, links it from the hub,
+    and, once the change is measured, records the new digests."""
     (root / "skills/resume-tailor/references/summary-lines.md").write_text("# Summary lines\n")
     path = root / HUB_MD
     text = path.read_text()
     anchor = "- `references/dossier-consumption.md`: read when a dossier is present\n"
     path.write_text(text.replace(anchor, anchor + "- `references/summary-lines.md`: read before a summary line\n"))
+    tool(root, "sync.py")
+    measured_now(root)
+
+
+def built(root: Path, rel: str) -> Path:
+    return root / "dist" / rel
+
+
+def break_build_extra_change(root: Path) -> str:
+    """A Claude Code build that changes more than the one hiding line."""
+    for tree in ("claude-code", "plugin/tuesday/skills"):
+        path = built(root, f"{tree}/mock-interview/SKILL.md")
+        path.write_text(path.read_text().replace("Generates a personalized", "Builds a personalized", 1))
+    return "dist/claude-code/mock-interview/SKILL.md must differ from its source by one line added inside the frontmatter"
+
+
+def break_build_key_in_body(root: Path) -> str:
+    """The hiding line added below the frontmatter, where Claude Code does not read it."""
+    for tree in ("claude-code", "plugin/tuesday/skills"):
+        path = built(root, f"{tree}/resume-tailor/SKILL.md")
+        text = path.read_text().replace("disable-model-invocation: true\n", "", 1)
+        path.write_text(text + "disable-model-invocation: true\n")
+    return "dist/claude-code/resume-tailor/SKILL.md must differ from its source by one line added inside the frontmatter"
+
+
+def break_build_hub_hidden(root: Path) -> str:
+    """The front door hidden in the Claude Code build: nothing would ever route."""
+    for tree in ("claude-code", "plugin/tuesday/skills"):
+        path = built(root, f"{tree}/tuesday/SKILL.md")
+        path.write_text(path.read_text().replace("name: tuesday\n", "name: tuesday\ndisable-model-invocation: true\n", 1))
+    return "dist/claude-code/tuesday/SKILL.md differs from its source: the front door ships unchanged"
+
+
+def break_build_key_in_skill_file(root: Path) -> str:
+    """The hiding key inside a claude.ai .skill file, which an upload refuses."""
+    with zipfile.ZipFile(root / "dist/job-underwriter.skill", "a") as archive:
+        archive.writestr("job-underwriter/notes.md", "disable-model-invocation: true\n")
+    return "dist/job-underwriter.skill:job-underwriter/notes.md carries disable-model-invocation"
+
+
+def break_build_key_in_source(root: Path) -> str:
+    """The hiding key written into a module's own reference file in skills/."""
+    path = root / "skills/resume-tailor/references/edit-ledger.md"
+    path.write_text(path.read_text() + "\nThe build adds disable-model-invocation: true here.\n")
+    return "skills/resume-tailor/references/edit-ledger.md carries disable-model-invocation"
+
+
+def break_build_plugin_differs(root: Path) -> str:
+    """The plugin's skills/ missing a file the personal install carries."""
+    built(root, "plugin/tuesday/skills/mock-interview/references/personas.md").unlink()
+    return "dist/plugin/tuesday/skills/ differs from dist/claude-code/"
+
+
+def break_build_folder_name(root: Path) -> str:
+    """A plugin skill folder whose name is not the skill's `name`."""
+    built(root, "plugin/tuesday/skills/resume-tailor").rename(built(root, "plugin/tuesday/skills/tailor"))
+    return "dist/plugin/tuesday/skills/tailor/ holds a skill named 'resume-tailor'"
+
+
+def break_build_manifest_name(root: Path) -> str:
+    """The plugin manifest under another name than the front door's."""
+    path = built(root, "plugin/tuesday/.claude-plugin/plugin.json")
+    data = json.loads(path.read_text())
+    data["name"] = "job-search"
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return "the plugin manifest must name the plugin 'tuesday'"
+
+
+def break_build_manifest_not_json(root: Path) -> str:
+    """A manifest that is not JSON."""
+    built(root, "plugin/tuesday/.claude-plugin/plugin.json").write_text('{"name": "tuesday",}\n')
+    return "cannot be read as JSON"
+
+
+def break_build_marketplace_source(root: Path) -> str:
+    """The marketplace entry pointing somewhere other than the plugin's folder."""
+    path = root / ".claude-plugin/marketplace.json"
+    data = json.loads(path.read_text())
+    data["plugins"][0]["source"] = "./dist/claude-code"
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return ".claude-plugin/marketplace.json must carry a name, an owner's name, and one plugin entry"
+
+
+def break_build_key_in_hub_reference(root: Path) -> str:
+    """The hiding key written into one of the front door's built references, in both trees."""
+    for tree in ("claude-code", "plugin/tuesday/skills"):
+        path = built(root, f"{tree}/tuesday/references/edit-ledger.md")
+        path.write_text(path.read_text() + "\ndisable-model-invocation: true\n")
+    return "dist/claude-code/tuesday/references/edit-ledger.md carries disable-model-invocation"
+
+
+def break_build_manifest_no_version(root: Path) -> str:
+    """A plugin manifest with no version."""
+    path = built(root, "plugin/tuesday/.claude-plugin/plugin.json")
+    data = json.loads(path.read_text())
+    del data["version"]
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return "carry a version and a description"
+
+
+def break_build_manifest_version_unrecorded(root: Path) -> str:
+    """A plugin manifest whose version is not the one recorded with the measured text."""
+    path = built(root, "plugin/tuesday/.claude-plugin/plugin.json")
+    data = json.loads(path.read_text())
+    data["version"] = "0.1.1"
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return "the plugin manifest's version '0.1.1' is not MEASURED_FRONTDOOR's plugin_version"
+
+
+def break_build_marketplace_no_owner(root: Path) -> str:
+    """A marketplace file with no owner."""
+    path = root / ".claude-plugin/marketplace.json"
+    data = json.loads(path.read_text())
+    del data["owner"]
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return ".claude-plugin/marketplace.json must carry a name, an owner's name"
+
+
+def break_build_hub_readme(root: Path) -> str:
+    """The hub's README in its Claude Code builds, beside the hub the measurement installed without it."""
+    for tree in ("claude-code", "plugin/tuesday/skills"):
+        shutil.copy(root / "skills/tuesday/README.md", built(root, f"{tree}/tuesday/README.md"))
+    return "dist/claude-code/tuesday/README.md is in the front door's build"
+
+
+def break_build_hub_readme_skill_file(root: Path) -> str:
+    """The hub's README in the claude.ai upload."""
+    with zipfile.ZipFile(root / "dist/tuesday.skill", "a") as archive:
+        archive.writestr("tuesday/README.md", (root / "skills/tuesday/README.md").read_text())
+    return "dist/tuesday.skill:tuesday/README.md is in the front door's build"
+
+
+def break_package_hub_readme_skill_file(root: Path) -> str:
+    """The same upload, read by the package group: the README is not a file the hub packages."""
+    break_build_hub_readme_skill_file(root)
+    return "tuesday: build carries files not in source: ['tuesday/README.md']"
+
+
+def break_package_build_stale(root: Path) -> str:
+    """A module's README edited and the Claude Code builds not rebuilt."""
+    path = root / "skills/resume-tailor/README.md"
+    path.write_text(path.read_text() + "\nAn edit that was never rebuilt.\n")
+    return "dist/claude-code/resume-tailor/README.md is stale — run python ci/package.py"
+
+
+def break_package_build_stray(root: Path) -> str:
+    """A file in the plugin that no source builds."""
+    built(root, "plugin/tuesday/skills/tuesday/notes.md").write_text("# notes\n")
+    return "dist/plugin/tuesday/skills/tuesday/notes.md is built from nothing"
+
+
+def break_package_marketplace_missing(root: Path) -> str:
+    """The marketplace file deleted."""
+    (root / ".claude-plugin/marketplace.json").unlink()
+    return ".claude-plugin/marketplace.json is missing — run python ci/package.py"
+
+
+def break_answer_key_through_frontdoor(root: Path) -> str:
+    """A mock-interview fixture sentence in a job-underwriter reference, regenerated: no answer key
+    for job-underwriter's own fixtures, but the front door installs both modules' text."""
+    keep_answer_key_other_skill(root)
+    tool(root, "sync.py")
+    return "tuesday/references/risk-and-decision.md:32: \"ran the site's peak-season surge plan two years " \
+           "running\" is quoted from a module's fixtures"
+
+
+def keep_build_after_frontmatter_key(root: Path) -> None:
+    """A module gains an allowed frontmatter key and is rebuilt: the build still differs
+    from its source by the hiding line alone."""
+    swap_once(root, "skills/resume-tailor/SKILL.md", "name: resume-tailor\n", "name: resume-tailor\nlicense: MIT\n",
+              "keep_build_after_frontmatter_key")
+    tool(root, "package.py")
 
 
 PASSES = [
@@ -3325,8 +3649,12 @@ PASSES = [
     ("frontmatter", "the allowed-tools key, one of the six", keep_frontmatter_allowed_tools_key),
     ("guidance", "a SKILL.md body of 19,999 chars, one token under the estimate", keep_body_one_token_under),
     ("guidance", "a SKILL.md body of 499 lines", keep_body_499_lines),
-    ("frontdoor", "a module reference added and linked from the hub in the same change",
+    ("frontdoor", "a module reference added, regenerated, linked from the hub, and measured",
      keep_frontdoor_new_reference_linked),
+    ("builds", "a module given an allowed frontmatter key and rebuilt", keep_build_after_frontmatter_key),
+    ("frontdoor", "the hub's README edited, which ships nowhere", keep_frontdoor_hub_readme_edited),
+    ("package", "the hub's README edited, which no build carries", keep_frontdoor_hub_readme_edited),
+    ("package", "a module given an allowed frontmatter key and rebuilt", keep_build_after_frontmatter_key),
     ("frontmatter", "a colon with no space after it in an unquoted description",
      keep_frontmatter_colon_without_space),
 ]
@@ -3716,15 +4044,54 @@ CASES: list[tuple[str, str, callable]] = [
     ("guidance", "a mirror SKILL.md never names", break_reference_unlinked_mirror),
     ("guidance", "a reference named only in the frontmatter, not the body", break_reference_named_only_in_frontmatter),
     ("frontmatter", "a Claude Code-only frontmatter key in source", break_frontmatter_extra_key),
-    ("frontdoor", "a generated file the hub does not link", break_frontdoor_unlinked),
-    ("frontdoor", "a new name clash the hub's links do not follow", break_frontdoor_new_clash),
+    ("guidance", "a generated file the hub does not link", break_frontdoor_unlinked),
+    ("frontdoor", "a new name clash, not regenerated", break_frontdoor_new_clash),
+    ("frontdoor", "a new name clash, regenerated, that the hub's links do not follow", break_frontdoor_new_clash_synced),
     ("frontdoor", "a hub link to a file the generator does not write", break_frontdoor_dangling),
     ("frontdoor", "a shared mirror naming a clashing file", break_frontdoor_unresolvable),
-    ("frontdoor", "a Claude Code-only key in the hub's frontmatter", break_frontdoor_claude_code_key),
+    ("frontmatter", "a Claude Code-only key in the hub's frontmatter", break_frontdoor_claude_code_key),
     ("frontdoor", "an explicit case expecting another module", break_frontdoor_explicit_expects_other),
-    ("frontdoor", "a ': ' in the hub's unquoted description", break_frontdoor_yaml_colon),
+    ("frontmatter", "a ': ' in the hub's unquoted description", break_frontdoor_yaml_colon),
+    ("frontdoor", "a generated reference edited by hand", break_frontdoor_hand_edit),
+    ("frontdoor", "a file in the hub's references/ that nothing generates", break_frontdoor_stray_reference),
+    ("frontdoor", "a file a playbook names missing from the hub", break_frontdoor_playbook_names_absent),
+    ("frontdoor", "a module's text changed and regenerated, not measured", break_frontdoor_module_text_unmeasured),
+    ("frontdoor", "the hub's own text changed, not measured", break_frontdoor_hub_text_unmeasured),
+    ("frontdoor", "a module's README changed and rebuilt, not measured", break_frontdoor_module_readme_unmeasured),
+    ("frontdoor", "a module's description changed and rebuilt, not measured",
+     break_frontdoor_module_description_unmeasured),
+    ("frontdoor", "a new file at a module's root, not measured", break_frontdoor_module_new_file),
+    ("frontdoor", "a file beside the hub's SKILL.md that it does not hold", break_frontdoor_hub_extra_file),
+    ("frontdoor", "a folder inside the hub's references/", break_frontdoor_references_folder),
+    ("frontdoor", "a module's playbook missing from the hub", break_frontdoor_no_playbook),
+    ("frontdoor", "a routing row dropped", break_frontdoor_route_dropped),
+    ("frontdoor", "a module's slash command dropped from the hub", break_frontdoor_command_dropped),
+    ("frontdoor", "a module dropped from the hub's description", break_frontdoor_description_drops_module),
+    ("frontdoor", "a new module, regenerated, that the hub does not route to", break_frontdoor_new_module_unrouted),
+    ("builds", "a build that changes more than the hiding line", break_build_extra_change),
+    ("builds", "the hiding line below the frontmatter", break_build_key_in_body),
+    ("builds", "the front door hidden in a build", break_build_hub_hidden),
+    ("builds", "the hiding key in a .skill file", break_build_key_in_skill_file),
+    ("builds", "the hiding key in a source file", break_build_key_in_source),
+    ("builds", "the plugin missing a file the personal install carries", break_build_plugin_differs),
+    ("builds", "a plugin skill folder not named as its skill", break_build_folder_name),
+    ("builds", "the plugin manifest under another name", break_build_manifest_name),
+    ("builds", "a plugin manifest that is not JSON", break_build_manifest_not_json),
+    ("builds", "the marketplace entry's source elsewhere", break_build_marketplace_source),
+    ("builds", "the hiding key in one of the front door's built references", break_build_key_in_hub_reference),
+    ("builds", "a plugin manifest with no version", break_build_manifest_no_version),
+    ("builds", "a plugin version that is not the recorded one", break_build_manifest_version_unrecorded),
+    ("builds", "a marketplace file with no owner", break_build_marketplace_no_owner),
+    ("builds", "the hub's README in its Claude Code builds", break_build_hub_readme),
+    ("builds", "the hub's README in its .skill file", break_build_hub_readme_skill_file),
+    ("package", "the hub's README in its .skill file", break_package_hub_readme_skill_file),
+    ("answer-keys", "a module's fixture quoted in another module's reference, read through the front door",
+     break_answer_key_through_frontdoor),
+    ("package", "a Claude Code build not rebuilt after a source edit", break_package_build_stale),
+    ("package", "a file in the plugin built from nothing", break_package_build_stray),
+    ("package", "the marketplace file missing", break_package_marketplace_missing),
     ("frontmatter", "a ' #' in a module's unquoted description", break_frontmatter_yaml_comment),
-    ("frontdoor", "a generated playbook with no contents list", break_frontdoor_playbook_contents),
+    ("guidance", "a generated playbook with no contents list, regenerated", break_frontdoor_playbook_contents),
 ]
 
 

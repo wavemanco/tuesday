@@ -391,7 +391,9 @@ fewer than three content words in common passes, so a worked example's domain is
 left to review (job-underwriter's worked dossier, like the other skills' worked
 examples, sits in a grants-programme domain that no fixture uses); the README, `docs/`, the
 frontmatter and `citations.md`; and other skills' fixtures, since a room never
-installs two skills.
+installs two skills. Tuesday is the exception: a fixture run through it
+installs every module's text, so its installed text is read against every
+module's fixtures.
 
 **The fixture fields the harness reads are what it assumes.** `--only fixtures`
 reads every fixture through the harness's own functions in `evals/output_checks.py`
@@ -501,13 +503,61 @@ checks found that each heuristic added to read more English opened as many holes
 as it closed; they now read only forms they can read exactly, and the lists of
 what they do not read above are the price of that.
 
+## Tuesday ships what was measured
+
+Tuesday, `skills/tuesday/`, is a skill like the modules: its SKILL.md is
+written by hand and its `references/` are generated from the modules
+(`skills/tuesday/README.md` says how). It ships its SKILL.md, its `references/`
+and its LICENSE, in every build and in the harness's install. Its README.md is
+for maintainers and ships nowhere (`HUB_SHIPS` in `ci/sync.py`). Round 3
+installed Tuesday as SKILL.md and `references/` alone; the LICENSE, the
+modules' LICENSE byte for byte, is the one shipped file of Tuesday's it did not
+hold. CI reads Tuesday in every per-skill group but a few, and
+`HUB_EXEMPT` in `ci/check_skills.py` states each exemption's reason once; its
+output prints them. Two groups hold what is particular to it.
+
+`--only frontdoor` holds Tuesday to its sources and to its measurement.
+`skills/tuesday/` holds SKILL.md, LICENSE, README.md and `references/`, and
+nothing else; `references/` is one flat folder, exactly what `ci/sync.py`
+generates. Every module has a playbook there and every file a playbook names is
+there; Tuesday links no file that is not there, and the guidance group, which
+reads it like every skill, holds the other direction. The modules Tuesday
+routes to, read from its slash-command list and its routing table, are
+`skills/` without it, and its description names each one. `MEASURED_FRONTDOOR`
+records what round 3 measured as three hashes: Tuesday's SKILL.md, Tuesday with
+its references, and every file the Claude Code builds ship, Tuesday's and each
+module's, frontmatter, README and LICENSE included. So a change to any shipped
+file of Tuesday or a module, or to a convention a module mirrors, fails until it
+is measured, or until the constant is updated on purpose with the reason in the
+ledger. The constant also holds the plugin's version, and an update to its
+hashes moves the version: a user who installed the plugin keeps the copy they
+have until its version changes. What it does not read: whether a routing row
+or a link's read-when clause is right; the routing measurement and review hold
+those.
+
+`--only builds` holds the Claude Code builds, which `ci/package.py` writes beside
+the `.skill` files. In `dist/claude-code/` and in the plugin's `skills/`, each
+module's SKILL.md is its source with one line added inside the frontmatter,
+`disable-model-invocation: true`, and Tuesday's is its source unchanged.
+That line ships nowhere else: no file under `skills/`, and no `.skill` file, since
+a claude.ai upload refuses the key. Tuesday's build, in both trees and in
+`dist/tuesday.skill`, holds only the files it ships. The plugin's `skills/` is
+`dist/claude-code/` file for file; the plugin manifest names the plugin
+`tuesday` with a description and the version `MEASURED_FRONTDOOR` records; and
+the marketplace file lists it, under the manifest's name, from the plugin's
+folder. That every built file is current is the package group's. What it does
+not read: whether Claude Code loads the plugin; `claude plugin validate` and a
+session do.
+
 ## Structural rules
 
 - Skills are dependency-free: nothing outside a skill's folder may be required
   at runtime. Agent tooling never leaks into skills/.
 - conventions/ is canonical. Skills carry mirrors in references/ with a
   synced-from header; a mirror that drifts from canonical is a defect, and the
-  fix flows canonical -> mirror, never the reverse.
+  fix flows canonical -> mirror, never the reverse. `python ci/sync.py` rewrites
+  every mirror from its canonical file and Tuesday's references/ from the
+  modules; `--check` reports what is out of date.
 - Every skill upholds the standalone invariant (interaction-grammar.md §1).
 - Every skill folder carries its own LICENSE copy, so packaged .skill files
   and zips remain self-describing when they travel detached from the repo.

@@ -32,6 +32,9 @@ jobs:
       - name: Repository checks
         run: python ci/check_skills.py
 
+      - name: Generated copies are current
+        run: python ci/sync.py --check
+
       - name: Checks self-test
         run: python ci/test_checks.py
 

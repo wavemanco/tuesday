@@ -13,7 +13,8 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   frontmatter  SKILL.md frontmatter is present, well-formed, and within the
                limits the Skills API enforces on upload
   package      each dist/<skill>.skill matches its source, is rooted at the
-               skill folder, and excludes evals/
+               skill folder, and excludes evals/; the Claude Code builds and
+               the marketplace file are what ci/package.py writes
   mirrors      every references/ mirror is byte-identical to its canonical
                file once the synced-from header is stripped
   evals        every evals JSON parses, its clauses expand, and it carries the
@@ -32,15 +33,18 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   watch-out    each skill's one watch-out line, and every copy of it, exact
   guidance     Anthropic's skill-authoring limits: contents lists, SKILL.md size,
                a third-person description, and every reference linked
-  frontdoor    the front-door prototype hub (described in evals/README.md, "The
-               front-door arm", since it ships nothing): its references/ generate,
-               it links each generated file directly and nothing else, its
-               frontmatter is spec-only, and suite-explicit.json names installed modules
+  frontdoor    the front door, skills/tuesday/: its references/ are what ci/sync.py
+               generates, its module set is skills/ without it, and it and its
+               references are the text round 3 measured
+  builds       the Claude Code builds hide each module with one added line and
+               nothing else, that line ships nowhere else, and the plugin's
+               manifest and marketplace entry name `tuesday`
 """
 
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import json
 import re
@@ -58,6 +62,9 @@ sys.path.insert(0, str(REPO / "ci"))
 # The fit-ledger and snapshot rules, shared with evals/output_checks.py so the two
 # checks of one rule cannot disagree (ci/ledger_rules.py says why).
 import ledger_rules  # noqa: E402
+# The front door's generator, its digest and the hiding transform, shared with the
+# packager and the eval harness (ci/sync.py says why).
+import sync  # noqa: E402
 from ledger_rules import (BANDS, COUNT_WORDS, FIT_ORDER, PRIORITY_ORDER, ROW_ID,  # noqa: E402,F401
                           COUNTED, FRACTION, TIER_WORDS)
 SKILLS_DIR = REPO / "skills"
@@ -92,6 +99,36 @@ def ok(group: str, message: str) -> None:
 
 def skills() -> list[Path]:
     return sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir() and (p / "SKILL.md").exists())
+
+
+def modules() -> list[Path]:
+    """Every skill but the front door: the skills that each do one job (sync.modules)."""
+    return [SKILLS_DIR / name for name in sync.modules(SKILLS_DIR)]
+
+
+# The front door, skills/tuesday/, is a skill like the modules, and every per-skill group reads
+# it except the ones below, each for the reason given here, once. The documentation groups
+# (citations, sections, counts, wording) read its SKILL.md and README but not its references/,
+# which are generated copies of module files those groups read where they are written; and
+# answer-keys reads its installed text against every module's fixtures, since a room run
+# through the front door installs every module's text (evals/README.md, "Through Tuesday").
+NO_OUTPUT_OF_ITS_OWN = ("it delivers no output of its own: a turn's output is one module's, under the "
+                        "declarations in that module's playbook, a copy of the module's SKILL.md body")
+HUB_EXEMPT = {
+    "evals": "what it does is choose a module, which no one skill's fixtures can test; its evals are the "
+             "suite's routing cases (evals/suite-routing.json, evals/suite-explicit.json), run with "
+             "run_routing.py --arm frontdoor, and a fixture file of its own would be run by nothing",
+    "parameters": NO_OUTPUT_OF_ITS_OWN,
+    "columns": NO_OUTPUT_OF_ITS_OWN,
+    "watch-out": NO_OUTPUT_OF_ITS_OWN,
+    "triggers": "it has no row in interaction-grammar.md §6 and no pointer to that section's slash-command "
+                "rule, for the reason skills/tuesday/README.md gives beside its routing role",
+}
+
+
+def exempt(group: str) -> None:
+    """Say, in the group's output, that the front door is not read here and why."""
+    print(f"  --   {group}: {sync.HUB_NAME} is exempt: {HUB_EXEMPT[group]}")
 
 
 def parse_frontmatter(text: str) -> dict[str, str] | None:
@@ -219,12 +256,102 @@ def packaged_files(skill: Path) -> set[str]:
             continue
         if path.suffix == ".pyc":
             continue
+        if skill.name == sync.HUB_NAME and not sync.hub_ships(rel.as_posix()):
+            continue   # its README.md ships nowhere (sync.HUB_SHIPS)
         included.add(f"{skill.name}/{rel.as_posix()}")
     return included
 
 
+# The Claude Code builds (README.md, "Install"): the personal install, each skill folder to
+# copy into ~/.claude/skills/; and the plugin, those same folders under skills/ beside a
+# manifest, listed by the marketplace file at the repository root.
+CLAUDE_CODE = DIST / "claude-code"
+PLUGIN = DIST / "plugin" / sync.HUB_NAME
+MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
+# What round 3 measured, recorded once, and the plugin version that ships it. hub_sha256 and
+# frontdoor_sha256 are the front door's two hashes (sync.digests) on b2f424b, where every result
+# file of the measurement records them. builds_sha256 (frontdoor_digests) hashes every file of
+# dist/claude-code/, which the plugin's skills/ equals: each module's shipped files with the
+# hiding line, and the hub's. Rebuilt from b2f424b's own sources (its module folders, its measured
+# hub and its generator), the tree hashes to the same value. That tree is what round 3 installed
+# but for the run-id suffix the harness gives each name, and the hub's LICENSE, the modules'
+# LICENSE byte for byte. plugin_version is the manifest's: an installed plugin keeps its version
+# until the version string changes (Claude Code's plugin docs), so an update to the hashes moves it.
+MEASURED_FRONTDOOR = {
+    "hub_sha256": "e698b12d47be1436e9c7074491c31b7601fe9682a01c99ca29f0d3fcc83d50dd",
+    "frontdoor_sha256": "a3405730323913aacfc998707701d6305113a3a81338e9dc6c779cb69f35875f",
+    "builds_sha256": "8e9184efd286a437e747a81c139b127fc84e2d5c9212b2865142503d59f43a9c",
+    "plugin_version": "0.1.0",
+}
+MEASURED_HASHES = [key for key in MEASURED_FRONTDOOR if key.endswith("_sha256")]
+PLUGIN_MANIFEST = {
+    "name": sync.HUB_NAME,
+    "version": MEASURED_FRONTDOOR["plugin_version"],
+    "description": "Applicant-side job search on evidence: Tuesday runs the module a request needs, "
+                   "job-underwriter (whether to apply), resume-tailor (a resume tailored to a role) "
+                   "or mock-interview (interview prep and drills), each also its own command.",
+}
+# The marketplace's name is what a user types after `@`, and a user registers one marketplace per
+# name, so it is the repository's owner and name rather than a word another author might pick
+# (Claude Code's plugin-marketplaces docs).
+MARKETPLACE_FILE = {
+    "name": "wavemanco-tuesday",
+    "description": "Tuesday, an applicant-side evidence system for job seekers, as a Claude Code plugin.",
+    "owner": {"name": "moondocksaint"},
+    "plugins": [{"name": sync.HUB_NAME, "source": f"./{PLUGIN.relative_to(REPO).as_posix()}"}],
+}
+
+
+def as_json(data: dict) -> bytes:
+    return (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def builds() -> dict[str, bytes]:
+    """Every file of the Claude Code builds and the marketplace file, by repository path.
+
+    A skill is built from the files its .skill package carries (packaged_files); a
+    module's SKILL.md gains the hiding line (sync.hide) and the front door's is unchanged.
+    The plugin's skills/ holds the same folders as dist/claude-code/.
+    """
+    out: dict[str, bytes] = {}
+    for skill in skills():
+        for name in sorted(packaged_files(skill)):
+            data = (SKILLS_DIR / name).read_bytes()
+            if name == f"{skill.name}/SKILL.md" and skill.name != sync.HUB_NAME:
+                data = sync.hide(data.decode("utf-8")).encode("utf-8")
+            for tree in (CLAUDE_CODE, PLUGIN / "skills"):
+                out[f"{tree.relative_to(REPO).as_posix()}/{name}"] = data
+    out[f"{PLUGIN.relative_to(REPO).as_posix()}/.claude-plugin/plugin.json"] = as_json(PLUGIN_MANIFEST)
+    out[MARKETPLACE.relative_to(REPO).as_posix()] = as_json(MARKETPLACE_FILE)
+    return out
+
+
+def frontdoor_digests() -> dict[str, str]:
+    """The hashes MEASURED_FRONTDOOR records, of the sources as they are now: the hub's two
+    (sync.digests), and builds_sha256 over dist/claude-code/ as builds() makes it."""
+    prefix = f"{CLAUDE_CODE.relative_to(REPO).as_posix()}/"
+    tree = {name[len(prefix):]: data for name, data in builds().items() if name.startswith(prefix)}
+    return {**sync.digests(SKILLS_DIR / sync.HUB_NAME), "builds_sha256": sync.tree_digest(tree)}
+
+
+def built_files() -> dict[str, bytes]:
+    """The files on disk where builds() writes: both trees and the marketplace file."""
+    found = {p.relative_to(REPO).as_posix(): p.read_bytes()
+             for tree in (CLAUDE_CODE, PLUGIN) if tree.is_dir() for p in tree.rglob("*") if p.is_file()}
+    if MARKETPLACE.is_file():
+        found[MARKETPLACE.relative_to(REPO).as_posix()] = MARKETPLACE.read_bytes()
+    return found
+
+
 def check_package() -> None:
     group = "package"
+    wanted, found = builds(), built_files()
+    for name in sorted(set(wanted) | set(found)):
+        if found.get(name) != wanted.get(name):
+            state = "is missing" if name not in found else "is built from nothing" if name not in wanted else "is stale"
+            fail(group, f"{name} {state} — run python ci/package.py")
+    if all(found.get(n) == wanted.get(n) for n in set(wanted) | set(found)):
+        ok(group, f"the Claude Code builds and the marketplace file are what ci/package.py writes, {len(wanted)} files")
     for skill in skills():
         artifact = DIST / f"{skill.name}.skill"
         if not artifact.exists():
@@ -355,7 +482,8 @@ def check_mirrors() -> None:
 
 def check_evals() -> None:
     group = "evals"
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         path = skill / "evals" / "evals.json"
         if not path.exists():
             fail(group, f"{skill.name}: no evals/evals.json")
@@ -413,7 +541,7 @@ def check_evals() -> None:
             fail(group, f"evals/suite-routing.json does not parse: {exc}")
             return
         routes = set(spec.get("routes", []))
-        installed = {s.name for s in skills()}
+        installed = {s.name for s in modules()}
         if not installed <= routes:
             fail(group, f"suite-routing routes {sorted(routes)} do not cover every skill: {sorted(installed)}")
         for case in spec.get("cases", []):
@@ -506,19 +634,20 @@ def check_triggers() -> None:
     its slash-command rule is pointed to from the top of every SKILL.md body
     (command_rule_problems)."""
     group = "triggers"
+    exempt(group)
     grammar = (CONVENTIONS / "interaction-grammar.md").read_text(encoding="utf-8")
     problems = command_rule_problems(grammar, {s.name: (s / "SKILL.md").read_text(encoding="utf-8")
-                                               for s in skills()})
+                                               for s in modules()})
     for problem in problems:
         fail(group, problem)
     if not problems:
         ok(group, f"the slash-command rule is stated once in the grammar's §6 and pointed to from the top of "
-                  f"each of {len(skills())} SKILL.md bodies")
+                  f"each of {len(modules())} SKILL.md bodies")
     table = {}
     for row in re.finditer(r"^\|\s*`(?P<skill>[a-z0-9-]+)`\s*\|[^|]*\|\s*(?P<boundary>[^|]+?)\s*\|", grammar, re.MULTILINE):
         table[row.group("skill")] = row.group("boundary")
 
-    for skill in skills():
+    for skill in modules():
         boundary = table.get(skill.name)
         if not boundary:
             fail(group, f"{skill.name}: no row in the trigger-hygiene table")
@@ -570,7 +699,8 @@ def check_parameters() -> None:
         fail(group, "output-discipline.md names no parameters — the check would pass vacuously")
         return
 
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         text = (skill / "SKILL.md").read_text(encoding="utf-8")
         section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
                             re.MULTILINE | re.DOTALL)
@@ -735,7 +865,8 @@ def check_columns() -> None:
     the point of a slot.
     """
     group = "columns"
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         text = (skill / "SKILL.md").read_text(encoding="utf-8")
         section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
                             re.MULTILINE | re.DOTALL)
@@ -1175,6 +1306,7 @@ def citing_files() -> list[Path]:
     files += sorted(CONVENTIONS.glob("*.md")) + sorted((REPO / "docs").glob("*.md"))
     for skill in skills():
         files += [skill / "SKILL.md", skill / "README.md"]
+    for skill in modules():   # the front door's references/ are generated copies (HUB_EXEMPT's comment)
         files += [r for r in sorted((skill / "references").glob("*.md"))
                   if not SYNCED_HEADER.match(r.read_text(encoding="utf-8"))]   # mirrors inherit canonical's cites
     return [f for f in files if f.exists() and f != CITATIONS]
@@ -1367,7 +1499,7 @@ def check_sections() -> None:
     targets: dict[str, Path] = {}
     for path in list(CONVENTIONS.glob("*.md")) + list((REPO / "docs").glob("*.md")):
         targets[path.name] = path
-    for skill in skills():
+    for skill in modules():
         for ref in (skill / "references").glob("*.md"):
             targets.setdefault(ref.name, ref)
     # Files a reference can name but that have no numbered sections to point at.
@@ -1752,7 +1884,7 @@ def check_counts() -> None:
     targets: dict[str, Path] = {}
     for path in list(CONVENTIONS.glob("*.md")) + list((REPO / "docs").glob("*.md")):
         targets[path.name] = path
-    for skill in skills():
+    for skill in modules():
         for ref in (skill / "references").glob("*.md"):
             targets.setdefault(ref.name, ref)
     by_noun: dict[str, dict[str, set[int]]] = {}
@@ -2180,6 +2312,11 @@ ANSWER_KEY_CONTRACT = {
     "confirmed, limited inspectable proof - expect a probe":
         "the verification caveat evidence-conventions.md tells a skill to name beside a `medium` claim; a "
         "dossier carries it in these words, and mock-interview eval 4's prompt is a dossier",
+    "high confidence, inspectable":
+        "a dossier's verified evidence carries each claim with its band; job-underwriter's worked envelope "
+        "and mock-interview eval 4's prompt are both dossiers, and the front door installs the one beside the other",
+    "medium confidence: confirmed, limited inspectable proof, expect a probe":
+        "the `medium` caveat as a dossier's verified evidence carries it, in the same two dossiers",
 }
 # Window sizes, measured on the clean tree (CONTRIBUTING.md says what each caught).
 # A quoted span is a worked example, so three content words in a row shared with a
@@ -2275,12 +2412,16 @@ def check_answer_keys() -> None:
     of more than one word) fails on QUOTED_RUN content words in a row; the prose
     outside quotes and code spans, fenced code included, fails on PROSE_RUN words in
     a row. A snake_case identifier is one word (key_tokens). ANSWER_KEY_CONTRACT lists the
-    contract wording a fixture repeats by design, each with its reason.
+    contract wording a fixture repeats by design, each with its reason. The front door,
+    which has no fixtures, is read against every module's: a fixture run through it
+    installs every module's text.
     """
     group = "answer-keys"
     checked = 0
     for skill in skills():
-        cases = load_evals(skill / "evals" / "evals.json") or []
+        hub = skill.name == sync.HUB_NAME
+        cases = [c for m in (modules() if hub else [skill]) for c in load_evals(m / "evals" / "evals.json") or []]
+        whose = "a module's" if hub else "this skill's own"
         content_index: dict[tuple[str, ...], str] = {}
         prose_index: dict[tuple[str, ...], str] = {}
         for where, text in fixture_haystack(cases):
@@ -2315,7 +2456,7 @@ def check_answer_keys() -> None:
                 hit = shared_run(tokens, QUOTED_RUN, content_index)
                 if hit:
                     line = text[:at].count("\n") + 1
-                    fail(group, f"{rel}:{line}: \"{' '.join(span.split())[:70]}\" is quoted from this skill's own "
+                    fail(group, f"{rel}:{line}: \"{' '.join(span.split())[:70]}\" is quoted from {whose} "
                                 f"fixtures (\"{hit[0]}\", {hit[1]}) — a worked example the clean room installs as "
                                 f"an answer key")
             tokens = []
@@ -2324,13 +2465,13 @@ def check_answer_keys() -> None:
             runs = {run for run in key_runs(tokens, PROSE_RUN) if "|" not in run}
             checked += 1
             for run in sorted(runs & set(prose_index)):
-                fail(group, f"{rel}: \"{' '.join(run)}\" repeats this skill's own fixtures unquoted "
+                fail(group, f"{rel}: \"{' '.join(run)}\" repeats {whose} fixtures unquoted "
                             f"({prose_index[run]}) — a worked example the clean room installs as an answer key")
     if checked == 0:
         fail(group, "no quoted spans read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
         ok(group, f"{checked} quoted spans and files of prose in installed skill text, none sharing a run of "
-                  f"words with the skill's own fixtures")
+                  f"words with the fixtures a room installs it for")
 
 
 def search_entry(query: str, research: dict, mode: str) -> dict:
@@ -2719,7 +2860,8 @@ def wording_surfaces() -> list[tuple[str, str]]:
         if path.exists():
             out.append((str(path.relative_to(REPO)), path.read_text(encoding="utf-8")))
     for skill in skills():
-        for path in [skill / "SKILL.md", skill / "README.md"] + sorted((skill / "references").glob("*.md")):
+        generated = skill.name == sync.HUB_NAME   # its references/ are copies (HUB_EXEMPT's comment)
+        for path in [skill / "SKILL.md", skill / "README.md"] + ([] if generated else sorted((skill / "references").glob("*.md"))):
             if path.exists() and path.name != "citations.md":
                 out.append((str(path.relative_to(REPO)), path.read_text(encoding="utf-8")))
         raw_path = skill / "evals" / "evals.json"
@@ -2889,7 +3031,8 @@ def check_watch_outs() -> None:
     if rule and re.search(r"\bwarning", rule.group(1), re.I):
         fail(group, "conventions/output-discipline.md rule 7 uses \"warning\" — the slot is a watch-out, by no other name")
     declared: dict[str, str] = {}
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         text = (skill / "SKILL.md").read_text(encoding="utf-8")
         line = output_checks.declared_watch_out(text)
         if line is None:
@@ -2965,8 +3108,8 @@ def check_watch_outs() -> None:
         if not tables:
             fail(group, "README.md's watch-out section has no table")
         for name, cells in rows.items():
-            if name not in {s.name for s in skills()}:
-                fail(group, f"README.md's watch-out table names {name!r}, which is not a skill")
+            if name not in {s.name for s in modules()}:
+                fail(group, f"README.md's watch-out table names {name!r}, which is not a module")
         for name, sentence in declared.items():
             checked += 1
             cells = rows.get(name, [])
@@ -3095,79 +3238,119 @@ def check_guidance() -> None:
                     ok(group, f"{skill.name}: references/{ref.name} ({n} lines) opens with its contents")
 
 
-def check_frontdoor() -> None:
-    """The prototype hub at evals/arms/frontdoor/, held to what the measurement needs.
+TABLE_CELLS = re.compile(r"^\|(.*)\|\s*$")
 
-    Its references/ are generated by evals/frontdoor.py from the module sources;
-    a clash the generator cannot resolve, or a playbook naming a file that would
-    not be there, fails here. Every generated file is linked from the hub's
-    SKILL.md as `references/<name>` and the hub links nothing else (the
-    one-level-deep rule, both ways), so a module reference added or renamed is a
-    hub edit in the same change. The hub's frontmatter meets the limits a
-    shipped SKILL.md meets, every value in it reads as strict YAML
-    (plain_scalar_problems), every generated file over TOC_OVER_LINES lines opens
-    with its contents list, as a shipped reference does, and each case in evals/suite-explicit.json opens
-    with an installed module's slash command and expects that module. What it
-    does not read: whether a link's read-when clause is right, or whether the
-    routing table agrees with the module descriptions; review holds those.
+
+def hub_modules(hub_text: str) -> dict[str, set[str]]:
+    """The modules the hub's SKILL.md routes to, by each place that names them: the slash
+    commands its body lists (`/<module>` in a code span); the module each row of its routing
+    table runs (the first word of the table's last column, headed "Run", when that word is a
+    kebab-case name); and the modules its description names, read for the modules alone."""
+    body = sync.body(hub_text)
+    commands = set(re.findall(r"`/([a-z0-9]+(?:-[a-z0-9]+)*)`", body))
+    routes, in_table = set(), False
+    for line in body.splitlines():
+        cells = TABLE_CELLS.match(line.strip())
+        if not cells:
+            in_table = False
+            continue
+        last = cells.group(1).split("|")[-1].strip()
+        if not in_table:
+            in_table = last == "Run"
+        elif not set(last) <= set(":- "):
+            first = re.match(r"([a-z0-9]+(?:-[a-z0-9]+)+)\b", last)
+            routes |= {first.group(1)} if first else set()
+    description = (parse_frontmatter(hub_text) or {}).get("description", "")
+    named = {m.name for m in modules() if re.search(rf"(?<![\w-]){re.escape(m.name)}(?![\w-])", description)}
+    return {"slash commands in its body": commands, "rows of its routing table": routes,
+            "modules its description names": named}
+
+
+def check_frontdoor() -> None:
+    """The front door, skills/tuesday/, held to what it is: a hub over the modules, carrying
+    copies of their text, and the text round 3 measured.
+
+    Its references/ are exactly what ci/sync.py generates from the module sources, and a
+    generation the sources do not allow (a clash, a playbook naming a file that would not be
+    there) fails here. Every module has a playbook there, every file a playbook names is
+    there, and the hub links no file that is not; that it links every file is the guidance
+    group's, which reads the hub like every skill. skills/tuesday/ holds SKILL.md, LICENSE,
+    references/ with no folder in it, and README.md, which ships nowhere; any other file or
+    folder there fails. The hub's module set, read from its
+    slash-command list and its routing table, is skills/ without it, and its description
+    names every module (hub_modules). Every shipped file of the hub and the modules hashes to
+    MEASURED_FRONTDOOR (frontdoor_digests).
+    Each case in evals/suite-explicit.json opens with a module's slash command and expects
+    that module. What it does not read: whether a link's read-when clause or a routing row
+    is right, or whether the routing table agrees with the module descriptions; review and
+    the routing measurement hold those.
     """
     group = "frontdoor"
-    import frontdoor  # evals/, on the path above
-    if not frontdoor.HUB.exists():
-        fail(group, f"{frontdoor.HUB.relative_to(REPO)} is missing")
+    hub = SKILLS_DIR / sync.HUB_NAME
+    if not (hub / "SKILL.md").is_file():
+        fail(group, f"skills/{sync.HUB_NAME}/SKILL.md is missing")
         return
-    text = frontdoor.HUB.read_text(encoding="utf-8")
-    fm = parse_frontmatter(text)
-    if fm is None:
-        fail(group, "the hub SKILL.md has no frontmatter")
-        return
-    unexpected = set(fm) - ALLOWED_FRONTMATTER
-    if unexpected:
-        fail(group, f"the hub has frontmatter key(s) a claude.ai upload rejects: {', '.join(sorted(unexpected))}")
-    if fm.get("name") != frontdoor.HUB_NAME:
-        fail(group, f"the hub's name is {fm.get('name')!r}, not {frontdoor.HUB_NAME!r}")
-    desc = fm.get("description", "")
-    unparsable = plain_scalar_problems(text)
-    for key, why in unparsable:
-        fail(group, f"the hub's frontmatter {key} is an unquoted YAML value that {why} — a strict parser "
-                    f"(a claude.ai upload) rejects it; reword it rather than quote it")
-    if not desc or len(desc) > MAX_DESCRIPTION or "<" in desc or ">" in desc:
-        fail(group, f"the hub's description is {len(desc)} characters (limit {MAX_DESCRIPTION}), "
-                    f"or empty, or carries an angle bracket")
-    elif not THIRD_PERSON.match(desc):
-        fail(group, f"the hub's description opens with '{desc.split()[0]}', not a third-person verb")
-    elif not unparsable:
-        ok(group, f"hub frontmatter is spec-only and strict YAML; description {len(desc)} characters, third person")
-    body = skill_body(text)
-    if len(body.splitlines()) >= MAX_BODY_LINES or len(body) // CHARS_PER_TOKEN >= MAX_BODY_TOKENS:
-        fail(group, f"the hub's body is over {MAX_BODY_LINES} lines or {MAX_BODY_TOKENS} estimated tokens")
-
+    text = (hub / "SKILL.md").read_text(encoding="utf-8")
     try:
-        generated = frontdoor.generate(SKILLS_DIR)
+        generated = sync.generate(SKILLS_DIR)
     except SystemExit as exc:
-        fail(group, f"evals/frontdoor.py cannot generate the hub's references: {exc}")
+        fail(group, f"ci/sync.py cannot generate the front door's references: {exc}")
         return
-    missing = sorted(f"references/{m.name}.md" for m in skills() if f"{m.name}.md" not in generated)
-    if missing:
-        fail(group, f"no playbook generated for {', '.join(missing)}")
-    long_files = 0
-    for name, entry in generated.items():
-        n = len(entry["text"].splitlines())
-        if n > TOC_OVER_LINES:
-            long_files += 1
-            problem = contents_problem(entry["text"])
-            if problem:
-                fail(group, f"generated references/{name} ({entry['from']}) is {n} lines and {problem} — a "
-                            f"reference file over {TOC_OVER_LINES} lines starts with a table of contents")
-    ok(group, f"each of the {long_files} generated files over {TOC_OVER_LINES} lines read for its contents list")
-    links = frontdoor.hub_links(text)
-    for name in sorted(set(generated) - links):
-        fail(group, f"references/{name} ({generated[name]['from']}) is generated but not linked directly "
-                    f"from the hub — every file is reachable from SKILL.md, one level deep")
-    for name in sorted(links - set(generated)):
-        fail(group, f"the hub links references/{name}, which the generator does not produce")
-    if links == set(generated):
-        ok(group, f"the hub links each of its {len(generated)} generated files directly, and nothing else")
+    unheld = []
+    for path in sorted(hub.rglob("*")):
+        rel = path.relative_to(hub).as_posix()
+        if (path.is_dir() and rel != "references") or (
+                path.is_file() and not sync.hub_ships(rel) and rel not in sync.HUB_SOURCE_ONLY):
+            unheld.append(rel + ("/" if path.is_dir() else ""))
+    for rel in unheld:
+        fail(group, f"skills/{sync.HUB_NAME}/{rel} is not one of the front door's files: it holds SKILL.md, "
+                    f"LICENSE and references/, one flat folder, which ship, and README.md, which ships nowhere")
+    if not unheld:
+        ok(group, f"skills/{sync.HUB_NAME}/ holds SKILL.md, LICENSE, a flat references/ and README.md, nothing else")
+    refs = hub / "references"
+    shipped = {p.relative_to(refs).as_posix(): p.read_text(encoding="utf-8", errors="replace")
+               for p in sorted(refs.rglob("*")) if p.is_file()} if refs.is_dir() else {}
+    differ = [n for n in sorted(set(generated) | set(shipped)) if shipped.get(n) != generated.get(n, {}).get("text")]
+    for name in differ:
+        state = ("is missing" if name not in shipped else "is generated by nothing" if name not in generated
+                 else f"differs from what ci/sync.py generates from {generated[name]['from']}")
+        fail(group, f"skills/{sync.HUB_NAME}/references/{name} {state} — run python ci/sync.py, never edit it")
+    if not differ:
+        ok(group, f"references/ is what ci/sync.py generates, {len(generated)} files")
+
+    for module in modules():
+        playbook = shipped.get(f"{module.name}.md")
+        if playbook is None:
+            fail(group, f"no playbook for {module.name}: references/{module.name}.md is not in the front door")
+            continue
+        absent = sorted(set(sync.LINK.findall(playbook)) - set(shipped))
+        for name in absent:
+            fail(group, f"references/{module.name}.md names references/{name}, which the front door does not carry")
+    dangling = sorted(sync.hub_links(text) - set(shipped))
+    for name in dangling:
+        fail(group, f"the hub links references/{name}, which its references/ folder does not hold")
+    if not dangling:
+        ok(group, f"every module has a playbook, every file a playbook names is carried, "
+                  f"and the hub links only files it carries")
+
+    wanted = {m.name for m in modules()}
+    for where, found in hub_modules(text).items():
+        if found != wanted:
+            fail(group, f"the hub's {where} are {sorted(found)}, not the modules {sorted(wanted)} — a module "
+                        f"added or removed is a hub edit in the same change")
+        else:
+            ok(group, f"the hub's {where} are the {len(wanted)} modules")
+
+    measured = frontdoor_digests()
+    changed = [k for k in MEASURED_HASHES if measured[k] != MEASURED_FRONTDOOR[k]]
+    if changed:
+        fail(group, f"the front door's text is not what round 3 measured ({', '.join(changed)} differ): a change "
+                    f"to a shipped file of the hub or a module ships only once measured, or once MEASURED_FRONTDOOR "
+                    f"is updated on purpose, its plugin_version moved with it; now "
+                    + ", ".join(f"{k} {measured[k]}" for k in changed))
+    else:
+        ok(group, f"every shipped file of the hub and the modules is what round 3 measured (frontdoor_sha256 "
+                  f"{measured['frontdoor_sha256'][:8]}, builds_sha256 {measured['builds_sha256'][:8]})")
 
     explicit = REPO / "evals" / "suite-explicit.json"
     try:
@@ -3175,16 +3358,132 @@ def check_frontdoor() -> None:
     except (OSError, ValueError, KeyError) as exc:
         fail(group, f"evals/suite-explicit.json cannot be read: {exc}")
         return
-    installed = {s.name for s in skills()}
     for case in cases:
         command = re.match(r"/([a-z0-9-]+)(?=\s|$)", case.get("prompt", ""))
-        if not command or command.group(1) not in installed:
-            fail(group, f"suite-explicit case {case.get('id')}: the prompt does not open with an installed "
-                        f"module's slash command")
+        if not command or command.group(1) not in wanted:
+            fail(group, f"suite-explicit case {case.get('id')}: the prompt does not open with a module's slash command")
         elif case.get("expected") != command.group(1):
             fail(group, f"suite-explicit case {case.get('id')}: invokes /{command.group(1)} but expects "
                         f"{case.get('expected')!r}")
     ok(group, f"suite-explicit: {len(cases)} case(s), each expecting the module its command names")
+
+
+def rel_hub(path: Path) -> str:
+    return path.relative_to(REPO).as_posix()
+
+
+def check_builds() -> None:
+    """The Claude Code builds are the source with each module hidden, and nothing else changed.
+
+    In dist/claude-code/ and in the plugin's skills/, each module's SKILL.md is its source
+    with one line added inside the frontmatter, sync.HIDDEN_KEY, and the front door's is its
+    source, byte for byte (that every other file is its source is the package group's). The
+    key ships nowhere else: no file under skills/, no entry of a dist/*.skill file, since a
+    claude.ai upload refuses it. The front door's build, in both trees and in dist/tuesday.skill,
+    holds the files it ships (sync.HUB_SHIPS) and no other: no README.md. The plugin's skills/ is
+    dist/claude-code/ file for file, each skill folder named as its frontmatter `name`. The plugin
+    manifest is JSON naming the plugin
+    `tuesday` with a description and MEASURED_FRONTDOOR's plugin_version, and the marketplace file is JSON with a name,
+    an owner's name, and one entry, `tuesday`, whose source is the plugin's folder and whose
+    name is the manifest's. What it does not read: whether Claude Code loads the plugin;
+    `claude plugin validate` and a session do (evals/README.md, "Through Tuesday").
+    """
+    group = "builds"
+    key = sync.HIDDEN_KEY.split(":")[0]
+    for tree in (CLAUDE_CODE, PLUGIN / "skills"):
+        rel = tree.relative_to(REPO)
+        for skill in skills():
+            built, source = tree / skill.name / "SKILL.md", skill / "SKILL.md"
+            if not built.is_file():
+                fail(group, f"{rel}/{skill.name}/SKILL.md is missing — run python ci/package.py")
+                continue
+            got, was = built.read_text(encoding="utf-8"), source.read_text(encoding="utf-8")
+            if skill.name == sync.HUB_NAME:
+                if got != was:
+                    fail(group, f"{rel}/{skill.name}/SKILL.md differs from its source: the front door ships unchanged")
+                else:
+                    ok(group, f"{rel}/{skill.name}/SKILL.md is its source, unchanged")
+                continue
+            added = [d[2:] for d in difflib.ndiff(was.splitlines(), got.splitlines()) if d[:2] in ("+ ", "- ")]
+            fm = re.match(r"\A---\n.*?\n---\n", got, re.DOTALL)
+            if added != [sync.HIDDEN_KEY] or not fm or f"\n{sync.HIDDEN_KEY}\n" not in fm.group(0):
+                fail(group, f"{rel}/{skill.name}/SKILL.md must differ from its source by one line added inside "
+                            f"the frontmatter, '{sync.HIDDEN_KEY}'; it differs by {added[:3]}")
+            else:
+                ok(group, f"{rel}/{skill.name}/SKILL.md is its source with '{sync.HIDDEN_KEY}' added")
+        hub_build = tree / sync.HUB_NAME
+        extra = sorted(rel for rel in (p.relative_to(hub_build).as_posix() for p in hub_build.rglob("*")
+                                       if p.is_file()) if not sync.hub_ships(rel)) if hub_build.is_dir() else []
+        for rel in extra:
+            fail(group, f"{rel_hub(hub_build)}/{rel} is in the front door's build: it ships SKILL.md, LICENSE "
+                        f"and references/ alone")
+        if not extra:
+            ok(group, f"{rel_hub(hub_build)}/ holds only what the front door ships")
+        for folder in sorted(p for p in tree.iterdir() if p.is_dir()) if tree.is_dir() else []:
+            name = (parse_frontmatter((folder / "SKILL.md").read_text(encoding="utf-8")) or {}).get("name") \
+                if (folder / "SKILL.md").is_file() else None
+            if name != folder.name:
+                fail(group, f"{rel}/{folder.name}/ holds a skill named {name!r}: a skill folder is named as its `name`")
+
+    hub_skill = DIST / f"{sync.HUB_NAME}.skill"
+    if hub_skill.is_file():
+        with zipfile.ZipFile(hub_skill) as archive:
+            extra = sorted(n for n in archive.namelist() if not n.endswith("/")
+                           and not sync.hub_ships(n.removeprefix(f"{sync.HUB_NAME}/")))
+        for name in extra:
+            fail(group, f"{hub_skill.relative_to(REPO)}:{name} is in the front door's build: it ships SKILL.md, "
+                        f"LICENSE and references/ alone")
+
+    carriers = [p.relative_to(REPO).as_posix() for p in sorted(SKILLS_DIR.rglob("*"))
+                if p.is_file() and key in p.read_text(encoding="utf-8", errors="replace")]
+    for artifact in sorted(DIST.glob("*.skill")):
+        with zipfile.ZipFile(artifact) as archive:
+            carriers += [f"{artifact.relative_to(REPO)}:{n}" for n in archive.namelist()
+                         if key in archive.read(n).decode("utf-8", errors="replace")]
+    for tree in (CLAUDE_CODE, PLUGIN):
+        for path in sorted(tree.rglob("*")) if tree.is_dir() else []:
+            if path.is_file() and key in path.read_text(encoding="utf-8", errors="replace") and not (
+                    path.name == "SKILL.md" and path.parent.name in {m.name for m in modules()}):
+                carriers.append(path.relative_to(REPO).as_posix())
+    for where in carriers:
+        fail(group, f"{where} carries {key}, which ships only in a hidden module's SKILL.md in the Claude Code builds")
+    if not carriers:
+        ok(group, f"{key} is in no source file, no .skill file, and no other build file")
+
+    plugin_files = {p.relative_to(PLUGIN / "skills").as_posix(): p.read_bytes()
+                    for p in (PLUGIN / "skills").rglob("*") if p.is_file()} if (PLUGIN / "skills").is_dir() else {}
+    cc_files = {p.relative_to(CLAUDE_CODE).as_posix(): p.read_bytes()
+                for p in CLAUDE_CODE.rglob("*") if p.is_file()} if CLAUDE_CODE.is_dir() else {}
+    if plugin_files != cc_files:
+        fail(group, f"{(PLUGIN / 'skills').relative_to(REPO)}/ differs from {CLAUDE_CODE.relative_to(REPO)}/: "
+                    f"{sorted(set(plugin_files) ^ set(cc_files) or {n for n in cc_files if plugin_files.get(n) != cc_files[n]})[:3]}")
+    else:
+        ok(group, f"the plugin's skills/ is {CLAUDE_CODE.relative_to(REPO)}/, file for file")
+
+    try:
+        manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        market = json.loads(MARKETPLACE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        fail(group, f"the plugin manifest or the marketplace file cannot be read as JSON: {exc}")
+        return
+    if manifest.get("name") != sync.HUB_NAME or not all(isinstance(manifest.get(k), str) and manifest.get(k)
+                                                         for k in ("version", "description")):
+        fail(group, f"the plugin manifest must name the plugin {sync.HUB_NAME!r} and carry a version and a "
+                    f"description: {manifest}")
+    elif manifest["version"] != MEASURED_FRONTDOOR["plugin_version"]:
+        fail(group, f"the plugin manifest's version {manifest['version']!r} is not MEASURED_FRONTDOOR's "
+                    f"plugin_version {MEASURED_FRONTDOOR['plugin_version']!r}: the version moves with the measured text")
+    else:
+        ok(group, f"the plugin manifest is JSON naming {sync.HUB_NAME!r}, version {manifest['version']}, "
+                  f"MEASURED_FRONTDOOR's")
+    entries = market.get("plugins") if isinstance(market.get("plugins"), list) else []
+    source = f"./{PLUGIN.relative_to(REPO).as_posix()}"
+    if not market.get("name") or not (market.get("owner") or {}).get("name") or [
+            (e.get("name"), e.get("source")) for e in entries] != [(manifest.get("name"), source)]:
+        fail(group, f"{MARKETPLACE.relative_to(REPO)} must carry a name, an owner's name, and one plugin entry "
+                    f"named as the manifest, {manifest.get('name')!r}, from {source!r}")
+    else:
+        ok(group, f"{MARKETPLACE.relative_to(REPO)} lists {manifest['name']}@{market['name']} from {source}")
 
 
 GROUPS = {
@@ -3207,6 +3506,7 @@ GROUPS = {
     "watch-out": check_watch_outs,
     "guidance": check_guidance,
     "frontdoor": check_frontdoor,
+    "builds": check_builds,
 }
 
 

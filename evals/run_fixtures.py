@@ -100,6 +100,10 @@ Usage:
     python evals/run_fixtures.py --out /tmp/cr --skip-execute   # grade saved, ungraded runs
     python evals/run_fixtures.py --regrade-from /tmp/cr --out /tmp/cr-regrade --expectation 14
     python evals/run_fixtures.py --skill job-underwriter --cases probe.json --out /tmp/p
+    python evals/run_fixtures.py --via frontdoor --out /tmp/fd   # each fixture through the front door
+
+`--via frontdoor` runs each module's fixtures with the front door installed as the
+Claude Code plugin ships it (evals/README.md, "Through Tuesday").
 """
 
 from __future__ import annotations
@@ -120,6 +124,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import output_checks  # noqa: E402
+import run_routing  # noqa: E402  (the front door's plugin install and routing reader, for --via frontdoor)
 from child_env import child_env  # noqa: E402
 from fixture_clauses import load_cases  # noqa: E402
 
@@ -127,6 +132,8 @@ REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
 SERVER = Path(__file__).resolve().parent / "research_server.py"
 MODES = ("denied", "canned")
+# How a fixture's module reaches the room: installed alone (`skill`), or through the front door.
+VIAS = ("skill", "frontdoor")
 SEARCH_KIND = output_checks.SEARCH_KIND
 PERMISSION_TEXT = re.compile(r"requested permissions|haven't granted|permission to use|"
                              r"not allowed|was denied|denied by", re.I)
@@ -226,6 +233,49 @@ def install_one(root: Path, skill: str, run_id: str) -> str:
         raise SystemExit(f"{skill}: frontmatter name not found to rename")
     skill_md.write_text(renamed)
     return name
+
+
+def install_via_frontdoor(room: Path, run_id: str) -> tuple[Path, dict[str, str]]:
+    """Install the front door for a fixture run as the routing arm's plugin layout installs it:
+    the hub and the three hidden modules in a plugin folder beside the room, never in it
+    (`run_routing.install_plugin`). Return the plugin folder and name -> installed name."""
+    plugin = run_routing.home(room, "plugin")
+    return plugin, run_routing.install_plugin(plugin, run_id)
+
+
+def via_frontdoor_flags(flags: list[str], room: Path) -> list[str]:
+    """A room's flags with the plugin added and its skills folder readable: `--plugin-dir`, and
+    the routing arm's read rule (`run_routing.read_rule`) joined to the room's one `--allowedTools`
+    list, or given its own when the room has none."""
+    flags, rule = list(flags), run_routing.read_rule(room, "plugin")
+    if "--allowedTools" in flags:
+        flags.insert(flags.index("--allowedTools") + 1, rule)
+    else:
+        flags += ["--allowedTools", rule]
+    return flags + ["--plugin-dir", str(run_routing.home(room, "plugin"))]
+
+
+def frontdoor_fire(lines, names: dict[str, str], skill: str, room: Path) -> str:
+    """`fired` when a run through the front door read `skill`'s playbook through the hub and
+    reached no hidden module; otherwise the routing reader's label for what the run did
+    instead (`run_routing.RunReader`, front-door arm: another module, `hidden-<module>`,
+    `tuesday-unrouted`, `neither`, `void`, `error`). The same reader scores the routing arm,
+    so a fire here is a route there."""
+    reader = run_routing.RunReader(names, "frontdoor", None, "plugin", room)
+    outcome = None
+    for line in lines:
+        event = line
+        if not isinstance(line, dict):
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if isinstance(event, dict):
+            outcome = reader.feed(event)
+            if outcome:
+                break
+    outcome = outcome or reader.exited()
+    return "fired" if outcome == skill else outcome
 
 
 CLI_FAILURE_MARKERS = (
@@ -510,7 +560,9 @@ def classify_room(mode: str, invocation: dict, calls_log: list[dict] | None) -> 
     """
     reasons = []
     if invocation.get("fire") != "fired":
-        reasons.append(f"the installed skill never fired ({invocation.get('fire')})")
+        reasons.append(f"the installed skill never fired ({invocation.get('fire')})"
+                       if invocation.get("via", "skill") == "skill" else
+                       f"the module's playbook was not read through the front door ({invocation.get('fire')})")
     init = invocation.get("init") or {}
     calls = invocation.get("tool_calls") or []
     denied_ids = {d.get("tool_use_id") for d in
@@ -705,26 +757,39 @@ def write_meta(out: Path, stem: str, meta: dict) -> None:
 
 
 def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
-            model: str | None, mode: str | None = None) -> dict:
-    """Run one fixture in a clean room and save the response plus the room's record."""
+            model: str | None, mode: str | None = None, via: str = "skill") -> dict:
+    """Run one fixture in a clean room and save the response plus the room's record.
+
+    Through the front door (`via="frontdoor"`) the room is named for the case alone, since
+    the hub's folder path reaches the model and a module's name in it would point the route.
+    """
     mode = mode or modes_of(case)[0]
     stem = stem_for(skill, case, mode, run)
     meta = {"skill": skill, "id": case["id"], "run": run, "mode": mode, "stem": stem,
-            "model": model, "invocations": []}
+            "model": model, "via": via, "invocations": []}
     parsed = None
     for nudged in (False, True):
         run_id = uuid.uuid4().hex[:8]
-        room = out / "rooms" / f"{skill}-{case['id']}-{mode}-{run_id}"
+        room = out / "rooms" / (f"{skill}-{case['id']}-{mode}-{run_id}" if via == "skill"
+                                else f"case-{case['id']}-{mode}-{run_id}")
         room.mkdir(parents=True, exist_ok=True)
-        name = install_one(room, skill, run_id)
+        if via == "frontdoor":
+            skill_dir, names = install_via_frontdoor(room, run_id)
+            name = run_routing.installed_command(names[run_routing.HUB], run_routing.plugin_prefix(names, "plugin"))
+        else:
+            name = install_one(room, skill, run_id)
+            skill_dir, names = room / ".claude" / "skills" / name, None
         paths = research_paths(out, room, "nudged" if nudged else "first") \
             if mode == "canned" else None
         if paths:
             write_research_files(case, paths)
         flags = room_flags(mode, paths) + (["--model", model] if model else [])
+        if via == "frontdoor":
+            flags = via_frontdoor_flags(flags, room)
         prompt = case["prompt"] if not nudged else \
             f"Use the {name} skill for this.\n\n{case['prompt']}"
         invocation = {"room": str(room), "nudged": nudged, "installed": name, "flags": flags,
+                      "via": via, "skill_dir": str(skill_dir),
                       "calls_log": str(paths["calls"]) if paths else None}
         meta["invocations"].append(invocation)
         try:
@@ -738,6 +803,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 (out / "streams").mkdir(exist_ok=True)
                 (out / "streams" / f"{room.name}.partial.jsonl").write_text(stdout)
             partial = parse_stream(stdout.splitlines(), name)
+            if names:
+                partial["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
             invocation.update(outcome="timeout" if isinstance(exc, CLITimeout) else "declined",
                               error=str(exc), fire=partial["fire"], init=partial["init"],
                               result=partial["result"], tool_calls=partial["tool_calls"],
@@ -752,7 +819,10 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
             return meta
         streams = out / "streams"
         streams.mkdir(exist_ok=True)
-        (streams / f"{room.name}.jsonl").write_text(parsed.pop("stdout", ""))
+        stdout = parsed.pop("stdout", "")
+        (streams / f"{room.name}.jsonl").write_text(stdout)
+        if names:
+            parsed["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
         calls = read_calls(paths["calls"]) if paths else []
         invocation.update(outcome="completed", fire=parsed["fire"],
                           skills_fired=parsed["skills_fired"], init=parsed["init"],
@@ -769,7 +839,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     graded = meta["invocations"][-1]
     status, reasons = classify_room(mode, graded, read_calls(graded.get("calls_log")))
     room = Path(graded["room"])
-    artifacts = collect_artifacts(room, room / ".claude" / "skills" / graded["installed"])
+    artifacts = collect_artifacts(room, Path(graded["skill_dir"]))
     text = parsed["text"]
     if artifacts:
         text += "\n\n" + "\n\n".join(
@@ -787,7 +857,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     init = graded.get("init") or {}
     read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
     links = sum(len(fetches) for fetches in [*read.values(), *unread.values()])
-    print(f"  ran {skill} eval {case['id']} [{mode}] (run {run}): {len(text)} chars"
+    print(f"  ran {skill} eval {case['id']} [{mode}]{' via the front door' if via == 'frontdoor' else ''} "
+          f"(run {run}): {len(text)} chars"
           f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not graded['nudged'] else ' (needed a nudge to fire)'}"
           f", {len(graded['research_log']) - links} research call(s)"
@@ -1234,6 +1305,9 @@ def main() -> int:
                     help="grade only this expectation number (repeatable)")
     ap.add_argument("--cases", default=None,
                     help="load cases from this JSON instead of skills/<skill>/evals/evals.json")
+    ap.add_argument("--via", choices=VIAS, default="skill",
+                    help="skill: each module installed alone (the default); frontdoor: the front door "
+                         "installed as the plugin ships it, a fire counting only through the hub")
     args = ap.parse_args()
 
     out = Path(args.out).resolve()
@@ -1272,7 +1346,7 @@ def main() -> int:
             print(f"\n{label}: executing {len(jobs)} fixture run(s)")
             with ThreadPoolExecutor(max_workers=args.workers) as pool:
                 list(pool.map(lambda j: execute(j[0], j[1], out, j[3], args.timeout,
-                                               args.model, j[2]), jobs))
+                                               args.model, j[2], args.via), jobs))
         for skill, case, mode, run in jobs:
             checks[(skill, case["id"], mode)].append(check_run(skill, case, out, run, mode))
         print(f"\n{label}: grading {len(jobs)} response(s), {args.graders} grader(s) each")

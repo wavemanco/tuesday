@@ -1,0 +1,5 @@
+{
+  "name": "tuesday",
+  "version": "0.1.0",
+  "description": "Applicant-side job search on evidence: Tuesday runs the module a request needs, job-underwriter (whether to apply), resume-tailor (a resume tailored to a role) or mock-interview (interview prep and drills), each also its own command."
+}

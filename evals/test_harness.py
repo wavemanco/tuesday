@@ -36,6 +36,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -44,13 +45,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import backfill_tools
-import frontdoor
 import output_checks
 import ledger_rules  # noqa: E402  (ci/, put on the path by output_checks)
 import recurring
 import run_fixtures
 import run_routing
 import routing_variants
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
+import sync  # noqa: E402  (ci/: the front door's generator and the generated-copy sync)
 
 FAILURES: list[str] = []
 SERVER = Path(__file__).resolve().parent / "research_server.py"
@@ -288,8 +291,8 @@ def module_tree(root: Path, files: dict[str, dict[str, str]], bodies: dict[str, 
 def test_frontdoor_generation() -> None:
     print("\nfront door: references/ is generated, deterministically, from the module sources")
     repo = Path(__file__).resolve().parent.parent
-    files = frontdoor.generate()
-    check("generating twice gives the same files", files == frontdoor.generate(), True)
+    files = sync.generate()
+    check("generating twice gives the same files", files == sync.generate(), True)
     check("a playbook per module", sorted(n for n in files if n[:-3] in run_routing.SKILLS),
           [f"{s}.md" for s in run_routing.SKILLS])
     for module in run_routing.SKILLS:
@@ -297,20 +300,20 @@ def test_frontdoor_generation() -> None:
         playbook = files[f"{module}.md"]["text"]
         check(f"{module}'s playbook is its SKILL.md body with the frontmatter stripped, its contents listed, "
               f"and only clash paths moved",
-              playbook, frontdoor.with_paths_note(frontdoor.with_contents(
-                  frontdoor.body(source).replace("references/rationale.md", f"references/{module}-rationale.md"))))
+              playbook, sync.with_paths_note(sync.with_contents(
+                  sync.body(source).replace("references/rationale.md", f"references/{module}-rationale.md"))))
         listing_end = playbook.index("\n\n", playbook.index("## Contents\n\n") + len("## Contents\n\n"))
         check(f"{module}'s playbook says where its paths resolve, first thing after its contents list",
-              playbook[listing_end:listing_end + 2 + len(frontdoor.PATHS_NOTE)], "\n\n" + frontdoor.PATHS_NOTE)
+              playbook[listing_end:listing_end + 2 + len(sync.PATHS_NOTE)], "\n\n" + sync.PATHS_NOTE)
         lines = playbook.splitlines()
         check(f"{module}'s playbook opens with '## Contents' directly under its H1, as a file over 100 lines must",
               [line for line in lines[:3] if line.strip()], [lines[0], "## Contents"])
-        headings = [line.lstrip("#").strip() for line in frontdoor.body(source).splitlines()
+        headings = [line.lstrip("#").strip() for line in sync.body(source).splitlines()
                     if line.startswith(("## ", "### "))]
         listed = [line.strip()[2:] for line in playbook.partition("## Contents\n\n")[2].split("\n\n", 1)[0].splitlines()]
         check(f"{module}'s contents list names its ## and ### headings, in order", listed, headings)
         check_true(f"{module}'s playbook names only files the hub carries",
-                   set(frontdoor.LINK.findall(playbook)) <= set(files))
+                   set(sync.LINK.findall(playbook)) <= set(files))
         check(f"{module}'s rationale.md, which clashes, is carried as {module}-rationale.md, unchanged",
               files[f"{module}-rationale.md"]["text"],
               (repo / "skills" / module / "references" / "rationale.md").read_text())
@@ -318,21 +321,22 @@ def test_frontdoor_generation() -> None:
     mirror = (repo / "skills" / "resume-tailor" / "references" / "citations.md").read_text()
     check("a convention mirror is one byte-identical file", files["citations.md"]["text"], mirror)
     check("every distinct module reference and mirror is carried once, beside one playbook per module",
-          len(files), len({(p.name, p.read_text()) for p in (repo / "skills").glob("*/references/*.md")})
+          len(files), len({(p.name, p.read_text()) for m in sync.modules()
+                           for p in (repo / "skills" / m / "references").glob("*.md")})
           + len(run_routing.SKILLS))
-    hub = frontdoor.HUB.read_text()
+    hub = sync.HUB.read_text()
     check("the committed hub links every generated file directly, and nothing else",
-          frontdoor.hub_links(hub), set(files))
+          sync.hub_links(hub), set(files))
     # Round 2: Haiku read a playbook's files from the hidden module's own folder.
     section3 = hub.partition("## 3. Run the chosen module")[2].partition("\n## ")[0]
     check_true("the hub's section 3, which the paths note points to, says whose references/ a path means "
                "and rules out the modules' own folders",
                "this skill's own `references/`" in section3 and "never read from them" in " ".join(section3.split()))
     check_true("the paths note names no references/ file, so it adds no link the hub must carry",
-               not frontdoor.LINK.findall(frontdoor.PATHS_NOTE))
+               not sync.LINK.findall(sync.PATHS_NOTE))
     check_true("the paths note points to the hub without saying SKILL.md, which section 3 item 1 says "
                "means the playbook inside one",
-               "SKILL.md" not in frontdoor.PATHS_NOTE and "section 3" in frontdoor.PATHS_NOTE)
+               "SKILL.md" not in sync.PATHS_NOTE and "section 3" in sync.PATHS_NOTE)
 
 
 def test_frontdoor_clashes() -> None:
@@ -343,14 +347,14 @@ def test_frontdoor_clashes() -> None:
             "beta": {"notes.md": "beta's notes", "shared.md": "same text"}},
             bodies={"alpha": "# Alpha\n\nRead `references/notes.md`, then `references/own.md` and "
                              "`references/shared.md`; not `conventions/notes.md`.\n"})
-        files = frontdoor.generate(root)
+        files = sync.generate(root)
         check("different text under one name: each module's copy gets its module's prefix",
               {n: files[n]["text"] for n in ("alpha-notes.md", "beta-notes.md")},
               {"alpha-notes.md": "alpha's notes", "beta-notes.md": "beta's notes"})
         check("the same text under one name is one shared file", files["shared.md"]["text"], "same text")
         check("the playbook's path moves to its own module's copy; other paths are untouched",
               files["alpha.md"]["text"],
-              "# Alpha\n\n" + frontdoor.PATHS_NOTE + "\n\nRead `references/alpha-notes.md`, then "
+              "# Alpha\n\n" + sync.PATHS_NOTE + "\n\nRead `references/alpha-notes.md`, then "
               "`references/own.md` and `references/shared.md`; not `conventions/notes.md`.\n")
         check("a module's own file that names a clashing file points at that module's copy",
               files["own.md"]["text"], "see rationale and alpha-notes.md")
@@ -359,7 +363,7 @@ def test_frontdoor_clashes() -> None:
             "alpha": {"notes.md": "a", "shared.md": "read notes.md"},
             "beta": {"notes.md": "b", "shared.md": "read notes.md"}})
         try:
-            frontdoor.generate(bad)
+            sync.generate(bad)
             check("a shared file naming a clashing file is refused, not guessed", "generated", "refused")
         except SystemExit as exc:
             check_true("a shared file naming a clashing file is refused, not guessed", "cannot be resolved" in str(exc))
@@ -368,14 +372,14 @@ def test_frontdoor_clashes() -> None:
             "alpha": {"notes.md": "a", "alpha-notes.md": "already here"},
             "beta": {"notes.md": "b"}})
         try:
-            frontdoor.generate(collide)
+            sync.generate(collide)
             check("a renamed file that would overwrite another is refused", "generated", "refused")
         except SystemExit as exc:
             check_true("a renamed file that would overwrite another is refused", "already is" in str(exc))
 
         playbook_name = module_tree(Path(tmp) / "d", {"alpha": {"beta.md": "alpha's note on beta"},
                                                      "beta": {"x.md": "x"}})
-        files = frontdoor.generate(playbook_name)
+        files = sync.generate(playbook_name)
         check("a module file named like a playbook is renamed, so the playbook keeps its name",
               (files["alpha-beta.md"]["text"], files["beta.md"]["from"]),
               ("alpha's note on beta", "skills/beta/SKILL.md (body)"))
@@ -384,22 +388,22 @@ def test_frontdoor_clashes() -> None:
                              bodies={"alpha": "# Alpha\n\nIntro.\n\n## One\n\n```text\n## not a heading\n```\n\n"
                                               "### One a\n\n## Two\n"})
         check("a playbook's contents list its ## and ### headings, ### nested, and skip fenced code",
-              frontdoor.generate(fenced)["alpha.md"]["text"],
-              "# Alpha\n\n## Contents\n\n- One\n  - One a\n- Two\n\n" + frontdoor.PATHS_NOTE + "\n\nIntro.\n\n"
+              sync.generate(fenced)["alpha.md"]["text"],
+              "# Alpha\n\n## Contents\n\n- One\n  - One a\n- Two\n\n" + sync.PATHS_NOTE + "\n\nIntro.\n\n"
               "## One\n\n```text\n## not a heading\n```\n\n### One a\n\n## Two\n")
         listed = "# Alpha\n\n## Contents\n\n- One\n\n## One\n"
         check("a playbook that already opens with its contents is left as it is",
-              frontdoor.with_contents(listed), listed)
+              sync.with_contents(listed), listed)
         check("the paths note goes after an existing contents list, under a bare H1, or first with no H1",
-              (frontdoor.with_paths_note(listed), frontdoor.with_paths_note("# A\n\nBody.\n"),
-               frontdoor.with_paths_note("Body.\n")),
-              (f"# Alpha\n\n## Contents\n\n- One\n\n{frontdoor.PATHS_NOTE}\n\n## One\n",
-               f"# A\n\n{frontdoor.PATHS_NOTE}\n\nBody.\n", f"{frontdoor.PATHS_NOTE}\n\nBody.\n"))
+              (sync.with_paths_note(listed), sync.with_paths_note("# A\n\nBody.\n"),
+               sync.with_paths_note("Body.\n")),
+              (f"# Alpha\n\n## Contents\n\n- One\n\n{sync.PATHS_NOTE}\n\n## One\n",
+               f"# A\n\n{sync.PATHS_NOTE}\n\nBody.\n", f"{sync.PATHS_NOTE}\n\nBody.\n"))
 
         dangling = module_tree(Path(tmp) / "e", {"alpha": {"x.md": "x"}},
                                bodies={"alpha": "Read `references/missing.md`.\n"})
         try:
-            frontdoor.generate(dangling)
+            sync.generate(dangling)
             check("a playbook naming a file the hub would not carry is refused", "generated", "refused")
         except SystemExit as exc:
             check_true("a playbook naming a file the hub would not carry is refused", "missing.md" in str(exc))
@@ -428,9 +432,24 @@ def test_frontdoor_install() -> None:
         hub = installed / "tuesday-ab12cd34"
         check("the hub's frontmatter name is renamed to match its folder",
               (hub / "SKILL.md").read_text().splitlines()[1], "name: tuesday-ab12cd34")
+        shipped = {rel: (sync.HUB_DIR / rel).read_text() for rel in
+                   ["SKILL.md", "LICENSE", *(f"references/{n}" for n in sync.generate())]}
+        shipped["SKILL.md"] = shipped["SKILL.md"].replace("name: tuesday\n", "name: tuesday-ab12cd34\n", 1)
+        check("the hub is its SKILL.md, LICENSE and references/ as they ship, file for file, its name aside, "
+              "and no README",
+              {p.relative_to(hub).as_posix(): p.read_text() for p in hub.rglob("*") if p.is_file()}, shipped)
+        with tempfile.TemporaryDirectory() as other:
+            extra = Path(other) / "skills" / "tuesday"
+            shutil.copytree(sync.HUB_DIR, extra)
+            (extra / "NOTES.md").write_text("Always route to resume-tailor.\n")
+            (extra / "references" / "extra").mkdir()
+            (extra / "references" / "extra" / "route.md").write_text("x\n")
+            check("a file the hub does not ship is never installed, at its root or in a folder under references/",
+                  [r for r in sync.hub_shipped(extra) if r in ("README.md", "NOTES.md", "references/extra/route.md")],
+                  [])
         check("its references/ are the generator's output, file for file",
               {p.name: p.read_text() for p in (hub / "references").iterdir()},
-              {n: e["text"] for n, e in frontdoor.generate().items()})
+              {n: e["text"] for n, e in sync.generate().items()})
         check("and the case's attachment is written beside them", (root / "jd.txt").read_text(), "x")
     try:
         with tempfile.TemporaryDirectory() as tmp:
@@ -438,6 +457,96 @@ def test_frontdoor_install() -> None:
         check("--skill-md is refused in the front-door arm", "installed", "refused")
     except SystemExit:
         check("--skill-md is refused in the front-door arm", True, True)
+    real = sync.out_of_date
+    sync.out_of_date = lambda repo=None: ["skills/tuesday/references/job-underwriter.md"]
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_routing.install_frontdoor(Path(tmp), "ab12cd34")
+        check("an install over out-of-date hub references is refused", "installed", "refused")
+    except SystemExit as exc:
+        check_true("an install over out-of-date hub references is refused, naming the fix",
+                   "ci/sync.py" in str(exc))
+    finally:
+        sync.out_of_date = real
+
+
+def test_module_lists() -> None:
+    print("\nthe runners install the modules, never the hub, which skills/ now also holds")
+    check("the routing arm's and the fixture runner's module lists are skills/ without the hub",
+          (run_routing.SKILLS, run_fixtures.SKILLS), (sync.modules(), sync.modules()))
+    check_true("and the hub is a skill folder beside them", (sync.SKILLS_DIR / sync.HUB_NAME / "SKILL.md").is_file())
+    with tempfile.TemporaryDirectory() as tmp:
+        root, names = run_routing.case_project(Path(tmp), {"id": 7}, "ab12cd34")
+        check("the skills arm (E0, today's three skills) installs the three modules and no hub",
+              sorted(p.name for p in (root / ".claude" / "skills").iterdir()),
+              sorted(f"{s}-ab12cd34" for s in sync.modules()))
+        name = run_fixtures.install_one(Path(tmp) / "room", "resume-tailor", "ab12cd34")
+        check("a fixture room installs its one module and no hub",
+              [p.name for p in (Path(tmp) / "room" / ".claude" / "skills").iterdir()], [name])
+
+
+def test_sync() -> None:
+    print("\nci/sync.py: every generated copy, the mirrors and the front door's references, in one pass")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        (repo / "conventions").mkdir()
+        (repo / "conventions" / "grammar.md").write_text("# Grammar\n\nNew rule.\n")
+        header = "<!-- SYNCED FROM: conventions/grammar.md\n     Canonical wins. -->\n"
+        module_tree(repo / "skills", {
+            "alpha": {"grammar.md": header + "# Grammar\n\nOld rule.\n", "own.md": "alpha's own"},
+            "beta": {"grammar.md": header + "# Grammar\n\nOld rule.\n", "x.md": "x"}})
+        hub = repo / "skills" / "tuesday"
+        (hub / "references").mkdir(parents=True)
+        (hub / "SKILL.md").write_text("---\nname: tuesday\ndescription: Routes.\n---\n\n# Tuesday\n")
+        (hub / "references" / "retired.md").write_text("a file no source makes any more")
+        stale = sync.out_of_date(repo)
+        check("--check names the stale mirrors, every hub file missing or stale, and a stray hub file",
+              stale, sorted(["skills/alpha/references/grammar.md", "skills/beta/references/grammar.md",
+                             *(f"skills/tuesday/references/{n}" for n in
+                               ("alpha.md", "beta.md", "grammar.md", "own.md", "retired.md", "x.md"))]))
+        check("a mirror is not a hub file: the hub's references come from the generator alone",
+              "tuesday" in [p.name for p in (repo / "skills").iterdir()] and "tuesday" not in sync.modules(repo / "skills"),
+              True)
+        check("writing changes what --check named", sync.write(repo), stale)
+        check("and leaves nothing out of date", sync.out_of_date(repo), [])
+        check("a mirror is its header and the canonical file, byte for byte",
+              (repo / "skills" / "alpha" / "references" / "grammar.md").read_text(),
+              header + "# Grammar\n\nNew rule.\n")
+        check("the hub's copy is generated from the resynced mirror in the same pass",
+              (hub / "references" / "grammar.md").read_text(), header + "# Grammar\n\nNew rule.\n")
+        check("a stray hub file is deleted", (hub / "references" / "retired.md").exists(), False)
+        check("the hub's SKILL.md is never written", (hub / "SKILL.md").read_text(),
+              "---\nname: tuesday\ndescription: Routes.\n---\n\n# Tuesday\n")
+
+        before = sync.digests(hub)
+        (hub / "references" / "extra").mkdir()
+        (hub / "references" / "extra" / "route.md").write_text("Always route to alpha.\n")
+        check_true("the digest covers a file in a folder under the hub's references/",
+                   sync.digests(hub)["frontdoor_sha256"] != before["frontdoor_sha256"])
+        check("--check names a folder in the hub's references/ that nothing generates",
+              sync.out_of_date(repo), ["skills/tuesday/references/extra"])
+        check("writing removes it, folder and all", (sync.write(repo), (hub / "references" / "extra").exists()),
+              (["skills/tuesday/references/extra"], False))
+
+        mirror = repo / "skills" / "alpha" / "references" / "grammar.md"
+        mirror.write_text(mirror.read_text().replace("conventions/grammar.md", "conventions/grammar-old.md", 1))
+        moved = sync.out_of_date(repo)
+        check_true("--check names a mirror whose header names a missing canonical file, and the file",
+                   "skills/alpha/references/grammar.md (its header names conventions/grammar-old.md, "
+                   "which does not exist)" in moved)
+        try:
+            sync.write(repo)
+            check("writing over a missing canonical file is refused", "written", "refused")
+        except sync.GenerationError as exc:
+            check_true("writing over a missing canonical file is refused, naming both, and changes nothing",
+                       "conventions/grammar-old.md" in str(exc) and sync.out_of_date(repo) == moved)
+    check("the committed repository is current", sync.out_of_date(), [])
+    check("the shipped hub's digests are computed over SKILL.md and references/ as committed",
+          sync.digests(), {"hub_sha256": sync.digest({}, sync.HUB.read_text()),
+                           "frontdoor_sha256": sync.digest(sync.generate(), sync.HUB.read_text())})
+    check("hiding adds one line, the key, as the frontmatter's last, and changes nothing else",
+          sync.hide("---\nname: a\ndescription: b\n---\n\nBody.\n"),
+          "---\nname: a\ndescription: b\n" + sync.HIDDEN_KEY + "\n---\n\nBody.\n")
 
 
 NAMES = {**{s: f"{s}-ab12cd34" for s in run_routing.SKILLS}, "tuesday": "tuesday-ab12cd34"}
@@ -1868,6 +1977,98 @@ def test_execute_nudge() -> None:
         check("the graded research log holds only the nudged run's call",
               [e["query_or_url"] for e in meta["research_log"]], ["second"])
         check("the room is valid", meta["harness"]["status"], "ok")
+
+
+def test_via_frontdoor() -> None:
+    print("\nfixtures --via frontdoor: the front door installed as the plugin ships it, a fire only through the hub")
+    source = (Path(__file__).resolve().parent / "run_fixtures.py").read_text()
+    check_true("--via defaults to the module alone, accepts frontdoor, and reaches every run",
+               run_fixtures.VIAS == ("skill", "frontdoor")
+               and 'ap.add_argument("--via", choices=VIAS, default="skill",' in source
+               and "args.model, j[2], args.via)" in source)
+    with tempfile.TemporaryDirectory() as tmp:
+        room = Path(tmp) / "rooms" / "case-3-denied-ab12cd34"
+        room.mkdir(parents=True)
+        plugin, names = run_fixtures.install_via_frontdoor(room, "ab12cd34")
+        check("the room holds nothing: the plugin sits beside it, where the routing arm's plugin layout puts it",
+              (list(room.iterdir()), plugin), ([], run_routing.home(room, "plugin")))
+        reference = Path(tmp) / "reference"
+        check("its files and names are the routing arm's plugin layout's",
+              (files_of(plugin), names), (files_of(reference) if run_routing.install_plugin(reference, "ab12cd34")
+                                          else None, NAMES))
+        rule = run_routing.read_rule(room, "plugin")
+        denied = run_fixtures.via_frontdoor_flags(run_fixtures.room_flags("denied"), room)
+        check("a denied room gains the plugin and a rule to read its skills folder",
+              denied, run_fixtures.room_flags("denied") + ["--allowedTools", rule, "--plugin-dir", str(plugin)])
+        paths = {"mcp": Path("/x/mcp.json")}
+        canned = run_fixtures.via_frontdoor_flags(run_fixtures.room_flags("canned", paths), room)
+        check("a canned room keeps one --allowedTools list, the read rule joined to its search tools",
+              (canned.count("--allowedTools"), canned[canned.index("--allowedTools") + 1:canned.index("--allowedTools") + 4]),
+              (1, [rule, "mcp__web__search", "mcp__web__fetch"]))
+
+    hub = f"{Path('/r/rooms/plugins/case-3-denied-ab12cd34/skills')}/tuesday-ab12cd34"
+    own = [ev_init(list(QUALIFIED.values())), ev_tool("s", "Skill", {"skill": QUALIFIED["tuesday"]})]
+    def fire(*events, skill="resume-tailor"):
+        return run_fixtures.frontdoor_fire(stream(*events), NAMES, skill, Path("/r/rooms/case-3-denied-ab12cd34"))
+    read = lambda module: ev_tool("r", "Read", {"file_path": f"{hub}/references/{module}.md"})
+    check("the module's playbook read through the hub is a fire",
+          fire(*own, read("resume-tailor"), ev_result()), "fired")
+    check("another module's playbook is that module, not a fire",
+          fire(*own, read("job-underwriter"), ev_result()), "job-underwriter")
+    check("the hub with no playbook read is unrouted",
+          fire(*own, ev_text("Which would you like?"), ev_result()), "tuesday-unrouted")
+    check("the right playbook, then a hidden module's folder, is that hidden reach",
+          fire(*own, read("resume-tailor"),
+               ev_tool("h", "Read", {"file_path": f"{hub}/../resume-tailor-ab12cd34/SKILL.md"}), ev_result()),
+          "hidden-resume-tailor")
+    check("nothing fired is neither", fire(ev_init(list(QUALIFIED.values())), ev_text("hi"), ev_result()), "neither")
+    check("a room listing a Tuesday skill it did not install is void",
+          fire(ev_init(list(QUALIFIED.values()) + ["anthropic-skills:resume-tailor"]), read("resume-tailor"),
+               ev_result()), "void")
+
+    case = {"id": 3, "prompt": "Tailor this.", "expectations": ["a"]}
+    seen = []
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        nudged = prompt.startswith("Use the")
+        seen.append((Path(cwd), list(extra_args), prompt, installed))
+        folder = run_routing.home(Path(cwd), "plugin") / "skills" / installed.split(":")[-1]
+        module = "resume-tailor" if nudged else "job-underwriter"
+        lines = stream(ev_init([installed, installed.split(":")[0] + ":resume-tailor-" + installed[-8:]]),
+                       ev_tool("s", "Skill", {"skill": installed}),
+                       ev_tool("r", "Read", {"file_path": f"{folder}/references/{module}.md"}),
+                       ev_text("second answer" if nudged else "first answer"), ev_result())
+        parsed = run_fixtures.parse_stream(lines, installed)
+        parsed["stdout"] = "\n".join(lines) + "\n"
+        return parsed
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            import contextlib
+            import io
+            with contextlib.redirect_stdout(io.StringIO()):
+                meta = run_fixtures.execute("resume-tailor", case, out, 0, 1, None, None, "frontdoor")
+        finally:
+            run_fixtures.claude = real
+        check("a run that routed to another module is not a fire, and says so, and is nudged",
+              [i["fire"] for i in meta["invocations"]], ["job-underwriter", "fired"])
+        second = meta["invocations"][-1]
+        check("its nudge names the hub, by its plugin id, in a fresh room",
+              [(prompt.startswith(f"Use the {name} skill"), name.count("tuesday-"), room) for room, _, prompt, name in seen[1:]],
+              [(True, 2, seen[-1][0])] if len(seen) == 2 and seen[0][0] != seen[1][0] else "two rooms")
+        check("each room is named for the case, never for the module whose route is measured",
+              ["resume-tailor" in str(room) for room, *_ in seen], [False, False])
+        check("each run loads the plugin from beside its room",
+              [args[args.index("--plugin-dir") + 1] for _, args, *_ in seen],
+              [str(run_routing.home(room, "plugin")) for room, *_ in seen])
+        check("the nudged run read resume-tailor's playbook through the hub, graded as valid",
+              (second["fire"], meta["harness"]["status"], meta["via"]), ("fired", "ok", "frontdoor"))
+        check("the graded response is the nudged one", (out / "resume-tailor-3.run0.md").read_text(), "second answer")
+        status, why = run_fixtures.classify_room("denied", dict(invocation(fire="job-underwriter", servers=()),
+                                                                via="frontdoor"), [])
+        check("a run that did not reach the module through the hub is harness-invalid, and the reason says so",
+              (status, why), ("harness-invalid",
+                              ["the module's playbook was not read through the front door (job-underwriter)"]))
 
 
 # --- 6a. Research accounting, read from verbatim saved outputs ---
@@ -4179,7 +4380,7 @@ def test_watch_out() -> None:
 
 def main() -> int:
     for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
-                 test_frontdoor_clashes, test_frontdoor_install, test_frontdoor_labels, test_explicit_naming,
+                 test_frontdoor_clashes, test_frontdoor_install, test_module_lists, test_sync, test_frontdoor_labels, test_explicit_naming,
                  test_layouts_install, test_layout_naming, test_layout_transcript, test_reported_measures,
                  test_layout_runs,
                  test_cli_refusal, test_parse_stream,
@@ -4187,7 +4388,7 @@ def main() -> int:
                  test_classification, test_missing_response,
                  test_declined_grade_prints_no_score, test_artifact_collection,
                  test_skill_installation, test_classify_room, test_execute_timeout,
-                 test_execute_nudge, test_parse_accounting, test_check_accounting,
+                 test_execute_nudge, test_via_frontdoor, test_parse_accounting, test_check_accounting,
                  test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
                  test_user_links, test_user_link_fixture,

@@ -61,7 +61,7 @@ python evals/run_routing.py --cases evals/routing-arm-b.json  # another case fil
 project (above). A `--case` id the file lacks is an error. Every run ends with
 its reach rate — the share of decided runs that reached any skill — and the
 number that reached a skill other than a named-route case's own. In the
-front-door arm a second line counts the runs in which the hub fired, read from
+Tuesday arm a second line counts the runs in which the hub fired, read from
 each run's `hub_fired`, so a run that routed and then reached a hidden module
 counts. An explicit case (E2, below) is not a routing case and is left out of
 both: its runs end with an `explicit:` line instead.
@@ -140,67 +140,30 @@ python evals/run_routing.py --model $M --runs 5 --json-out arm-d.json \
 Report the reach rate per arm and per case, and the wrong-skill count, which
 must stay 0. **The decision rule:** if B − A ≥ 20 points and D − C ≥ 20 points,
 the hypothesis holds, the README finding is updated with the mechanism, and the
-fix — description wording that names the attached-files case, or a front-door
-architecture — goes back to the owner as a decision. If either difference falls
+fix — description wording that names the attached-files case, or one skill that
+routes to the modules, as Tuesday now does — goes back to the owner as a decision. If either difference falls
 short, the hypothesis is recorded as falsified, as the last one was.
 
-### The front-door arm
+### The Tuesday arm
 
-The front door is a prototype: one skill, `tuesday`, that routes each request to
-one module and runs it from a copy of that module's instructions. The
-measurement compares it with the three skills as they ship, so the harness has
-two arms. `--arm skills`, the default, installs the three modules as before.
-`--arm frontdoor` installs the hub and the three modules, each module copy with
-`disable-model-invocation: true` added to its frontmatter and nothing else
-changed, so a module keeps its slash command and leaves the listing. That key
-is Claude Code's alone and a claude.ai upload refuses it, which is why it is
-added in the throwaway copies and never in `skills/`.
+Tuesday is one skill, `tuesday`, that routes each request to one module
+and runs it from a copy of that module's instructions. It ships at
+`skills/tuesday/`, and how its `references/` are generated is stated in its
+README ("How references/ is made"). Rounds 1 to 3 measured it as a prototype
+kept in `evals/arms/frontdoor/`; that hub is now `skills/tuesday/SKILL.md`, byte
+for byte, and the folder is gone. The measurement compares it with the three
+skills as they ship, so the harness has two arms. `--arm skills`, the default,
+installs the three modules as before, and never Tuesday. `--arm
+frontdoor` installs `skills/tuesday/` as it ships, its SKILL.md, `references/`
+and LICENSE without its README (`HUB_SHIPS` in `ci/sync.py`), and the three modules, each
+module copy with `disable-model-invocation: true` added to its frontmatter and
+nothing else changed (`hide` in `ci/sync.py`, the transform the Claude Code
+builds make), so a module keeps its slash command and leaves the listing. That
+key is Claude Code's alone and a claude.ai upload refuses it, which is why it is
+never in `skills/`. The arm refuses a working tree whose Tuesday references
+are out of date with the modules; `python ci/sync.py` regenerates them.
 
-The hub is hand-written, at `evals/arms/frontdoor/SKILL.md`, outside `skills/`,
-so nothing packages or ships it. Its `references/` folder is generated at
-install time by `frontdoor.py` from the module sources in the same working tree,
-and never edited:
-
-- **Playbooks.** `references/<module>.md` is that module's SKILL.md with its
-  frontmatter stripped and a `## Contents` list of its `##` and `###` headings
-  generated under its title. A playbook is read in full and runs past 100 lines,
-  where the guidance asks a reference file to open with its contents; a SKILL.md
-  body carries none, so the generator adds it rather than the module sources.
-  A playbook and its files still say SKILL.md where they mean the module's own;
-  the hub's section 3 tells the model that SKILL.md there means the playbook it
-  is running, so no third transform rewrites them.
-- **Paths note.** After the contents list, each playbook gets one generated
-  line, `PATHS_NOTE` in `frontdoor.py`: every `references/` path in it means the
-  folder that holds the playbook, never a module's own skill folder, pointing to
-  the hub's section 3, which states that rule. The hidden modules' folders sit
-  beside the hub holding files of the same names, and a listing of the project
-  shows them; round 2's diagnosis found Haiku, after routing correctly, reading
-  a playbook's files from the hidden module's own folder.
-- **Copies.** Every file in a module's `references/` is carried in the hub's one
-  flat `references/`. A file several modules carry with identical text, as every
-  convention mirror is, is carried once.
-- **Name clashes.** Where two modules carry one file name with different text,
-  or a module file is named like a playbook, each module's copy is carried as
-  `<module>-<name>`. Every mention of the old name in that module's playbook and
-  its own files, bare or under `references/`, is rewritten to the new one. Today
-  that is the per-module `rationale.md`, carried as `job-underwriter-rationale.md`,
-  `mock-interview-rationale.md` and `resume-tailor-rationale.md`. The module
-  sources keep their own names; only the generated copies move.
-- **Refusals.** Generation stops rather than guess when a shared file names a
-  clashing file, when a renamed file would overwrite another, or when a playbook
-  names a file the hub would not carry.
-
-`python evals/frontdoor.py` lists each generated file and where it came from,
-and `--out DIR` writes the assembled hub for reading. The hub links every
-generated file directly, by its `references/` path, and links nothing else.
-`check_skills.py --only frontdoor` holds it to that, both ways, so a module
-reference added or renamed is a hub edit in the same change. The same group
-holds the hub's frontmatter to the keys and limits a shipped skill meets, every
-unquoted value to what a strict YAML parser reads (no `: ` and no ` #`; a
-claude.ai upload parses strictly, where Claude Code falls back to a lenient
-reader), and every generated file over 100 lines to opening with its contents.
-
-What a front-door run is scored on is the playbook read first after `tuesday`
+What a Tuesday run is scored on is the playbook read first after `tuesday`
 fires, unless a hidden module was reached anywhere in the turn. Its labels:
 
 | Label | Meaning |
@@ -212,7 +175,7 @@ fires, unless a hidden module was reached anywhere in the turn. Its labels:
 | `timeout`, `error` | no verdict reached; set aside, as in the skills arm |
 | `void` | the run could see a Tuesday skill it did not install; set aside |
 
-A front-door run is read to its end. It used to stop at the routing decision,
+A Tuesday run is read to its end. It used to stop at the routing decision,
 the first playbook read; round 2's diagnosis found the hidden module reached
 after it — a Bash call into the hidden module's own `references/` — in a run
 that reader scored as a clean route. So a run routed right that later reaches a
@@ -267,10 +230,10 @@ every run is `focused`. A run cut off by the timeout is set aside even after
 the module loaded, because the rest of the turn is what the case tests and the
 cut-off never showed it. A module's whole run outlasts the 240 seconds a
 skills-arm routing run gets, so a run read to the end of its turn — every
-front-door run and every explicit case — gets 900 unless `--timeout` says
+Tuesday run and every explicit case — gets 900 unless `--timeout` says
 otherwise, and each case's result records the seconds it had. The default
 follows the reader because a flag can be left off: round 2's measurement ran its
-front-door arm at 240, and six mock-interview runs on Sonnet and Opus that had
+Tuesday arm at 240, and six mock-interview runs on Sonnet and Opus that had
 routed right were cut off while writing the pack and set aside. The init event's
 slash-command list is recorded with each E2 run.
 
@@ -285,7 +248,7 @@ python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e2-$M
   --cases evals/suite-explicit.json
 ```
 
-A front-door results file also records the hub's hash and one hash over the hub
+A Tuesday results file also records the hub's hash and one hash over the hub
 and every generated file, so a result names the exact text it measured.
 
 An arm with more than 10% of its runs set aside is re-run, and void runs count
@@ -308,7 +271,7 @@ holds the case's documents and nothing else.
 | `personal` | `skills/` in a config folder of the run's own, `config/case-<id>-<n>/` for the case's run `n`, beside the case folder; the session starts with `CLAUDE_CONFIG_DIR` set to that folder | a personal install, outside the working folder |
 | `plugin` | `skills/` in a plugin folder of the case's own, `plugins/case-<id>/`, beside the case folder, with the manifest in `.claude-plugin/plugin.json`; the session starts with `--plugin-dir` set to that folder | the Claude Code plugin, outside the working folder |
 
-The plugin layout is for the front-door arm only. The runner refuses
+The plugin layout is for the Tuesday arm only. The runner refuses
 `--arm skills --layout plugin`, because today's three skills do not ship as a
 plugin.
 
@@ -324,7 +287,7 @@ CLI asks. A read-only Bash command given the folder's path, such as `ls -R`,
 runs under it too (round 3's re-check). A Bash `cd` into the folder is still
 refused, because the CLI allows a `cd` only into a working folder.
 
-The front-door arm installs the same files in every layout, with the folder and
+The Tuesday arm installs the same files in every layout, with the folder and
 frontmatter names the project layout gives them. The plugin is named as the hub
 is installed, `tuesday-<run id>`, and the CLI lists each of its skills under
 that name: the hub as `tuesday-<id>:tuesday-<id>`, a module as
@@ -368,7 +331,7 @@ Outside the project layout each run records five measures, reported and never
 scored. The run prints the first three as counts over the arm's decided runs,
 and the last two summed, with a median a run (`reported` in the results file):
 
-- `hub_path_contact`, in the front-door arm: before any Skill call to the hub,
+- `hub_path_contact`, in the Tuesday arm: before any Skill call to the hub,
   a tool call named the hub's `SKILL.md` or a playbook,
   `references/<module>.md`, by a path into the hub's folder. In round 2 three
   of Haiku's four path contacts led to a hidden reach.
@@ -385,7 +348,7 @@ and the last two summed, with a median a run (`reported` in the results file):
 The two path measures read every word of a call's input as a path, with `.`
 and `..` resolved: a relative path from the case folder, or from the folder a
 `cd` earlier in the same command moved to. A skills-arm run is read only up to
-its first fire, where a front-door run is read to the end of its turn. So a
+its first fire, where a Tuesday run is read to the end of its turn. So a
 skills-arm run's measures cover the calls before the fire, and its `seconds`
 end there. A run that ended before its result event, a skills-arm run that
 fired or a timed-out one, has no `refused` list and no `output_tokens`
@@ -510,6 +473,37 @@ A run that does not fire the installed skill is re-run with the skill named, in 
 the response being graded. Both attempts are recorded in meta.json; only the
 graded one's files, research and checks count. A run that never fires the
 installed skill is harness-invalid: it is not this skill's output.
+
+### Through Tuesday
+
+`--via frontdoor` runs each module's fixtures with Tuesday installed as
+the Claude Code plugin ships it, instead of the module alone. It is for a
+non-inferiority check: a module run through Tuesday should do as well on
+its own fixtures as the module alone, since its text is the same.
+
+```bash
+python evals/run_fixtures.py --via frontdoor --out /tmp/fd --model claude-sonnet-5-5
+```
+
+The room holds nothing. Tuesday and the three hidden modules sit in a
+plugin folder beside the room, installed by the routing arm's own plugin layout
+(`run_routing.install_plugin`, "Layouts" above), and the run starts with
+`--plugin-dir` set to it and the routing arm's rule that lets Read open its
+skills folder, joined to the room's own `--allowedTools` list. The room is named
+for the case and the run alone, never for the module, because the hub's folder
+path reaches the model and a module's name in it would point the route.
+
+A fire counts only when the run read that module's playbook through the hub and
+reached no hidden module, read by the routing arm's own reader (`RunReader`,
+Tuesday arm), so a fire here is a route there. A run that did anything else is
+labelled as that reader labels it — another module, `hidden-<module>`,
+`tuesday-unrouted`, `neither`, `void` — and is nudged once, in a new room, with
+the hub named by its plugin id; a run that still does not route is
+harness-invalid. Each run's meta.json records `via`.
+
+What has not been run: any live `--via frontdoor` pass, so `--plugin-dir`
+together with the rooms' `--setting-sources project` is unverified in a fixture
+room; and the gate a pass would feed, which the owner sets.
 
 ### Research rooms: denied and canned
 
