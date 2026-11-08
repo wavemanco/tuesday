@@ -1985,11 +1985,11 @@ def test_via_frontdoor() -> None:
     check_true("--via defaults to the module alone, accepts frontdoor, and reaches every run",
                run_fixtures.VIAS == ("skill", "frontdoor")
                and 'ap.add_argument("--via", choices=VIAS, default="skill",' in source
-               and "args.model, j[2], args.via)" in source)
+               and "args.model, j[2], args.via, args.layout)" in source)
     with tempfile.TemporaryDirectory() as tmp:
         room = Path(tmp) / "rooms" / "case-3-denied-ab12cd34"
         room.mkdir(parents=True)
-        plugin, names = run_fixtures.install_via_frontdoor(room, "ab12cd34")
+        plugin, names = run_fixtures.install_in_plugin(room, "ab12cd34")
         check("the room holds nothing: the plugin sits beside it, where the routing arm's plugin layout puts it",
               (list(room.iterdir()), plugin), ([], run_routing.home(room, "plugin")))
         reference = Path(tmp) / "reference"
@@ -1997,11 +1997,11 @@ def test_via_frontdoor() -> None:
               (files_of(plugin), names), (files_of(reference) if run_routing.install_plugin(reference, "ab12cd34")
                                           else None, NAMES))
         rule = run_routing.read_rule(room, "plugin")
-        denied = run_fixtures.via_frontdoor_flags(run_fixtures.room_flags("denied"), room)
+        denied = run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), room)
         check("a denied room gains the plugin and a rule to read its skills folder",
               denied, run_fixtures.room_flags("denied") + ["--allowedTools", rule, "--plugin-dir", str(plugin)])
         paths = {"mcp": Path("/x/mcp.json")}
-        canned = run_fixtures.via_frontdoor_flags(run_fixtures.room_flags("canned", paths), room)
+        canned = run_fixtures.plugin_flags(run_fixtures.room_flags("canned", paths), room)
         check("a canned room keeps one --allowedTools list, the read rule joined to its search tools",
               (canned.count("--allowedTools"), canned[canned.index("--allowedTools") + 1:canned.index("--allowedTools") + 4]),
               (1, [rule, "mcp__web__search", "mcp__web__fetch"]))
@@ -2538,6 +2538,20 @@ def test_quotes() -> None:
     check("a two-word quote in the evidence column is checked too, and a true one passes",
           fails('"Looker instance" — your message; '
                 '"Built the company\'s Looker instance from scratch" — your message'), [])
+    kelverton = fixture("mock-interview", 5)
+    report = "the market report their strategy team circulated internally last quarter, which I've read"
+    # opus/alone/mock-interview-5.run3.md, E2, its quotation also placed in the evidence column
+    got = output_checks.check_quotes(
+        "| # | Requirement | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+        f'| F4 | Commercial point of view | "{report}" — your message | medium |\n\n'
+        "| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+        f'| E2 | "What did you make of the market report?" | One thing it confirmed for you | [grounded] "{report}" |\n',
+        kelverton["prompt"], (), kelverton["candidate_text"])
+    check("must pass: fixture 5's candidate_text holds the candidate's own sentences in the message, not only the "
+          "background (m18, mock-interview 5)", [c["why"] for c in got["checks"] if c["verdict"] == "FAIL"], [])
+    check_true("and leaves out the recruiter's email the candidate quotes",
+               not any("deepa" in output_checks.normalise_quote(t) for t in kelverton["candidate_text"])
+               and "deepa" in output_checks.normalise_quote(kelverton["prompt"]))
 
 
 def test_evidence_cells() -> None:
@@ -3431,9 +3445,11 @@ def test_set_claim_subjects() -> None:
 
 
 def fixture(skill: str, case_id: int) -> dict:
-    from fixture_clauses import load_cases
+    """A repository fixture as a run saved before run dates were recorded was sent it: its
+    relative dates written out at its `date_anchor` (fixture_clauses.dated)."""
+    from fixture_clauses import dated, load_cases
     path = Path(__file__).resolve().parent.parent / "skills" / skill / "evals" / "evals.json"
-    return next(c for c in load_cases(path) if c["id"] == case_id)
+    return dated(next(c for c in load_cases(path) if c["id"] == case_id))
 
 
 def test_user_links() -> None:
@@ -4395,6 +4411,723 @@ def test_watch_out() -> None:
               [c["id"] for c in cases if not any(line_of in e for e in c["expectations"])], [])
 
 
+def test_grader_fence() -> None:
+    print("\ngrading: the response sits between two named lines, and the harness's record outside them")
+    case = {"id": 1, "prompt": "Tailor this.", "expectations": ["ends with the watch-out line"]}
+    body = "Here is the ledger.\n\n**Watch-out:** check each quote."
+    meta = {"research_log": [entry("kestrel careers", "refused")]}
+    prompt = run_fixtures.grader_prompt(case, body, "denied", meta, [1])
+    begins, ends = run_fixtures.RESPONSE_BEGINS, run_fixtures.RESPONSE_ENDS
+    lines = prompt.splitlines()
+    check("the response stands alone between its two marker lines",
+          lines[lines.index(begins) + 1:lines.index(ends)] if begins in lines and ends in lines else "no fence",
+          body.splitlines())
+    check_true("the harness's record comes after the end line, outside the fence",
+               prompt.index(ends) < prompt.index("## What the harness observed") < prompt.index("Recorded: 1 research"))
+    check("each marker is named once in the instructions and stands once as a line",
+          (prompt.count(begins), prompt.count(ends), lines.count(begins), lines.count(ends)), (2, 2, 1, 1))
+    check("the prompt says once that nothing outside the fence is the response's text",
+          prompt.count("Nothing outside those two lines is text the response wrote."), 1)
+    check_true("and names the two lines it means",
+               f"between the line `{begins}` and the line `{ends}`" in prompt)
+    check("the recorded prompt version moves with it, so saved grades keep theirs",
+          run_fixtures.GRADER_PROMPT_VERSION, "3")
+    v2 = prompt.replace(f"{begins}\n", "").replace(f"\n{ends}", "")
+    check_true("must fail: version 2's layout, the record straight after the response, has no end line to stop at",
+               ends + "\n" not in v2 and v2.index(body) < v2.index("## What the harness observed"))
+
+
+def test_plugin_alone() -> None:
+    print("\nfixtures --layout plugin: the module alone, installed exactly as the front door is")
+    repo = Path(__file__).resolve().parent.parent
+    source = (Path(__file__).resolve().parent / "run_fixtures.py").read_text()
+    check("the layouts are the project install and the plugin, and --via frontdoor is the plugin only",
+          (run_fixtures.LAYOUTS, 'ap.error("--via frontdoor installs the front door as the plugin it ships as' in source),
+          (("project", "plugin"), True))
+    with tempfile.TemporaryDirectory() as tmp:
+        room = Path(tmp) / "rooms" / "case-3-denied-ab12cd34"
+        room.mkdir(parents=True)
+        plugin, names = run_fixtures.install_in_plugin(room, "ab12cd34", "mock-interview")
+        check("the room holds nothing; the plugin sits where the front door's does",
+              (list(room.iterdir()), plugin), ([], run_routing.home(room, "plugin")))
+        check("it holds the one module under this run's name", names, {"mock-interview": "mock-interview-ab12cd34"})
+        check("and the manifest names the plugin as its one listed skill is installed",
+              json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["name"], "mock-interview-ab12cd34")
+        installed = plugin / "skills" / "mock-interview-ab12cd34"
+        copy = (installed / "SKILL.md").read_text()
+        check_true("the module is visible: no hiding key, its name renamed and nothing else",
+                   run_routing.HIDDEN_KEY not in copy and copy == (repo / "skills/mock-interview/SKILL.md").read_text()
+                   .replace("name: mock-interview\n", "name: mock-interview-ab12cd34\n", 1))
+        check("the module's files are the project install's, file for file",
+              files_of(installed), files_of(Path(tmp) / "p" / ".claude" / "skills" / "mock-interview-ab12cd34")
+              if run_fixtures.install_one(Path(tmp) / "p", "mock-interview", "ab12cd34") else None)
+        front = Path(tmp) / "rooms" / "case-3-denied-cd34ef56"
+        front.mkdir()
+        run_fixtures.install_in_plugin(front, "cd34ef56")
+        flags = [run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), r) for r in (room, front)]
+        same = [[a.replace(r.name, "ROOM") for a in f] for f, r in zip(flags, (room, front))]
+        check("both arms run under the same flags, the read rule and --plugin-dir naming each room's own plugin",
+              same[0], same[1])
+        check_true("and those name the plugin beside the room", "--plugin-dir" in same[0]
+                   and any(a.startswith("Read(") and "/plugins/ROOM/skills/" in a for a in same[0]))
+        check("the plugin's id prefixes the module, as the front door's prefixes the hub",
+              run_routing.installed_command(names["mock-interview"], run_routing.plugin_prefix(names, "plugin")),
+              "mock-interview-ab12cd34:mock-interview-ab12cd34")
+
+    qualified = "mock-interview-ab12cd34:mock-interview-ab12cd34"
+    init = ev_init([qualified, "dataviz"])
+    # run_routing.skill_id: the CLI takes a name after one leading `/`, and the fire is read as routing reads it.
+    for label, called, want in (("the plugin-qualified id", qualified, "fired"),
+                                ("the name alone", "mock-interview-ab12cd34", "fired"),
+                                ("the name alone after a `/`", "/mock-interview-ab12cd34", "fired"),
+                                ("the qualified id after a `/`", "/" + qualified, "fired"),
+                                ("the shipped name, another skill", "anthropic-skills:mock-interview", "wrong_skill"),
+                                ("the shipped name after a `/`", "/mock-interview", "wrong_skill")):
+        got = run_fixtures.parse_stream(stream(init, ev_tool("s", "Skill", {"skill": called}), ev_text("pack"),
+                                               ev_result()), qualified)
+        check(f"a Skill call by {label} is {want}", got["fire"], want)
+    got = run_fixtures.parse_stream(stream(ev_init([qualified, "anthropic-skills:mock-interview"]), ev_result()),
+                                    qualified)
+    check("the init list finds the qualified skill loaded, and a host's same-named skill competing",
+          (got["init"]["installed_loaded"], got["init"]["competing_skills"]),
+          (True, ["anthropic-skills:mock-interview"]))
+    check("one reader of names: the fixture runner's is the routing reader's",
+          [run_routing.local_name(n) for n in ("/" + qualified, "/mock-interview-ab12cd34", " mock-interview-ab12cd34 ")],
+          ["mock-interview-ab12cd34"] * 3)
+    got = run_fixtures.parse_stream(stream(ev_init(["mock-interview-ab12cd34"]), ev_tool(
+        "s", "Skill", {"skill": "mock-interview-ab12cd34"}), ev_result()), "mock-interview-ab12cd34")
+    check("the project install's bare name still fires, loaded and uncontested",
+          (got["fire"], got["init"]["installed_loaded"], got["init"]["competing_skills"]), ("fired", True, []))
+
+    check("refusals are counted by tool, with a save among them flagged",
+          run_fixtures.refusals({"result": {"incomplete": False, "permission_denials": [
+              {"tool_name": "Write"}, {"tool_name": "Bash"}, {"tool_name": "Bash"}]}}),
+          ({"Bash": 2, "Write": 1}, True))
+    check("none refused is an empty count, not a missing one",
+          run_fixtures.refusals({"result": {"incomplete": False, "permission_denials": []}}), ({}, False))
+    check("a run that ended before its result event has its refusals unread, never none",
+          run_fixtures.refusals({"result": {"incomplete": True, "permission_denials": [{"tool_name": "Write"}]}}),
+          (None, None))
+
+    case = {"id": 3, "prompt": "Prep me.", "expectations": ["a"]}
+    seen = []
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        nudged = prompt.startswith("Use the")
+        seen.append((Path(cwd), list(extra_args), prompt, installed))
+        events = [ev_init([installed])]
+        if nudged:
+            events.append(ev_tool("s", "Skill", {"skill": installed}))
+        events += [ev_text("second" if nudged else "first"), ev_result([{"tool_name": "Write"}] if nudged else [])]
+        parsed = run_fixtures.parse_stream(stream(*events), installed)
+        parsed["stdout"] = ""
+        return parsed
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as printed:
+                meta = run_fixtures.execute("mock-interview", case, out, 0, 1, None, None, "skill", "plugin")
+        finally:
+            run_fixtures.claude = real
+        check("each room is named for the case alone, as the front door's are",
+              [room.name.startswith("case-3-denied-") and "mock-interview" not in room.name for room, *_ in seen],
+              [True, True])
+        check("each run loads its own plugin from beside its room, its skills folder readable",
+              [(a[a.index("--plugin-dir") + 1], run_routing.read_rule(room, "plugin") in a) for room, a, *_ in seen],
+              [(str(run_routing.home(room, "plugin")), True) for room, *_ in seen])
+        check("the nudge names the module by its plugin id",
+              seen[1][2].startswith(f"Use the {seen[1][3]} skill") and seen[1][3].count("mock-interview-") == 2, True)
+        check("the nudged run fired, graded as valid, and the meta records how it was installed",
+              (meta["fire"], meta["harness"]["status"], meta["via"], meta["layout"]), ("fired", "ok", "skill", "plugin"))
+        check("and what was refused, reported: a refused save", (meta["refused"], meta["save_refused"]),
+              ({"Write": 1}, True))
+        check_true("the run's line says where the module sat and what was refused",
+                   "alone, in a plugin" in printed.getvalue() and "refused Write 1 (a save among them)" in printed.getvalue())
+        seen.clear()
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                meta = run_fixtures.execute("mock-interview", case, out, 1, 1, None)
+        finally:
+            run_fixtures.claude = real
+        check("the project install is still the default: a room named for the module, the skill inside it",
+              [(room.name.startswith("mock-interview-3-"), (room / ".claude" / "skills").is_dir(),
+                "--plugin-dir" in a) for room, a, *_ in seen], [(True, True, False), (True, True, False)])
+        check("and recorded as such", meta["layout"], "project")
+    proc = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "run_fixtures.py"), "--via",
+                           "frontdoor", "--layout", "project", "--out", "/nonexistent/never-made"],
+                          capture_output=True, text=True)
+    check("must fail: --via frontdoor with --layout project is refused before anything runs",
+          (proc.returncode, "--layout plugin" in proc.stderr), (2, True))
+
+
+def test_relative_dates() -> None:
+    print("\nfixtures: dates relative to the run, written out for the run's date or the fixture's anchor")
+    import datetime
+    import fixture_clauses as fc
+    day = datetime.date(2026, 10, 12)
+    check("offsets in days, months and years, in the order written",
+          [fc.written(fc.shifted(day, o), f) for o, f in (("", "day month year"), ("+9d", "day month"),
+                                                          ("-4m", "month year"), ("-4m+2y", "year"))],
+          ["12 October 2026", "21 October", "June 2026", "2028"])
+    check("a month step keeps the day where the month has it, else its last day",
+          [fc.shifted(datetime.date(2026, 3, 31), "-1m"), fc.shifted(datetime.date(2028, 2, 29), "+1y"),
+           fc.shifted(datetime.date(2026, 12, 25), "+9d")],
+          [datetime.date(2026, 2, 28), datetime.date(2029, 2, 28), datetime.date(2027, 1, 3)])
+    case = {"id": 9, "date_anchor": "2026-10-12", "prompt": "Copied {{date:day month year}}; rounds on {{date+9d:day month}}.",
+            "candidate_text": ["since {{date-1y:year}}"], "expectations": ["names {{date+9d:day month}}"],
+            "research": {"pages": [{"url": "https://x.test/{{date:year}}", "text": "{{date-4m:month year}} brief"}]}}
+    got = fc.dated(case, datetime.date(2027, 3, 1))
+    check("every string in the case is written out for the run's date: prompt, pages, candidate_text, expectations",
+          (got["prompt"], got["candidate_text"], got["expectations"], got["research"]["pages"][0]),
+          ("Copied 1 March 2027; rounds on 10 March.", ["since 2026"], ["names 10 March"],
+           {"url": "https://x.test/2027", "text": "November 2026 brief"}))
+    check("with no run date, the anchor stands in", fc.dated(case)["prompt"], "Copied 12 October 2026; rounds on 21 October.")
+    plain = {"id": 1, "prompt": "Interview next week."}
+    check("a case with no reference comes back as it was", fc.dated(plain, day) is plain, True)
+    for label, bad, needle in (("a reference with no anchor and no run date", {"id": 2, "prompt": "on {{date:year}}"},
+                                "no run date or date_anchor"),
+                               ("a reference the pattern cannot read", {"id": 3, "date_anchor": "2026-10-12",
+                                                                        "prompt": "on {{date+9w:day month}}"},
+                                "a date reference the loader cannot read")):
+        try:
+            fc.dated(bad)
+            got = "no error"
+        except fc.ClauseError as exc:
+            got = needle if needle in str(exc) else str(exc)
+        check(f"must fail: {label}", got, needle)
+
+    repo = Path(__file__).resolve().parent.parent
+    m8, m7 = fixture("mock-interview", 8), fixture("mock-interview", 7)
+    check_true("fixture 8 at its anchor is the text its saved runs were sent: this morning, the interviews, the brief",
+               "copied this morning (12 October 2026)" in m8["prompt"] and "Three rounds on 21 October:" in m8["prompt"]
+               and "from the 2026 strategy brief Ashgrove published in June 2026," in m8["prompt"]
+               and "by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending "
+                   "product in Q1 2027" in m8["prompt"]
+               and (m8["research"]["pages"][2]["url"], m8["research"]["pages"][2]["title"],
+                    m8["research"]["pages"][2]["text"][:9]) == ("https://ashgrovecu.org/news/strategy-2026",
+                                                                "Ashgrove strategy brief 2026", "June 2026"))
+    check_true("fixture 7's news page at its anchor is its saved text",
+               m7["research"]["pages"][2]["text"].startswith("August 2026: Project Larkspur")
+               and "from January 2027," in m7["research"]["pages"][2]["text"])
+    # sha256 of [prompt, research.pages] as the m18 runs were sent them (dce0299), so a regrade
+    # of a saved run shows graders the request that run answered, byte for byte.
+    sent = {7: "51581377a8fc870051bfec8545d9ed01962102e0ad6f1473b80a8df8ada5d4c9",
+            8: "451cb97a91b93aa548ec11732e78e9bf7b42429543af320492efb52473fd0ac3"}
+    import hashlib
+    check("each changed fixture at its anchor is, prompt and pages, byte for byte what its saved runs were sent",
+          {fid: hashlib.sha256(json.dumps([c["prompt"], c["research"]["pages"]], ensure_ascii=False,
+                                          sort_keys=True).encode()).hexdigest() for fid, c in ((7, m7), (8, m8))}, sent)
+    later = fc.dated(next(c for c in fc.load_cases(repo / "skills/mock-interview/evals/evals.json") if c["id"] == 8),
+                     datetime.date(2027, 5, 20))
+    check_true("on a later run date the brief is four months old and the interviews nine days ahead",
+               "copied this morning (20 May 2027)" in later["prompt"] and "Three rounds on 29 May:" in later["prompt"]
+               and "published in January 2027," in later["prompt"] and "October" not in later["prompt"]
+               and later["research"]["pages"][2]["text"].startswith("January 2027: move 40%"))
+    later7 = fc.dated(next(c for c in fc.load_cases(repo / "skills/mock-interview/evals/evals.json") if c["id"] == 7),
+                      datetime.date(2027, 5, 20))["research"]["pages"][2]["text"]
+    check_true("and fixture 7's news page, on a later run date, is two months old and announces a change still ahead",
+               later7.startswith("March 2027: Project Larkspur") and "from August 2027," in later7)
+
+    seen = []
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        seen.append(prompt)
+        server = json.loads(Path(extra_args[extra_args.index("--mcp-config") + 1]).read_text())["mcpServers"]["web"]
+        seen.append(json.loads(Path(server["args"][2]).read_text()))
+        Path(server["args"][3]).write_text(json.dumps({"rpc": "initialize"}) + "\n")
+        parsed = run_fixtures.parse_stream(stream(ev_init([installed], ("Skill", "mcp__web__search", "mcp__web__fetch"),
+                                                          ({"name": "web", "status": "connected"},)),
+                                                  ev_tool("s", "Skill", {"skill": installed}), ev_text("pack"),
+                                                  ev_result()), installed)
+        parsed["stdout"] = ""
+        return parsed
+    raw = next(c for c in fc.load_cases(repo / "skills/mock-interview/evals/evals.json") if c["id"] == 8)
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                meta = run_fixtures.execute("mock-interview", raw, out, 0, 1, None, "canned", on=datetime.date(2027, 1, 15))
+        finally:
+            run_fixtures.claude = real
+        check("the meta records the run's date", meta["run_date"], "2027-01-15")
+        check_true("the room is sent the prompt and served the pages written for that date",
+                   "copied this morning (15 January 2027)" in seen[0]
+                   and seen[1]["pages"][2]["text"].startswith("September 2026: move 40%"))
+        stem = meta["stem"]
+        upcoming = raw["expectations"][0] + " The pack treats the {{date+9d:day month}} rounds as upcoming."
+        asked = {**raw, "expectations": [upcoming, *raw["expectations"][1:]]}
+        for grader in (1,):
+            captured = []
+            def grade_fake(prompt, cwd, timeout, extra_args=(), output="json", installed=""):
+                captured.append(prompt)
+                return {"result": json.dumps({"verdicts": [{"n": 1, "why": "w", "verdict": "PASS"}]}), "modelUsage": {}}
+            real, run_fixtures.claude = run_fixtures.claude, grade_fake
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    run_fixtures.grade("mock-interview", asked, out, 0, grader, 1, None, "canned", [1])
+                    # The strategy line as the room was sent it on 15 January 2027: "by 2029", where the
+                    # fixture's anchor writes "by 2028".
+                    (out / f"{stem}.md").write_text(
+                        "| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                        '| F1 | "move 40% of member service to digital channels by 2029" — strategy brief | none given '
+                        "| none |\n")
+                    rec = run_fixtures.check_run("mock-interview", raw, out, 0, "canned")
+                    old_meta = json.loads((out / f"{stem}.meta.json").read_text())
+                    old_meta.pop("run_date")
+                    (out / f"{stem}.meta.json").write_text(json.dumps(old_meta))
+                    run_fixtures.grade("mock-interview", asked, out, 0, 2, 1, None, "canned", [1])
+            finally:
+                run_fixtures.claude = real
+        hashes = [json.loads((out / f"{stem}.grade-{g}.json").read_text())["expectation_sha256"]["1"] for g in (1, 2)]
+        check_true("an expectation with a relative date is shown to each grader written for its run's date",
+                   "the 24 January rounds" in captured[0]
+                   and "the 21 October rounds" in captured[1])
+        check("and hashed as the fixture writes it, one question on every run date (recurring.py's key)",
+              hashes, [run_fixtures.expectation_sha(upcoming)] * 2)
+        check_true("a grader is shown the request as the run's date wrote it",
+                   "copied this morning (15 January 2027)" in captured[0])
+        check_true("and a run that recorded no date is graded against its fixture's anchor, the text it was sent",
+                   "copied this morning (12 October 2026)" in captured[1])
+        check("the checks read the same dated case: the requirement quoted as the run's date wrote it is in the request",
+              verdict_of(rec, "quotes", "requirements"), "PASS")
+
+
+# Real cells, cut from the m18 runs (scratchpad/m18/<model>/<arm>/<stem>.md), so the re-cut
+# label and the trace check are tested against what skills wrote.
+MI8_OWN = ("6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log "
+           "and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional "
+           "manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.")
+RECUT_SNAPSHOT = (
+    "| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+    # opus/tuesday/mock-interview-8.canned.run0.md, F2 and F9 (and F8's shortened quote)
+    '| F2 | "across branches and the contact centre" — JD | "Never worked in a contact centre" — your message | none |\n'
+    '| F8 | "experience handling regulated complaints" — JD | "I handled the branch\'s formal complaints log" — your message | low |\n'
+    '| F9 | "confident presenting to senior leaders" — JD | "I\'ve never presented to anyone above regional level." — your message | none |\n')
+
+
+def recut_bank(cell: str) -> str:
+    return (RECUT_SNAPSHOT + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+            f"| C2 | Tell me about it. | Say what you did. | {cell} |\n")
+
+
+def test_recut_quotes() -> None:
+    print("\nchecks: a re-cut quote, the candidate's own words cut otherwise than the evidence column, is labelled")
+
+    def quote_fails(cell: str, own: str = MI8_OWN) -> list[dict]:
+        got = output_checks.check_quotes(recut_bank(cell), "prompt " + own, (), [own])
+        return [c for c in got["checks"] if c["check"] == "quotes" and c["target"] == "banks" and c["verdict"] == "FAIL"]
+    # opus/tuesday/mock-interview-8.canned.run0.md, C2: two of the column's quotations and the "and" between them
+    joined = quote_fails('[grounded] "Never worked in a contact centre, and I\'ve never presented to anyone above regional level."')
+    check("must fail, labelled joined: two of the column's quotations run together, the candidate's \"and\" between",
+          [(c["verdict"], c.get("recut")) for c in joined], [("FAIL", "joined")])
+    check_true("and the reason says so", "a re-cut quote, joined" in joined[0]["why"])
+    # opus/tuesday/mock-interview-8.canned.run0.md, H2 against F8's shorter quotation
+    unquoted = quote_fails('[grounded] "I handled the branch\'s formal complaints log and trained new tellers on our escalation script."')
+    check("must fail, labelled unquoted: a candidate sentence the column quotes only part of",
+          [(c["verdict"], c.get("recut")) for c in unquoted], [("FAIL", "unquoted")])
+    check("must fail, labelled unquoted: a candidate sentence the column does not quote at all",
+          [c.get("recut") for c in quote_fails('[grounded] "I built the monthly complaints spreadsheet our regional manager uses."')],
+          ["unquoted"])
+    shared = quote_fails('[grounded] "6 years in retail banking, the last 3 as a branch supervisor."')
+    check("a word an unrelated column quotation shares covers nothing: unquoted, not joined",
+          [c.get("recut") for c in shared], ["unquoted"])
+    stray = quote_fails('[grounded] "I led the regional complaints team"')
+    check("must fail, unlabelled: words the candidate never gave are no re-cut quote",
+          [(c["verdict"], "recut" in c) for c in stray], [("FAIL", False)])
+    check("must pass, unlabelled: one of the column's quotations, or part of one",
+          quote_fails('[grounded] "Never worked in a contact centre" and "formal complaints log"'), [])
+    own2 = ("7 years in warehouse and distribution ops, currently a senior shift manager over 3 supervisors; cut "
+            "mis-pick rate 40% by redesigning the pick path; ran the site's peak-season surge plan two years running; "
+            "green belt certified; solid Excel, never used Power BI.")
+    snapshot2 = ("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                 '| F5 | "build reporting in Excel/Power BI" — JD | "solid Excel" — your message | medium |\n'
+                 '| F6 | "build reporting in Excel/Power BI" — JD | "never used Power BI" — your message | none |\n')
+    # opus/alone/mock-interview-2.run4.md, F5, F6 and A4
+    got = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+                                     '| A4 | Q | G | [grounded] "solid Excel, never used Power BI" |\n', own2, (), [own2])
+    check("must fail, labelled joined: two quotations joined by a comma (m18, mock-interview 2)",
+          [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["joined"])
+    edge = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+                                      '| A4 | Q | G | [grounded] "and never used Power BI" |\n',
+                                      own2.replace("solid Excel, never", "solid Excel and never"), (),
+                                      [own2.replace("solid Excel, never", "solid Excel and never")])
+    check("must fail, labelled unquoted: a joining word at the quotation's edge joins nothing",
+          [c.get("recut") for c in edge["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["unquoted"])
+    mi6 = fixture("mock-interview", 6)["candidate_text"]
+    snapshot6 = ("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                 '| F3 | "own delivery" — role summary | "pushed a reliability quarter through against roadmap pressure" '
+                 '— your message; "My team\'s on-call burden dropped 60%" — your message | medium |\n')
+    # sonnet-recheck/tuesday/mock-interview-6.run4.md, F3 and B4: the sentence whole, its two stretches in F3
+    got = output_checks.check_quotes(snapshot6 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+                                     '| B4 | Q | G | [grounded] "My team\'s on-call burden dropped 60% after I pushed a '
+                                     'reliability quarter through against roadmap pressure" |\n', mi6[0], (), mi6)
+    check("must fail, labelled joined: the column's two stretches joined by a conjunction and its clause's subject "
+          "(m18, mock-interview 6)",
+          [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["joined"])
+    # Synthetic: the second sentence holds every word of the column's one quotation, and is quoted
+    own3 = ("I ran the weekly sales review for the north region. After I left, the north region ran the weekly "
+            "sales review without me.")
+    got = output_checks.check_quotes("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                                     '| F1 | "run the sales cadence" — JD | "I ran the weekly sales review for the north '
+                                     'region" — your message | high |\n\n| # | Question | Answer guidance | Provenance |\n'
+                                     '|---|---|---|---|\n| A1 | Q | G | [grounded] "the north region ran the weekly sales '
+                                     'review" |\n', own3, (), [own3])
+    check("must fail, labelled unquoted: words the column quotes elsewhere in the passage cover nothing here, "
+          "read by place, not by text",
+          [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["unquoted"])
+    part = output_checks.recut_kind(["the branch's formal"], output_checks.normalise_quote(MI8_OWN),
+                                    ["the branch", "formal complaints log"])
+    check("a word a quotation covers only part of is not covered: \"branch\" of \"branch's\" leaves it unquoted",
+          part, "unquoted")
+    check("the kinds are the two the scorer reads", sorted(output_checks.RECUT_KINDS), ["joined", "unquoted"])
+
+
+TRACES_HEAD = "| # | Section | Current line | Proposed line | Operation | Traces to | Provenance | Status |\n|---|---|---|---|---|---|---|---|\n"
+
+
+def test_traces() -> None:
+    print("\nchecks: resume-tailor's Traces to cells quote the candidate's material, verbatim")
+    priya = fixture("resume-tailor", 1)
+
+    def fails(rows: str, case: dict = priya, head: str = TRACES_HEAD) -> list[tuple[str, str]]:
+        got = output_checks.check_traces(head + rows, case.get("candidate_text"), case.get("prompt", ""))
+        return [(c["verdict"], c["kind"]) for c in got["checks"] if c["verdict"] == "FAIL"]
+    # haiku/alone/resume-tailor-1.run1.md, E1
+    e1 = ('| E1 | Experience | "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." '
+          '| *(unchanged, moved to lead the ledger-pipeline entry)* | `reorder` | "I own three services in our ledger '
+          'pipeline — one handles about 40k requests/minute at peak." | `[grounded]` cv | pending your approval |\n')
+    check("must pass: a trace quoting the candidate's sentence whole (m18, resume-tailor 1)", fails(e1), [])
+    check("must fail: the same sentence cut mid-word, a quotation found only inside a longer word",
+          fails(e1.replace('pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
+                           'pipelin" | `[grounded]`')), [("FAIL", "judgement")])
+    curly = e1.replace('| "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
+                       '| “I own three services in our ledger pipeline – one handles about 40k requests/minute at peak.” | `[grounded]`')
+    check("must pass: the same trace in curly quotes, an en dash for its dash (normalise_quote's reading)",
+          fails(curly), [])
+    rowan = fixture("resume-tailor", 5)
+    # haiku/alone/resume-tailor-5.run0.md, rows 3 and 4, in that run's six-column ledger
+    head5 = "| # | Current line | Proposed line | Operation | Traces to | Status |\n|---|---|---|---|---|---|\n"
+    two = ('| 3 | HubSpot daily for 4 years | Daily HubSpot user for 4 years; pull my own performance reporting in HubSpot. '
+           '| reorder | "HubSpot daily for 4 years" + "I pull my own numbers in HubSpot reporting" | pending your approval |\n')
+    check("must pass: two quotations of the candidate's, each verbatim (m18, resume-tailor 5)", fails(two, rowan, head5), [])
+    # haiku/alone/resume-tailor-2.run4.md, L4: a trace of the candidate's own sentence in the message
+    dev = ('| L4 | Summary (optional) | *(no current line)* | "Moving from analytics into data engineering." | `reframe` '
+           '| "I\'m trying to move into data engineering from analytics." | `[grounded]` your message | pending your approval |\n')
+    check("must pass: fixture 2's candidate_text holds the candidate's sentence in the message (m18, resume-tailor 2)",
+          fails(dev, fixture("resume-tailor", 2)), [])
+    check("must pass: a quotation cut at an ellipsis, each piece verbatim",
+          fails(two.replace('"I pull my own numbers in HubSpot reporting"', '"I pull my own numbers … reporting"'), rowan, head5), [])
+    pointer = ('| 4 | built our lifecycle email programme from scratch, 12 automated flows | No change. | none '
+               '| source sentence | — |\n')
+    check("must fail, as format: a cell that refers to its sentence instead of quoting it (m18, resume-tailor 5)",
+          fails(pointer, rowan, head5), [("FAIL", "format")])
+    sam = fixture("resume-tailor", 4)
+    # haiku/tuesday/resume-tailor-4.run2.md, E1: the resume's dash quoted as a comma
+    altered = ('| E1 | Skills (assumed) | no Kubernetes entry | "Kubernetes (proof-of-concept for two months, never went to '
+               'production)" | surface | "Ran a Kubernetes proof-of-concept for two months last year, never went to '
+               'production." | `[grounded]` cv | pending your approval |\n')
+    check("must fail: a quotation tidied, the candidate's dash turned into a comma (m18, resume-tailor 4)",
+          fails(altered, sam), [("FAIL", "judgement")])
+    check("must pass: the same row quoting the sentence as the resume has it",
+          fails(altered.replace("last year, never went", "last year — never went"), sam), [])
+    nadia = fixture("resume-tailor", 3)
+    # sonnet/alone/resume-tailor-3.run3.md, E1: the dossier's drafted edit quoted beside the CV's sentence
+    inherited = ('| E1 | Experience | "Wrote the internal integration playbook the whole team uses." (placement not seen) '
+                 '| "Wrote the internal integration playbook the whole team uses." as its own line | `surface` | "Wrote the '
+                 'internal integration playbook the whole team uses."; dossier E1: "surface the integration playbook '
+                 'authorship into its own line" | `[grounded]` your CV, dossier | pending your approval |\n')
+    check("must pass: the CV's sentence quoted, and beside it the dossier's drafted edit, verbatim with its origin "
+          "named — edit-ledger.md asks for the one and forbids neither (m18, resume-tailor 3)", fails(inherited, nadia), [])
+    # sonnet/alone/resume-tailor-3.run1.md, E1: the same cell, the dossier item named with no colon
+    check("must pass: the same, the dossier item named right before its quotation with no colon (m18, resume-tailor 3)",
+          fails(inherited.replace("dossier E1: ", "dossier E1 "), nadia), [])
+    only = inherited.replace('"Wrote the internal integration playbook the whole team uses."; dossier E1:', "dossier E1:")
+    got = output_checks.check_traces(TRACES_HEAD + only, nadia["candidate_text"], nadia["prompt"])
+    check("must fail: a cell quoting only the dossier's drafted edit holds no quotation of the candidate's material",
+          [(c["verdict"], "quotes no sentence of the candidate's material" in c["why"]) for c in got["checks"]],
+          [("FAIL", True)])
+    got = output_checks.check_traces(TRACES_HEAD + inherited.replace("authorship into its own line", "authorship up"),
+                                     nadia["candidate_text"], nadia["prompt"])
+    check("must fail: the dossier's drafted edit altered, beside a true trace, is not in the request",
+          [(c["verdict"], "is not in the request (quoted as from 'dossier E1')" in c["why"]) for c in got["checks"]],
+          [("FAIL", True)])
+    check("must fail: a quotation the cell says is the CV's, not in it, is held to the candidate's material, never the request",
+          fails(inherited.replace('dossier E1: "surface the integration playbook authorship into its own line"',
+                                  'your CV: "surface the integration playbook authorship into its own line"'), nadia),
+          [("FAIL", "judgement")])
+    row = ("R1 '3+ yrs PM' fit_status adjacent, gap_type transferability, confidence medium, reasoning 'integration "
+           "leadership is adjacent; roadmap ownership and prioritisation authority not evidenced'")
+    check("must pass: a quotation of the dossier's evidence_map row, which edit-ledger.md names as the candidate's material",
+          fails(inherited.replace('dossier E1: "surface the integration playbook authorship into its own line"',
+                                  'dossier R1: "integration leadership is adjacent"'), nadia), [])
+    check_true("fixture 3's candidate_text holds that evidence_map row", any(row in t for t in nadia["candidate_text"]))
+    jd = e1.replace('| "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
+                    '| "design and ship Go services handling high request volume" | `[grounded]`')
+    check("must fail: a line of the JD quoted as a trace", fails(jd), [("FAIL", "judgement")])
+    got = output_checks.check_traces("Here is your ledger in prose.", priya["candidate_text"])
+    check("must fail, as format: no table with a Traces to column",
+          [(c["verdict"], c["kind"]) for c in got["checks"]], [("FAIL", "format")])
+    got = output_checks.check_traces(TRACES_HEAD + e1, None)
+    check("a fixture with no candidate_text has the check unchecked, never passed",
+          (got["checks"], got["unchecked"]), ([], [output_checks.TRACES_CHECK]))
+    got = output_checks.run_checks(priya, "denied", TRACES_HEAD + e1, None)
+    check("run_checks runs it on a fixture that names it", verdict_of(got, "traces", "edit_ledger"), "PASS")
+    got = output_checks.run_checks(nadia, "denied", TRACES_HEAD + inherited, None)
+    check("and reads a named source's quotation against the fixture's own request",
+          verdict_of(got, "traces", "edit_ledger"), "PASS")
+    got = output_checks.run_checks(fixture("mock-interview", 1), "denied", "Here is your pack.", None)
+    check("and never on a fixture that does not name it: no traces finding, nothing unchecked",
+          ([c for c in got["checks"] if c["check"] == "traces"], "traces" in got["unchecked"]), ([], False))
+    from fixture_clauses import load_cases
+    cases = load_cases(Path(__file__).resolve().parent.parent / "skills/resume-tailor/evals/evals.json")
+    check("every resume-tailor fixture runs it, its candidate_text in its prompt",
+          [c["id"] for c in cases if "traces" not in c.get("checks", []) or not all(
+              output_checks.normalise_quote(t) in output_checks.normalise_quote(c["prompt"]) for t in c["candidate_text"])],
+          [])
+
+
+def arm_set(folder: Path, runs: list[dict]) -> Path:
+    """A synthetic saved set: each run's meta, checks, two grade files and a stream with its cost."""
+    folder.mkdir(parents=True)
+    (folder / "streams").mkdir()
+    for i, run in enumerate(runs):
+        stem = run.get("stem") or f"{run.get('skill', 'mock-interview')}-{run.get('id', 1)}.run{i}"
+        room = f"room-{folder.name}-{i}"
+        meta = {"skill": run.get("skill", "mock-interview"), "id": run.get("id", 1), "run": i, "mode": run.get("mode", "denied"),
+                "stem": stem, "graded_invocation": 0, "triggered_unprompted": not run.get("nudged"),
+                "harness": {"status": run.get("status", "ok"), "reasons": run.get("reasons", [])},
+                "research_log": run.get("log"),
+                "invocations": [{"room": f"/x/rooms/{room}", "result": {"incomplete": False,
+                                 "permission_denials": [{"tool_name": t} for t in run.get("refused", [])]}}]}
+        (folder / f"{stem}.meta.json").write_text(json.dumps(meta))
+        if not run.get("no_checks"):
+            (folder / f"{stem}.checks.json").write_text(json.dumps({"checks": run.get("checks", []),
+                                                                     "unchecked": run.get("unchecked", [])}))
+        for g, verdicts in enumerate(run.get("grades", [["PASS"], ["PASS"]]), 1):
+            if verdicts is None:
+                continue
+            (folder / f"{stem}.grade-{g}.json").write_text(json.dumps(
+                {"harness_invalid": True, "verdicts": []} if run.get("status") else {
+                    "verdicts": [{"n": n, "verdict": v} for n, v in enumerate(verdicts, 1)],
+                    "model_usage": {"m": {"costUSD": 0.5}}, "grader_prompt_version": run.get("version", "3"),
+                    "grader_model": "claude-sonnet-5-5",
+                    "expectation_sha256": {str(n): run.get("hashes", {}).get(n, f"sha{n}")
+                                           for n in range(1, len(verdicts) + 1)}}))
+        for name in run.get("truncate", []):
+            path = folder / f"{stem}.{name}"
+            path.write_text(path.read_text()[:20])
+        (folder / "streams" / f"{room}.jsonl").write_text(json.dumps({"type": "result", "total_cost_usd": 1.25}) + "\n")
+    return folder
+
+
+def finding(check_name, target="all", verdict="FAIL", why="x", **extra):
+    return {"check": check_name, "target": str(target), "verdict": verdict, "why": why, "kind": "judgement", **extra}
+
+
+def test_compare_arms() -> None:
+    print("\ncompare_arms: two saved sets, module by module, with nothing decided")
+    import compare_arms as ca
+    check("Fisher's exact two-sided p, against values the summary computed",
+          [round(ca.fisher(15, 27, 5, 20), 3), round(ca.fisher(17, 50, 8, 50), 3), round(ca.fisher(20, 50, 9, 50), 3),
+           round(ca.fisher(3, 5, 3, 5), 9), ca.fisher(1, 0, 0, 3)], [0.044, 0.063, 0.027, 1.0, None])
+    check("and symmetric in its two sides", ca.fisher(6, 10, 2, 10) == ca.fisher(2, 10, 6, 10), True)
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep Kestrel.", "research": {
+        "modes": ["denied"], "zero_calls": True, "targets": [
+            {"n": 1, "name": "values", "terms": ["values"], "accept": ["skipped"]},
+            {"n": 3, "name": "strategy", "terms": ["strategy"], "accept": ["skipped"]}]}}}
+    gates = [finding("gates_line"), finding("gates_form")]
+    call = [finding("zero_calls"), finding("accept", 3), finding("accept", 1)]
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"checks": [*gates, finding("quotes", "banks", why='"a, b" is not in the fit snapshot\'s evidence column')],
+             "grades": [["PASS", "FAIL"], ["PASS", "PASS"]], "refused": ["Write", "Bash"]},
+            {"checks": [*call, finding("evidence_form", "fit_snapshot")], "log": [entry("Kestrel strategy 2026", "refused")],
+             "nudged": True},
+            {"checks": [finding("quotes", "banks", recut="joined"), finding("quotes", "banks", why="not the candidate's")]},
+            {"status": "harness-invalid", "reasons": ["the installed skill never fired"]},
+            {"checks": [finding("gates_line", verdict="PASS"), finding("accept", 1, verdict="PASS"),
+                        finding("quotes", "banks", verdict="PASS"), finding("zero_calls", verdict="PASS")]},
+        ])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"checks": [finding("gates_form")]},
+            {"checks": [finding("quotes", "fit_snapshot", verdict="PASS"), finding("quotes", "banks", verdict="PASS")],
+             "unchecked": ["evidence_form"]},
+        ])
+        a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
+        only = ca.failure_only(a + c)
+        check("a check output_checks declares failure-only records only failures",
+              sorted(only), ["evidence_form", "gates_form"])
+        check("it applies in every valid run, less those that listed it unchecked",
+              (ca.check_counts(a, "evidence_form", only), ca.check_counts(c, "evidence_form", only)), ((1, 4), (0, 1)))
+        check("a check that records passes applies only where it wrote a finding",
+              ca.check_counts(a, "gates_line", only), (1, 2))
+        check("the call's targets are read from its record, as the accounting checks aim it", a[1]["aimed"], {1: 0, 3: 1})
+        check("one defect per family: the hard-gates line and the call where none belongs each count once, and an "
+              "accept row its calls were not aimed at stays its own",
+              (ca.defects(a[0]), ca.defects(a[1])),
+              ({"hard-gates line": 2, "quotes": 1}, {"a call where none belongs": 2, "accept": 1, "evidence_form": 1}))
+        check("a family applies where its anchoring check applied, and reports its overlaps",
+              ca.unit_counts(a, "a call where none belongs", ("zero_calls",), only), (1, 2, 1))
+        check("re-cut quotes are read from the field, and from the reason a finding saved before it carries",
+              [[ca.recut_of(f) for f in ca.failing(r) if f["check"] == "quotes"] for r in a if r["valid"]],
+              [["unrecorded"], [], ["joined", None], []])
+        out = ca.report(arm, ctl, None, cases)
+
+        def shows(pattern: str) -> bool:
+            return re.search(pattern, out) is not None
+        check_true("the headline counts runs, harness-invalid, nudged and refused saves, and costs from streams and grades",
+                   "tuesday: 5 runs, 1 harness-invalid, 1 nudged, 1 with a save refused; cost $10.25 (runs $6.25, graders $4.00)"
+                   in out and "alone: 2 runs, 0 harness-invalid, 0 nudged, 0 with a save refused; cost $4.50" in out)
+        check_true("the graded pass rate is over both graders' verdicts, with no p-value on verdicts",
+                   shows(r"mock-interview\s+90\.0% \(9/10\)\s+100\.0% \(4/4\)\s+-10\.0 points")
+                   and "two graders of one run are not independent" in out)
+        check_true("an expectation is passed by a run only when every grader passed it",
+                   shows(r"fixture 1 \[denied\] #1\s+4/4\s+2/2") and shows(r"fixture 1 \[denied\] #2\s+0/1\s+0/0\s+p n/a"))
+        check_true("a family is counted once, with its overlap, and the accept row outside it apart",
+                   shows(r"a call where none belongs \[zero_calls\+accept\+skip_has_no_call\]\s+1/2\s+0/0\s+p n/a\s+\[1 / 0\]")
+                   and shows(r"\n  accept\s+1/2\s+0/0"))
+        check_true("quote failures are split: re-cut only, and any other",
+                   shows(r"only re-cut quotes\s+1/3\s+0/1") and shows(r"a quote failure that is not re-cut\s+1/3\s+0/1"))
+        check_true("refused tool calls are reported by tool", "by tool {'Bash': 1, 'Write': 1}" in out)
+        check_true("no threshold, no verdict: nothing in the report decides",
+                   not any(w in out.lower() for w in ("pass:", "miss", "verdict:", "significant")))
+        recheck = Path(tmp) / "recheck"
+        recheck.mkdir()
+        for p in ctl.glob("*.checks.json"):
+            (recheck / p.name).write_text(json.dumps({"checks": [finding("format", "chat")]}))
+        check_true("--checks-from reads a re-check of the same runs, a failure-only check over every valid run",
+                   re.search(r"format \(records only failures\)\s+0/4\s+2/2", ca.report(arm, ctl, (arm, recheck), cases))
+                   is not None)
+
+
+def written_checks(source: str) -> tuple[dict[str, set[bool]], list[str]]:
+    """Each check name output_checks' finding() calls write, with whether each call's verdict is
+    the literal False; a name passed through a function's parameter is read at its call sites.
+    Second: the calls whose name could not be read."""
+    import ast
+    tree = ast.parse(source)
+    consts = {t.id: n.value.value for n in tree.body if isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant)
+              and isinstance(n.value.value, str) for t in n.targets if isinstance(t, ast.Name)}
+    funcs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+    within = {c: f for f in funcs for c in ast.walk(f) if isinstance(c, ast.Call)}
+
+    def names(node, where) -> list[str] | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        if isinstance(node, ast.Name) and node.id in consts:
+            return [consts[node.id]]
+        params = [a.arg for a in where.args.args] if where is not None else []
+        if not isinstance(node, ast.Name) or node.id not in params:
+            return None
+        i, got = params.index(node.id), []
+        for c in (c for c in calls if c.func.id == where.name):
+            arg = c.args[i] if i < len(c.args) else next((k.value for k in c.keywords if k.arg == node.id), None)
+            sub = names(arg, within.get(c)) if arg is not None else None
+            if sub is None:
+                return None
+            got += sub
+        return got
+    out, unread = {}, []
+    for c in (c for c in calls if c.func.id == "finding"):
+        got = names(c.args[0], within.get(c))
+        if got is None:
+            unread.append(f"line {c.lineno}: {ast.unparse(c.args[0])}")
+        for name in got or []:
+            out.setdefault(name, set()).add(isinstance(c.args[2], ast.Constant) and c.args[2].value is False)
+    return out, unread
+
+
+def test_compare_reads() -> None:
+    print("\ncompare_arms: like for like, missing and unreadable files, and checks that record only failures")
+    import compare_arms as ca
+    written, unread = written_checks((Path(__file__).resolve().parent / "output_checks.py").read_text())
+    check("every finding() call's check name is read", unread, [])
+    check("FAILURE_ONLY is exactly the checks written only with a literal False, RECORDS_PASSES every other",
+          (sorted(output_checks.FAILURE_ONLY), sorted(output_checks.RECORDS_PASSES)),
+          (sorted(k for k, v in written.items() if v == {True}), sorted(k for k, v in written.items() if v != {True})))
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep.", "expectations": ["a", "b"]}}
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"checks": [finding("zero_calls"), finding("old_check")], "grades": [["PASS", "PASS"], None]},
+            {"checks": [finding("zero_calls"), finding("old_check2", verdict="PASS")]},
+            {"checks": [], "grades": [None, None]},
+            {"no_checks": True, "truncate": ["grade-2.json"]},
+            {"truncate": ["meta.json"]},
+        ])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"checks": [finding("old_check2")], "grades": [["PASS", "PASS"], ["FAIL", "FAIL"]]},
+            {"checks": [finding("gates_line", verdict="PASS")]},
+        ])
+        a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
+        check("must pass: a truncated meta.json is a run read as unreadable, never a crash",
+              [(r["meta_read"], r["unreadable"]) for r in a if not r["meta_read"]],
+              [(False, ["mock-interview-1.run4.meta.json"])])
+        a = [r for r in a if r["meta_read"]]
+        only = ca.failure_only(a + c)
+        check("a check that records passes stays one when it failed in every run that wrote it, and a name "
+              "output_checks does not write is read from the data", sorted(only), ["old_check"])
+        check("so zero_calls applies only where it wrote a finding", ca.check_counts(a, "zero_calls", only), (2, 2))
+        check("must fail: a missing grader's file is a grader that returned nothing, never a pass",
+              ca.expect_graders(a, c), 2)
+        check("each run's expectations: grade-2 missing reads partial, no grade file at all reads every one partial, "
+              "an unreadable grade-2 reads partial",
+              [ca.expectation_states(r) for r in a],
+              [{1: "partial", 2: "partial"}, {1: "pass"}, {1: "partial", 2: "partial"}, {1: "partial"}])
+        out = ca.report(arm, ctl, None, cases)
+
+        def shows(pattern: str) -> bool:
+            return re.search(pattern, out) is not None
+        check_true("the expectation rows count them partial, beside the control's fully graded runs",
+                   shows(r"fixture 1 \[denied\] #1\s+1/1\s+1/2\s+p=1\.000\s+\(3 / 0 partially graded\)"))
+        check_true("and the report says which runs are short of graders, and which have no checks file",
+                   shows(r"tuesday: of 4 valid runs, 1 with fewer than 2 grade files, 1 with none, 1 with one unreadable")
+                   and shows(r"tuesday: 1 of 4 valid runs have no readable checks file"))
+        check_true("and names the files it could not read, the meta's run left out of everything",
+                   shows(r"tuesday: 4 runs, ") and "2 file(s) could not be read, 1 of them a meta.json" in out
+                   and "mock-interview-1.run3.grade-2.json" in out)
+        check_true("must pass: both sets under one prompt version and the same texts are like for like",
+                   "NOT LIKE FOR LIKE" not in out and "not like for like" not in out
+                   and "graded under prompt version 3 (4); by claude-sonnet-5-5 (4)" in out)
+
+        v2 = arm_set(Path(tmp) / "v2", [{"version": "2", "grades": [["PASS", "FAIL"], ["PASS", "FAIL"]]}])
+        v3 = arm_set(Path(tmp) / "v3", [{"grades": [["PASS", "PASS"], ["PASS", "PASS"]], "hashes": {2: "changed"}}])
+        out = ca.report(v3, v2, None, cases)
+        check_true("must fail: grades under prompt versions 3 and 2 are flagged in the headline and on every row, "
+                   "with no p-value",
+                   "NOT LIKE FOR LIKE: graded under prompt version 3 against 2" in out
+                   and re.search(r"fixture 1 \[denied\] #1\s+1/1\s+1/1\s+p n/a\s+\[not like for like: grader prompt "
+                                 r"version 3 against 2\]", out) is not None
+                   and "NOT LIKE FOR LIKE: 2 expectation(s), flagged below, carry 4 / 4 of those verdicts" in out)
+        same = arm_set(Path(tmp) / "same", [{"grades": [["PASS", "FAIL"], ["PASS", "FAIL"]]}])
+        out = ca.report(v3, same, None, cases)
+        check_true("must fail: one prompt version, an expectation whose text changed is flagged, the other compared",
+                   re.search(r"#2\s+1/1\s+0/1\s+p n/a\s+\[not like for like: expectation text differs\]", out) is not None
+                   and re.search(r"#1\s+1/1\s+1/1\s+p=1\.000\s*\n", out) is not None)
+
+    claim = output_checks.check_fit_ledger(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", "Every must-have is `direct`."))["checks"]
+    run = {"checks": claim, "aimed": None}
+    check("one set claim the snapshot's prose and the sentence after the ledger both read is one defect",
+          ca.defects(run), {"one set claim, read twice": 2})
+    two = [finding("snapshot_count", why='the snapshot\'s prose: "every row" is a set claim over the map that names no row'),
+           finding("ledger_sentence", why='in the sentence after the ledger, "two adjacent" is a set claim over the map '
+                                          "that names no row: 'The two adjacent rows are R4 and R5.'")]
+    check("two different claims stay two", ca.defects({"checks": two, "aimed": None}),
+          {"snapshot_count": 1, "ledger_sentence": 1})
+    prose = [finding("row", 1, why="the response has no accounting table"),
+             finding("tally", why="a `Research tier:` line that is not the fixed form: chat: Research tier: L0, no searches.")]
+    check("no accounting table and the tally line written off its form beside it are one block",
+          ca.defects({"checks": prose, "aimed": None}), {"no accounting table, nor its tally line": 2})
+    check("an off-form tally line beside a table is its own defect",
+          ca.defects({"checks": [prose[1]], "aimed": None}), {"tally": 1})
+
+
 def main() -> int:
     for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
                  test_frontdoor_clashes, test_frontdoor_install, test_module_lists, test_sync, test_frontdoor_labels, test_explicit_naming,
@@ -4412,7 +5145,8 @@ def main() -> int:
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_yes_names_page,
                  test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
-                 test_audit_ledger, test_watch_out):
+                 test_audit_ledger, test_watch_out, test_grader_fence, test_plugin_alone, test_relative_dates,
+                 test_recut_quotes, test_traces, test_compare_arms, test_compare_reads):
         test()
     print()
     if FAILURES:

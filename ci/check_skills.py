@@ -54,7 +54,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "evals"))
-from fixture_clauses import ClauseError, expand_spec, unused_clauses  # noqa: E402
+from fixture_clauses import DATE_ANCHOR, ClauseError, anchor_of, date_refs, dated, expand_spec, unused_clauses  # noqa: E402
 import output_checks  # noqa: E402  (the harness's readers, for the checks that lint what it reads)
 import research_server  # noqa: E402  (the canned room's own search, for the fixtures lint)
 import run_fixtures  # noqa: E402  (the modes a fixture runs in)
@@ -512,6 +512,23 @@ def check_evals() -> None:
             fail(group, f"{skill.name}: duplicate eval ids: {ids}")
         for case in cases:
             label = f"{skill.name} eval {case.get('id')}"
+            # A date relative to the run is written out at the run's date, and a run saved
+            # before runs recorded one at the fixture's date_anchor: references with no
+            # anchor, an anchor with none, and a reference the loader cannot read fail.
+            refs = date_refs(case) if isinstance(case, dict) else []
+            if refs and anchor_of(case) is None:
+                fail(group, f"{label}: writes dates relative to the run ({refs[0]}) and declares no "
+                            f"{DATE_ANCHOR} as an ISO date — a run saved before runs recorded their date "
+                            f"would be graded against text it was never sent")
+            elif not refs and DATE_ANCHOR in case:
+                fail(group, f"{label}: declares a {DATE_ANCHOR} and writes no date relative to the run — "
+                            f"a key that does nothing")
+            elif refs:
+                try:
+                    case = dated(case)
+                except ClauseError as exc:
+                    fail(group, f"{skill.name}: {exc}")
+                    continue
             # A reference the loader cannot expand — a clause inside a clause, a name
             # with a capital or a space — reaches the grader as literal braces.
             for field in ("expected_output", "expectations"):
@@ -677,7 +694,17 @@ def load_evals(path: Path) -> list[dict] | None:
         cases = expand_spec(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return None
-    return cases if isinstance(cases, list) else None
+    if not isinstance(cases, list):
+        return None
+    # Each fixture as a run saved before run dates were recorded was sent it: its relative
+    # dates written at its date_anchor. One the evals group refuses is read as it stands.
+    out = []
+    for case in cases:
+        try:
+            out.append(dated(case) if isinstance(case, dict) else case)
+        except ClauseError:
+            out.append(case)
+    return out
 
 
 def check_parameters() -> None:
@@ -2537,9 +2564,11 @@ def check_fixtures() -> None:
                 fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check with no research block — "
                             f"it never runs")
             text = case.get("candidate_text")
-            if "quotes" in checks and not isinstance(text, list):
-                fail(group, f"{label}: runs the quotes check and declares no candidate_text list — the evidence "
-                            f"column would go unchecked ([] says nothing the candidate gave is quotable)")
+            quoting = [c for c in ("quotes", output_checks.TRACES_CHECK) if c in checks]
+            if quoting and not isinstance(text, list):
+                fail(group, f"{label}: runs the {quoting[0]} check and declares no candidate_text list — the "
+                            f"quotations it reads would go unchecked ([] says nothing the candidate gave is "
+                            f"quotable)")
             for entry in text if isinstance(text, list) else []:
                 linted += 1
                 if not isinstance(entry, str) or output_checks.normalise_quote(entry) not in prompt:

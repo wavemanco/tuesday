@@ -57,8 +57,10 @@ re-run with the skill named — in a fresh room, because the first attempt's
 files and searches would otherwise be credited to the response being graded. A
 run that never fires it is harness-invalid: it is not this skill's output.
 
-**What the graders are told.** The prompt states the room's actual research mode
-and carries a "What the harness observed" block: the calls the run actually
+**What the graders are told.** The response sits between two marker lines the
+prompt names, and nothing outside them is the response's text, so the record
+after it is never read as its closing lines. The prompt states the room's actual
+research mode and carries a "What the harness observed" block: the calls the run actually
 sent, or that it sent none, or — for a run saved before this record existed —
 that nothing was recorded and research counts must not be graded. Graders had
 been failing true claims of refused searches because nothing told them the
@@ -101,14 +103,17 @@ Usage:
     python evals/run_fixtures.py --regrade-from /tmp/cr --out /tmp/cr-regrade --expectation 14
     python evals/run_fixtures.py --skill job-underwriter --cases probe.json --out /tmp/p
     python evals/run_fixtures.py --via frontdoor --out /tmp/fd   # each fixture through the front door
+    python evals/run_fixtures.py --layout plugin --out /tmp/alone # each module alone, installed as the front door is
 
 `--via frontdoor` runs each module's fixtures with the front door installed as the
-Claude Code plugin ships it (evals/README.md, "Through Tuesday").
+Claude Code plugin ships it; `--layout plugin` installs a module alone the same way, the
+control a comparison through Tuesday uses (evals/README.md, "Through Tuesday").
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import functools
 import hashlib
 import json
@@ -126,7 +131,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import output_checks  # noqa: E402
 import run_routing  # noqa: E402  (the front door's plugin install and routing reader, for --via frontdoor)
 from child_env import child_env  # noqa: E402
-from fixture_clauses import load_cases  # noqa: E402
+from fixture_clauses import dated, load_cases  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
@@ -134,11 +139,23 @@ SERVER = Path(__file__).resolve().parent / "research_server.py"
 MODES = ("denied", "canned")
 # How a fixture's module reaches the room: installed alone (`skill`), or through the front door.
 VIAS = ("skill", "frontdoor")
+# Where a run's skills sit (evals/README.md, "Through Tuesday"): the room's own `.claude/skills/`
+# (`project`: the module alone, as every ledger baseline before the arms shared an install), or a
+# plugin of the room's own beside it (`plugin`: the front door as it ships, or the module alone
+# installed the same way, so the two arms differ only in what the plugin holds).
+LAYOUTS = ("project", "plugin")
+# The tools a refused save is a refusal of (`refusals`).
+SAVE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 SEARCH_KIND = output_checks.SEARCH_KIND
 PERMISSION_TEXT = re.compile(r"requested permissions|haven't granted|permission to use|"
                              r"not allowed|was denied|denied by", re.I)
 
-GRADER_PROMPT_VERSION = "2"
+GRADER_PROMPT_VERSION = "3"
+# The two lines the grader prompt fences the response between, and names (version 3). Version 2
+# put the harness's record straight after the response, unmarked, and graders read the record
+# as the response's own closing text (evals/README.md, "What the graders see").
+RESPONSE_BEGINS = "===== RESPONSE BEGINS ====="
+RESPONSE_ENDS = "===== RESPONSE ENDS ====="
 
 GRADER_PROMPT = """You are grading one response against a fixed list of expectations.
 
@@ -172,9 +189,11 @@ Four rules that are not about being lenient, but about grading the right thing:
 
 ## The response to grade
 
-This is everything the response produced. Where it delivered by writing a file, that file's full contents appear below the chat text under a `----- file the response produced -----` marker, and it counts exactly as if it had been written inline.
+This is everything the response produced, between the line `{begins}` and the line `{ends}`. Nothing outside those two lines is text the response wrote. Where it delivered by writing a file, that file's full contents appear below the chat text under a `----- file the response produced -----` marker, and it counts exactly as if it had been written inline.
 
+{begins}
 {response}
+{ends}
 
 ## What the harness observed
 
@@ -235,18 +254,20 @@ def install_one(root: Path, skill: str, run_id: str) -> str:
     return name
 
 
-def install_via_frontdoor(room: Path, run_id: str) -> tuple[Path, dict[str, str]]:
-    """Install the front door for a fixture run as the routing arm's plugin layout installs it:
-    the hub and the three hidden modules in a plugin folder beside the room, never in it
-    (`run_routing.install_plugin`). Return the plugin folder and name -> installed name."""
+def install_in_plugin(room: Path, run_id: str, module: str | None = None) -> tuple[Path, dict[str, str]]:
+    """Install a fixture run's skills as the routing arm's plugin layout installs them, in a
+    plugin folder beside the room, never in it (`run_routing.install_plugin`): the front door,
+    the hub and the three hidden modules; or, given `module`, that module alone, visible, the
+    module-alone arm's plugin install. Return the plugin folder and name -> installed name."""
     plugin = run_routing.home(room, "plugin")
-    return plugin, run_routing.install_plugin(plugin, run_id)
+    return plugin, run_routing.install_plugin(plugin, run_id, module)
 
 
-def via_frontdoor_flags(flags: list[str], room: Path) -> list[str]:
-    """A room's flags with the plugin added and its skills folder readable: `--plugin-dir`, and
-    the routing arm's read rule (`run_routing.read_rule`) joined to the room's one `--allowedTools`
-    list, or given its own when the room has none."""
+def plugin_flags(flags: list[str], room: Path) -> list[str]:
+    """A room's flags with its plugin added and the plugin's skills folder readable: `--plugin-dir`,
+    and the routing arm's read rule (`run_routing.read_rule`) joined to the room's one
+    `--allowedTools` list, or given its own when the room has none. Both arms' plugin installs
+    run under exactly these."""
     flags, rule = list(flags), run_routing.read_rule(room, "plugin")
     if "--allowedTools" in flags:
         flags.insert(flags.index("--allowedTools") + 1, rule)
@@ -411,7 +432,11 @@ def parse_stream(lines, installed_name: str) -> dict:
                   incomplete=True when no result event arrived (a timeout);
       tool_calls  every tool_use joined to its tool_result by id.
     """
-    base = re.sub(r"-[0-9a-f]{8}$", "", installed_name or "")
+    # A plugin's skill is listed and called by its plugin-qualified id, `<plugin>:<name>`, a call
+    # may give the name alone, and either may follow one `/`: every name is read as the routing
+    # reader reads it, by the part after the colon (run_routing.local_name).
+    local = run_routing.local_name(installed_name or "")
+    base = re.sub(r"-[0-9a-f]{8}$", "", local)
     text, calls, order, fired_skills, denied_events = [], {}, [], [], []
     init, result = {}, None
     for line in lines:
@@ -434,9 +459,9 @@ def parse_stream(lines, installed_name: str) -> dict:
                     "tools": event.get("tools") or [],
                     "mcp_servers": event.get("mcp_servers") or [],
                     "skills": len(skills),
-                    "installed_loaded": installed_name in skills,
-                    "competing_skills": [s for s in skills
-                                         if base and base in s and s != installed_name],
+                    "installed_loaded": bool(local) and any(run_routing.local_name(s) == local for s in skills),
+                    "competing_skills": [s for s in skills if base and base in run_routing.local_name(s)
+                                         and run_routing.local_name(s) != local],
                     "session_id": event.get("session_id"),
                     "cwd": event.get("cwd")}
         elif kind == "system" and event.get("subtype") == "permission_denied":
@@ -475,8 +500,8 @@ def parse_stream(lines, installed_name: str) -> dict:
     if result is None:
         result = {"subtype": None, "is_error": None, "num_turns": None, "modelUsage": None,
                   "permission_denials": denied_events, "incomplete": True}
-    names = [s.split(":")[-1] for s in fired_skills]
-    fire = "fired" if installed_name and installed_name in names else \
+    names = [run_routing.local_name(s) for s in fired_skills]
+    fire = "fired" if local and local in names else \
         ("wrong_skill" if fired_skills else "not_fired")
     return {"text": "\n".join(text), "fire": fire, "skills_fired": fired_skills,
             "init": init, "result": result, "tool_calls": [calls[t] for t in order]}
@@ -756,26 +781,61 @@ def write_meta(out: Path, stem: str, meta: dict) -> None:
     (out / f"{stem}.meta.json").write_text(json.dumps(meta, indent=2) + "\n")
 
 
+def refusals(invocation: dict) -> tuple[dict[str, int] | None, bool | None]:
+    """The tool calls the CLI refused an invocation for want of permission, counted by tool, and
+    whether a save (SAVE_TOOLS) was among them, from its result event's `permission_denials`.
+    (None, None) for a run that ended before its result event: its list was never read, so it is
+    not counted as none. Recorded on every run and reported, never scored."""
+    result = invocation.get("result") or {}
+    if not result or result.get("incomplete"):
+        return None, None
+    counts: dict[str, int] = {}
+    for denial in result.get("permission_denials") or []:
+        if isinstance(denial, dict):
+            tool = str(denial.get("tool_name"))
+            counts[tool] = counts.get(tool, 0) + 1
+    return dict(sorted(counts.items())), any(tool in counts for tool in SAVE_TOOLS)
+
+
+def run_date(meta: dict) -> datetime.date | None:
+    """The date a run recorded as `run_date`, which its fixture's relative dates were written
+    for; None for a run saved before runs recorded one, whose fixture is then written at its
+    `date_anchor` (fixture_clauses.dated), the text such a run was sent."""
+    try:
+        return datetime.date.fromisoformat(meta.get("run_date") or "")
+    except (TypeError, ValueError):
+        return None
+
+
 def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
-            model: str | None, mode: str | None = None, via: str = "skill") -> dict:
+            model: str | None, mode: str | None = None, via: str = "skill",
+            layout: str | None = None, on: datetime.date | None = None) -> dict:
     """Run one fixture in a clean room and save the response plus the room's record.
 
-    Through the front door (`via="frontdoor"`) the room is named for the case alone, since
-    the hub's folder path reaches the model and a module's name in it would point the route.
+    In a plugin (`layout="plugin"`, which the front door always is) the room is named for the
+    case alone, since the plugin's folder path reaches the model and a module's name in it would
+    point the route. The fixture's relative dates are written for the run's date, `on` (today
+    unless given), which the meta records as `run_date`.
     """
+    layout = layout or ("plugin" if via == "frontdoor" else "project")
+    if via == "frontdoor" and layout != "plugin":
+        raise ValueError("the front door is installed as the plugin it ships as: layout plugin")
+    on = on or datetime.date.today()
+    case = dated(case, on)
     mode = mode or modes_of(case)[0]
     stem = stem_for(skill, case, mode, run)
     meta = {"skill": skill, "id": case["id"], "run": run, "mode": mode, "stem": stem,
-            "model": model, "via": via, "invocations": []}
+            "model": model, "via": via, "layout": layout, "run_date": on.isoformat(), "invocations": []}
     parsed = None
     for nudged in (False, True):
         run_id = uuid.uuid4().hex[:8]
-        room = out / "rooms" / (f"{skill}-{case['id']}-{mode}-{run_id}" if via == "skill"
+        room = out / "rooms" / (f"{skill}-{case['id']}-{mode}-{run_id}" if layout == "project"
                                 else f"case-{case['id']}-{mode}-{run_id}")
         room.mkdir(parents=True, exist_ok=True)
-        if via == "frontdoor":
-            skill_dir, names = install_via_frontdoor(room, run_id)
-            name = run_routing.installed_command(names[run_routing.HUB], run_routing.plugin_prefix(names, "plugin"))
+        if layout == "plugin":
+            skill_dir, names = install_in_plugin(room, run_id, None if via == "frontdoor" else skill)
+            listed = run_routing.HUB if via == "frontdoor" else skill
+            name = run_routing.installed_command(names[listed], run_routing.plugin_prefix(names, "plugin"))
         else:
             name = install_one(room, skill, run_id)
             skill_dir, names = room / ".claude" / "skills" / name, None
@@ -784,12 +844,12 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
         if paths:
             write_research_files(case, paths)
         flags = room_flags(mode, paths) + (["--model", model] if model else [])
-        if via == "frontdoor":
-            flags = via_frontdoor_flags(flags, room)
+        if layout == "plugin":
+            flags = plugin_flags(flags, room)
         prompt = case["prompt"] if not nudged else \
             f"Use the {name} skill for this.\n\n{case['prompt']}"
         invocation = {"room": str(room), "nudged": nudged, "installed": name, "flags": flags,
-                      "via": via, "skill_dir": str(skill_dir),
+                      "via": via, "layout": layout, "skill_dir": str(skill_dir),
                       "calls_log": str(paths["calls"]) if paths else None}
         meta["invocations"].append(invocation)
         try:
@@ -803,7 +863,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 (out / "streams").mkdir(exist_ok=True)
                 (out / "streams" / f"{room.name}.partial.jsonl").write_text(stdout)
             partial = parse_stream(stdout.splitlines(), name)
-            if names:
+            if via == "frontdoor":
                 partial["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
             invocation.update(outcome="timeout" if isinstance(exc, CLITimeout) else "declined",
                               error=str(exc), fire=partial["fire"], init=partial["init"],
@@ -811,8 +871,10 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                               research_log=build_research_log(
                                   partial["tool_calls"], partial["result"]["permission_denials"],
                                   read_calls(paths["calls"]) if paths else []))
+            refused, save_refused = refusals(invocation)
             meta.update(error=str(exc), outcome=invocation["outcome"],
                         graded_invocation=None, research_log=None,
+                        refused=refused, save_refused=save_refused,
                         harness={"status": "harness-invalid", "reasons": [f"skipped: {exc}"]})
             write_meta(out, stem, meta)
             print(f"  SKIPPED {skill} eval {case['id']} [{mode}] (run {run}): {exc}", flush=True)
@@ -821,7 +883,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
         streams.mkdir(exist_ok=True)
         stdout = parsed.pop("stdout", "")
         (streams / f"{room.name}.jsonl").write_text(stdout)
-        if names:
+        if via == "frontdoor":
             parsed["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
         calls = read_calls(paths["calls"]) if paths else []
         invocation.update(outcome="completed", fire=parsed["fire"],
@@ -853,17 +915,22 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 chars=len(text), response_file=body.name, artifacts=[a[0] for a in artifacts],
                 research_log=graded["research_log"],
                 harness={"status": status, "reasons": reasons})
+    meta["refused"], meta["save_refused"] = refusals(graded)
     write_meta(out, stem, meta)
     init = graded.get("init") or {}
     read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
     links = sum(len(fetches) for fetches in [*read.values(), *unread.values()])
-    print(f"  ran {skill} eval {case['id']} [{mode}]{' via the front door' if via == 'frontdoor' else ''} "
+    where = " via the front door" if via == "frontdoor" else " alone, in a plugin" if layout == "plugin" else ""
+    refused = ", ".join(f"{tool} {n}" for tool, n in (meta["refused"] or {}).items())
+    print(f"  ran {skill} eval {case['id']} [{mode}]{where} "
           f"(run {run}): {len(text)} chars"
           f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not graded['nudged'] else ' (needed a nudge to fire)'}"
           f", {len(graded['research_log']) - links} research call(s)"
           f"{f', {len(read)} user link(s) read' if read else ''}"
-          f"{f', {len(unread)} user link(s) not opened' if unread else ''}, model {init.get('model')}"
+          f"{f', {len(unread)} user link(s) not opened' if unread else ''}"
+          f"{f', refused {refused}' + (' (a save among them)' if meta['save_refused'] else '') if refused else ''}"
+          f", model {init.get('model')}"
           f"{'' if status == 'ok' else ' — HARNESS-INVALID: ' + '; '.join(reasons)}", flush=True)
     return meta
 
@@ -1022,6 +1089,7 @@ def grader_prompt(case: dict, body: str, mode: str, meta: dict, numbers: list[in
         for n in numbers)
     return GRADER_PROMPT.format(
         research_mode=RESEARCH_MODE[mode], prompt=case["prompt"], response=body,
+        begins=RESPONSE_BEGINS, ends=RESPONSE_ENDS,
         observed=observed_block(meta, case.get("research")), expectations=expectations,
         sites=SITES_INSTRUCTION if enumerate_ns & set(numbers) else "")
 
@@ -1062,13 +1130,18 @@ def untraced_sites(verdicts: list[dict], enumerate_ns) -> dict[str, int]:
 
 def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int,
           model: str | None, mode: str | None = None, only=None) -> dict:
-    """Score one saved response against its expectations (or the `only` subset)."""
+    """Score one saved response against its expectations (or the `only` subset), the fixture's
+    relative dates written for the date the run recorded (`run_date`)."""
     mode = mode or modes_of(case)[0]
     stem = stem_for(skill, case, mode, run)
     base = {"skill": skill, "id": case["id"], "run": run, "mode": mode, "grader": grader}
     body_path = out / f"{stem}.md"
     meta_path = out / f"{stem}.meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    # An expectation is hashed as the fixture writes it, its relative dates unwritten: the
+    # question asked is the same on every run date (recurring.py keys verdicts by the hash).
+    template = case["expectations"]
+    case = dated(case, run_date(meta))
     if not body_path.exists():
         # Silent here would drop the run out of the log entirely, leaving a reader
         # to infer from a gap in the grader numbering that anything happened.
@@ -1129,8 +1202,7 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
                               for k, v in usage.items()},
               "requested_model": model, "cli_version": cli_version(), "flags": flags,
               "grader_prompt_version": GRADER_PROMPT_VERSION,
-              "expectation_sha256": {str(n): expectation_sha(case["expectations"][n - 1])
-                                     for n in numbers},
+              "expectation_sha256": {str(n): expectation_sha(template[n - 1]) for n in numbers},
               "untraced_sites": untraced_sites(result["verdicts"], case.get("enumerate"))}
     (out / f"{stem}.grade-{grader}.json").write_text(json.dumps(record, indent=2) + "\n")
     verdicts = record["verdicts"]
@@ -1149,10 +1221,12 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
 
 
 def check_run(skill: str, case: dict, out: Path, run: int, mode: str) -> dict:
-    """Run the deterministic checks on one saved response; write {stem}.checks.json."""
+    """Run the deterministic checks on one saved response, the fixture's relative dates written
+    for the date the run recorded (`run_date`); write {stem}.checks.json."""
     stem = stem_for(skill, case, mode, run)
     meta_path, body_path = out / f"{stem}.meta.json", out / f"{stem}.md"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    case = dated(case, run_date(meta))
     status, reasons = harness_status(meta)
     if status == "ok" and not body_path.exists():
         status, reasons = "harness-invalid", ["no response saved"]
@@ -1308,7 +1382,14 @@ def main() -> int:
     ap.add_argument("--via", choices=VIAS, default="skill",
                     help="skill: each module installed alone (the default); frontdoor: the front door "
                          "installed as the plugin ships it, a fire counting only through the hub")
+    ap.add_argument("--layout", choices=LAYOUTS, default=None,
+                    help="where the skills sit: project, the room's .claude/skills/ (the default with --via "
+                         "skill); plugin, a plugin beside the room, as the front door always is — with --via "
+                         "skill, the module alone installed exactly as the front door is, the control a "
+                         "comparison through Tuesday uses")
     args = ap.parse_args()
+    if args.via == "frontdoor" and args.layout == "project":
+        ap.error("--via frontdoor installs the front door as the plugin it ships as: --layout plugin")
 
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -1346,7 +1427,7 @@ def main() -> int:
             print(f"\n{label}: executing {len(jobs)} fixture run(s)")
             with ThreadPoolExecutor(max_workers=args.workers) as pool:
                 list(pool.map(lambda j: execute(j[0], j[1], out, j[3], args.timeout,
-                                               args.model, j[2], args.via), jobs))
+                                               args.model, j[2], args.via, args.layout), jobs))
         for skill, case, mode, run in jobs:
             checks[(skill, case["id"], mode)].append(check_run(skill, case, out, run, mode))
         print(f"\n{label}: grading {len(jobs)} response(s), {args.graders} grader(s) each")

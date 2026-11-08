@@ -483,6 +483,7 @@ its own fixtures as the module alone, since its text is the same.
 
 ```bash
 python evals/run_fixtures.py --via frontdoor --out /tmp/fd --model claude-sonnet-5-5
+python evals/run_fixtures.py --layout plugin --out /tmp/alone --model claude-sonnet-5-5
 ```
 
 The room holds nothing. Tuesday and the three hidden modules sit in a
@@ -499,11 +500,63 @@ Tuesday arm), so a fire here is a route there. A run that did anything else is
 labelled as that reader labels it — another module, `hidden-<module>`,
 `tuesday-unrouted`, `neither`, `void` — and is nudged once, in a new room, with
 the hub named by its plugin id; a run that still does not route is
-harness-invalid. Each run's meta.json records `via`.
+harness-invalid.
 
-What has not been run: any live `--via frontdoor` pass, so `--plugin-dir`
-together with the rooms' `--setting-sources project` is unverified in a fixture
-room; and the gate a pass would feed, which the owner sets.
+**A comparison through Tuesday installs the module alone with `--layout
+plugin`.** That installs it exactly as Tuesday is installed: a plugin of the
+room's own beside the room, holding that one module, visible, named as the
+module is installed (`mock-interview-<run id>`, so the CLI lists it as
+`mock-interview-<id>:mock-interview-<id>`), with the same read rule and the same
+neutral room name, `case-<id>-<mode>-<run id>`. The two arms then differ only in
+what the plugin holds. Both installs are `run_routing.install_plugin`, one
+definition, and a Skill call by the plugin-qualified id or by the name alone,
+either after one `/`, fires: the fixture runner reads a skill's name as the
+routing reader does (`run_routing.local_name`). `--layout project`, the default with `--via skill`, is the install every
+measurement before this one used for the module alone: the room's own
+`.claude/skills/`, a room named for the module, and no plugin or read rule. It
+stays, because the ledger's earlier baselines were measured with it. The quality
+check through Tuesday (m18) ran its alone arm that way, so its two arms differed
+in install, read rule and room name as well as in Tuesday.
+
+Every run's meta.json records `via`, `layout`, and, reported and never scored,
+`refused`, the graded invocation's tool calls the CLI refused for want of
+permission, counted by tool, and `save_refused`, whether a save (Write, Edit,
+MultiEdit or NotebookEdit) was among them (`run_fixtures.refusals`). A run that ended before its result event
+has both `null`, never an empty count.
+
+`--via frontdoor` has run: the quality check through Tuesday (m18) ran it on
+three models, 115 runs each, 345 in all, beside 345 runs of the modules alone, and
+set none aside, so `--plugin-dir` works beside the rooms' `--setting-sources
+project`. The bar each step was held to was fixed by the owner before it ran.
+
+### Dates relative to the run
+
+A fixture whose test turns on how old something is when a run reads it writes
+those dates relative to the run, as `{{date<offsets>:<form>}}`: offsets in days,
+months or years applied in the order written (`+9d`, `-4m`, `-4m+2y`), then one of
+four forms, `day month year`, `day month`, `month year` or `year`. So
+`{{date:day month year}}` is the run's own date, and `{{date-4m:month year}}` is
+the month four months before it. `fixture_clauses.dated` writes every one out,
+in every string of the case — the prompt, the research pages, `candidate_text`,
+the expectations — for the run's date, which the meta records as `run_date`. A
+run is graded and checked against the text its own date wrote, and a grade file
+hashes each expectation as the fixture writes it, its dates unwritten, so a
+verdict on it is one question on every run date (`evals/recurring.py` keys
+verdicts by that hash). mock-interview
+eval 8 is why: its material was "copied this morning (12 October 2026)", its
+interviews were "on 21 October" and its strategy brief was from June, so every
+run after 21 October was shown interviews already past and a brief ageing past the
+research checklist's "under ~6 months". It now always reads a brief about four
+months old and interviews nine days ahead. Eval 7's news page, which a strategy
+target's `yes` rests on, is written about two months old for the same rule.
+
+A fixture with relative dates declares `date_anchor`, an ISO date: the run date
+at which its references write out exactly the text it held before, which the
+runs saved before `run_date` existed were sent. A run with no `run_date` is
+graded and checked at the anchor, so a regrade of a saved set shows graders the
+request its runs answered. CI's evals group reads each fixture at its anchor and
+fails relative dates with no anchor, an anchor with none, and a reference the
+pattern cannot read; the other groups read fixtures at their anchors too.
 
 ### Research rooms: denied and canned
 
@@ -574,9 +627,10 @@ strings holds, so a fact that exists only as such a phrase is left to the
 fixture's graded expectation, which judges meaning. This is the one statement of
 the rule; `CONTRIBUTING.md` points here.
 
-A fixture with the `quotes` check also declares `candidate_text`, top-level: the
-candidate's own words, against which the verbatim evidence column and the banks'
-Provenance are checked (`[]` when the candidate gave nothing quotable). A
+A fixture with the `quotes` or `traces` check also declares `candidate_text`, top-level: the
+candidate's own words, against which the verbatim evidence column, the banks'
+Provenance and resume-tailor's Traces to cells are checked (`[]` when the
+candidate gave nothing quotable). A
 fixture with the `fit_ledger` check declares `candidate_constraints`, top-level:
 `"known"` when the prompt states the candidate's own constraints or
 non-negotiables, `"unknown"` when it does not. It is the only source of that fact
@@ -620,6 +674,15 @@ and the reply read from the JSON result. `--grader-model` pins them and defaults
 to `--model`. Every grade file records the model that answered, the CLI version,
 the flags, the sha256 of each expectation it graded and the grader prompt's
 version, so a later set can be compared like with like.
+
+The response sits between two lines the prompt names, `===== RESPONSE BEGINS
+=====` and `===== RESPONSE ENDS =====`, and the prompt says once that nothing
+outside them is text the response wrote. The harness's record follows the end
+line. Version 2 of the prompt put the record straight after the response with
+nothing marking where the response ended, and graders read it as the response's
+own closing text: most closing-expectation failures in the m18 runs cited it. The
+fence is prompt version 3; a grade file records its version, and grades saved
+under version 2 keep it.
 
 The grader prompt states the room's actual research mode and carries a block
 headed "What the harness observed", in one of three states: not recorded for
@@ -811,7 +874,35 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   `handoff`, `handoff_to_mock_interview[.verified_candidate_evidence]`,
   `evidence_map`), separated by nothing that adds a word (a comma, semicolon,
   full stop, line break, "and" or a space, one punctuation mark optionally
-  followed by "and"), with nothing else in the cell.
+  followed by "and"), with nothing else in the cell. A Provenance quotation that
+  is the candidate's words, verbatim, but not one quotation of the evidence
+  column fails as before and is labelled a re-cut quote: its finding carries
+  `recut`, `joined` when every word of it is in the column's quotations of that
+  passage, two or more run together with nothing between them but punctuation and
+  the candidate's own joining words, a conjunction and the subject of the clause
+  it opens ("after I", `output_checks.JOINERS`), and `unquoted` when
+  it holds candidate words the column does not quote (`output_checks.recut_kind`).
+  The verdict does not change; the scorer counts the two apart.
+
+- **Traces** (`traces`), on every resume-tailor fixture: every quotation in a
+  Traces to cell of the edit ledger is the candidate's material, verbatim, the
+  rule of resume-tailor's `references/edit-ledger.md` ("The row") and nothing
+  stricter. The material is the fixture's `candidate_text`: the resume, the
+  candidate's own sentences about themselves, and, in a dossier fixture, the
+  dossier's `evidence_map` rows, which that rule names as a source. Each quotation
+  is read as the quotes check reads one, normalised and cut at an ellipsis, and
+  found on word boundaries. The rule asks a cell to hold such a quotation and
+  forbids no other, so a quotation whose own origin names another source — the JD,
+  or the dossier's drafted edit (`dossier E1: "…"`) — is checked only for being in
+  the request, and a cell whose quotations are all of other sources fails for
+  quoting none of the candidate's material (`output_checks.trace_other_source`).
+  A cell with no quotation in it refers to its sentence
+  instead of quoting it and fails as format, as does a response with no table
+  carrying a Traces to column. A fixture without `candidate_text` has the check
+  reported unchecked. What it does not read: words outside the quotation marks
+  beyond a quotation's origin, so a cell that quotes one sentence and points at
+  another ("+ the programme sentences") passes on the one it quotes, and whether a
+  row drew on the sentence it points at is left to the graders.
 
 - **Watch-out** (`watch_out`), on every fixture of every skill, because every
   fixture's turn delivers output: the chat's last non-empty line must be the
@@ -865,6 +956,77 @@ and says why; it is never guessed.
 grader verdict only with verdicts on the identical expectation text, by hash —
 older grade files without hashes are compared by position and flagged — and it
 keeps modes and check keys apart.
+
+### Comparing two arms
+
+`compare_arms.py` compares two saved sets, an arm and its control, module by
+module, and decides nothing: a measurement's bar names its thresholds before it
+runs. Per module it reports the graded pass rate over both graders' verdicts,
+each expectation's runs passing (every grader PASS) over the runs graded on it,
+each automatic check's failing runs over the runs where it applied, the checks
+again with each family below counted once per run, quote failures with re-cut
+quotes apart, nudged and harness-invalid runs, refused tool calls by tool and
+runs with a refused save, and cost from each invocation's stream and each grade
+file. Every comparison of runs carries an exact two-sided Fisher p-value on runs;
+the graded pass rate carries none, because two graders of one run are not
+independent. A check applies in a run that recorded a finding for it and did not
+list it unchecked. A check that writes a finding only to fail, as
+`output_checks.FAILURE_ONLY` declares (the harness test holds that set to the
+code), applies in every valid run that did not list it unchecked; a check name
+`output_checks` does not write is read from the data, failure-only when no run of
+either set recorded a PASS for it. `--checks-from` reads each run's checks from a
+re-check of the same runs. A finding saved before the `recut` label is read as a
+re-cut quote by the reason the check has always written for that case.
+
+It also reports whether the two sets were graded like for like. Each set's grader
+prompt versions and grader models are printed, and an expectation whose version
+or text (the sha256 its grade files record) differs between the sets, or within
+one, is flagged on its row and given no p-value. Every valid run is held to as
+many graders as the most grade files any run of either set has, since a meta does
+not record how many were asked for: a missing or unreadable grade file is a grader
+that returned nothing, so its expectations read partial, as a declined grade's do.
+Runs short of graders, runs with no checks file and files that could not be read
+are printed per set; a run whose meta.json cannot be read is left out of
+everything and named.
+
+```bash
+python evals/compare_arms.py OUT/tuesday OUT/alone > compare.txt
+```
+
+A check family is one defect that more than one check reads, counted once per
+run: one slot, one absent block, or one piece of text breaking one rule. These
+are the families, pooled over m18's 690 runs (Sonnet's checks from its re-check
+under 2d7dbfc):
+
+| Family | Checks | Why it is one defect | m18: runs failing it, and with two or more of its checks failing |
+|---|---|---|---|
+| hard-gates line | `gates_line`, `gates_form` | one slot, read for its form and its judgement | 63; 32 (every `gates_line` failure) |
+| severity slot | `severity`, `severity_form` | one slot, read the same two ways | 2; 1 |
+| a call where none belongs | `zero_calls`, and `accept` and `skip_has_no_call` for each target the calls were aimed at (`output_checks.aimed_calls`) | one call in a no-call fixture, and the honest row it leaves | 53; 53 |
+| canned unavailable, nothing refused | `unavailable_has_refusal` and `accept` for the same target | one row's label | 7; 7 |
+| no accounting table, nor its tally line | `row` failed for the table's absence, and beside that `tally`, missing or off its fixed form | one block, not written or written as a line of prose ("Research tier: L0, no searches. …") | 10; 9 |
+| one set claim, read twice | `snapshot_count` and `ledger_sentence` quoting the same claim | the sentence after the ledger is part of the snapshot's prose, so one claim fails one rule under both | 8; 8 |
+
+Folding those leaves 11 of the 71 runs that failed `accept`. Every other pair of
+checks that failed together in 15 or more of those runs is counted apart:
+
+| Checks failing together | m18 runs | Folded | Why |
+|---|---|---|---|
+| `accept`, `zero_calls` | 53 | all 53 | a call where none belongs |
+| `evidence_form`, `quotes` | 49 | no | different cells: in 2 the failing quotation sits in the off-form cell |
+| `gates_form`, `ledger_sentence` | 41 | no | two slots, the hard-gates line and the sentence after the ledger |
+| `gates_form`, `ledger_parenthetical` | 35 | no | two slots; in 17 both hold the same words for one row, written twice |
+| `ledger_parenthetical`, `ledger_sentence` | 34 | no | two slots, the ledger's lines and the sentence after them |
+| `gates_form`, `gates_line` | 32 | all 32 | the hard-gates line |
+| `gates_line`, `ledger_sentence` | 26 | no | two slots |
+| `evidence_form`, `tally` | 26 | no | two slots, the fit snapshot and the research tally |
+| `accept`, `ledger_sentence` | 23 | no | two slots, a research row and the ledger |
+| `quotes`, `tally` | 22 | no | two slots |
+| `ledger_sentence`, `zero_calls` | 21 | no | two slots |
+| `ledger_parenthetical`, `ledger_wording` | 19 | no | two rules on one text in 15, a numeral in a parenthetical not copied from the map; the wording check's reason quotes the line cut at 80 characters, so the scorer cannot match it reliably from saved findings |
+| `ledger_sentence`, `snapshot_count` | 17 | 8 | one set claim, read twice; in the other 9 the two read different claims, or the sentence after the ledger is a second sentence |
+| `ledger_sentence`, `snapshot_band` | 16 | no | two rules: a set claim or a second sentence, and a band |
+| `gates_form`, `ledger_wording` | 16 | no | two slots |
 
 These evals are not run in CI: they need a model, cost real tokens, and take
 minutes. Run them in a session against any change that could plausibly move

@@ -1890,6 +1890,54 @@ def break_candidate_text_missing(root: Path) -> str:
     return "declares no candidate_text list"
 
 
+RT = "skills/resume-tailor/evals/evals.json"
+
+
+def break_date_anchor_missing(root: Path) -> str:
+    """Relative dates with no anchor: a run saved before run dates were recorded has no text to be graded on."""
+    mutate_case(root, MI, 8, lambda c: c.pop("date_anchor"))
+    return "declares no date_anchor as an ISO date"
+
+
+def break_date_anchor_not_iso(root: Path) -> str:
+    mutate_case(root, MI, 8, lambda c: c.update(date_anchor="12 October 2026"))
+    return "declares no date_anchor as an ISO date"
+
+
+def break_date_anchor_unused(root: Path) -> str:
+    """An anchor on a fixture that writes no relative date: a key that does nothing."""
+    mutate_case(root, JU, 1, lambda c: c.update(date_anchor="2026-10-12"))
+    return "declares a date_anchor and writes no date relative to the run"
+
+
+def break_date_ref_malformed(root: Path) -> str:
+    """A reference the pattern cannot read would reach the room, and the grader, as braces."""
+    mutate_case(root, MI, 8, lambda c: c.update(prompt=c["prompt"].replace("{{date+9d:day month}}", "{{date+9w:day month}}")))
+    return "a date reference the loader cannot read"
+
+
+def keep_date_in_expectation(root: Path) -> None:
+    """A relative date in an expectation is written out at the anchor, never read as a clause's braces."""
+    mutate_case(root, MI, 8, lambda c: c["expectations"].__setitem__(
+        3, c["expectations"][3] + " The rounds are on {{date+9d:day month}}."))
+
+
+def keep_canary_spelled_as_dated_page(root: Path) -> None:
+    """A canary found in its page only once the page's relative date is written out at the anchor."""
+    mutate_case(root, MI, 7, lambda c: c["research"]["canaries"][2].update(text=["August 2026"]))
+
+
+def break_traces_candidate_text_missing(root: Path) -> str:
+    """A traces fixture with no candidate_text: every Traces to quotation would go unchecked."""
+    mutate_case(root, RT, 2, lambda c: c.pop("candidate_text"))
+    return "runs the traces check and declares no candidate_text list"
+
+
+def break_traces_candidate_text_drift(root: Path) -> str:
+    mutate_case(root, RT, 4, lambda c: c["candidate_text"].__setitem__(0, c["candidate_text"][0] + " and more"))
+    return "is not in the prompt"
+
+
 def break_term_collision(root: Path) -> str:
     """RV3's shape: an n/a target's term matches another target's natural query."""
     mutate_case(root, MI, 3, lambda c: c["research"]["targets"][3]["terms"].append("the interviewer"))
@@ -3590,6 +3638,8 @@ PASSES = [
     ("wording", "\"no network\" outside an L0 definition", keep_no_network_elsewhere),
     ("answer-keys", "schema fields a dossier fixture repeats, fenced", keep_answer_key_snake_case),
     ("fixtures", "a fixture whose user declines research", keep_declined_fixture),
+    ("evals", "a relative date in an expectation, written out at the anchor", keep_date_in_expectation),
+    ("fixtures", "a canary found in its page once the page's date is written out", keep_canary_spelled_as_dated_page),
     ("fixtures", "the page-naming rule's sentence hard-wrapped at another word", keep_pages_rule_rewrapped),
     ("fit-ledger", "a ratio that counts something other than rows", keep_ledger_ratio_of_other_noun),
     ("fit-ledger", "a ratio that counts something else in decision.summary", keep_summary_ratio_of_other_noun),
@@ -3931,6 +3981,12 @@ CASES: list[tuple[str, str, callable]] = [
     ("fixtures", "a canary none of whose spellings is on its page", break_canary_spelling),
     ("fixtures", "a candidate_text entry not in the prompt", break_candidate_text_drift),
     ("fixtures", "a quotes fixture with no candidate_text", break_candidate_text_missing),
+    ("fixtures", "a traces fixture with no candidate_text", break_traces_candidate_text_missing),
+    ("fixtures", "a traces fixture's candidate_text entry not in the prompt", break_traces_candidate_text_drift),
+    ("evals", "relative dates with no date_anchor", break_date_anchor_missing),
+    ("evals", "a date_anchor that is not an ISO date", break_date_anchor_not_iso),
+    ("evals", "a date_anchor on a fixture with no relative date", break_date_anchor_unused),
+    ("evals", "a relative date the loader cannot read", break_date_ref_malformed),
     ("fixtures", "an n/a target's term matching another target's query", break_term_collision),
     ("fixtures", "an n/a target whose terms match none of its hunts", break_hunt_vacuous),
     ("fixtures", "an on-target sample aimed at no term of its target", break_sample_unaimed),

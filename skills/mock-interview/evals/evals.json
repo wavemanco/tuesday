@@ -468,6 +468,8 @@
         "quotes"
       ],
       "candidate_text": [
+        "Second round on Tuesday for Senior Partnerships Manager at Kelverton Rail (UK rail-tech, ~600 staff, they sell scheduling software to train operating companies). The recruiter was unusually specific in her email, quoting it",
+        "She also attached the market report their strategy team circulated internally last quarter, which I've read. I've got about four hours of prep time total, spread over the weekend.",
         "9 years in partnerships, last 4 at a payments company running the ISV channel — took it from 6 partners to 40, roughly £4M of influenced revenue. Before that, 5 years in transport consulting (bus and light rail network planning, so I know the operator world from the other side). Never sold into rail specifically and never carried a direct quota, only influenced revenue."
       ]
     },
@@ -501,6 +503,7 @@
     },
     {
       "id": 7,
+      "date_anchor": "2026-10-16",
       "prompt": "Interview prep please — I have a 60-minute interview on Friday for Live Operations Producer at Saltmarsh Games (mobile game studio, about 350 people). My interviewer is Tobias Wrenfield, Head of Live Operations. THE JD: 'Live Operations Producer — Saltmarsh Games. Plan and run the live-events calendar for two of our mobile titles; coordinate design, art, engineering and community teams on each update; own the post-event review and the KPIs it reports; manage the release checklist with QA. Requirements: 3+ years producing live-service games or apps; experience running a content calendar; comfortable with player-retention metrics; clear written communication.' MY BACKGROUND (call me Femi): 4 years as an associate producer at a puzzle-game studio. I ran the weekly content-drop calendar for our main title for the last two years. Wrote the release checklist our QA team still uses. Presented the monthly retention numbers to the studio head. Never led a team, and never worked on a game with in-app purchases.",
       "expected_output": "A complete prep pack whose research accounting matches what the room allowed: with search available, values, loop, strategy and the named interviewer are researched and used — the published value names, the documented loop, a strategy-grounded CO question, an interviewer read from the public talk — and the representative-JD target is skipped because the JD was supplied; with no search available, those four read unavailable, none of their facts appear, and the upgrade menu offers the research.",
       "files": [],
@@ -732,7 +735,7 @@
               "pass",
               "priorities"
             ],
-            "text": "August 2026: Project Larkspur moves Tidepool Tactics and Lantern Row to a season-pass model with one shared events calendar from January 2027, and retires per-title event teams in favour of a single live-ops group."
+            "text": "{{date-2m:month year}}: Project Larkspur moves Tidepool Tactics and Lantern Row to a season-pass model with one shared events calendar from {{date+3m:month year}}, and retires per-title event teams in favour of a single live-ops group."
           },
           {
             "url": "https://talks.gdconf.example/2026/patch-notes-are-a-promise",
@@ -798,7 +801,8 @@
     },
     {
       "id": 8,
-      "prompt": "Help me prep for my interviews at Ashgrove Credit Union. THE JD: 'Member Experience Lead — Ashgrove Credit Union (member-owned, about 900 staff). Own the member complaints process end to end across branches and the contact centre; report monthly on complaint volumes and resolution times; coach branch supervisors on escalations; work with digital teams on self-service journeys. Requirements: 4+ years in financial-services customer operations; experience handling regulated complaints; confident presenting to senior leaders; comfortable with Excel reporting.' THEIR VALUES, copied this morning (12 October 2026) from ashgrovecu.org/about/values: 'Members First, Always — we decide from the member's side of the counter. Plain Words — if a member needs it explained twice, we wrote it wrong. Neighbours, Not Numbers — every branch is part of its town. Own the Fix — whoever finds the problem keeps hold of it until it is solved.' THE RECRUITER'S EMAIL about the process: 'Three rounds on 21 October: 30 minutes with me; 45 minutes with the Head of Member Services, who would be your manager, mostly behavioural; then 60 minutes with a panel of two branch managers, including a 20-minute case on a complaint escalation. The panel is also the values round — they score against the four values.' THEIR STRATEGY, from the 2026 strategy brief Ashgrove published in June 2026, which the recruiter sent me: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027; the main competitive pressure is app-only banks. Interviewers beyond their roles haven't been assigned yet. MY BACKGROUND (call me Dara): 6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.",
+      "date_anchor": "2026-10-12",
+      "prompt": "Help me prep for my interviews at Ashgrove Credit Union. THE JD: 'Member Experience Lead — Ashgrove Credit Union (member-owned, about 900 staff). Own the member complaints process end to end across branches and the contact centre; report monthly on complaint volumes and resolution times; coach branch supervisors on escalations; work with digital teams on self-service journeys. Requirements: 4+ years in financial-services customer operations; experience handling regulated complaints; confident presenting to senior leaders; comfortable with Excel reporting.' THEIR VALUES, copied this morning ({{date:day month year}}) from ashgrovecu.org/about/values: 'Members First, Always — we decide from the member's side of the counter. Plain Words — if a member needs it explained twice, we wrote it wrong. Neighbours, Not Numbers — every branch is part of its town. Own the Fix — whoever finds the problem keeps hold of it until it is solved.' THE RECRUITER'S EMAIL about the process: 'Three rounds on {{date+9d:day month}}: 30 minutes with me; 45 minutes with the Head of Member Services, who would be your manager, mostly behavioural; then 60 minutes with a panel of two branch managers, including a 20-minute case on a complaint escalation. The panel is also the values round — they score against the four values.' THEIR STRATEGY, from the {{date-4m:year}} strategy brief Ashgrove published in {{date-4m:month year}}, which the recruiter sent me: move 40% of member service to digital channels by {{date+2y:year}}; consolidate eight branches into five hubs over {{date+1y:year}}; launch a small-business lending product in Q1 {{date+1y:year}}; the main competitive pressure is app-only banks. Interviewers beyond their roles haven't been assigned yet. MY BACKGROUND (call me Dara): 6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.",
       "expected_output": "A complete prep pack built entirely from what the candidate pasted: the four published values by name in the cheat sheet, persona weights following the recruiter's three rounds with the panel as the values round, CO questions grounded in the pasted strategy brief, and a research accounting that reads skipped for values, process, strategy and the representative JD — each naming the outputs the pasted material already fixes — and n/a for the interviewer, with no search or fetch sent whether or not this room could search.",
       "files": [],
       "expectations": [
@@ -1012,8 +1016,8 @@
             "text": "Most roles have three rounds: a recruiter call, a conversation with the hiring manager, and a panel that includes a short case and scores against our four values."
           },
           {
-            "url": "https://ashgrovecu.org/news/strategy-2026",
-            "title": "Ashgrove strategy brief 2026",
+            "url": "https://ashgrovecu.org/news/strategy-{{date-4m:year}}",
+            "title": "Ashgrove strategy brief {{date-4m:year}}",
             "target": 3,
             "keywords": [
               "strategy",
@@ -1023,7 +1027,7 @@
               "plans",
               "announced"
             ],
-            "text": "June 2026: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027. Main competitive pressure: app-only banks."
+            "text": "{{date-4m:month year}}: move 40% of member service to digital channels by {{date+2y:year}}; consolidate eight branches into five hubs over {{date+1y:year}}; launch a small-business lending product in Q1 {{date+1y:year}}. Main competitive pressure: app-only banks."
           }
         ],
         "stray_samples": [

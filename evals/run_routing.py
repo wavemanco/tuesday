@@ -162,10 +162,16 @@ def install_frontdoor(dest_root: Path, run_id: str) -> dict[str, str]:
     return names
 
 
-def install_plugin(plugin: Path, run_id: str) -> dict[str, str]:
-    """The plugin layout: the front-door arm's skills under `plugin/skills/`, and the manifest
-    that makes the folder a plugin, named by `plugin_prefix`; return name -> installed name."""
-    names = install_frontdoor(plugin / "skills", run_id)
+def install_plugin(plugin: Path, run_id: str, module: str | None = None) -> dict[str, str]:
+    """The plugin layout: the front-door arm's skills under `plugin/skills/` — or, given `module`,
+    that one module alone and visible, as the fixture runner's module-alone arm installs it in this
+    layout (evals/README.md, "Through Tuesday") — and the manifest that makes the folder a plugin,
+    named by `plugin_prefix`; return name -> installed name."""
+    if module:
+        names = {module: f"{module}-{run_id}"}
+        install_one(module, plugin / "skills" / names[module], names[module])
+    else:
+        names = install_frontdoor(plugin / "skills", run_id)
     manifest = plugin / ".claude-plugin" / "plugin.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin_prefix(names, "plugin"), "version": "0.0.0",
@@ -206,9 +212,12 @@ def keep_transcripts(config: Path | None) -> None:
 
 
 def plugin_prefix(names: dict[str, str], layout: str) -> str | None:
-    """The plugin's name, which prefixes every skill it holds: the hub's installed name,
-    `tuesday-<run id>`, in the plugin layout; None in the others."""
-    return names[HUB] if layout == "plugin" else None
+    """The plugin's name, which prefixes every skill it holds: the installed name of the skill it
+    lists, in the plugin layout — the hub's, `tuesday-<run id>`, or in a plugin holding one module
+    alone (`install_plugin`) that module's; None in the others."""
+    if layout != "plugin":
+        return None
+    return names[HUB] if HUB in names else next(iter(names.values()))
 
 
 def installed_command(name: str, prefix: str | None = None) -> str:
@@ -222,9 +231,15 @@ def skill_id(skill: str) -> str:
     return skill[1:] if skill.startswith("/") else skill
 
 
+def local_name(skill: str) -> str:
+    """A listed or called skill's name without a plugin prefix: the part of its id (skill_id)
+    after the colon."""
+    return skill_id(skill).split(":")[-1]
+
+
 def tuesday_base(skill: str) -> str:
     """A listed or called skill's name without a plugin prefix or a run suffix."""
-    return re.sub(r"-[0-9a-f]{8}$", "", skill_id(skill).split(":")[-1])
+    return re.sub(r"-[0-9a-f]{8}$", "", local_name(skill))
 
 
 def foreign_tuesday(listed: list, names: dict[str, str]) -> list[str]:
@@ -234,7 +249,7 @@ def foreign_tuesday(listed: list, names: dict[str, str]) -> list[str]:
     """
     ours = set(names.values())
     bases = set(SKILLS) | {HUB}
-    return [s for s in listed if isinstance(s, str) and tuesday_base(s) in bases and s.split(":")[-1] not in ours]
+    return [s for s in listed if isinstance(s, str) and tuesday_base(s) in bases and local_name(s) not in ours]
 
 
 def timeout_for(arm: str, prompt: str, given: int | None = None) -> int:
@@ -530,7 +545,7 @@ class RunReader:
         if not isinstance(skill, str) or not self.whole_turn:
             return None
         skill = skill_id(skill)
-        if skill.split(":")[-1] in self.all_names.values():
+        if local_name(skill) in self.all_names.values():
             return None
         base = tuesday_base(skill)
         if base == HUB:

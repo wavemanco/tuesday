@@ -402,8 +402,8 @@ and `evals/research_server.py`, in every mode the fixture runs. A canary names i
 fixture's pages for the canary's target, and one of its spellings is in that page's
 text — a canary whose page matches nothing is never asked for and passes every run.
 What a canary may be is stated once, in `evals/README.md` ("What a canary may be").
-A fixture that runs the quotes check declares `candidate_text` as a list, and each
-entry is in the prompt; one that runs the fit_ledger check declares
+A fixture that runs the quotes or traces check declares `candidate_text` as a list,
+and each entry is in the prompt; one that runs the fit_ledger check declares
 `candidate_constraints` as exactly "known" or "unknown". `research.declined`, where
 present, is true or false; a fixture that sets it true does not also set
 `zero_calls`, and its `research.declined_phrase` is in the prompt. A fixture with
@@ -484,6 +484,10 @@ rather than only in the index; review holds those.
 through `evals/fixture_clauses.py`, as the runner does: an expectation naming a
 clause the file does not define, a clause nothing uses, and braces left in the
 expanded text — a clause inside a clause, a name the loader cannot read — fail.
+It reads each fixture's dates relative to the run at its `date_anchor`, as every
+group does, and fails relative dates with no anchor, an anchor with none, and a
+date reference the loader cannot read (`evals/README.md`, "Dates relative to the
+run").
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A
