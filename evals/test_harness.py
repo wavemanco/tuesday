@@ -4078,6 +4078,23 @@ def test_audit_quotes() -> None:
           banks('[grounded] "I ran the five hubs over 2027" — strategy brief'), ["FAIL"])
     check("must fail: a dossier field's name is the dossier's material, not another source",
           banks('[grounded] prohibited_claims: "consolidate eight branches"'), ["FAIL"])
+    # The quality check through Tuesday (m18) found two correct sources read as the
+    # candidate's words: a possessive written right before the quote, the form the
+    # rubric's worked example uses, and the dossier's role_profile named after it.
+    for cell in ('[grounded] "I ran the weekly content-drop calendar", beside the strategy brief\'s '
+                 '"consolidate eight branches into five hubs over 2027"',
+                 '[grounded] the recruiter\'s "we\'d like you to present a short POV on operator partnerships"',
+                 '[grounded] the recruiter\'s email "we\'d like you to present a short POV"',
+                 '[grounded] "consolidate eight branches into five hubs" (dossier role_profile R5)'):
+        check(f"must pass: a source named as the rubric names one: {cell[:70]!r}", banks(cell), ["PASS"])
+    check("must fail: a contraction is no possessive: that's names no source",
+          banks('[grounded] and that\'s "consolidate eight branches into five hubs over 2027"'), ["FAIL"])
+    check("must fail: a possessive source still has to hold the quote",
+          banks('[grounded] the recruiter\'s "consolidate nine branches into two hubs"'), ["FAIL"])
+    check("must fail: the candidate's own material named possessively stays theirs, and must stand in the snapshot",
+          banks('[grounded] your CV\'s "Never led a team"'), ["FAIL"])
+    check("must fail: a dossier field other than role_profile is still the dossier's material",
+          banks('[grounded] "consolidate eight branches" (dossier prohibited_claims)'), ["FAIL"])
 
     # B: a canned room's pages are quotable by their title and URL too, and only the
     # pages the run's log shows returned.

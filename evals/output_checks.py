@@ -1364,10 +1364,16 @@ def quoted_spans(cell: str) -> list[str]:
 # recruiter, the company's published sources — the raising sources
 # mock-interview's references/question-rubric.md defines — quoted with its origin
 # beside it. Its origin is its own: "— X" or "(X)" right after it, "X:" or "X ("
-# right before it, or, for a quoted title, the origin of the quotation it sits in
-# ('"…" — Saltmarsh Games, "Announcing Project Larkspur"'). An origin that names the
-# candidate's own material — their CV or message, the coach's notes, a fit-snapshot
-# row, the dossier or one of its fields — is no other source.
+# right before it, a possessive right before it as the rubric's worked example
+# writes one ('beside the JD's "align priorities with partner funders"'; "the
+# recruiter's", "Saltmarsh's published value"), or, for a quoted title, the origin
+# of the quotation it sits in ('"…" — Saltmarsh Games, "Announcing Project
+# Larkspur"'). An origin that names the candidate's own material — their CV or
+# message, the coach's notes, a fit-snapshot row, the dossier or one of its fields —
+# is no other source, except the dossier's role_profile, whose requirement text
+# stands as the supplied JD's lines (the rubric, "What a question may presuppose").
+# Both exceptions were found in the quality check through Tuesday (README, "Tuesday
+# backlog"), where the check read correct sources as the candidate's words.
 CANDIDATE_ORIGIN = re.compile(
     r"(?<![a-z])(?:your\s+(?:cv|r[eé]sum[eé]|message|own|words)|(?:the\s+)?coach'?s?\s+notes?|cv|"
     r"r[eé]sum[eé]|candidate|dossier|verified[\s_]+(?:candidate[\s_]+)?evidence|fit\s+snapshot|f\d+[a-z]?|"
@@ -1377,6 +1383,11 @@ CANDIDATE_ORIGIN = re.compile(
 _DASH_ORIGIN = re.compile(r'\s*(?:-{1,2}|[–—])\s*([^;"\n()]*[^;"\n()\s,])')
 _PAREN_ORIGIN = re.compile(r'\s*\(\s*([^()"\n]*[^()"\n\s])\s*\)')
 _LEAD_ORIGIN = re.compile(r"([A-Za-z][\w'’ .-]{0,60}?)\s*(?::|\()\s*$")
+_POSSESSIVE_ORIGIN = re.compile(r"(?<![\w'’])((?:[A-Za-z][\w.-]*\s+){0,3}([A-Za-z][\w.-]*?)(?:'s|’s|s'|s’)"
+                                r"(?:\s+[a-z][\w-]*){0,3})\s*$")
+# A contraction is no possessive: "that's" names no source.
+CONTRACTIONS = {"it", "that", "what", "there", "here", "he", "she", "who", "let", "where", "how", "one"}
+ROLE_ORIGIN = re.compile(r"role[\s_-]?profile", re.I)
 _IN_ORIGIN = re.compile(r'^\s*(?:-{1,2}|[–—])\s*([^;"\n]*[^;"\n\s])\s*$')
 
 
@@ -1394,6 +1405,8 @@ def quoted_spans_with_origin(cell: str) -> list[tuple[str, str | None]]:
             origin = m.group(1)
         elif m := _LEAD_ORIGIN.search(before):
             origin = m.group(1)
+        elif (m := _POSSESSIVE_ORIGIN.search(before)) and m.group(2).lower() not in CONTRACTIONS:
+            origin = m.group(1)
         elif i and (m := _IN_ORIGIN.match(plain[hits[i - 1].end():hit.start()])):
             origin = m.group(1)
         out.append((hit.group(1), origin.strip() if origin and origin.strip() else None))
@@ -1402,7 +1415,7 @@ def quoted_spans_with_origin(cell: str) -> list[tuple[str, str | None]]:
 
 def other_source(origin: str | None) -> bool:
     """An origin naming a source other than the candidate's own material."""
-    return bool(origin) and not CANDIDATE_ORIGIN.search(origin)
+    return bool(origin) and (bool(ROLE_ORIGIN.search(origin)) or not CANDIDATE_ORIGIN.search(origin))
 
 
 # A plain acknowledgment's source may be a dossier item, named by its field
