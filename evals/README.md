@@ -494,6 +494,17 @@ skills folder, joined to the room's own `--allowedTools` list. The room is named
 for the case and the run alone, never for the module, because the hub's folder
 path reaches the model and a module's name in it would point the route.
 
+**A run may save inside its room**, in both arms (the owner's decision). The same
+list gains one allow rule, `Edit(//<room>/**)`, and a second naming the room's
+resolved path when the room is reached through a symlink
+(`run_fixtures.save_rules`). It models a user who answers the save prompt with
+"allow edits in this folder". It is a rule rather than a permission mode,
+because a mode is session-wide and can approve some shell commands. It reaches the
+room alone: the plugin folder beside it stays unwritable, and a save aimed anywhere
+else is still refused and recorded. The project layout, the graders and the routing
+runs get no save rule. Before it, a plugin room refused the model's first save, and
+some mock-interview runs then delivered their pack only in chat.
+
 A fire counts only when the run read that module's playbook through the hub and
 reached no hidden module, read by the routing arm's own reader (`RunReader`,
 Tuesday arm), so a fire here is a route there. A run that did anything else is
@@ -518,7 +529,8 @@ stays, because the ledger's earlier baselines were measured with it. The quality
 check through Tuesday ran its alone arm that way, so its two arms differed
 in install, read rule and room name as well as in Tuesday.
 
-Every run's meta.json records `via`, `layout`, and, reported and never scored,
+Every run's meta.json records `via`, `layout`, `room_writable` (whether its flags
+carried the save rule, recorded on each invocation too), and, reported and never scored,
 `refused`, the graded invocation's tool calls the CLI refused for want of
 permission, counted by tool, and `save_refused`, whether a save (Write, Edit,
 MultiEdit or NotebookEdit) was among them (`run_fixtures.refusals`). A run that ended before its result event
@@ -593,7 +605,13 @@ denied, as every fixture always has.
   fixture runs, a canned room's sample read as the log entry the stub server's
   own page route (`research_server.search`) would leave; where no correct run
   sends a call (`zero_calls` or `declined`), it skips the cross-target collision
-  check.
+  check but for a quick check's samples (`quick_check`, below).
+- `quick_check`, where the user's pasted material fixes some targets and a run may
+  check that it is still current and genuine (the owner's decision): `targets`, the
+  targets that material fixes, and `names`, the names it carries
+  (`["pellucid", "datawright"]`), one of which each call's query or decoded
+  address must carry. job-underwriter eval 5 and mock-interview evals 7 and 8
+  declare one, and `CONTRIBUTING.md` says what CI holds it to.
 - `user_links`: the links the user gave the skill to read (absent means none).
   A URL the prompt names only as the source of text the user pasted is not one.
   In a canned room each has its page in `user_pages` (`url`, `title`, `text`),
@@ -740,7 +758,13 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   ones, or under any other label, is a format failure, and one in a run that
   recorded no research call fails. The tally's search and fetch counts must
   equal the recorded research attempts, refused ones included, within the budget
-  the fixture declares, and `zero_calls` fails on any research call. A fetch
+  the fixture declares, and `zero_calls` fails on any research call beyond a quick
+  check of the user's material (`output_checks.quick_check`): at most
+  `output_checks.QUICK_CHECK_CALLS` calls aimed at the targets `research.quick_check`
+  declares, refused ones included, each aimed at those targets alone and carrying
+  one of its names, with no other call beside them. `zero_calls` records the run's
+  number of calls, and a target such a check was sent for also accepts `yes` and
+  `unavailable`, which the checks above then judge against the record. A fetch
   whose URL equals a link in `research.user_links` after
   `output_checks.norm_url` (scheme and host lowercased; the scheme, a leading
   `www.`, a `#fragment` and one trailing `/` dropped; path and query kept) is
@@ -816,7 +840,8 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   above `Claim` in `ci/ledger_rules.py`. Checks: `ledger_wording` (no numeral,
   quantifier or count in the ledger's own lines, named or not),
   `ledger_sentence` (the set claims of the one sentence after the ledger, and no
-  second sentence), `snapshot_count` (the set claims in the snapshot's prose,
+  second sentence; its finding records `sentences`, how many sentences follow the
+  ledger, whatever reason it reports first), `snapshot_count` (the set claims in the snapshot's prose,
   its status line included), `summary_count` (the same, by the same reader, in the
   last JSON envelope's `decision.summary`; unchecked when the response has no
   envelope with one), `snapshot_band` (a bare band word,
@@ -840,9 +865,9 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   sentence its guidance rests on, so every quotation in either, of any length,
   must appear on word boundaries in the fixture's `candidate_text` — `[]` means
   nothing the candidate gave is quotable, and a fixture without the key has that
-  check reported unchecked, never run against the prompt instead. A Provenance
-  quotation must also appear in the response's own evidence column, because the
-  template quotes it "exactly as it appears in the fit snapshot". Three
+  check reported unchecked, never run against the prompt instead. The template
+  quotes a Provenance quotation "exactly as it appears in the fit snapshot", and one
+  cut otherwise is read as the end of this bullet says. Three
   Provenance quotations are not the candidate's. The first is a dossier item
   named by its field, the source mock-interview's
   `references/question-rubric.md` ("A plain acknowledgment") allows and defines:
@@ -876,13 +901,15 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   full stop, line break, "and" or a space, one punctuation mark optionally
   followed by "and"), with nothing else in the cell. A Provenance quotation that
   is the candidate's words, verbatim, but not one quotation of the evidence
-  column fails as before and is labelled a re-cut quote: its finding carries
+  column is a re-cut quote, and by the owner's decision it passes: it writes a
+  passing finding that says so, labelled with
   `recut`, `joined` when every word of it is in the column's quotations of that
   passage, two or more run together with nothing between them but punctuation and
   the candidate's own joining words, a conjunction and the subject of the clause
   it opens ("after I", `output_checks.JOINERS`), and `unquoted` when
-  it holds candidate words the column does not quote (`output_checks.recut_kind`).
-  The verdict does not change; the scorer counts the two apart.
+  it holds candidate words the column does not quote (`output_checks.recut_kind`),
+  so the scorer reports it. A fragment the candidate never gave, an insertion or a
+  splice still fails, as does a line of the job description quoted as theirs.
 
 - **Traces** (`traces`), on every resume-tailor fixture: every quotation in a
   Traces to cell of the edit ledger is the candidate's material, verbatim, the
@@ -944,6 +971,15 @@ Grades are never overwritten. `--skip-execute` grades saved runs only in an
 NEW` copies its responses and meta into a fresh directory and grades there.
 `--expectation N` restricts grading to the numbers named.
 
+`--stems FILE` limits a pass to the runs a file lists, one stem a line
+(`job-underwriter-5.canned.run3`), each under its own run number, in `--out`. A stem
+that names no fixture and room of the pass is refused. Without `--skip-execute`, a
+listed run must have no file in the folder yet, so nothing is overwritten, and no
+retry pass follows. With it, the listed runs that hold a response and no grade file
+are graded, whatever the folder's other runs hold. It re-runs a run a usage limit or
+a restart killed, once that run's files have moved to `killed/` in its folder, and
+grades one that finished before its grading was cut off.
+
 Runs saved before the harness kept a research record have none, and graders
 would be told so. The calls still exist in each nested session's transcript under
 `~/.claude/projects/`, so `backfill_tools.py` — which `--regrade-from` runs on the
@@ -964,10 +1000,16 @@ module, and decides nothing: a measurement's bar names its thresholds before it
 runs. Per module it reports the graded pass rate over both graders' verdicts,
 each expectation's runs passing (every grader PASS) over the runs graded on it,
 each automatic check's failing runs over the runs where it applied, the checks
-again with each family below counted once per run, quote failures with re-cut
-quotes apart, nudged and harness-invalid runs, refused tool calls by tool and
-runs with a refused save, and cost from each invocation's stream and each grade
-file. Every comparison of runs carries an exact two-sided Fisher p-value on runs;
+again with each family below counted once per run, quote failures apart from
+re-cut quotes, which are reported by kind, runs with a quick check of the user's
+material by fixture, the module's truthfulness family, nudged and harness-invalid
+runs, refused tool calls by tool and runs with a refused save, and cost from each
+invocation's stream and each grade file. A truthfulness family is the expectations
+that include given fixture clauses (`compare_arms.TRUTHFULNESS`), and its row
+counts the runs where a grader failed any of them over the runs graded on one:
+job-underwriter's is printed twice, for `proposed_language` with `ledger_counts`
+and for `proposed_language` alone, mock-interview's is `no_overclaim` and
+resume-tailor's `row_quote`. Every comparison of runs carries an exact two-sided Fisher p-value on runs;
 the graded pass rate carries none, because two graders of one run are not
 independent. A check applies in a run that recorded a finding for it and did not
 list it unchecked. A check that writes a finding only to fail, as
@@ -976,7 +1018,9 @@ code), applies in every valid run that did not list it unchecked; a check name
 `output_checks` does not write is read from the data, failure-only when no run of
 either set recorded a PASS for it. `--checks-from` reads each run's checks from a
 re-check of the same runs. A finding saved before the `recut` label is read as a
-re-cut quote by the reason the check has always written for that case.
+re-cut quote by the reason the check has always written for that case. A re-cut
+quote that failed marks a set checked before re-cut quotes passed, and its row is
+printed only when it is not zero.
 
 It also reports whether the two sets were graded like for like. Each set's grader
 prompt versions and grader models are printed, and an expectation whose version
@@ -987,15 +1031,35 @@ not record how many were asked for: a missing or unreadable grade file is a grad
 that returned nothing, so its expectations read partial, as a declined grade's do.
 Runs short of graders, runs with no checks file and files that could not be read
 are printed per set; a run whose meta.json cannot be read is left out of
-everything and named.
+everything and named. Each set's `via`, `layout` and `room_writable` are printed
+too, `unrecorded` where a set was saved before the field. A run saved before runs
+recorded a layout is read as the layout its `via` always meant then, and the count
+of such runs is printed beside it. Two sets that differ in layout or save policy are
+flagged NOT LIKE FOR LIKE. Until then nothing flagged the quality check through
+Tuesday, whose two arms differed in layout.
+
+After the modules it prints the measures of the fix round's text change
+(`docs/fix-round-plan-detail.md`, section 4.2), by check name, pooled over the two
+sets and in each, every count with its runs: job-underwriter runs whose
+`ledger_sentence` recorded more than one sentence, and whose `ledger_sentence`
+failed for a set claim, over the runs where it applied; runs passing
+`ledger_present`, over job-underwriter's valid runs; for job-underwriter eval 5
+and mock-interview eval 8, runs failing `zero_calls` and runs with a quick check;
+of their runs that sent a call, those failing none of `tally_searches`,
+`tally_fetches`, `skip_has_no_call`, `off_target_shown`, `row` and `tally`; and
+their calls per run.
 
 ```bash
 python evals/compare_arms.py OUT/tuesday OUT/alone > compare.txt
 ```
 
 A check family is one defect that more than one check reads, counted once per
-run: one slot, one absent block, or one piece of text breaking one rule. These
-are the families, pooled over the 690 runs of the quality check through Tuesday (Sonnet's checks from its re-check
+run: one slot, one absent block, or one piece of text breaking one rule. A family
+applies in a run where a check it is anchored on (`compare_arms.FAMILIES`) that
+records passes applied, or where the family failed (`compare_arms.unit_applies`); a
+family anchored only on checks that record failures applies where any of them does.
+So a run that wrote no fit snapshot is outside the hard-gates line and severity
+slot families, rather than passing them. These are the families, pooled over the 690 runs of the quality check through Tuesday (Sonnet's checks from its re-check
 under 2d7dbfc):
 
 | Family | Checks | Why it is one defect | Quality check: runs failing it, and with two or more of its checks failing |

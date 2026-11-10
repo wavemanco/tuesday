@@ -2514,6 +2514,10 @@ def search_entry(query: str, research: dict, mode: str) -> dict:
     return {"kind": "search", "query_or_url": query, "targets": targets}
 
 
+# How a fixture file's quick_check clause states the calls a quick check may send ("at most two calls").
+QUICK_CHECK_LIMIT = re.compile(r"\bat most (\w+) calls?\b", re.I)
+
+
 def check_fixtures() -> None:
     """The fixture fields the harness reads are what the harness assumes (D5).
 
@@ -2531,9 +2535,12 @@ def check_fixtures() -> None:
     target's `terms` decide which calls were aimed at it, so a sample of another
     target that is aimed at an `n/a` or `skipped` one — by its terms, or in a canned
     room by a page the server returns — fails a correct row, and a target whose terms
-    match none of its own queries passes every hunt; and a fixture with research, of a
+    match none of its own queries passes every hunt; a fixture with research, of a
     skill whose SKILL.md states that every `yes` row names its pages, that does not
-    run `yes_names_page` leaves those pages unjudged. Each is read here with the
+    run `yes_names_page` leaves those pages unjudged; and a `research.quick_check`
+    whose targets, names, budget or samples do not fit the fixture fails a lawful
+    check of the user's material or passes a hunt, as a `quick_check` clause whose
+    number of calls is not the checks' own sets graders and checks apart. Each is read here with the
     harness's own functions (evals/output_checks.py, evals/research_server.py), in
     every mode the fixture runs (run_fixtures.modes_of), so the lint and the checks
     cannot disagree.
@@ -2545,6 +2552,23 @@ def check_fixtures() -> None:
         # in every fixture with research of a skill whose SKILL.md states it, and in no
         # other, so the check can neither go quiet nor judge a rule a skill never gave.
         states_pages = bool(output_checks.YES_PAGES_RULE.search((skill / "SKILL.md").read_text(encoding="utf-8")))
+        # The quick_check clause tells graders how many calls a quick check of the user's material
+        # may send; the checks allow output_checks.QUICK_CHECK_CALLS, and the two must agree.
+        try:
+            raw = json.loads((skill / "evals" / "evals.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raw = {}
+        clause = (raw.get("clauses") or {}).get("quick_check") if isinstance(raw, dict) else None
+        if clause is not None:
+            linted += 1
+            limit = QUICK_CHECK_LIMIT.search(str(clause))
+            said = None if not limit else (int(limit.group(1)) if limit.group(1).isdigit()
+                                           else ledger_rules.COUNT_WORDS.get(limit.group(1).lower()))
+            if said != output_checks.QUICK_CHECK_CALLS:
+                fail(group, f"{skill.name} evals.json clause quick_check allows "
+                            f"{limit.group(0) if limit else 'no stated number of calls'}, and the checks allow "
+                            f"{output_checks.QUICK_CHECK_CALLS} (output_checks.QUICK_CHECK_CALLS) — graders and "
+                            f"checks would pass different checks")
         for case in load_evals(skill / "evals" / "evals.json") or []:
             label = f"{skill.name} eval {case.get('id')}"
             prompt = output_checks.normalise_quote(case.get("prompt", ""))
@@ -2695,7 +2719,8 @@ def check_fixtures() -> None:
                     fail(group, f"{label}: no spelling of the canary for target {n} is in its page {page}")
 
             # Where no correct run sends a call (zero_calls, or declined), a collision
-            # cannot fail a correct n/a: any call there fails zero_calls first.
+            # cannot fail a correct n/a: any call there fails zero_calls first, but for a
+            # quick check's, which the quick-check sample rule below covers.
             no_call = bool(research.get("zero_calls")) or declined is True
             targets = research.get("targets") or []
             # The room aimed_at reads a search for the company by name in: the
@@ -2707,6 +2732,72 @@ def check_fixtures() -> None:
 
             def aimed(query: str, target: dict, mode: str) -> bool:
                 return output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode, room)
+
+            # A quick check of the user's material (`research.quick_check`, output_checks.quick_check):
+            # the targets that material fixes, and the names it carries. Each rule below keeps a
+            # lawful check from failing, or a hunt from passing as one.
+            quick = research.get("quick_check")
+            checked: set = set()
+            if quick is not None:
+                linted += 1
+                numbers = {t.get("n") for t in targets}
+                declared = quick.get("targets") if isinstance(quick, dict) else None
+                names = quick.get("names") if isinstance(quick, dict) else None
+                if not isinstance(declared, list) or not declared:
+                    fail(group, f"{label}: research.quick_check declares no targets")
+                    declared = []
+                for n in declared:
+                    if n not in numbers:
+                        fail(group, f"{label}: quick-check target {n!r} is not one of this fixture's targets")
+                        continue
+                    checked.add(n)
+                    target = next(t for t in targets if t.get("n") == n)
+                    for mode in modes:
+                        if output_checks.accepted(target, mode) != ["skipped"]:
+                            fail(group, f"{label}: quick-check target {n} accepts "
+                                        f"{output_checks.accepted(target, mode)} in a {mode} room, not skipped alone — "
+                                        f"a quick check is of material that fixes its target")
+                if not isinstance(names, list) or not any(isinstance(x, str) and x.strip() for x in names):
+                    fail(group, f"{label}: research.quick_check names nothing — no call could name the material it checks")
+                for name in names if isinstance(names, list) else []:
+                    if not isinstance(name, str) or not name.strip() or name.strip().lower() not in case.get("prompt", "").lower():
+                        fail(group, f"{label}: quick-check name {name!r} is not in the prompt — a check of the user's "
+                                    f"material names what the user gave")
+                if declined is True:
+                    fail(group, f"{label}: declares a quick check beside research.declined — research the user "
+                                f"declined sends no call, a check included")
+                cap = (research.get("budget") or {}).get("searches")
+                if not isinstance(cap, int) or cap < output_checks.QUICK_CHECK_CALLS:
+                    fail(group, f"{label}: a quick check may send {output_checks.QUICK_CHECK_CALLS} calls "
+                                f"(output_checks.QUICK_CHECK_CALLS), above this fixture's search budget of {cap!r}")
+            # A declared target's sample aimed at a target outside the declaration would fail a
+            # correct check. Where no correct run sends a call this is the one collision that can
+            # fail a correct row, so the collision check below is narrowed to it there.
+            for target in targets:
+                if target.get("n") not in checked:
+                    continue
+                for query in target.get("on_target_samples") or []:
+                    for mode in modes:
+                        hit = [o.get("n") for o in targets if o.get("n") not in checked and aimed(query, o, mode)]
+                        if hit:
+                            fail(group, f"{label}: quick-check target {target.get('n')}'s sample {query!r} is aimed at "
+                                        f"target(s) {hit} outside the quick check in a {mode} room — a correct check "
+                                        f"would fail")
+                            break
+            # The other direction: a sample of a target the material does not fix is a call for
+            # something the user did not give (the unnamed hiring manager), and must not pass as a check.
+            for target in targets:
+                if not checked or target.get("n") in checked:
+                    continue
+                for query in (target.get("on_target_samples") or []) + (target.get("hunt_samples") or []):
+                    for mode in modes:
+                        qc = output_checks.quick_check(research, mode, [search_entry(query, research, mode)],
+                                                       case.get("prompt", ""))
+                        if qc and qc["ok"]:
+                            fail(group, f"{label}: target {target.get('n')}'s sample {query!r} passes as a quick "
+                                        f"check of the user's material in a {mode} room — a hunt for a target the "
+                                        f"material does not fix would pass zero_calls")
+                            break
 
             for target in targets:
                 names = target.get("identity")
@@ -2785,7 +2876,7 @@ def check_fixtures() -> None:
         fail(group, "no fixture field read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
         ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links, "
-                  f"user pages, research targets and page-naming checks agree with what the harness reads")
+                  f"user pages, research targets, quick checks and page-naming checks agree with what the harness reads")
 
 
 class SentenceRule:

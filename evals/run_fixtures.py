@@ -94,6 +94,9 @@ Regrading. Grade files are never overwritten: `--skip-execute` refuses an --out
 that already holds them. `--regrade-from SRC --out NEW` copies SRC's responses
 and meta into a fresh directory, reconstructs the research record of runs saved
 before it existed (`backfill_tools.py`), and grades and checks them there.
+`--stems FILE` re-runs the runs a file names, each under its own run number, in an --out
+that holds none of their files; with --skip-execute it grades those of them that hold a
+response and no grade file.
 
 Usage:
     python evals/run_fixtures.py --out /tmp/clean-room --model claude-sonnet-5
@@ -102,6 +105,7 @@ Usage:
     python evals/run_fixtures.py --out /tmp/cr --skip-execute   # grade saved, ungraded runs
     python evals/run_fixtures.py --regrade-from /tmp/cr --out /tmp/cr-regrade --expectation 14
     python evals/run_fixtures.py --skill job-underwriter --cases probe.json --out /tmp/p
+    python evals/run_fixtures.py --stems killed.txt --out /tmp/cr                # re-run named runs in place
     python evals/run_fixtures.py --via frontdoor --out /tmp/fd   # each fixture through the front door
     python evals/run_fixtures.py --layout plugin --out /tmp/alone # each module alone, installed as the front door is
 
@@ -263,17 +267,36 @@ def install_in_plugin(room: Path, run_id: str, module: str | None = None) -> tup
     return plugin, run_routing.install_plugin(plugin, run_id, module)
 
 
+def save_rules(room: Path) -> list[str]:
+    """The permission rules that let a run save inside its own room, as a user who answers the save
+    prompt with "allow edits in this folder" would (the owner's decision 4; evals/README.md,
+    "Through Tuesday"): `Edit` on every file under the room, which covers the edit tools, and,
+    when the room is reached through a symlink, the same rule on its resolved path. Nothing
+    else is writable: the plugin folder beside the room, which holds the skills, stays refused."""
+    rules = [f"Edit(/{room.absolute().as_posix()}/**)"]
+    resolved = f"Edit(/{room.resolve().as_posix()}/**)"
+    return rules + ([resolved] if resolved not in rules else [])
+
+
 def plugin_flags(flags: list[str], room: Path) -> list[str]:
-    """A room's flags with its plugin added and the plugin's skills folder readable: `--plugin-dir`,
-    and the routing arm's read rule (`run_routing.read_rule`) joined to the room's one
-    `--allowedTools` list, or given its own when the room has none. Both arms' plugin installs
-    run under exactly these."""
-    flags, rule = list(flags), run_routing.read_rule(room, "plugin")
+    """A room's flags with its plugin added, the plugin's skills folder readable and the room
+    writable: `--plugin-dir`, and the routing arm's read rule (`run_routing.read_rule`) and the
+    room's save rules (`save_rules`) joined to the room's one `--allowedTools` list, or given
+    their own when the room has none. Both arms' plugin installs run under exactly these; the
+    project layout and the graders get no save rule."""
+    flags, rules = list(flags), [run_routing.read_rule(room, "plugin"), *save_rules(room)]
     if "--allowedTools" in flags:
-        flags.insert(flags.index("--allowedTools") + 1, rule)
+        at = flags.index("--allowedTools") + 1
+        flags[at:at] = rules
     else:
-        flags += ["--allowedTools", rule]
+        flags += ["--allowedTools", *rules]
     return flags + ["--plugin-dir", str(run_routing.home(room, "plugin"))]
+
+
+def room_writable(flags: list[str], room: Path) -> bool:
+    """Whether a run's flags let it save inside its room (`save_rules`), recorded on every
+    invocation and run (`room_writable`)."""
+    return all(rule in flags for rule in save_rules(room))
 
 
 def frontdoor_fire(lines, names: dict[str, str], skill: str, room: Path) -> str:
@@ -849,7 +872,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
         prompt = case["prompt"] if not nudged else \
             f"Use the {name} skill for this.\n\n{case['prompt']}"
         invocation = {"room": str(room), "nudged": nudged, "installed": name, "flags": flags,
-                      "via": via, "layout": layout, "skill_dir": str(skill_dir),
+                      "via": via, "layout": layout, "room_writable": room_writable(flags, room),
+                      "skill_dir": str(skill_dir),
                       "calls_log": str(paths["calls"]) if paths else None}
         meta["invocations"].append(invocation)
         try:
@@ -874,7 +898,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
             refused, save_refused = refusals(invocation)
             meta.update(error=str(exc), outcome=invocation["outcome"],
                         graded_invocation=None, research_log=None,
-                        refused=refused, save_refused=save_refused,
+                        refused=refused, save_refused=save_refused, room_writable=invocation["room_writable"],
                         harness={"status": "harness-invalid", "reasons": [f"skipped: {exc}"]})
             write_meta(out, stem, meta)
             print(f"  SKIPPED {skill} eval {case['id']} [{mode}] (run {run}): {exc}", flush=True)
@@ -916,6 +940,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 research_log=graded["research_log"],
                 harness={"status": status, "reasons": reasons})
     meta["refused"], meta["save_refused"] = refusals(graded)
+    meta["room_writable"] = graded["room_writable"]
     write_meta(out, stem, meta)
     init = graded.get("init") or {}
     read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
@@ -1355,6 +1380,40 @@ def copy_for_regrade(src: Path, out: Path) -> int:
     return copied
 
 
+STEM = re.compile(r"^(.+)\.run(\d+)$")
+
+
+def listed_runs(path: Path, work: list[tuple]) -> list[tuple]:
+    """The runs a `--stems` file lists, one stem a line (blank lines and lines starting with `#`
+    ignored), as (skill, case, mode, run) in the order listed, each under its own run number.
+    Raises ValueError for a stem that names no fixture and room of this pass's `work`, a stem
+    listed twice, and a file that lists none."""
+    prefixes = {stem_for(s, c, m, 0)[:-len(".run0")]: (s, c, m) for s, c, m in work}
+    runs, seen = [], set()
+    for line in path.read_text().splitlines():
+        stem = line.strip()
+        if not stem or stem.startswith("#"):
+            continue
+        match = STEM.match(stem)
+        if not match or match.group(1) not in prefixes:
+            raise ValueError(f"--stems: {stem!r} names no fixture and room this pass runs "
+                             f"(a stem is <skill>-<id>.run<n>, or <skill>-<id>.<mode>.run<n> for a fixture "
+                             f"with more than the denied room)")
+        if stem in seen:
+            raise ValueError(f"--stems: {stem!r} is listed twice")
+        seen.add(stem)
+        skill, case, mode = prefixes[match.group(1)]
+        runs.append((skill, case, mode, int(match.group(2))))
+    if not runs:
+        raise ValueError(f"--stems: {path} lists no run")
+    return runs
+
+
+def stem_files(out: Path, stem: str) -> list[str]:
+    """The files of one run in a set's folder: its response, meta, checks and grade files."""
+    return sorted(p.name for p in out.glob(f"{stem}.*") if p.is_file())
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skill", action="append", choices=SKILLS, default=[])
@@ -1387,9 +1446,16 @@ def main() -> int:
                          "skill); plugin, a plugin beside the room, as the front door always is — with --via "
                          "skill, the module alone installed exactly as the front door is, the control a "
                          "comparison through Tuesday uses")
+    ap.add_argument("--stems", default=None,
+                    help="a file listing runs by stem, one a line: run only those, each under its own run "
+                         "number, in --out, where none of their files may exist yet; with --skip-execute, grade "
+                         "only those that hold a response and no grade file. No retry pass follows")
     args = ap.parse_args()
     if args.via == "frontdoor" and args.layout == "project":
         ap.error("--via frontdoor installs the front door as the plugin it ships as: --layout plugin")
+
+    if args.stems and args.regrade_from:
+        ap.error("--stems re-runs or grades named runs in place, in --out; it does not combine with --regrade-from")
 
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -1406,7 +1472,7 @@ def main() -> int:
             import backfill_tools
             backfill_tools.backfill_dir(out)
         skip_execute = True
-    elif skip_execute and any(out.glob("*.grade-*.json")):
+    elif skip_execute and not args.stems and any(out.glob("*.grade-*.json")):
         ap.error(f"{out} already holds grade files; regrade into a fresh directory with "
                  f"--regrade-from {out} --out <new dir>")
     if args.cases and len(args.skill) != 1:
@@ -1415,6 +1481,19 @@ def main() -> int:
     skills = args.skill or SKILLS
     work = [(s, c, m) for s in skills for c in cases_for(s, args.eval, args.cases)
             for m in modes_of(c)]
+    listed = None
+    if args.stems:
+        try:
+            listed = listed_runs(Path(args.stems), work)
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
+        if not skip_execute:
+            # Nothing is overwritten: a run is re-run only where the folder holds none of its files
+            # (a killed run's files move to killed/ first, evals/README.md "Regrading a saved set").
+            held = {stem: files for s, c, m, r in listed if (files := stem_files(out, stem := stem_for(s, c, m, r)))}
+            if held:
+                ap.error("--stems runs a listed run only where --out holds none of its files: "
+                         + "; ".join(f"{stem} holds {', '.join(files)}" for stem, files in held.items()))
     results: dict[tuple, list[dict]] = {(s, c["id"], m): [] for s, c, m in work}
     checks: dict[tuple, list[dict]] = {(s, c["id"], m): [] for s, c, m in work}
     runs_done: dict[tuple, list[int]] = {(s, c["id"], m): [] for s, c, m in work}
@@ -1441,7 +1520,23 @@ def main() -> int:
         for skill, case, mode, run in jobs:
             runs_done[(skill, case["id"], mode)].append(run)
 
-    if skip_execute:
+    if listed is not None and skip_execute:
+        # Grades are never overwritten: of the listed runs, those that hold a response and no grade
+        # file are graded, whatever the folder's other runs hold.
+        jobs = []
+        for s, c, m, r in listed:
+            stem = stem_for(s, c, m, r)
+            if not (out / f"{stem}.md").exists():
+                print(f"  not graded {stem}: it holds no response")
+            elif any(out.glob(f"{stem}.grade-*.json")):
+                print(f"  not graded {stem}: it already holds a grade file, which is never overwritten")
+            else:
+                jobs.append((s, c, m, r))
+        pass_over(jobs, "listed runs")
+    elif listed is not None:
+        # No retry pass: its run numbers follow the listed runs' and could be ones the folder holds.
+        pass_over(listed, "listed runs")
+    elif skip_execute:
         pass_over([(s, c, m, r) for s, c, m in work for r in runs_on_disk(out, s, c, m)],
                   "saved runs")
     else:

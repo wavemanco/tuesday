@@ -84,6 +84,17 @@ def load_cases(path: Path) -> list[dict]:
     return expand_spec(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
+def clause_refs(path: Path) -> dict:
+    """{case id: [the clause names each expectation includes, in order]}, read from an evals.json
+    before expansion: which expectations grade a rule written once (compare_arms' truthfulness
+    rows read them)."""
+    spec = json.loads(Path(path).read_text(encoding="utf-8"))
+    cases = spec.get("evals") if isinstance(spec, dict) else spec
+    return {case.get("id"): [sorted(set(CLAUSE_REF.findall(e))) if isinstance(e, str) else []
+                             for e in case.get("expectations") or []]
+            for case in cases or [] if isinstance(case, dict)}
+
+
 def shifted(day: datetime.date, offsets: str) -> datetime.date:
     """`day` moved by each offset in turn (`+9d`, `-4m`, `+1y`); a month or year step keeps the
     day of the month where the month has it, else its last day."""

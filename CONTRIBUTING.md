@@ -429,7 +429,12 @@ is stated in `evals/README.md`); its names are in the prompt and in no target's
 terms, and some `research.stray_samples` query carries one, while every stray sample
 is aimed at no target in any room the fixture runs. A fixture in which no correct
 run sends a call (`zero_calls`, or `declined`) is not read for that last collision:
-any call there fails `zero_calls` first. What it does not read: whether a canary's
+any call there fails `zero_calls` first. A `research.quick_check` lists declared
+targets that accept `skipped` alone and names the prompt carries, sits beside no
+`declined` and within the search budget, has no sample of its targets aimed at a
+target outside them and passes no other target's sample as a quick check, and each
+fixture file's `quick_check` clause allows
+`output_checks.QUICK_CHECK_CALLS` calls. What it does not read: whether a canary's
 spellings are figures, names or titles; whether the declined phrase declines; and
 whether the samples are the queries runs actually send.
 

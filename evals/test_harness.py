@@ -1997,14 +1997,19 @@ def test_via_frontdoor() -> None:
               (files_of(plugin), names), (files_of(reference) if run_routing.install_plugin(reference, "ab12cd34")
                                           else None, NAMES))
         rule = run_routing.read_rule(room, "plugin")
+        # The save rule names the room; where the temporary folder is reached through a symlink (as on
+        # macOS), a second names its resolved path.
+        save = [f"Edit(/{room.absolute().as_posix()}/**)"] + (
+            [f"Edit(/{room.resolve().as_posix()}/**)"] if room.resolve() != room.absolute() else [])
         denied = run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), room)
-        check("a denied room gains the plugin and a rule to read its skills folder",
-              denied, run_fixtures.room_flags("denied") + ["--allowedTools", rule, "--plugin-dir", str(plugin)])
+        check("a denied room gains the plugin, a rule to read its skills folder and a rule to save in the room",
+              denied, run_fixtures.room_flags("denied") + ["--allowedTools", rule, *save, "--plugin-dir", str(plugin)])
         paths = {"mcp": Path("/x/mcp.json")}
         canned = run_fixtures.plugin_flags(run_fixtures.room_flags("canned", paths), room)
-        check("a canned room keeps one --allowedTools list, the read rule joined to its search tools",
-              (canned.count("--allowedTools"), canned[canned.index("--allowedTools") + 1:canned.index("--allowedTools") + 4]),
-              (1, [rule, "mcp__web__search", "mcp__web__fetch"]))
+        at = canned.index("--allowedTools") + 1
+        check("a canned room keeps one --allowedTools list, the read and save rules joined to its search tools",
+              (canned.count("--allowedTools"), canned[at:at + len(save) + 3]),
+              (1, [rule, *save, "mcp__web__search", "mcp__web__fetch"]))
 
     hub = f"{Path('/r/rooms/plugins/case-3-denied-ab12cd34/skills')}/tuesday-ab12cd34"
     own = [ev_init(list(QUALIFIED.values())), ev_tool("s", "Skill", {"skill": QUALIFIED["tuesday"]})]
@@ -2657,8 +2662,12 @@ def test_provenance_pool() -> None:
     check("with no fit snapshot table, that is one format failure, not one per Provenance cell",
           sorted((c["target"], c["verdict"], c["kind"]) for c in got if c["check"] == "quotes"),
           [("banks", "PASS", "judgement"), ("fit_snapshot", "FAIL", "format")])
-    check("a candidate sentence the fit snapshot does not quote fails: Provenance quotes it as it appears there",
-          banks("Led 30+ end-to-end client integrations of the vendor's REST APIs"), ["FAIL"])
+    got = output_checks.run_checks(mi4, "denied", pack("Led 30+ end-to-end client integrations of the vendor's REST APIs"),
+                                   None)["checks"]
+    check("must pass, labelled: a candidate sentence the fit snapshot does not quote is a re-cut quote, passed and "
+          "reported (the owner's decision 2)",
+          [(c["verdict"], c.get("recut")) for c in got if c["check"] == "quotes" and c["target"] == "banks"],
+          [("PASS", "unquoted"), ("PASS", None)])
 
     # A plain acknowledgment's source may be a dossier item named by its field
     # (question-rubric.md, "A plain acknowledgment"): the cell names the field
@@ -3484,10 +3493,16 @@ def test_user_links() -> None:
         got = output_checks.check_accounting(
             accounting(rows, "Research tier: L0 — no searches; user links read 1"), research, "canned",
             [entry(url, kind="fetch", targets=[1])], ju5["prompt"])
-        check(f"ju 5: a fetch of {url} is research: zero_calls, target 1's skip, the count and "
-              f"the user-link claim all fail",
+        check(f"ju 5: a fetch of {url} is research, here a quick check of the pasted page, so zero_calls "
+              f"passes, while target 1's skip, the count and the user-link claim all fail",
               [verdict_of(got, "zero_calls"), verdict_of(got, "skip_has_no_call", 1),
-               verdict_of(got, "tally_searches"), verdict_of(got, "tally_user_links")], ["FAIL"] * 4)
+               verdict_of(got, "tally_searches"), verdict_of(got, "tally_user_links")], ["PASS"] + ["FAIL"] * 3)
+    three = [entry(u, kind="fetch", targets=[1]) for u in ("https://pellucidlearning.com/about", "https://pellucidlearning.com",
+                                                          "https://www.pellucidlearning.com/careers")]
+    got = output_checks.check_accounting(accounting(rows, "Research tier: L0 — no searches; user links read 1"), research,
+                                         "canned", three, ju5["prompt"])
+    check("ju 5: three such fetches are more than a quick check sends: zero_calls fails",
+          verdict_of(got, "zero_calls"), "FAIL")
 
     l0 = dict(RESEARCH, user_links=["https://example.org/jd"])
     jd = [entry("https://example.org/jd", kind="fetch")]
@@ -3690,6 +3705,116 @@ def test_user_link_fixture() -> None:
         [*research["pages"], *research["user_pages"]], log)] for log in ([read], calls)]
     check("a canned room's quotable text holds the user's page once it was read, and not before",
           [any(s) for s in shown], [True, False])
+
+
+def test_quick_check() -> None:
+    print("\nchecks: a quick, reported check that the user's pasted material is still current passes (decision 3)")
+    ju5, mi8, mi7 = fixture("job-underwriter", 5), fixture("mock-interview", 8), fixture("mock-interview", 7)
+    check("the fixtures declare which targets the material fixes, and the names it carries",
+          [(c["research"]["quick_check"]["targets"], c["research"]["quick_check"]["names"]) for c in (ju5, mi8, mi7)],
+          [([1, 2], ["pellucid", "datawright"]), ([1, 2, 3, 5], ["ashgrove"]), ([5], ["saltmarsh"])])
+    check("a quick check sends at most two calls, searches and fetches together", output_checks.QUICK_CHECK_CALLS, 2)
+    check_true("eval 5's prompt drops its copy times and the posting's status, and eval 8 keeps its copy date",
+               "THE JD, from pellucidlearning.com/careers/senior-data-engineer: '" in ju5["prompt"]
+               and not any(w in ju5["prompt"] for w in ("09:12", "09:10", "Accepting applications", "copied"))
+               and "copied this morning" in mi8["prompt"])
+
+    def run(case, mode, log, rows, tally):
+        return output_checks.check_accounting(accounting(rows, tally), case["research"], mode, log, case["prompt"])
+
+    def verdicts(got, *keys):
+        return [verdict_of(got, *k.split(":")) for k in keys]
+    post = "https://pellucidlearning.com/careers/senior-data-engineer"
+    calls = [entry(post, kind="fetch", targets=[1]), entry("Pellucid Learning Series C funding", targets=[1])]
+    got = run(ju5, "canned", calls, {1: "yes", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 1 of 2")
+    check("must pass: eval 5 canned, a posting fetch and a Pellucid search, row 1 yes, tally 1 of 5 and 1 of 2",
+          verdicts(got, "zero_calls", "accept:1", "yes_has_call:1", "tally_searches", "tally_fetches"), ["PASS"] * 5)
+    check("and zero_calls records the calls and the quick check, as does the checked row",
+          [(c.get("calls"), c.get("quick_check")) for c in got["checks"] if c["check"] in ("zero_calls",)]
+          + [(None, c.get("quick_check")) for c in got["checks"] if c["check"] == "accept" and c["target"] == "1"],
+          [(2, 2), (None, 2)])
+    refused = [dict(e, outcome="refused") for e in calls]
+    got = run(ju5, "denied", refused, {1: "unavailable", 2: "skipped", 3: "n/a"},
+              "Research tier: L1 — searches 1 of 5, fetches 1 of 2")
+    check("must pass: the same calls refused in a denied room, row 1 unavailable",
+          verdicts(got, "zero_calls", "accept:1", "tally_searches", "tally_fetches"), ["PASS"] * 4)
+    got = run(ju5, "canned", [entry("Datawright 2026 Data Engineering Pay Report", targets=[2])],
+              {1: "skipped", 2: "yes", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must pass: a search for the Datawright report by title, row 2 yes",
+          verdicts(got, "zero_calls", "accept:2", "yes_has_call:2"), ["PASS"] * 3)
+    got = run(mi8, "canned", [entry("Ashgrove Credit Union news 2026", targets=[3])],
+              {1: "skipped", 2: "skipped", 3: "yes", 4: "n/a", 5: "skipped"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must pass: an Ashgrove news search on eval 8, row 3 yes",
+          verdicts(got, "zero_calls", "accept:3", "yes_has_call:3"), ["PASS"] * 3)
+    got = run(mi7, "canned", [entry("Saltmarsh Games live operations producer posting")],
+              {1: "unavailable", 2: "unavailable", 3: "unavailable", 4: "unavailable", 5: "yes"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must pass: a Saltmarsh posting search on eval 7, row 5 yes, the row recording the check",
+          (verdicts(got, "accept:5", "yes_has_call:5"),
+           [c.get("quick_check") for c in got["checks"] if c["check"] == "accept" and c["target"] == "5"]),
+          (["PASS", "PASS"], [1]))
+
+    three = [*calls, entry("https://pellucidlearning.com/about", kind="fetch", targets=[1])]
+    got = run(ju5, "canned", three, {1: "yes", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 2 of 2")
+    check("must fail: three Pellucid calls are beyond a quick check",
+          (verdicts(got, "zero_calls", "accept:1"), "above the 2 a quick check sends" in next(
+              c["why"] for c in got["checks"] if c["check"] == "zero_calls")), (["FAIL", "FAIL"], True))
+    got = run(ju5, "canned", [entry("senior data engineer salary US 2026", targets=[2])],
+              {1: "skipped", 2: "yes", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a market-pay search naming nothing is a hunt, not a check",
+          (verdicts(got, "zero_calls", "accept:2"), "names none of the user's material" in next(
+              c["why"] for c in got["checks"] if c["check"] == "zero_calls")), (["FAIL", "FAIL"], True))
+    got = run(ju5, "canned", [entry("Pellucid Learning head of data")], {1: "skipped", 2: "skipped", 3: "yes"},
+              "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a call for the hiring manager the request does not name",
+          verdicts(got, "zero_calls", "accept:3"), ["FAIL", "FAIL"])
+    got = run(ju5, "denied", [entry("Pellucid Learning hiring manager", outcome="refused")],
+              {1: "unavailable", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a bare search for the hiring manager, in the request's own words, is no check of the company",
+          verdicts(got, "zero_calls"), ["FAIL"])
+    got = run(mi8, "denied", [entry("Ashgrove Credit Union hiring manager LinkedIn", outcome="refused")],
+              {1: "skipped", 2: "unavailable", 3: "skipped", 4: "n/a", 5: "skipped"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must fail: a search for eval 8's hiring manager is no check of the interview process",
+          verdicts(got, "zero_calls"), ["FAIL"])
+    got = run(ju5, "canned", [entry(post, kind="fetch", targets=[1]), entry("Pellucid Learning head of data")],
+              {1: "yes", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 1 of 2")
+    check("must fail: a quick check beside a call outside it: every call must belong to the check",
+          verdicts(got, "zero_calls", "skip_has_no_call:3"), ["FAIL", "FAIL"])
+    got = run(ju5, "canned", [entry("Pellucid Learning tutoring platform Glassdoor reviews")],
+              {1: "skipped", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a stray review-site search", verdicts(got, "zero_calls"), ["FAIL"])
+    got = run(ju5, "canned", [entry(post, kind="fetch", targets=[1])], {1: "skipped", 2: "skipped", 3: "n/a"},
+              "Research tier: L1 — searches 0 of 5, fetches 1 of 2")
+    check("must fail: a checked row still written skipped", verdicts(got, "zero_calls", "skip_has_no_call:1"),
+          ["PASS", "FAIL"])
+    got = run(ju5, "canned", [entry(post, kind="fetch", targets=[1])], {1: "yes", 2: "skipped", 3: "n/a"},
+              "Research tier: L0 — no searches")
+    check("must fail: a check under \"L0 — no searches\"", verdicts(got, "zero_calls", "tally_searches"), ["PASS", "FAIL"])
+    got = run(mi8, "canned", [entry("Ashgrove Credit Union news 2026", targets=[3])],
+              {1: "skipped", 2: "skipped", 3: "unavailable", 4: "n/a", 5: "skipped"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must fail: a returned check written unavailable in a canned room",
+          verdicts(got, "zero_calls", "accept:3", "unavailable_has_refusal:3"), ["PASS", "PASS", "FAIL"])
+    got = run(mi7, "canned", [entry("Saltmarsh Games live operations producer posting"),
+                              entry("Saltmarsh Games live ops producer job listing"),
+                              entry("Saltmarsh Games jobs live operations producer")],
+              {1: "unavailable", 2: "unavailable", 3: "unavailable", 4: "unavailable", 5: "yes"},
+              "Research tier: L1 — searches 3 of 6, fetches 0 of 2")
+    check("must fail: three checks of eval 7's job description", verdicts(got, "accept:5"), ["FAIL"])
+    plain = {"targets": [{"n": 1, "terms": ["careers"], "accept": ["skipped"]}], "budget": {"searches": 5, "fetches": 2},
+             "zero_calls": True}
+    got = output_checks.check_accounting(accounting({1: "yes"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2"),
+                                         plain, "canned", [entry("Kestrel careers", targets=[1])], "Prep me for Kestrel.")
+    check("must fail: a yes on a target in a fixture with no quick_check", verdicts(got, "zero_calls", "accept:1"),
+          ["FAIL", "FAIL"])
+    declined = dict(ju5["research"], declined=True, zero_calls=False)
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "skipped", 3: "n/a"},
+                                                    "Research tier: L1 — searches 1 of 5, fetches 1 of 2"),
+                                         declined, "canned", calls, ju5["prompt"])
+    check("must fail: research the user declined stays strict, a check included",
+          verdicts(got, "zero_calls", "accept:1"), ["FAIL", "FAIL"])
 
 
 def test_budget_spent_unavailable() -> None:
@@ -4061,6 +4186,12 @@ def test_audit_quotes() -> None:
         got = output_checks.check_quotes(pack(provenance), prompt, corpus, own)["checks"]
         return sorted(c["verdict"] for c in got if c["check"] == "quotes" and c["target"] == "banks"
                       and c["verdict"] == "FAIL") or ["PASS"]
+
+    def recut(provenance):
+        """The passing re-cut findings' labels, beside any failure: a re-cut quote passes, labelled."""
+        got = output_checks.check_quotes(pack(provenance), prompt, (), own)["checks"]
+        return [(c["verdict"], c.get("recut")) for c in got if c["check"] == "quotes" and c["target"] == "banks"
+                and (c["verdict"] == "FAIL" or "recut" in c)]
     for cell in ('[grounded] "we\'d like you to present a short POV on operator partnerships" — recruiter\'s email',
                  '[grounded] strategy brief: "consolidate eight branches into five hubs over 2027"',
                  '[grounded] "consolidate eight branches into five hubs over 2027" (strategy brief)',
@@ -4084,10 +4215,11 @@ def test_audit_quotes() -> None:
           ["FAIL"])
     check("must fail: an origin-tagged quote that no source holds",
           banks('[grounded] "consolidate nine branches into two hubs" — strategy brief'), ["FAIL"])
-    check("must fail: a candidate negative tagged as their own, absent from the snapshot (mi7.denied.run2 B2)",
-          banks('[grounded] "Never led a team" — your own stated negative'), ["FAIL"])
-    check("must fail: a candidate sentence stays the candidate's whatever origin it claims, and must stand in "
-          "the snapshot", banks('[grounded] "Never led a team" — LinkedIn'), ["FAIL"])
+    check("must pass, labelled unquoted: a candidate negative tagged as their own, absent from the snapshot, is a "
+          "re-cut quote (mi7.denied.run2 B2)",
+          recut('[grounded] "Never led a team" — your own stated negative'), [("PASS", "unquoted")])
+    check("must pass, labelled unquoted: a candidate sentence stays the candidate's whatever origin it claims, "
+          "and is read as a re-cut quote", recut('[grounded] "Never led a team" — LinkedIn'), [("PASS", "unquoted")])
     check("must fail: a candidate quote with an insertion ([years]) is no quote",
           banks('[grounded] "I ran the weekly [years] content-drop calendar"'), ["FAIL"])
     check("must fail: a spliced quote (\"I\" for \"I've\") is no quote of a source either",
@@ -4107,8 +4239,8 @@ def test_audit_quotes() -> None:
           banks('[grounded] and that\'s "consolidate eight branches into five hubs over 2027"'), ["FAIL"])
     check("must fail: a possessive source still has to hold the quote",
           banks('[grounded] the recruiter\'s "consolidate nine branches into two hubs"'), ["FAIL"])
-    check("must fail: the candidate's own material named possessively stays theirs, and must stand in the snapshot",
-          banks('[grounded] your CV\'s "Never led a team"'), ["FAIL"])
+    check("must pass, labelled unquoted: the candidate's own material named possessively stays theirs, a re-cut quote",
+          recut('[grounded] your CV\'s "Never led a team"'), [("PASS", "unquoted")])
     check("must fail: a dossier field other than role_profile is still the dossier's material",
           banks('[grounded] "consolidate eight branches" (dossier prohibited_claims)'), ["FAIL"])
 
@@ -4563,6 +4695,198 @@ def test_plugin_alone() -> None:
           (proc.returncode, "--layout plugin" in proc.stderr), (2, True))
 
 
+def write_rules(flags: list[str]) -> list[str]:
+    """Every flag that names a save tool, whatever its argument: a save rule in any other form than
+    the room's own still lets a run write."""
+    return [flag for flag in flags if re.match(r"(Edit|Write|MultiEdit|NotebookEdit)\b", flag)]
+
+
+def save_targets(flags: list[str]) -> list[str]:
+    """The folders the flags' write rules name (Edit(...) or Write(...)), and any bare Write or Edit
+    rule as itself."""
+    out = []
+    for flag in flags:
+        m = re.fullmatch(r"(Edit|Write|MultiEdit|NotebookEdit)(?:\(/(/.*?)/\*\*\))?", flag)
+        if m:
+            out.append(m.group(2) or flag)
+    return out
+
+
+def test_save_rule() -> None:
+    print("\nfixtures: a run may save inside its room, in both arms, and nowhere else (decision 4)")
+    import contextlib
+    import io
+    case = {"id": 3, "prompt": "Prep me.", "expectations": ["a"]}
+    canned = {"id": 4, "prompt": "Prep me.", "expectations": ["a"],
+              "research": {"modes": ["canned"], "pages": CORPUS["pages"], "entity_tokens": CORPUS["entity_tokens"]}}
+    seen = []
+
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        seen.append((Path(cwd), list(extra_args)))
+        parsed = run_fixtures.parse_stream(stream(ev_init([installed]), ev_text("no fire"), ev_result()), installed)
+        parsed["stdout"] = ""
+        return parsed
+    metas = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp).resolve()
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                for via, layout in (("skill", "plugin"), ("frontdoor", "plugin"), ("skill", "project")):
+                    for fixture_case in (case, canned):
+                        seen.clear()
+                        meta = run_fixtures.execute("mock-interview", fixture_case, out, len(metas), 1, None,
+                                                    None, via, layout)
+                        metas[(via, layout, fixture_case["id"])] = (meta, list(seen))
+        finally:
+            run_fixtures.claude = real
+        for (via, layout, cid), (meta, calls) in metas.items():
+            rooms = [str(room) for room, _ in calls]
+            rules = [write_rules(flags) for _, flags in calls]
+            lists = [flags.count("--allowedTools") for _, flags in calls]
+            room_name = "denied" if cid == 3 else "canned"
+            if layout == "plugin":
+                check(f"must pass: {via} arm, {room_name} room: the rule once, in the one list, naming the room, no "
+                      f"other save rule in any form, and the nudged run's naming its own fresh room",
+                      (rules, lists, rooms[0] != rooms[1]),
+                      ([[f"Edit(/{rooms[0]}/**)"], [f"Edit(/{rooms[1]}/**)"]], [1, 1], True))
+                check_true(f"and it sits in the room's one --allowedTools list ({via}, {room_name})",
+                           all(flags.index(f"Edit(/{room}/**)") > flags.index("--allowedTools")
+                               and flags.index(f"Edit(/{room}/**)") < flags.index("--plugin-dir")
+                               for (room, flags) in calls))
+            else:
+                check(f"must fail: a save rule in the project layout ({room_name} room)", rules, [[], []])
+            check(f"room_writable is recorded on each invocation and the run ({via}, {layout}, {room_name})",
+                  ([i["room_writable"] for i in meta["invocations"]], meta["room_writable"]),
+                  ([layout == "plugin"] * 2, layout == "plugin"))
+        for (via, layout, cid), (meta, calls) in metas.items():
+            for room, flags in calls:
+                plugin = run_routing.home(room, "plugin")
+                named = save_targets(flags)
+                check_true(f"must fail: no rule on the room's parent, the plugin folder or its skills/ ({via}, {layout})",
+                           not set(named) & {str(room.parent), str(plugin), str(plugin / "skills")})
+                check_true(f"must fail: no unscoped Write or Edit rule, and no permission mode or bypass ({via}, {layout})",
+                           not set(named) & {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+                           and not any(f.startswith(("--permission-mode", "--dangerously")) for f in flags))
+                if cid == 3:
+                    check_true(f"must fail: a refused-tools list added to a denied room ({via}, {layout})",
+                               "--disallowedTools" not in flags)
+        check("must fail: a save rule in the graders' flags", write_rules(run_fixtures.grader_flags("m")), [])
+
+        real_dir = out / "real"
+        (real_dir / "rooms" / "case-3-denied-ab12cd34").mkdir(parents=True)
+        (out / "link").symlink_to(real_dir)
+        room = out / "link" / "rooms" / "case-3-denied-ab12cd34"
+        flags = run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), room)
+        check("must pass: an output folder reached through a symlink gets a rule for its resolved path too",
+              (write_rules(flags), run_fixtures.room_writable(flags, room)),
+              ([f"Edit(/{room}/**)", f"Edit(/{real_dir / 'rooms' / 'case-3-denied-ab12cd34'}/**)"], True))
+
+    import compare_arms as ca
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep.", "expectations": ["a"]}}
+    with tempfile.TemporaryDirectory() as tmp:
+        plugin = [{"via": "frontdoor", "layout": "plugin", "room_writable": True}]
+        alone = [{"via": "skill", "layout": "plugin", "room_writable": True}]
+        out = ca.report(arm_set(Path(tmp) / "tuesday", plugin), arm_set(Path(tmp) / "alone", alone), None, cases)
+        check_true("must pass: matched sets print each set's via, layout and room_writable, and no flag",
+                   "installed via frontdoor (1); layout plugin (1); room_writable true (1)" in out
+                   and "installed via skill (1); layout plugin (1); room_writable true (1)" in out
+                   and "NOT LIKE FOR LIKE" not in out)
+        project = [{"via": "skill", "layout": "project", "room_writable": False}]
+        out = ca.report(arm_set(Path(tmp) / "t2", plugin), arm_set(Path(tmp) / "a2", project), None, cases)
+        check_true("must fail: sets that differ in layout and save policy are flagged, each way",
+                   "NOT LIKE FOR LIKE: installed with layout plugin against project" in out
+                   and "NOT LIKE FOR LIKE: installed with save policy (room_writable) true against false" in out)
+        old = [{"via": "skill", "layout": "project"}]
+        out = ca.report(arm_set(Path(tmp) / "t3", plugin), arm_set(Path(tmp) / "a3", old), None, cases)
+        check_true("old sets read unrecorded, and differ from a recorded policy",
+                   "room_writable unrecorded (1)" in out
+                   and "save policy (room_writable) true against unrecorded" in out)
+        out = ca.report(arm_set(Path(tmp) / "t4", [{"via": "frontdoor"}]), arm_set(Path(tmp) / "a4", [{"via": "skill"}]),
+                        None, cases)
+        check_true("must fail: the quality check's two arms, saved before runs recorded a layout, are flagged: the "
+                   "layout their via always meant then is read, and said to be",
+                   "layout plugin (1) (1 read from via, saved before runs recorded a layout)" in out
+                   and "NOT LIKE FOR LIKE: installed with layout plugin against project" in out
+                   and "room_writable unrecorded (1)" in out and "save policy" not in out)
+        out = ca.report(arm_set(Path(tmp) / "t5", [{}]), arm_set(Path(tmp) / "a5", [{}]), None, cases)
+        check_true("and sets recording neither read unrecorded, unflagged",
+                   "installed via unrecorded (1); layout unrecorded (1); room_writable unrecorded (1)" in out
+                   and "NOT LIKE FOR LIKE" not in out)
+
+
+def test_rerun_stems() -> None:
+    print("\nfixtures --stems: named runs re-run in place under their own numbers, or graded in place")
+    import contextlib
+    import io
+    executed, graded, checked = [], [], []
+
+    def fake_execute(skill, case, out, run, timeout, model, mode=None, *rest):
+        executed.append(run_fixtures.stem_for(skill, case, mode or run_fixtures.modes_of(case)[0], run))
+        (out / f"{executed[-1]}.md").write_text("response")
+        return {}
+
+    def fake_check(skill, case, out, run, mode):
+        checked.append(run_fixtures.stem_for(skill, case, mode, run))
+        return {"run": run, "status": "ok", "checks": []}
+
+    def fake_grade(skill, case, out, run, grader, timeout, model, mode=None, only=None):
+        graded.append((run_fixtures.stem_for(skill, case, mode, run), grader))
+        return {"run": run, "grader": grader, "verdicts": [], "expected": []}
+
+    def main(*argv: str) -> tuple[int | str, str]:
+        executed.clear(), graded.clear(), checked.clear()
+        saved = (sys.argv, run_fixtures.execute, run_fixtures.check_run, run_fixtures.grade)
+        sys.argv = ["run_fixtures.py", *argv]
+        run_fixtures.execute, run_fixtures.check_run, run_fixtures.grade = fake_execute, fake_check, fake_grade
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+                code = run_fixtures.main()
+        except SystemExit as exc:
+            code = exc.code
+        finally:
+            sys.argv, run_fixtures.execute, run_fixtures.check_run, run_fixtures.grade = saved
+        return code, err.getvalue()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "set"
+        out.mkdir()
+        for stem in ("job-underwriter-1.run0", "job-underwriter-1.run1"):
+            (out / f"{stem}.md").write_text("saved")
+            (out / f"{stem}.grade-1.json").write_text("{}")
+        (out / "killed").mkdir()
+        (out / "killed" / "job-underwriter-1.run2.md").write_text("killed run, moved aside")
+        stems = Path(tmp) / "stems.txt"
+        stems.write_text("# killed runs\njob-underwriter-1.run2\n\njob-underwriter-5.canned.run3\n")
+        code, _ = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out), "--graders", "1")
+        check("must pass: listed stems run under their own numbers, an unlisted one does not, and no retry follows",
+              (sorted(executed), sorted(checked), sorted(g for g, _ in graded)),
+              (["job-underwriter-1.run2", "job-underwriter-5.canned.run3"],) * 3)
+        stems.write_text("job-underwriter-1.run1\njob-underwriter-1.run4\n")
+        code, err = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out))
+        check("must fail: a listed stem with files present is refused without --skip-execute, before anything runs",
+              (code, executed, "job-underwriter-1.run1 holds job-underwriter-1.run1.grade-1.json" in err), (2, [], True))
+        for bad in ("job-underwriter-99.run0", "job-underwriter-5.run0", "job-underwriter-1.denied.run0",
+                    "mock-interview-1.run0", "job-underwriter-1"):
+            stems.write_text(bad + "\n")
+            code, err = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out))
+            check(f"must fail: a stem that names no fixture or room of the pass is refused: {bad}",
+                  (code, executed, "names no fixture and room" in err), (2, [], True))
+        (out / "job-underwriter-1.run4.md").write_text("finished, never graded")
+        (out / "job-underwriter-1.run5.md").write_text("finished, never graded, not listed")
+        stems.write_text("job-underwriter-1.run0\njob-underwriter-1.run4\njob-underwriter-1.run6\n")
+        code, _ = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out), "--skip-execute",
+                       "--graders", "2")
+        check("must pass: with --skip-execute, only the listed runs that hold a response and no grade file are graded, "
+              "in a folder whose other runs hold grades",
+              (executed, sorted(set(checked)), graded),
+              ([], ["job-underwriter-1.run4"], [("job-underwriter-1.run4", 1), ("job-underwriter-1.run4", 2)]))
+        code, err = main("--skill", "job-underwriter", "--out", str(out), "--skip-execute")
+        check("and without --stems, --skip-execute still refuses a folder that holds grades",
+              (code, "already holds grade files" in err), (2, True))
+
+
 def test_relative_dates() -> None:
     print("\nfixtures: dates relative to the run, written out for the run's date or the fixture's anchor")
     import datetime
@@ -4716,31 +5040,55 @@ def recut_bank(cell: str) -> str:
 
 
 def test_recut_quotes() -> None:
-    print("\nchecks: a re-cut quote, the candidate's own words cut otherwise than the evidence column, is labelled")
+    print("\nchecks: a re-cut quote, the candidate's own words cut otherwise than the evidence column, passes and "
+          "is labelled")
 
-    def quote_fails(cell: str, own: str = MI8_OWN) -> list[dict]:
-        got = output_checks.check_quotes(recut_bank(cell), "prompt " + own, (), [own])
-        return [c for c in got["checks"] if c["check"] == "quotes" and c["target"] == "banks" and c["verdict"] == "FAIL"]
+    def quote_findings(cell: str, own: str = MI8_OWN, prompt: str | None = None) -> list[dict]:
+        """Each failing quote finding, and each passing one that carries a re-cut label."""
+        got = output_checks.check_quotes(recut_bank(cell), prompt or "prompt " + own, (), [own])
+        return [c for c in got["checks"] if c["check"] == "quotes" and c["target"] == "banks"
+                and (c["verdict"] == "FAIL" or "recut" in c)]
+
+    def labelled(checks: list[dict]) -> list[tuple[str, str | None]]:
+        return [(c["verdict"], c.get("recut")) for c in checks if c["check"] == "quotes" and c["target"] == "banks"
+                and (c["verdict"] == "FAIL" or "recut" in c)]
     # opus/tuesday/mock-interview-8.canned.run0.md, C2: two of the column's quotations and the "and" between them
-    joined = quote_fails('[grounded] "Never worked in a contact centre, and I\'ve never presented to anyone above regional level."')
-    check("must fail, labelled joined: two of the column's quotations run together, the candidate's \"and\" between",
-          [(c["verdict"], c.get("recut")) for c in joined], [("FAIL", "joined")])
-    check_true("and the reason says so", "a re-cut quote, joined" in joined[0]["why"])
+    joined = quote_findings('[grounded] "Never worked in a contact centre, and I\'ve never presented to anyone above regional level."')
+    check("must pass, labelled joined: two of the column's quotations run together, the candidate's \"and\" between",
+          [(c["verdict"], c.get("recut")) for c in joined], [("PASS", "joined")])
+    check_true("and the reason says it was passed and reported",
+               "a re-cut quote, joined" in joined[0]["why"] and "passed, and reported" in joined[0]["why"])
     # opus/tuesday/mock-interview-8.canned.run0.md, H2 against F8's shorter quotation
-    unquoted = quote_fails('[grounded] "I handled the branch\'s formal complaints log and trained new tellers on our escalation script."')
-    check("must fail, labelled unquoted: a candidate sentence the column quotes only part of",
-          [(c["verdict"], c.get("recut")) for c in unquoted], [("FAIL", "unquoted")])
-    check("must fail, labelled unquoted: a candidate sentence the column does not quote at all",
-          [c.get("recut") for c in quote_fails('[grounded] "I built the monthly complaints spreadsheet our regional manager uses."')],
+    unquoted = quote_findings('[grounded] "I handled the branch\'s formal complaints log and trained new tellers on our escalation script."')
+    check("must pass, labelled unquoted: a candidate sentence the column quotes only part of",
+          [(c["verdict"], c.get("recut")) for c in unquoted], [("PASS", "unquoted")])
+    check("must pass, labelled unquoted: a candidate sentence the column does not quote at all",
+          [c.get("recut") for c in quote_findings('[grounded] "I built the monthly complaints spreadsheet our regional manager uses."')],
           ["unquoted"])
-    shared = quote_fails('[grounded] "6 years in retail banking, the last 3 as a branch supervisor."')
+    shared = quote_findings('[grounded] "6 years in retail banking, the last 3 as a branch supervisor."')
     check("a word an unrelated column quotation shares covers nothing: unquoted, not joined",
           [c.get("recut") for c in shared], ["unquoted"])
-    stray = quote_fails('[grounded] "I led the regional complaints team"')
+    stray = quote_findings('[grounded] "I led the regional complaints team"')
     check("must fail, unlabelled: words the candidate never gave are no re-cut quote",
           [(c["verdict"], "recut" in c) for c in stray], [("FAIL", False)])
+    check("must fail, unlabelled: the candidate's words joined to one word the candidate never wrote",
+          [(c["verdict"], "recut" in c) for c in quote_findings(
+              '[grounded] "I built the monthly complaints spreadsheet our regional manager uses weekly"')], [("FAIL", False)])
+    jd = "Own the member complaints process end to end across branches and the contact centre"
+    check("must fail, unlabelled: an ellipsis quote holding a fragment of the job description",
+          [(c["verdict"], "recut" in c) for c in quote_findings(
+              '[grounded] "I handled the branch\'s formal complaints log … across branches and the contact centre"',
+              prompt=f"THE JD: '{jd}.' ME: {MI8_OWN}")], [("FAIL", False)])
     check("must pass, unlabelled: one of the column's quotations, or part of one",
-          quote_fails('[grounded] "Never worked in a contact centre" and "formal complaints log"'), [])
+          quote_findings('[grounded] "Never worked in a contact centre" and "formal complaints log"'), [])
+    pasted = ("THE JD: 'Own complaints across branches and the contact centre; experience handling regulated "
+              "complaints; confident presenting to senior leaders.' ME: " + MI8_OWN)
+    clean = output_checks.run_checks(
+        {"checks": ["quotes"], "prompt": pasted, "candidate_text": [MI8_OWN]}, "denied",
+        recut_bank('[grounded] "Never worked in a contact centre, and I\'ve never presented to anyone above regional '
+                   'level."; "I built the monthly complaints spreadsheet our regional manager uses."'), None)
+    check("must pass: a run whose only quote findings beside the passes are re-cut quotes is clean",
+          (clean["status"], labelled(clean["checks"])), ("ok", [("PASS", "joined"), ("PASS", "unquoted")]))
     own2 = ("7 years in warehouse and distribution ops, currently a senior shift manager over 3 supervisors; cut "
             "mis-pick rate 40% by redesigning the pick path; ran the site's peak-season surge plan two years running; "
             "green belt certified; solid Excel, never used Power BI.")
@@ -4750,14 +5098,14 @@ def test_recut_quotes() -> None:
     # opus/alone/mock-interview-2.run4.md, F5, F6 and A4
     got = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
                                      '| A4 | Q | G | [grounded] "solid Excel, never used Power BI" |\n', own2, (), [own2])
-    check("must fail, labelled joined: two quotations joined by a comma (quality check, mock-interview 2)",
-          [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["joined"])
+    check("must pass, labelled joined: two quotations joined by a comma (quality check, mock-interview 2)",
+          labelled(got["checks"]), [("PASS", "joined")])
     edge = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
                                       '| A4 | Q | G | [grounded] "and never used Power BI" |\n',
                                       own2.replace("solid Excel, never", "solid Excel and never"), (),
                                       [own2.replace("solid Excel, never", "solid Excel and never")])
-    check("must fail, labelled unquoted: a joining word at the quotation's edge joins nothing",
-          [c.get("recut") for c in edge["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["unquoted"])
+    check("must pass, labelled unquoted: a joining word at the quotation's edge joins nothing",
+          labelled(edge["checks"]), [("PASS", "unquoted")])
     mi6 = fixture("mock-interview", 6)["candidate_text"]
     snapshot6 = ("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
                  '| F3 | "own delivery" — role summary | "pushed a reliability quarter through against roadmap pressure" '
@@ -4766,9 +5114,9 @@ def test_recut_quotes() -> None:
     got = output_checks.check_quotes(snapshot6 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
                                      '| B4 | Q | G | [grounded] "My team\'s on-call burden dropped 60% after I pushed a '
                                      'reliability quarter through against roadmap pressure" |\n', mi6[0], (), mi6)
-    check("must fail, labelled joined: the column's two stretches joined by a conjunction and its clause's subject "
+    check("must pass, labelled joined: the column's two stretches joined by a conjunction and its clause's subject "
           "(quality check, mock-interview 6)",
-          [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["joined"])
+          labelled(got["checks"]), [("PASS", "joined")])
     # Synthetic: the second sentence holds every word of the column's one quotation, and is quoted
     own3 = ("I ran the weekly sales review for the north region. After I left, the north region ran the weekly "
             "sales review without me.")
@@ -4777,9 +5125,9 @@ def test_recut_quotes() -> None:
                                      'region" — your message | high |\n\n| # | Question | Answer guidance | Provenance |\n'
                                      '|---|---|---|---|\n| A1 | Q | G | [grounded] "the north region ran the weekly sales '
                                      'review" |\n', own3, (), [own3])
-    check("must fail, labelled unquoted: words the column quotes elsewhere in the passage cover nothing here, "
+    check("must pass, labelled unquoted: words the column quotes elsewhere in the passage cover nothing here, "
           "read by place, not by text",
-          [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["unquoted"])
+          labelled(got["checks"]), [("PASS", "unquoted")])
     part = output_checks.recut_kind(["the branch's formal"], output_checks.normalise_quote(MI8_OWN),
                                     ["the branch", "formal complaints log"])
     check("a word a quotation covers only part of is not covered: \"branch\" of \"branch's\" leaves it unquoted",
@@ -4902,6 +5250,9 @@ def arm_set(folder: Path, runs: list[dict]) -> Path:
                 "stem": stem, "graded_invocation": 0, "triggered_unprompted": not run.get("nudged"),
                 "harness": {"status": run.get("status", "ok"), "reasons": run.get("reasons", [])},
                 "research_log": run.get("log"),
+                # How the run was installed, written only where the run gives it, as a set saved before
+                # a field existed lacks it.
+                **{k: run[k] for k in ("via", "layout", "room_writable", "model") if k in run},
                 "invocations": [{"room": f"/x/rooms/{room}", "result": {"incomplete": False,
                                  "permission_denials": [{"tool_name": t} for t in run.get("refused", [])]}}]}
         (folder / f"{stem}.meta.json").write_text(json.dumps(meta))
@@ -4955,7 +5306,8 @@ def test_compare_arms() -> None:
         ])
         ctl = arm_set(Path(tmp) / "alone", [
             {"checks": [finding("gates_form")]},
-            {"checks": [finding("quotes", "fit_snapshot", verdict="PASS"), finding("quotes", "banks", verdict="PASS")],
+            {"checks": [finding("quotes", "fit_snapshot", verdict="PASS"), finding("quotes", "banks", verdict="PASS"),
+                        finding("quotes", "banks", verdict="PASS", recut="unquoted")],
              "unchecked": ["evidence_form"]},
         ])
         a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
@@ -4991,8 +5343,15 @@ def test_compare_arms() -> None:
         check_true("a family is counted once, with its overlap, and the accept row outside it apart",
                    shows(r"a call where none belongs \[zero_calls\+accept\+skip_has_no_call\]\s+1/2\s+0/0\s+p n/a\s+\[1 / 0\]")
                    and shows(r"\n  accept\s+1/2\s+0/0"))
-        check_true("quote failures are split: re-cut only, and any other",
-                   shows(r"only re-cut quotes\s+1/3\s+0/1") and shows(r"a quote failure that is not re-cut\s+1/3\s+0/1"))
+        check_true("quotes: any failure, a failure that is not re-cut, and re-cut quotes reported by kind, a passing "
+                   "re-cut finding in the reported rows and in no failure row",
+                   shows(r"any quote failure\s+2/3\s+0/1") and shows(r"a quote failure that is not re-cut\s+1/3\s+0/1")
+                   and shows(r"a re-cut quote \(reported\)\s+2/3\s+1/1")
+                   and shows(r"a re-cut quote, joined \(reported\)\s+1/3\s+0/1")
+                   and shows(r"a re-cut quote, unquoted \(reported\)\s+0/3\s+1/1")
+                   and shows(r"a re-cut quote, unrecorded \(reported\)\s+1/3\s+0/1"))
+        check_true("and a re-cut quote that failed, the mark of a set checked under the old rule, prints when not zero",
+                   shows(r"a re-cut quote that failed \(a set checked before re-cut quotes passed\)\s+2/3\s+0/1"))
         check_true("refused tool calls are reported by tool", "by tool {'Bash': 1, 'Write': 1}" in out)
         check_true("no threshold, no verdict: nothing in the report decides",
                    not any(w in out.lower() for w in ("pass:", "miss", "verdict:", "significant")))
@@ -5128,6 +5487,117 @@ def test_compare_reads() -> None:
           ca.defects({"checks": [prose[1]], "aimed": None}), {"tally": 1})
 
 
+def test_compare_rows() -> None:
+    print("\ncompare_arms: truthfulness rows, the slot families' denominators, quick checks and the text change's "
+          "measures")
+    import compare_arms as ca
+
+    def sentence(text: str) -> dict:
+        got = output_checks.check_fit_ledger(LEDGER_OK.replace(
+            "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", text))["checks"]
+        return next(c for c in got if c["check"] == "ledger_sentence")
+    one, two, both = (sentence(t) for t in (
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "R4 has a credible bridge. R3 (`medium`) waits on an artifact.",
+        "Every must-have is `direct`. R3 (`medium`) waits on an artifact."))
+    check("ledger_sentence records its sentence count, whatever reason it reports, its verdict unchanged",
+          [(f["verdict"], f["sentences"], f["why"].startswith(ca.SECOND_SENTENCE)) for f in (one, two, both)],
+          [("PASS", 1, False), ("FAIL", 2, True), ("FAIL", 2, False)])
+    check("the clause references are read before expansion",
+          __import__("fixture_clauses").clause_refs(Path(__file__).resolve().parent.parent / "skills" / "job-underwriter"
+                                                    / "evals" / "evals.json")[5][1],
+          ["accounting", "accounting_counts", "quick_check"])
+
+    research = {"modes": ["denied"], "zero_calls": True, "quick_check": {"targets": [1], "names": ["kestrel"]},
+                "targets": [{"n": 1, "terms": ["careers"], "accept": ["skipped"]},
+                            {"n": 3, "terms": ["hiring manager"], "accept": ["n/a"]}]}
+    cases = {("job-underwriter", 5): {"id": 5, "prompt": "Kestrel.", "expectations": ["a", "b", "c"], "research": research,
+                                      "clause_refs": [[], ["proposed_language"], ["hard_gates_line", "ledger_counts"]]},
+             ("job-underwriter", 1): {"id": 1, "prompt": "Kestrel.", "expectations": ["a", "b", "c"],
+                                      "clause_refs": [[], ["proposed_language"], ["hard_gates_line", "ledger_counts"]]},
+             ("mock-interview", 8): {"id": 8, "prompt": "Kestrel.", "expectations": ["a"], "research": research,
+                                     "clause_refs": [["no_overclaim"]]}}
+    ju, mi = "job-underwriter", "mock-interview"
+    claim = finding("ledger_sentence", why='in the sentence after the ledger, "every must-have" is a set claim', sentences=2)
+    second = finding("ledger_sentence", why="more than one sentence after the ledger (rule 2 allows one)", sentences=2)
+    present = finding("ledger_present", verdict="PASS")
+    calls = [entry("Kestrel careers"), entry("Kestrel careers page"), entry("Kestrel hiring manager")]
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"skill": ju, "id": 5, "log": calls, "grades": [["PASS", "FAIL", "PASS"], ["PASS", "PASS", "PASS"]],
+             "checks": [claim, present, finding("zero_calls", calls=3), finding("tally_searches"),
+                        finding("gates_line", verdict="PASS"), finding("severity", verdict="PASS")]},
+            {"skill": ju, "id": 5, "log": calls[:2], "grades": [["PASS", "PASS", "FAIL"], ["PASS", "PASS", "PASS"]],
+             "checks": [second, present, finding("zero_calls", verdict="PASS", calls=2, quick_check=2),
+                        finding("accept", 1, verdict="PASS", quick_check=2), finding("gates_form"), finding("severity_form")]},
+            {"skill": ju, "id": 5, "log": [], "grades": [["PASS", "PASS", "PASS"], ["PASS", "PASS", "PASS"]],
+             "checks": [finding("ledger_sentence", verdict="PASS", sentences=1), present,
+                        finding("zero_calls", verdict="PASS", calls=0)]},
+            # No fit snapshot: outside the slot families, as it is outside ledger_sentence.
+            {"skill": ju, "id": 1, "grades": [["PASS", "PASS", "PASS"], ["PASS", "PASS", "PASS"]],
+             "checks": [finding("ledger_present")]},
+        ])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"skill": mi, "id": 8, "log": calls[:1], "grades": [["PASS"], ["PASS"]],
+             "checks": [finding("zero_calls", verdict="PASS", calls=1, quick_check=1), finding("row", 3)]},
+            # Saved before ledger_sentence recorded its count; grader 2's file missing, so graded on nothing.
+            {"skill": ju, "id": 5, "log": [], "grades": [["PASS", "PASS", "PASS"], None],
+             "checks": [finding("ledger_sentence", verdict="PASS"), present, finding("zero_calls", verdict="PASS")]},
+        ])
+        a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
+        ca.expect_graders(a, c)
+        only = ca.failure_only(a + c)
+        ja = [r for r in a if r["skill"] == ju]
+        check("must pass: a run with no fit snapshot is outside both slot families; a run whose failure-only member "
+              "failed is inside them",
+              [ca.unit_counts(ja, unit, via, only) for unit, _, via, _ in ca.FAMILIES[:2]], [(1, 2, 0), (1, 2, 0)])
+        check("a family whose anchor records passes is unchanged: the call family applies where zero_calls applied",
+              ca.unit_counts(ja, "a call where none belongs", ("zero_calls",), only), (1, 3, 0))
+        check("the truthfulness family: runs where a grader failed any of its expectations, over the runs graded on one",
+              [(ca.truth_counts(ja, f), ca.truth_counts([r for r in c if r["skill"] == ju], f)) for f in ca.TRUTHFULNESS[ju]],
+              [((2, 4), (0, 0)), ((1, 4), (0, 0))])
+        check("a quick check is read from the run's checks: zero_calls's record, else a checked row's",
+              ({r["stem"]: r["quick_check"] for r in a}, {r["stem"]: r["quick_check"] for r in c}),
+              ({"job-underwriter-5.run0": False, "job-underwriter-5.run1": True, "job-underwriter-5.run2": False,
+                "job-underwriter-1.run3": False}, {"mock-interview-8.run0": True, "job-underwriter-5.run1": False}))
+        out = ca.report(arm, ctl, None, cases)
+
+        def shows(pattern: str) -> bool:
+            return re.search(pattern, out) is not None
+        check_true("the report prints both job-underwriter truthfulness rows and mock-interview's, each with its p "
+                   "(n/a where a side was graded on none)",
+                   shows(r"truthfulness \[proposed_language\+ledger_counts\]\s+2/4\s+0/0\s+p n/a")
+                   and shows(r"truthfulness \[proposed_language\]\s+1/4\s+0/0")
+                   and shows(r"truthfulness \[no_overclaim\]\s+0/0\s+0/1\s+p n/a"))
+        check_true("and the slot families over the runs where their slot was written",
+                   shows(r"hard-gates line \[gates_line\+gates_form\]\s+1/2\s+0/0")
+                   and shows(r"severity slot \[severity\+severity_form\]\s+1/2\s+0/0"))
+        check_true("and runs with a quick check of the user's material, by fixture",
+                   shows(r"a quick check of the user's material, fixture 5 \(reported\)\s+1/3\s+0/1")
+                   and shows(r"a quick check of the user's material, fixture 8 \(reported\)\s+0/0\s+1/1"))
+        block = out[out.index("== text-change measures"):]
+
+        def measure(label: str, pooled: str, arm_cell: str, ctl_cell: str) -> bool:
+            return re.search(re.escape(label) + r"\s+" + r"\s+".join(map(re.escape, (pooled, arm_cell, ctl_cell))),
+                             block) is not None
+        check_true("text change: sentences above one, pooled and per arm; a run with a set claim and a second "
+                   "sentence counts here and in the set-claim row, and an unrecorded count is left out and said",
+                   measure("ledger_sentence: sentences after the ledger above one", "2/3", "2/3", "0/0")
+                   and measure("ledger_sentence: failed for a set claim (any reason but a second sentence)",
+                               "1/4", "1/3", "0/1")
+                   and "1 run(s) checked before ledger_sentence recorded its sentence count" in block)
+        check_true("text change: ledgers written, over job-underwriter's valid runs",
+                   measure("ledger_present: passing, of job-underwriter's valid runs", "4/5", "3/4", "1/1"))
+        check_true("text change: each fixture's runs beyond a quick check, and with one",
+                   measure("zero_calls: failing, job-underwriter eval 5", "1/4", "1/3", "0/1")
+                   and measure("zero_calls: a quick check, job-underwriter eval 5", "1/4", "1/3", "0/1")
+                   and measure("zero_calls: failing, mock-interview eval 8", "0/1", "0/0", "0/1")
+                   and measure("zero_calls: a quick check, mock-interview eval 8", "1/1", "0/0", "1/1"))
+        check_true("text change: of the runs that sent a call, those that reported every call; and calls per run",
+                   re.search(r"of the runs that sent a call\s+1/3\s+1/2\s+0/1", block) is not None
+                   and measure("calls per run", "6/5 (1.20)", "5/3 (1.67)", "1/2 (0.50)"))
+
+
 def main() -> int:
     for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
                  test_frontdoor_clashes, test_frontdoor_install, test_module_lists, test_sync, test_frontdoor_labels, test_explicit_naming,
@@ -5141,12 +5611,13 @@ def main() -> int:
                  test_execute_nudge, test_via_frontdoor, test_parse_accounting, test_check_accounting,
                  test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
-                 test_user_links, test_user_link_fixture,
+                 test_user_links, test_user_link_fixture, test_quick_check,
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_yes_names_page,
                  test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
-                 test_audit_ledger, test_watch_out, test_grader_fence, test_plugin_alone, test_relative_dates,
-                 test_recut_quotes, test_traces, test_compare_arms, test_compare_reads):
+                 test_audit_ledger, test_watch_out, test_grader_fence, test_plugin_alone, test_save_rule, test_rerun_stems,
+                 test_relative_dates,
+                 test_recut_quotes, test_traces, test_compare_arms, test_compare_reads, test_compare_rows):
         test()
     print()
     if FAILURES:

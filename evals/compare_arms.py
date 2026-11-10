@@ -29,12 +29,21 @@ names its thresholds before the measurement runs. Per module it reports:
   not name is read from the data: failure-only when no run in either set recorded
   a PASS for it;
 - the same checks with each check family counted once per run, the families and
-  why each is one defect stated once in evals/README.md ("Comparing two arms");
-- quote failures split into re-cut quotes (output_checks.recut_kind) and the rest;
+  why each is one defect stated once in evals/README.md ("Comparing two arms"); a
+  family applies where a check it is anchored on that records passes applied, or
+  where it failed;
+- quote failures apart from re-cut quotes (output_checks.recut_kind), which pass
+  and are reported by kind, and runs with a quick check of the user's material;
+- each module's truthfulness family (TRUTHFULNESS): runs where a grader failed
+  any of its expectations, over the runs graded on one;
+- how each set was installed (via, layout, room_writable), flagged NOT LIKE FOR
+  LIKE where the sets differ in layout or save policy;
 - nudged runs, harness-invalid runs, refused tool calls by tool and runs with a
   refused save (run_fixtures.refusals, read from the graded invocation);
 - cost: each invocation's stream (its result event's total_cost_usd) and each
-  grade file's model usage.
+  grade file's model usage;
+- after the modules, the text change's measures by check name, pooled over the
+  two sets and in each (text_change_measures).
 
 Every comparison of runs carries an exact two-sided Fisher p-value on runs, never
 on verdicts. Harness-invalid runs are counted and left out of everything else.
@@ -49,6 +58,7 @@ import argparse
 import json
 import re
 import sys
+from decimal import ROUND_HALF_UP, Decimal
 from math import comb
 from pathlib import Path
 
@@ -56,7 +66,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import output_checks  # noqa: E402
 import run_fixtures  # noqa: E402
-from fixture_clauses import ClauseError, dated  # noqa: E402
+from fixture_clauses import ClauseError, clause_refs, dated  # noqa: E402
 
 MODULES = tuple(run_fixtures.SKILLS)
 # A finding saved before check_quotes labelled re-cut quotes is read by the reason it has
@@ -67,6 +77,19 @@ NO_TABLE = ("the response has no accounting table", "the accounting table could 
 CLAIM_IN = {"snapshot_count": re.compile(r'^the snapshot\'s prose: "(.+?)" is '),
             "ledger_sentence": re.compile(r'^in the sentence after the ledger, "(.+?)" is ')}
 GRADE_FILE = re.compile(r"\.grade-(\d+)\.json$")
+# Each module's truthfulness family, by the fixture clauses its expectations include: a run fails
+# it when any grader failed any of them. job-underwriter's is read two ways, the pair and
+# proposed_language alone (docs/fix-round-plan-detail.md, section 4.1, says which the bar reads).
+TRUTHFULNESS = {
+    "job-underwriter": (("proposed_language", "ledger_counts"), ("proposed_language",)),
+    "mock-interview": (("no_overclaim",),),
+    "resume-tailor": (("row_quote",),),
+}
+# The fixtures the text change's research item reads (docs/fix-round-plan-detail.md, section 4.2),
+# and the checks a run that sent a call passes when it reported every call.
+CALL_FIXTURES = (("job-underwriter", 5), ("mock-interview", 8))
+REPORTS_CALLS = ("tally_searches", "tally_fetches", "skip_has_no_call", "off_target_shown", "row", "tally")
+SECOND_SENTENCE = "more than one sentence after the ledger"
 
 
 # --- Reading a set ------------------------------------------------------------------
@@ -105,8 +128,40 @@ def module_of(stem: str) -> str | None:
 
 
 def fixture_cases() -> dict[tuple[str, int], dict]:
-    """Every repository fixture, by module and id, as the runner loads it."""
-    return {(m, c["id"]): c for m in MODULES for c in run_fixtures.cases_for(m, [])}
+    """Every repository fixture, by module and id, as the runner loads it, with `clause_refs`: the
+    clause names each expectation includes (fixture_clauses.clause_refs)."""
+    out = {}
+    for m in MODULES:
+        refs = clause_refs(run_fixtures.REPO / "skills" / m / "evals" / "evals.json")
+        for c in run_fixtures.cases_for(m, []):
+            out[(m, c["id"])] = {**c, "clause_refs": refs.get(c["id"], [])}
+    return out
+
+
+def layout_of(meta: dict) -> str | None:
+    """Where a run's skills sat: its recorded `layout`, or, for a run saved before the field, the
+    one its `via` always meant then (the plugin through Tuesday, the room's own .claude/skills/
+    for a module alone, as run_fixtures.execute still defaults); None with neither recorded."""
+    if meta.get("layout"):
+        return meta["layout"]
+    return {"frontdoor": "plugin", "skill": "project"}.get(meta.get("via"))
+
+
+def research_calls(case: dict | None, meta: dict) -> int | None:
+    """The run's research calls, a read of a link the user gave left out; None with no record."""
+    log = meta.get("research_log")
+    if log is None:
+        return None
+    research = (case or {}).get("research")
+    return sum(1 for e in log if isinstance(e, dict) and not output_checks.is_user_link(e, research))
+
+
+def quick_checked(checks: list[dict] | None) -> bool:
+    """Whether the run's calls were a quick check of the user's material, as the accounting checks
+    record it: on zero_calls where the fixture runs it, else on a checked target's accept row."""
+    found = checks or []
+    zero = [f for f in found if f.get("check") == "zero_calls"]
+    return any(f.get("quick_check") for f in (zero or [f for f in found if f.get("check") == "accept"]))
 
 
 def aimed_targets(case: dict | None, meta: dict) -> dict[int, int] | None:
@@ -188,16 +243,22 @@ def load(folder: Path, checks_from: Path | None = None, cases: dict | None = Non
                      if room and p.exists()]
             costs.append(stream_cost(found[0]) if found else None)
         case = cases.get((skill, meta.get("id")))
+        findings = None if checks is None else list(checks.get("checks") or [])
         runs.append({
             "stem": stem, "skill": skill, "id": meta.get("id"), "mode": meta.get("mode"), "meta_read": True,
+            "model": meta.get("model"), "via": meta.get("via"), "layout": layout_of(meta),
+            "layout_read_from_via": not meta.get("layout") and bool(layout_of(meta)),
+            "room_writable": meta.get("room_writable"),
             "valid": status == "ok", "reasons": reasons, "nudged": meta.get("triggered_unprompted") is False,
-            "checks": None if checks is None else list(checks.get("checks") or []),
+            "checks": findings,
             "unchecked": [] if checks is None else list(checks.get("unchecked") or []),
             "grades": grades, "graded_by": graded_by, "grade_files": numbers, "grader_cost": grader_cost,
             "expectations": len(case.get("expectations") or []) if case else None,
             "run_cost": sum(c for c in costs if c is not None), "cost_unread": sum(c is None for c in costs),
             "refused": refused, "save_refused": save_refused, "unreadable": unreadable,
-            "aimed": aimed_targets(case, meta)})
+            "aimed": aimed_targets(case, meta), "calls": research_calls(case, meta),
+            "declares_quick_check": bool(((case or {}).get("research") or {}).get("quick_check")),
+            "quick_check": quick_checked(findings), "clauses": (case or {}).get("clause_refs")})
     return runs
 
 
@@ -294,13 +355,14 @@ def defects(run: dict) -> dict[str, int]:
 
 
 def recut_of(finding: dict) -> str | None:
-    """A quote failure's re-cut kind: its `recut` field, or `unrecorded` for a finding saved before
-    the field whose reason names the case; None for any other finding."""
-    if finding.get("check") != "quotes" or finding.get("verdict") != "FAIL":
+    """A quotes finding's re-cut kind: its `recut` field, on a passing finding as check_quotes writes
+    it now or on a failure as it wrote it before re-cut quotes passed, or `unrecorded` for a failure
+    saved before the field whose reason names the case; None for any other finding."""
+    if finding.get("check") != "quotes":
         return None
     if finding.get("recut"):
         return finding["recut"]
-    return "unrecorded" if RECUT_REASON in str(finding.get("why", "")) else None
+    return "unrecorded" if finding.get("verdict") == "FAIL" and RECUT_REASON in str(finding.get("why", "")) else None
 
 
 # --- Reporting ---------------------------------------------------------------------------
@@ -345,10 +407,21 @@ def check_counts(runs: list[dict], check: str, only_failures: set[str]) -> tuple
     return sum(any(f["check"] == check for f in failing(r)) for r in applied), len(applied)
 
 
+def unit_applies(run: dict, unit: str, via: tuple[str, ...], only_failures: set[str]) -> bool:
+    """Whether a unit (a family, or a check outside them) applied in a run: where a check in `via`
+    that records passes applied, or where the unit failed. A unit whose `via` holds only checks that
+    record failures applies where any of them applies, as a failure-only check does in every run.
+    So a run that wrote no fit snapshot is outside the snapshot slots' families, not passing them."""
+    recording = [m for m in via if m not in only_failures]
+    if not recording:
+        return any(applies(run, m, only_failures) for m in via)
+    return any(applies(run, m, only_failures) for m in recording) or bool(defects(run).get(unit))
+
+
 def unit_counts(runs: list[dict], unit: str, via: tuple[str, ...], only_failures: set[str]) -> tuple[int, int, int]:
-    """Runs failing a unit (a family or a check outside them), runs where it applied (any check in
-    `via` applied), and runs where more than one member check failed inside the unit."""
-    applied = [r for r in runs if r["valid"] and any(applies(r, m, only_failures) for m in via)]
+    """Runs failing a unit (a family or a check outside them), runs where it applied (unit_applies),
+    and runs where more than one member check failed inside the unit."""
+    applied = [r for r in runs if r["valid"] and unit_applies(r, unit, via, only_failures)]
     got = [defects(r).get(unit, 0) for r in applied]
     return sum(1 for g in got if g), len(applied), sum(1 for g in got if g > 1)
 
@@ -366,6 +439,25 @@ def expectation_states(run: dict) -> dict[int, str]:
         got = [run["grades"].get(g, {}).get(n) for g in range(1, max(run.get("graders") or 0, *run["grades"], 0) + 1)]
         out[n] = "fail" if "FAIL" in got else "pass" if got and all(v == "PASS" for v in got) else "partial"
     return out
+
+
+def family_numbers(run: dict, family: tuple[str, ...]) -> list[int]:
+    """The run's fixture's expectations that include a clause of the family (`clauses`, from
+    fixture_clauses.clause_refs)."""
+    return [n for n, names in enumerate(run.get("clauses") or [], 1) if set(names) & set(family)]
+
+
+def truth_counts(runs: list[dict], family: tuple[str, ...]) -> tuple[int, int]:
+    """Runs where a grader failed any expectation of a truthfulness family, and runs graded on any
+    of them (a pass or a fail from every grader; partially graded expectations are left out)."""
+    failed = graded = 0
+    for r in runs:
+        states = expectation_states(r)
+        got = [states[n] for n in family_numbers(r, family) if states.get(n) in ("pass", "fail")]
+        if got:
+            graded += 1
+            failed += "fail" in got
+    return failed, graded
 
 
 def grading_of(runs: list[dict], fid, mode: str, n: int) -> tuple[set, set]:
@@ -499,20 +591,39 @@ def module_report(mod: str, arm: list[dict], ctl: list[dict], names: tuple[str, 
 
     quote_runs = [r for r in a + c if any(f["check"] == "quotes" for f in r["checks"] or [])]
     if quote_runs:
-        lines.append("  quote failures, re-cut quotes apart (runs)")
+        lines.append("  quotes, re-cut quotes apart (runs / runs where quotes applied)")
+        failed_recut = "a re-cut quote that failed (a set checked before re-cut quotes passed)"
 
         def quotes(rs):
-            kinds = [[recut_of(f) for f in failing(r) if f["check"] == "quotes"] for r in rs]
-            applied = [k for r, k in zip(rs, kinds) if applies(r, "quotes", only)]
-            return {"any quote failure": (sum(bool(k) for k in applied), len(applied)),
-                    "only re-cut quotes": (sum(bool(k) and all(k) for k in applied), len(applied)),
-                    "a quote failure that is not re-cut": (sum(any(x is None for x in k) for k in applied), len(applied)),
-                    **{f"a re-cut quote, {kind}": (sum(kind in k for k in applied), len(applied))
-                       for kind in (*output_checks.RECUT_KINDS, "unrecorded")}}
+            ran = [r for r in rs if applies(r, "quotes", only)]
+            fails = [[recut_of(f) for f in failing(r) if f["check"] == "quotes"] for r in ran]
+            cuts = [{recut_of(f) for f in r["checks"] or []} - {None} for r in ran]
+            n = len(ran)
+            return {"any quote failure": (sum(bool(k) for k in fails), n),
+                    "a quote failure that is not re-cut": (sum(any(x is None for x in k) for k in fails), n),
+                    "a re-cut quote (reported)": (sum(bool(k) for k in cuts), n),
+                    **{f"a re-cut quote, {kind} (reported)": (sum(kind in k for k in cuts), n)
+                       for kind in (*output_checks.RECUT_KINDS, "unrecorded")},
+                    failed_recut: (sum(any(x is not None for x in k) for k in fails), n)}
         qa, qc = quotes(a), quotes(c)
         for key in qa:
-            if qa[key][0] or qc[key][0] or not key.startswith("a re-cut"):
-                lines.append(ratio_row(key, qa[key], qc[key]))
+            if qa[key][0] or qc[key][0] or key in ("any quote failure", "a quote failure that is not re-cut",
+                                                   "a re-cut quote (reported)"):
+                lines.append(ratio_row(key, qa[key], qc[key], 64))
+
+    declaring = sorted({r["id"] for r in a + c if r["declares_quick_check"]}, key=lambda i: (not isinstance(i, int), i))
+    for fid in declaring:
+        def checked(rs):
+            ran = [r for r in rs if r["id"] == fid and r["checks"] is not None and r["calls"] is not None]
+            return sum(r["quick_check"] for r in ran), len(ran)
+        lines.append(ratio_row(f"a quick check of the user's material, fixture {fid} (reported)", checked(a), checked(c), 64))
+
+    if TRUTHFULNESS.get(mod):
+        lines.append("  truthfulness: runs where a grader failed any expectation of the family / runs graded on one")
+    for family in TRUTHFULNESS.get(mod, ()):
+        flagged = {(r["id"], r["mode"] or "", n) for r in a + c for n in family_numbers(r, family)} & set(unlike_keys)
+        lines.append(ratio_row(f"truthfulness [{'+'.join(family)}]", truth_counts(a, family), truth_counts(c, family), 64,
+                               "   [not like for like]" if flagged else "", compared=not flagged))
 
     lines.append("  expectations: runs passing (every grader PASS) / runs graded on it")
     for fid, mode, n in keys:
@@ -536,6 +647,24 @@ def tallied(values) -> str:
     return ", ".join(f"{k} ({n})" for k, n in sorted(counts.items())) or "none"
 
 
+def json_word(value) -> str | None:
+    """A recorded boolean as meta.json writes it; None (unrecorded) stays None."""
+    return None if value is None else json.dumps(value)
+
+
+def install_unlike(arm: list[dict], ctl: list[dict]) -> list[str]:
+    """Why the two sets were not installed like for like, one reason per way they differ: the
+    layout their skills sat in, or the save policy (`room_writable`), differing between the sets or
+    within one. A value a set's runs did not record reads `unrecorded`, and is a value like any
+    other. The arms' `via` differs by design and is not compared."""
+    out = []
+    for key, what in (("layout", "layout"), ("room_writable", "save policy (room_writable)")):
+        seen = [{json_word(r[key]) if key == "room_writable" else r[key] for r in rs} for rs in (arm, ctl)]
+        if all(seen) and (seen[0] != seen[1] or len(seen[0]) > 1 or len(seen[1]) > 1):
+            out.append(f"installed with {what} {named(seen[0])} against {named(seen[1])}")
+    return out
+
+
 def headline(arm: list[dict], ctl: list[dict], names: tuple[str, str], paths: tuple[Path, Path],
              unread: tuple[list[dict], list[dict]] = ([], [])) -> list[str]:
     lines = [f"compare_arms: {names[0]} ({paths[0]}) against {names[1]} ({paths[1]})"]
@@ -549,10 +678,16 @@ def headline(arm: list[dict], ctl: list[dict], names: tuple[str, str], paths: tu
         graded = [g for r in rs if r["valid"] for g in r["graded_by"].values()]
         lines.append(f"    graded under prompt version {tallied(g['version'] for g in graded)}; "
                      f"by {tallied(g['model'] for g in graded)}")
+        from_via = sum(r["layout_read_from_via"] for r in rs)
+        lines.append(f"    installed via {tallied(r['via'] for r in rs)}; layout {tallied(r['layout'] for r in rs)}"
+                     + (f" ({from_via} read from via, saved before runs recorded a layout)" if from_via else "") + "; "
+                     f"room_writable {tallied(json_word(r['room_writable']) for r in rs)}")
         files = [f for r in rs for f in r["unreadable"]] + [f for r in lost for f in r["unreadable"]]
         if files:
             lines.append(f"    {len(files)} file(s) could not be read" + (f", {len(lost)} of them a meta.json whose "
                          f"run is left out of everything" if lost else "") + f": {', '.join(files[:6])}")
+    for why in install_unlike(arm, ctl):
+        lines.append(f"  NOT LIKE FOR LIKE: {why}")
     versions = [{g["version"] for r in rs if r["valid"] for g in r["graded_by"].values()} for rs in (arm, ctl)]
     if all(versions) and (len(versions[0] | versions[1]) > 1):
         lines.append(f"  NOT LIKE FOR LIKE: graded under prompt version {named(versions[0])} against "
@@ -573,6 +708,77 @@ def headline(arm: list[dict], ctl: list[dict], names: tuple[str, str], paths: tu
     return lines
 
 
+def findings_of(run: dict, check: str) -> list[dict]:
+    return [f for f in run["checks"] or [] if f.get("check") == check]
+
+
+def text_change_measures(runs: list[dict]) -> list[tuple[str, tuple[int, int] | tuple[int, int, int]]]:
+    """Each measure the text change's items read (docs/fix-round-plan-detail.md, section 4.2), over
+    the valid runs given, by check name, as (label, (count, runs)); calls per run is (calls, runs,
+    0). A ledger_sentence finding saved before it recorded `sentences` is left out of the first."""
+    valid = [r for r in runs if r["valid"]]
+    ju = [r for r in valid if r["skill"] == "job-underwriter"]
+    after = [r for r in ju if findings_of(r, "ledger_sentence") and "ledger_sentence" not in r["unchecked"]]
+    counted = [r for r in after if all("sentences" in f for f in findings_of(r, "ledger_sentence"))]
+    out = [
+        ("ledger_sentence: sentences after the ledger above one",
+         (sum(any(f["sentences"] > 1 for f in findings_of(r, "ledger_sentence")) for r in counted), len(counted))),
+        ("ledger_sentence: failed for a set claim (any reason but a second sentence)",
+         (sum(any(f.get("verdict") == "FAIL" and not str(f.get("why", "")).startswith(SECOND_SENTENCE)
+                  for f in findings_of(r, "ledger_sentence")) for r in after), len(after))),
+        ("ledger_present: passing, of job-underwriter's valid runs",
+         (sum(any(f.get("verdict") == "PASS" for f in findings_of(r, "ledger_present")) for r in ju), len(ju))),
+    ]
+    sent = []
+    for skill, fid in CALL_FIXTURES:
+        on = [r for r in valid if r["skill"] == skill and r["id"] == fid]
+        zero = [r for r in on if findings_of(r, "zero_calls")]
+        out += [(f"zero_calls: failing, {skill} eval {fid}",
+                 (sum(any(f.get("verdict") == "FAIL" for f in findings_of(r, "zero_calls")) for r in zero), len(zero))),
+                (f"zero_calls: a quick check, {skill} eval {fid}",
+                 (sum(r["quick_check"] for r in zero), len(zero)))]
+        sent += [r for r in on if r["calls"] is not None]
+    called = [r for r in sent if r["calls"]]
+    out += [("every call reported (the checks below), of the runs that sent a call",
+             (sum(not any(f.get("check") in REPORTS_CALLS for f in failing(r)) for r in called), len(called))),
+            ("calls per run", (sum(r["calls"] for r in sent), len(sent), 0))]
+    return out
+
+
+def uncounted_sentences(runs: list[dict]) -> int:
+    """Valid job-underwriter runs whose ledger_sentence finding was saved before it recorded
+    `sentences`, left out of the first text-change measure."""
+    return sum(1 for r in runs if r["valid"] and r["skill"] == "job-underwriter"
+               and "ledger_sentence" not in r["unchecked"]
+               and any("sentences" not in f for f in findings_of(r, "ledger_sentence")))
+
+
+def text_change_block(arm: list[dict], ctl: list[dict], names: tuple[str, str]) -> list[str]:
+    """The text change's measures, by check name, pooled over the two sets and in each, with each
+    count's runs: section 4.2 of the round's plan reads them against its saved baselines, so no
+    p-value between the sets is printed. Empty when neither set holds a run they read."""
+    rows = list(zip(text_change_measures(arm + ctl), text_change_measures(arm), text_change_measures(ctl)))
+    if not any(pooled[1][1] for pooled, _, _ in rows):
+        return []
+
+    def cell(value) -> str:
+        if len(value) == 3:     # a rate per run, rounded half up (0.975 reads 0.98)
+            rate = (Decimal(value[0]) / Decimal(value[1])).quantize(Decimal("0.01"), ROUND_HALF_UP) if value[1] else None
+            return f"{value[0]}/{value[1]} ({rate})" if value[1] else f"{value[0]}/0"
+        return f"{value[0]}/{value[1]}"
+    models = tallied(r["model"] for r in arm + ctl if r["valid"])
+    lines = ["", f"== text-change measures (docs/fix-round-plan-detail.md, section 4.2), model {models}",
+             f"  {'':<72} {'pooled':>14}  {names[0]:>14}  {names[1]:>14}"]
+    for (label, pooled), (_, a), (_, c) in rows:
+        lines.append(f"  {label:<72} {cell(pooled):>14}  {cell(a):>14}  {cell(c):>14}")
+    lines.append(f"    (the reporting checks: {', '.join(REPORTS_CALLS)}; the fixtures read for calls: "
+                 f"{', '.join(f'{s} eval {i}' for s, i in CALL_FIXTURES)})")
+    if (left := uncounted_sentences(arm + ctl)):
+        lines.append(f"    ({left} run(s) checked before ledger_sentence recorded its sentence count are left out of "
+                     f"its first row)")
+    return lines
+
+
 def report(arm_dir: Path, ctl_dir: Path, checks_from: tuple[Path, Path] | None = None,
            cases: dict | None = None) -> str:
     """The whole comparison as text: the headline, then each module. `cases` stands in for the
@@ -588,6 +794,7 @@ def report(arm_dir: Path, ctl_dir: Path, checks_from: tuple[Path, Path] | None =
         lines.append(f"  checks read from {checks_from[0]} and {checks_from[1]}")
     for mod in MODULES:
         lines += module_report(mod, arm, ctl, names)
+    lines += text_change_block(arm, ctl, names)
     return "\n".join(lines) + "\n"
 
 

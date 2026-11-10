@@ -574,6 +574,51 @@ def aimed_calls(research: dict, mode: str, research_log: list | None, prompt: st
             for t in research.get("targets", [])}
 
 
+# The most calls a quick check of the material the user pasted may send, searches and fetches
+# together, refused ones included (the owner's decision 3, "a couple of calls"). CI's fixtures
+# group holds each fixture file's `quick_check` clause to it.
+QUICK_CHECK_CALLS = 2
+
+
+def quick_check(research: dict, mode: str, research_log: list | None, prompt: str | None) -> dict | None:
+    """The run's quick check that the material its user pasted is still current and genuine, where
+    the fixture declares one (`research.quick_check`: the targets that material fixes, and the
+    names it carries). Its calls are the research calls aimed at those targets, a read of a link
+    the user gave left out. They are a quick check (`ok`) when there are at most QUICK_CHECK_CALLS
+    of them, each aimed at the declared targets alone and each query or address carrying one of
+    the names; `checked` is then the declared targets they were aimed at. None where the fixture
+    declares none, or the run has no research record."""
+    declared = research.get("quick_check")
+    if not isinstance(declared, dict) or research_log is None:
+        return None
+    wanted = set(declared.get("targets") or [])
+    names = [str(n).lower() for n in declared.get("names") or [] if str(n).strip()]
+    full = list(research_log)
+    links_read, _ = user_link_reads(full, research)
+    room = call_room(prompt, research, links_read)
+    pages = research.get("pages", [])
+
+    def aims(e: dict) -> set:
+        return {t["n"] for t in research.get("targets", []) if aimed_at(e, t, pages, mode, room)}
+    calls = [e for e in full if not is_user_link(e, research) and aims(e) & wanted]
+    problems = []
+    if len(calls) > QUICK_CHECK_CALLS:
+        problems.append(f"{len(calls)} calls aimed at target(s) {', '.join(map(str, sorted(wanted)))}, above the "
+                        f"{QUICK_CHECK_CALLS} a quick check sends")
+    for e in calls:
+        asked = str(e.get("query_or_url") or "")
+        asked = (urllib.parse.unquote_plus(asked) if e.get("kind") == "fetch" else asked).lower()
+        other = sorted(aims(e) - wanted)
+        if other:
+            problems.append(f"{e.get('kind')} {asked[:60]!r} is also aimed at target(s) {', '.join(map(str, other))}")
+        if not any(n in asked for n in names):
+            problems.append(f"{e.get('kind')} {asked[:60]!r} names none of the user's material "
+                            f"({', '.join(names)}): it searches for more, and checks nothing given")
+    ok = bool(calls) and not problems
+    return {"calls": calls, "ok": ok, "why": "; ".join(problems), "names": names, "targets": sorted(wanted),
+            "checked": {n for e in calls for n in aims(e) & wanted} if ok else set()}
+
+
 def check_accounting(response: str, research: dict, mode: str,
                      research_log: list | None, prompt: str | None = None,
                      yes_pages: bool = False) -> dict:
@@ -584,7 +629,9 @@ def check_accounting(response: str, research: dict, mode: str,
     run that had made other calls. A refused call counts as a call — the budget
     is spent on what was sent, and a target searched and refused was not skipped.
     The rule judged here is interaction-grammar §4; each check below is that rule
-    and no stricter. `yes_pages` adds one rule §4 does not state and job-underwriter's
+    and no stricter, and a quick check of the user's pasted material (`quick_check`),
+    which the owner allowed, is no wasted search. `yes_pages` adds one rule §4 does
+    not state and job-underwriter's
     SKILL.md Step 2 does — a `yes` row names the pages it rests on — for a fixture
     whose `checks` name YES_PAGES_CHECK.
     """
@@ -637,6 +684,10 @@ def check_accounting(response: str, research: dict, mode: str,
     # §4's other ground for `unavailable` with no call sent: the user chose L0 or
     # declined research. The fixture says so (`research.declined`), never the run.
     declined = bool(research.get("declined"))
+    # A quick check that the user's pasted material is still current and genuine is no wasted
+    # search (the owner's decision 3). Research the user declined stays strict.
+    qc = None if declined else quick_check(research, mode, research_log, prompt)
+    checked = qc["checked"] if qc else set()
 
     def budget_went_above(n: int) -> list[int] | None:
         """The lower-numbered targets the whole search budget went on, or None.
@@ -672,6 +723,10 @@ def check_accounting(response: str, research: dict, mode: str,
         checks.append(finding("vocabulary", n, in_vocab,
                               f"{label!r} is {'' if in_vocab else 'not '}one of {', '.join(VOCAB)}"))
         allowed = accepted(target, mode)
+        if n in checked:
+            # A target the quick check was sent for reads `yes`, or `unavailable` if every call
+            # was refused or errored; the record-of-calls checks below judge which.
+            allowed = [*allowed, *(x for x in ("yes", "unavailable") if x not in allowed)]
         spent = budget_went_above(n) if label == "unavailable" and mode == "canned" else None
         spent_why = (f"the whole search budget ({len(searches_sent)} of {cap}) went on "
                      f"target(s) {', '.join(map(str, spent))} first, and no call was aimed "
@@ -704,6 +759,10 @@ def check_accounting(response: str, research: dict, mode: str,
                 checks.append(finding("accept", n, False,
                                       f"{label!r} in a {mode} room; this fixture accepts "
                                       f"{' or '.join(allowed)}"))
+            if n in checked:
+                checks[-1]["why"] += (f" (yes and unavailable added: {len(qc['calls'])} call(s) here were a quick "
+                                      f"check of the user's material)")
+                checks[-1]["quick_check"] = len(qc["calls"])
         if not have_log:
             continue
         calls = aimed[n]
@@ -815,10 +874,22 @@ def check_accounting(response: str, research: dict, mode: str,
     if (research.get("zero_calls") or declined) and have_log:
         ground = ("the user declined research or chose L0" if declined else
                   "the inputs answer every target")
-        checks.append(finding("zero_calls", "all", not log,
+        # Every call must belong to the quick check, so a call for an unnamed interviewer, or
+        # aimed at no target, still fails.
+        quick = bool(log) and bool(qc and qc["ok"]) and len(qc["calls"]) == len(log)
+        beyond = (f" beyond a quick check of the user's material (at most {QUICK_CHECK_CALLS} calls, each aimed "
+                  f"at target(s) {', '.join(map(str, qc['targets']))} alone and naming "
+                  f"{' or '.join(qc['names'])})") if qc else ""
+        verdict = ("; a quick check of the user's material" if quick else
+                   f"; not a quick check: {qc['why'] or 'a call is aimed at a target the material does not fix, or at none'}"
+                   if qc and log else "")
+        checks.append(finding("zero_calls", "all", not log or quick,
                               f"{ground}, so no research call should be "
-                              f"sent; {searches} search and {fetches} fetch attempt(s) recorded "
-                              f"(a declared user link is reading an input and not counted here)"))
+                              f"sent{beyond}; {searches} search and {fetches} fetch attempt(s) recorded "
+                              f"(a declared user link is reading an input and not counted here){verdict}"))
+        checks[-1]["calls"] = len(log)
+        if quick:
+            checks[-1]["quick_check"] = len(log)
 
     if tally["outcome"] != "checked":
         why = ("no `Research tier:` tally line" if tally["outcome"] == "absent" else
@@ -1287,6 +1358,9 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     else:
         said = "the sentence after the ledger names a row in every set claim it makes, and holds no complement"
     checks.append(finding("ledger_sentence", "all", word is None, said))
+    # How many sentences follow the ledger, whatever the reason above reports first: a set
+    # claim in the first sentence hides a second one from the reason, and the scorer reads both.
+    checks[-1]["sentences"] = len(ledger_rules.sentences(after)) if after else 0
 
     # decision.summary is prose that reads the map, read with the one set-claim
     # reader (ledger_rules.map_claim) that CI and snapshot_count use.
@@ -1519,8 +1593,8 @@ def places(fragment: str, pool: str) -> list[tuple[int, int]]:
 
 
 # A Provenance quotation of the candidate's own words, verbatim, that the fit snapshot's
-# evidence column does not hold as one quotation is a re-cut quote (the scorer reports it
-# apart, evals/README.md "Deterministic checks"), of one of two kinds.
+# evidence column does not hold as one quotation is a re-cut quote: it passes, by the owner's
+# decision, and the scorer reports it (evals/README.md "Deterministic checks"), by its kind.
 RECUT_KINDS = {"joined": "two or more of the evidence column's quotations of that passage run together",
                "unquoted": "candidate words the evidence column does not quote"}
 # The words a candidate's own sentence may join two quoted stretches with, which a joined
@@ -1577,9 +1651,9 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     any length of quotation: checked against the prompt, a quoted JD line, a
     dossier header or a prohibited claim passed as the candidate's own. A fixture
     that declares no `candidate_text` gets that check reported unchecked, never a
-    fallback to the prompt; `[]` means the candidate gave nothing quotable. A
-    Provenance quote must also stand in the fit snapshot's evidence column, because
-    the template says it is quoted exactly as it appears there. Three Provenance
+    fallback to the prompt; `[]` means the candidate gave nothing quotable. The
+    template quotes a Provenance sentence exactly as it appears in the fit snapshot,
+    and one cut otherwise is passed and labelled (below). Three Provenance
     quotations are not the candidate's: one whole item of a dossier field its cell
     names (fields_named); a raising source's line — not in what the candidate gave,
     with its own origin naming a source other than the candidate's material
@@ -1588,14 +1662,16 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     requirement column quotes the JD, so it is checked against the request and the
     pages, from three words up; a canned room's pages are their title, URL and text
     (room_pages_text). A Provenance quote that is the candidate's words, verbatim, but
-    not one quotation of the evidence column still fails, and its finding carries
-    `recut`, one of RECUT_KINDS (recut_kind), for the scorer to count apart.
+    not one quotation of the evidence column is a re-cut quote: it passes, by the owner's
+    decision, and its passing finding carries `recut`, one of RECUT_KINDS (recut_kind),
+    so the scorer reports it.
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
     own = normalise_quote("\n".join(candidate_text)) if candidate_text is not None else None
     dossier = dossier_items(prompt)
     checks, info, unchecked = [], [], []
     counted = {"fit_snapshot": [0, 0], "banks": [0, 0], "requirements": [0, 0]}   # spans, failures
+    recuts = {"fit_snapshot": 0, "banks": 0, "requirements": 0}                     # re-cut quotes passed
     seen = {"fit_snapshot": False, "banks": False, "requirements": False}
     found: list[tuple[str, str, str, str]] = []          # (section, source, row, cell)
     evidence_spans: list[str] = []
@@ -1657,15 +1733,13 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                     bad, where = [], ""
                 else:
                     bad, where = [f for f in frags if not contains_words(f, own)], "what the candidate gave"
-                if section == "banks" and not bad and seen["fit_snapshot"]:
-                    # With no fit snapshot table there is no column to quote from;
-                    # that is reported once, as format, not once per Provenance cell.
-                    bad = [f for f in frags if not contains_words(f, in_snapshot)]
-                    where = "the fit snapshot's evidence column"
-                    if bad and own is not None:
-                        # The candidate's words, verbatim, cut otherwise than the column
-                        # cuts them: still a failure, labelled for the scorer.
-                        recut = recut_kind(frags, own, evidence_spans)
+                if section == "banks" and not bad and own is not None and seen["fit_snapshot"] \
+                        and not all(contains_words(f, in_snapshot) for f in frags):
+                    # The candidate's words, verbatim, cut otherwise than the column cuts them:
+                    # a re-cut quote, which passes and is reported (the owner's decision 2). With
+                    # no fit snapshot table there is no column to compare; that is reported
+                    # once, as format, not once per Provenance cell.
+                    recut = recut_kind(frags, own, evidence_spans)
                 if own is None and section == "fit_snapshot":
                     continue
                 if bad and named:
@@ -1680,10 +1754,15 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 counted[section][1] += 1
                 checks.append(finding(
                     "quotes", section, False,
-                    f"{source} row {row_id}: \"{span.strip()[:120]}\" — \"{bad[0][:80]}\" is not in {where}"
-                    + (f" (a re-cut quote, {recut}: {RECUT_KINDS[recut]})" if recut else "")))
-                if recut:
-                    checks[-1]["recut"] = recut
+                    f"{source} row {row_id}: \"{span.strip()[:120]}\" — \"{bad[0][:80]}\" is not in {where}"))
+            elif recut:
+                recuts[section] += 1
+                checks.append(finding(
+                    "quotes", section, True,
+                    f"{source} row {row_id}: \"{span.strip()[:120]}\" is the candidate's own words, verbatim, but not "
+                    f"one quotation of the fit snapshot's evidence column (a re-cut quote, {recut}: "
+                    f"{RECUT_KINDS[recut]}); passed, and reported, by the owner's decision"))
+                checks[-1]["recut"] = recut
     if own is None:
         info.append("the fixture declares no candidate_text: the evidence column's quotations, and the "
                     "Provenance quotations' source, are unchecked (never checked against the prompt)")
@@ -1703,8 +1782,10 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
             checks.append(finding("quotes", section, True,
                                   f"{spans} quotation(s) {what}all verbatim"
                                   + (" in what the candidate gave" if section != "requirements" and own is not None
-                                     else "")))
-        info.append(f"{section}: {spans} quotation(s) checked, {failures} not verbatim")
+                                     else "")
+                                  + (f", {recuts[section]} of them re-cut (reported)" if recuts[section] else "")))
+        info.append(f"{section}: {spans} quotation(s) checked, {failures} not verbatim"
+                    + (f", {recuts[section]} re-cut and passed" if recuts[section] else ""))
     return {"checks": checks, "info": info, "unchecked": unchecked}
 
 

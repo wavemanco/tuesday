@@ -2166,6 +2166,76 @@ def break_collision_canned_page(root: Path) -> str:
     return "in a canned room target 2's sample 'Saltmarsh Games interview process' returns its page"
 
 
+# A quick check of the user's material (`research.quick_check`): one mutation per rule of the
+# fixtures group, and the three declaring fixtures written another lawful way.
+
+def break_quick_check_undeclared_target(root: Path) -> str:
+    mutate_case(root, JU, 5, lambda c: c["research"]["quick_check"]["targets"].append(4))
+    return "job-underwriter eval 5: quick-check target 4 is not one of this fixture's targets"
+
+
+def break_quick_check_target_not_skipped(root: Path) -> str:
+    """A target the material does not fix: its own research is expected, so a check is no check."""
+    mutate_case(root, MI, 7, lambda c: c["research"]["quick_check"]["targets"].append(1))
+    return "mock-interview eval 7: quick-check target 1 accepts ['yes'] in a canned room, not skipped alone"
+
+
+def break_quick_check_no_names(root: Path) -> str:
+    mutate_case(root, JU, 5, lambda c: c["research"]["quick_check"].update(names=[]))
+    return "job-underwriter eval 5: research.quick_check names nothing"
+
+
+def break_quick_check_name_absent(root: Path) -> str:
+    mutate_case(root, MI, 8, lambda c: c["research"]["quick_check"]["names"].append("kelverton"))
+    return "mock-interview eval 8: quick-check name 'kelverton' is not in the prompt"
+
+
+def break_quick_check_declined(root: Path) -> str:
+    mutate_case(root, MI, 7, decline)
+    return "mock-interview eval 7: declares a quick check beside research.declined"
+
+
+def break_quick_check_over_budget(root: Path) -> str:
+    mutate_case(root, JU, 5, lambda c: c["research"]["budget"].update(searches=1))
+    return "job-underwriter eval 5: a quick check may send 2 calls (output_checks.QUICK_CHECK_CALLS), above this " \
+           "fixture's search budget of 1"
+
+
+def break_quick_check_sample_outside(root: Path) -> str:
+    """A correct check of the company that a target outside the declaration also claims would fail
+    its n/a row: the collision check, skipped where zero_calls holds, still reads this one."""
+    mutate_case(root, JU, 5, lambda c: c["research"]["targets"][0]["on_target_samples"].append(
+        "Pellucid Learning careers head of data"))
+    return "quick-check target 1's sample 'Pellucid Learning careers head of data' is aimed at target(s) [3] outside"
+
+
+def break_quick_check_hunt_passes(root: Path) -> str:
+    """A hunt for the hiring manager the request does not name, read as a check of the company: with
+    no term of its own target, it is a search for Pellucid in the request's own words."""
+    def drop(c):
+        target = next(t for t in c["research"]["targets"] if t["n"] == 3)
+        target["terms"] = [t for t in target["terms"] if t not in ("hiring manager", "hiring managers")]
+    mutate_case(root, JU, 5, drop)
+    return "job-underwriter eval 5: target 3's sample 'Pellucid Learning hiring manager' passes as a quick check"
+
+
+def break_quick_check_clause_number(root: Path) -> str:
+    swap_once(root, JU, "at most two calls", "at most three calls", "break_quick_check_clause_number")
+    return "job-underwriter evals.json clause quick_check allows at most three calls, and the checks allow 2"
+
+
+def keep_quick_check_names_capitalised(root: Path) -> None:
+    mutate_case(root, JU, 5, lambda c: c["research"]["quick_check"].update(names=["Pellucid", "Datawright"]))
+
+
+def keep_quick_check_narrowed(root: Path) -> None:
+    mutate_case(root, MI, 8, lambda c: c["research"]["quick_check"].update(targets=[3]))
+
+
+def keep_quick_check_name_as_written(root: Path) -> None:
+    mutate_case(root, MI, 7, lambda c: c["research"]["quick_check"].update(names=["Saltmarsh Games"]))
+
+
 # Retired wording and rewritten rules (NEW-RV-C, RV14, NEW-RV-I, MI-7).
 
 def break_retired_returned_something(root: Path) -> str:
@@ -3638,6 +3708,10 @@ PASSES = [
     ("wording", "\"no network\" outside an L0 definition", keep_no_network_elsewhere),
     ("answer-keys", "schema fields a dossier fixture repeats, fenced", keep_answer_key_snake_case),
     ("fixtures", "a fixture whose user declines research", keep_declined_fixture),
+    ("fixtures", "job-underwriter eval 5's quick-check names written with capitals", keep_quick_check_names_capitalised),
+    ("fixtures", "mock-interview eval 8's quick check narrowed to one target", keep_quick_check_narrowed),
+    ("fixtures", "mock-interview eval 7's quick-check name written as the prompt writes it",
+     keep_quick_check_name_as_written),
     ("evals", "a relative date in an expectation, written out at the anchor", keep_date_in_expectation),
     ("fixtures", "a canary found in its page once the page's date is written out", keep_canary_spelled_as_dated_page),
     ("fixtures", "the page-naming rule's sentence hard-wrapped at another word", keep_pages_rule_rewrapped),
@@ -4061,6 +4135,15 @@ CASES: list[tuple[str, str, callable]] = [
     ("fixtures", "user_pages that is not a list", break_user_pages_not_list),
     ("answer-keys", "a user page's sentence quoted", break_answer_key_user_page),
     ("fixtures", "a skipped target's page returned for another target's sample", break_collision_canned_page),
+    ("fixtures", "a quick-check target the fixture does not declare", break_quick_check_undeclared_target),
+    ("fixtures", "a quick-check target that accepts more than skipped", break_quick_check_target_not_skipped),
+    ("fixtures", "a quick check that names nothing", break_quick_check_no_names),
+    ("fixtures", "a quick-check name the prompt does not carry", break_quick_check_name_absent),
+    ("fixtures", "a quick check beside research.declined", break_quick_check_declined),
+    ("fixtures", "a quick check's calls above the fixture's search budget", break_quick_check_over_budget),
+    ("fixtures", "a quick-check sample aimed at a target outside the check", break_quick_check_sample_outside),
+    ("fixtures", "another target's sample passing as a quick check", break_quick_check_hunt_passes),
+    ("fixtures", "a quick_check clause allowing another number of calls", break_quick_check_clause_number),
     ("evals", "an expectation naming an unknown clause", break_clause_unknown),
     ("evals", "a clause nothing uses", break_clause_unused),
     ("evals", "a clause inside a clause", break_clause_nested),
