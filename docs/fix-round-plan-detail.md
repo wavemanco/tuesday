@@ -1,9 +1,9 @@
 # The fix round: plan and bar in full
 
 This document is the plan for the fix round and the bar the round is held to, in full.
-`fix-round-plan.md` is its short version, and where the two differ this one holds. It
-is in the repository before any measured run, so the bar is fixed in advance. Once the
-owner approves it, nothing in sections 4 and 5 changes.
+`fix-round-plan.md` is its short version, and where the two differ this one holds. The
+owner approved it on 10 November 2026, before any measured run, so the bar is fixed:
+nothing in sections 4 and 5 changes from here.
 
 ## 1. What this round is for
 
@@ -159,7 +159,7 @@ The same commit adds the two-word name to the retired wordings that `check_skill
 --only wording` fails, so it cannot come back unnoticed in any file that group reads,
 and adds one clause naming it to `CONTRIBUTING.md`'s paragraph that lists every phrase
 that group reads ("Retired wordings stay retired"). Comments, messages and identifiers
-in `ci/` and `evals/` are left to a separate tidy-up (section 8, question 3).
+in `ci/` and `evals/` are left to a separate tidy-up (section 8, decision 3).
 
 #### G2. Tuesday's row in the routing table, and the install line
 
@@ -316,7 +316,7 @@ Why this shape, and not another:
 - Removing the sentence would ripple through every file that anchors on it, and would
   push the readings into the next free-text surface.
 - Allowing two sentences that each name their rows would pass most saved runs, but it
-  changes what counts as compliant, which is the owner's call (section 8, question 2).
+  changes what counts as compliant, and the owner kept the rule (section 8, decision 2).
 
 The same commit carries the check and its tests:
 
@@ -343,7 +343,7 @@ The same commit carries the check and its tests:
   changes saving. A Tuesday-side line would be a second change on the same check, so
   the round could not tell which one worked.
 - resume-tailor's trace rule. The new traces check fails 2 of 150 saved runs; the 33%
-  in its watch-out row came from graders reading older text (section 8, question 4).
+  in its watch-out row came from graders reading older text (section 8, decision 4).
 
 ### 2.2 Harness, check and fixture changes
 
@@ -694,10 +694,10 @@ Runs per fixture and room, under the run plan in section 6:
 | Model | job-underwriter, 8 fixture-rooms | mock-interview, 10 fixture-rooms | resume-tailor, 5 fixture-rooms | Runs per arm |
 |---|---|---|---|---|
 | Haiku | 10 | 10 | 10 | 230 |
-| Sonnet | 5 | 10 | 5 | 165 |
-| Opus | 5 | 10 | 5 | 165 |
+| Sonnet | 5 | 10 | 10 | 190 |
+| Opus | 5 | 10 | 10 | 190 |
 
-That makes 1,120 graded runs. The models run one after another: Haiku, Sonnet, then
+That makes 1,220 graded runs. The models run one after another: Haiku, Sonnet, then
 Opus.
 
 #### The routing runs
@@ -743,7 +743,7 @@ That makes 870 routing runs: 690 standard and 180 extra.
   the time and CLI version are logged with each reading.
 - No step starts while the meter reads over 80%, or when its reading plus the step's
   high estimate would pass 90%. The high estimates are Haiku quality 4.8 points,
-  Sonnet quality 17.2, Opus quality 20.7, and routing 5.7, or 7.7 with the worst case
+  Sonnet quality 18.7, Opus quality 22.5, and routing 5.7, or 7.7 with the worst case
   for the extra runs.
 - A step that has started finishes.
 - When the rule stops the round, the owner gets a report of what ran (section 5).
@@ -841,7 +841,8 @@ module of a model:
 | Graded | an 8-point fall, spread over every run | 89–99% |
 | Graded | an 8-point fall, whole runs breaking, as an undelivered pack does | 75–84% |
 | Graded | a 5-point fall | about half the time |
-| Checks | a unit rising from 10% to 30% of runs, 25 runs a side (resume-tailor at 5) | 12% |
+| Checks | a unit rising from 10% to 30% of runs, 25 runs a side (resume-tailor at 5, as planned before the owner's decision) | 12% |
+| Checks | the same, 50 runs a side (resume-tailor at 10) | about 40% |
 | Checks | the same, 40 runs a side (job-underwriter at 5) | 26% |
 | Checks | the same, 100 runs a side (mock-interview at 10) | 81% |
 | Checks | a 20-point rise in mock-interview's quote, evidence-form or watch-out unit, at 10 runs | 54–98% |
@@ -864,7 +865,7 @@ Tuesday that fail every expectation, with none alone, trip it at two runs when t
 25 a side, three at 40 and six or seven at 100. If whole runs broke 1 time in 100 in
 both arms, resume-tailor's graded item on Sonnet and Opus would miss by luck about 4.5%
 of the time, and about 9% at 2 in 100; at 10 runs a side, under 1% and about 3%.
-Section 8, question 1, prices resume-tailor at 10 runs.
+So resume-tailor runs at 10 on Sonnet and Opus too (section 8, decision 1).
 
 **Reported, not gated:**
 
@@ -880,7 +881,7 @@ Section 8, question 1, prices resume-tailor at 10 runs.
   round's readings (Haiku at least 90%, Sonnet and Opus at least 95%), and any line
   placed in a saved file rather than the chat, now that saves succeed;
 - resume-tailor's trace cells (the traces check), per model and arm, for section 8,
-  question 4;
+  decision 4;
 - resume-tailor's closing block, counting only failures that do not cite the harness's
   own record;
 - mock-interview eval 5 writing `skipped` where `unavailable` is required;
@@ -1009,11 +1010,11 @@ Per model, with rates on decided runs.
    Tuesday on that model: the standard runs, the explicit commands and the extra case
    runs, as in round 3. (b) Over every Tuesday session of the round, on the three
    models together, quality runs and nudged runs included, at most one reach. Over
-   this plan's 1,025 Tuesday sessions, one reach bounds the per-run rate at 0.46%
-   (one-sided 95%), and zero bounds it at 0.29%. Both runners read a run with the same
+   this plan's 1,075 Tuesday sessions, one reach bounds the per-run rate at 0.44%
+   (one-sided 95%), and zero bounds it at 0.28%. Both runners read a run with the same
    reader, and each reach is diagnosed. The per-model bounds are reported; with zero
-   reaches they are 0.75% on Haiku's 400 sessions, 1.03% on Sonnet's 290 and 0.89% on
-   Opus's 335. The ledger states a bound, never "never".
+   reaches they are 0.75% on Haiku's 400 sessions, 0.95% on Sonnet's 315 and 0.83% on
+   Opus's 360. The ledger states a bound, never "never".
 4. **No off-topic fires.** No fire in the 30 off-topic runs (cases 11 to 14, 19 and
    20).
 5. **Wrong picks.** At most 2 of the 60 single-module runs pick the wrong module.
@@ -1128,8 +1129,8 @@ The chance that the round misses somewhere by luck, from the figures above:
   the skills.
 - So about one round in four or five would miss somewhere with nothing wrong. A miss
   goes to the owner with its measurements, and nothing is re-run to turn it into a pass
-  (section 5), so a false miss costs a decision, not the round. Section 8, question 5,
-  asks the owner to accept this rate.
+  (section 5), so a false miss costs a decision, not the round. The owner accepted
+  this rate (section 8, decision 5).
 
 ## 5. What each outcome leads to
 
@@ -1210,24 +1211,27 @@ Sonnet step, $18.71 on Haiku's, $25.98 on Opus's and $23.45 on the smoke. Readin
 whole percents, so each step's figure is good to about one point. This plan converts at
 $17–21 a point for Sonnet and Haiku, and $24–29 for Opus.
 
-The planned run counts are plan P2: Haiku at 10 runs per fixture and room on every
-module, and mock-interview at 10 on Sonnet and Opus. It puts the extra runs where the
-earlier misses and most of the truthfulness risk were, and on Haiku it removes the
-7-point exception. The table also costs P0, all at 5 runs (section 8, question 1).
+The planned run counts are plan P2 with resume-tailor at 10, as the owner decided
+(section 8, decision 1): Haiku at 10 runs per fixture and room on every module, and
+mock-interview and resume-tailor at 10 on Sonnet and Opus. P2 puts the extra runs where
+the earlier misses and most of the truthfulness risk were, and on Haiku it removes the
+7-point exception; resume-tailor at 10 stops two broken runs from tripping its graded
+item. The table also costs P0, all at 5 runs.
 
-| Part | P0, all at 5 runs | P2, planned |
+| Part | P0, all at 5 runs | P2 with resume-tailor at 10, planned |
 |---|---|---|
 | Quality, Haiku | 2.1 points, $40 | 4.3 points, $81 |
-| Quality, Sonnet | 9.4 points, $179 | 15.4 points, $292 |
-| Quality, Opus | 11.7 points, $304 | 19.1 points, $497 |
+| Quality, Sonnet | 9.4 points, $179 | 16.8 points, $318 |
+| Quality, Opus | 11.7 points, $304 | 20.8 points, $541 |
 | Routing, three models | 5.1 points, $118 | 5.1 points, $118 |
 | Extra case runs | 0.3 points, $7 (worst case 1.8, $46) | the same |
 | Probe, layout checks and meter reads | under 0.5 points | the same |
 | Scoring, verification and the report | 3–5 points | 3–5 points |
-| **Round total** | **about 33 points (29–37), about $650 of runs** | **about 49 points (43–54), about $1,000 of runs** |
+| **Round total** | **about 33 points (29–37), about $650 of runs** | **about 52 points (46–58), about $1,070 of runs** |
 
-P2's extra cost is about 16 points and $345. All of P3, every module at 10 runs on
-every model, would add about 7 points more.
+P2's extra cost is about 16 points and $345, and resume-tailor at 10 about 3 points and
+$70 more. All of P3, every module at 10 runs on
+every model, would add about 4 points more.
 
 **Schedule.** The meter read 48% after the smoke and has not been read since, so the
 Step 1 work before the reset starts with one reading. That work spends no measured
@@ -1238,10 +1242,10 @@ at 06:00 UTC.
 |---|---|---|---|
 | Thursday 12, from 06:00 UTC | Meter reading, CLI version, save probe, layout checks | minutes | about 1% |
 | Thursday 12 | Quality, Haiku | about 3.5 hours | about 5% |
-| Thursday 12 | Quality, Sonnet | about 5 hours | about 21% |
-| Friday 13 | Quality, Opus | about 5 hours | about 40% |
-| Sunday 15 | Routing on three models in parallel, then the extra case runs | about 75 minutes | about 45% |
-| Monday 16 | Scoring, verification and the report | — | about 49% |
+| Thursday 12 | Quality, Sonnet | about 5.5 hours | about 22% |
+| Friday 13 | Quality, Opus | about 5.5 hours | about 43% |
+| Sunday 15 | Routing on three models in parallel, then the extra case runs | about 75 minutes | about 48% |
+| Monday 16 | Scoring, verification and the report | — | about 52% |
 
 The hours for Sonnet and Opus are estimates: the quality check took about 3 hours a
 model at 5 runs, and mock-interview takes most of each step. The round should end near
@@ -1262,7 +1266,7 @@ cost of results three days later.
   went to the owner under the two-iteration rule and are covered by watch-outs. The
   round reports their rates and changes nothing.
 - **resume-tailor's owed change of shape:** no text change; the round reports the
-  traces rate (section 8, question 4).
+  traces rate (section 8, decision 4).
 - **Haiku's off-form tally line, Haiku's reworded quotes, resume-tailor's closing
   block, and mock-interview eval 5's mislabel:** reported only.
 - **Opus case 10's description fix:** left open (decision 10); the round only reads
@@ -1280,48 +1284,45 @@ cost of results three days later.
 - **An Opus grader spot-check:** not run. Both arms use the same Sonnet graders, so a
   bias common to both cancels, and grader noise is part of the calibration.
 - **Renaming code identifiers that hold the old name:** a separate harness change
-  (section 8, question 3).
+  (section 8, decision 3).
 - **Untested surfaces:** claude.ai on the web and in the desktop app, the plugin on
   claude.ai, the marketplace install with the private repository, permission prompts
   in a normal session, quality through the personal install, cloud sessions with
   synced copies of the skills, live drills, second turns, and live web research. None
   is measured here.
 
-## 8. Open questions for the owner
+## 8. The owner's decisions on the open questions
 
-1. **Run plan.** This plan runs P2: Haiku at 10 runs per fixture and room on every
-   module, and mock-interview at 10 on Sonnet and Opus, for about 49 points and $1,000
-   of runs. P0, all at 5 runs, costs about 33 points and $650; it leaves the checks and
-   truthfulness items weaker, and Haiku job-underwriter on its 7-point margin. P3, all
-   at 10, adds about 7 points more and mostly helps job-underwriter's checks.
-   Resume-tailor alone at 10 on Sonnet and Opus would add about 3 points and $70, and
-   would stop two broken runs from tripping its graded item (section 4.1).
-   Recommendation: P2. The thresholds are the same under every plan.
-2. **H1, what counts as compliant.** This plan keeps rule 2's "at most one sentence"
-   and gives that sentence a list form. The alternative is to allow two sentences that
-   each name their rows, which would have passed most saved runs (Sonnet 78 of 80, Opus
-   68 of 80, Haiku 27 of 47), but changes the rule rather than meeting it.
-   Recommendation: keep one sentence, with the list form.
-3. **Code identifiers that hold the old name as one word:** `--via frontdoor`, `--arm
-   frontdoor`, `check_skills.py --only frontdoor`, `MEASURED_FRONTDOOR` and the
-   `evals/arms/frontdoor/` folder. They appear in `README.md`'s backlog, in
-   `evals/README.md` and in `CONTRIBUTING.md`. No README holds the two-word name.
-   Recommendation: they are commands and constants, not the name in prose, so decision
-   9 does not reach them this round; rename them in a separate harness commit after the
-   round, so that the harness this round measures with is the one tested here.
-4. **resume-tailor's owed change of shape.** Its watch-out row cites 33% altered quotes,
-   measured by graders on older text, and says a change of shape is still owed. The new
-   traces check fails 2 of 150 saved runs. Recommendation: decide after the round, with
-   its traces rate. If the check fails in at most 1 run in 20 on every model, record the
-   issue as closed by measurement and keep the watch-out line, whose wording is yours to
-   change or keep.
-5. **The whole bar's false-miss rate.** With nothing wrong, the round would miss
-   somewhere about one time in four or five: 5–7% on Sonnet, 9–15% on Haiku and 6–9%
-   on Opus (section 4.5). It comes from gating nine pairs of module and model and three
-   routing comparisons at once. This plan already made every text-change guard a test
-   and widened the starved margin to 3 of 20. Lowering the rate further means loosening
-   items that earlier rounds found real losses on, such as Haiku's single-module item.
-   Recommendation: accept it, since a false miss costs a decision, not a re-run.
+The owner took every recommendation on 10 November 2026, before any measured run.
+
+1. **Run plan: P2, with resume-tailor at 10.** Haiku runs 10 per fixture and room on
+   every module; mock-interview and resume-tailor run 10 on Sonnet and Opus, and
+   job-underwriter 5. That is about 52 points and $1,070 of runs (section 6). P0, all
+   at 5, would have cost about 33 points and left the checks and truthfulness items
+   weaker. Resume-tailor at 10 stops two broken runs from tripping its graded item
+   (section 4.1). The thresholds are the same under every plan.
+2. **H1: one sentence, in a list form.** Rule 2's "at most one sentence" stays, and the
+   sentence takes a list form. The alternative, two sentences that each name their
+   rows, would have passed most saved runs (Sonnet 78 of 80, Opus 68 of 80, Haiku 27 of
+   47), but it changes the rule rather than meeting it.
+3. **Code identifiers that hold the old name as one word stay this round.** They are
+   `--via frontdoor`, `--arm frontdoor`, `check_skills.py --only frontdoor`,
+   `MEASURED_FRONTDOOR` and the `evals/arms/frontdoor/` folder, which appear in
+   `README.md`'s backlog, `evals/README.md` and `CONTRIBUTING.md`. They are commands and
+   constants, not the name in prose, so decision 9 does not reach them this round. They
+   are renamed in a separate harness commit after the round, so that the harness this
+   round measures with is the one tested here. No README holds the two-word name.
+4. **resume-tailor's owed change of shape is decided after the round**, from its traces
+   rate. Its watch-out row cites 33% altered quotes, measured by graders on older text;
+   the new traces check fails 2 of 150 saved runs. If the check fails in at most 1 run in
+   20 on every model, the issue goes to the owner as closed by measurement, with the
+   watch-out line's wording the owner's to change or keep.
+5. **The whole bar's false-miss rate is accepted.** With nothing wrong, the round would
+   miss somewhere about one time in four or five: 5–7% on Sonnet, 9–15% on Haiku and
+   6–9% on Opus (section 4.5). It comes from gating nine pairs of module and model and
+   three routing comparisons at once. A false miss costs a decision, not a re-run, and
+   lowering the rate further would loosen items that earlier rounds found real losses
+   on, such as Haiku's single-module item.
 
 ## 9. Choices made in this plan
 

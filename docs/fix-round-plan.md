@@ -2,8 +2,8 @@
 
 This is the short version of the fix round's plan and bar. The full version, with every
 threshold, its calibration and the commands, is `fix-round-plan-detail.md`; where the
-two differ, the full version holds. Both are in the repository before any measured run,
-so the bar is fixed in advance.
+two differ, the full version holds. The owner approved both on 10 November 2026, before
+any measured run, so the bar is fixed.
 
 ## What the round does
 
@@ -40,7 +40,7 @@ UTC:
 | Monday | Scoring and the report |
 
 Quality runs every fixture of every module twice, once with the module alone and once
-through Tuesday, both installed the same way: 1,120 graded runs. Routing is 870 runs.
+through Tuesday, both installed the same way: 1,220 graded runs. Routing is 870 runs.
 
 ## The bar
 
@@ -64,7 +64,7 @@ Falling short of a goal does not block shipping: the issue stays open and is rec
 Getting worse does block it.
 
 **Routing** keeps round 3's items. A hidden module may be reached at most once across
-all of the round's 1,025 Tuesday sessions. Two items were loosened because they would
+all of the round's 1,075 Tuesday sessions. Two items were loosened because they would
 often miss by luck: Haiku's single-module gain, and the "no module starved" margin.
 
 **How far to trust a miss.** With nothing actually wrong, the bar would still flag
@@ -85,7 +85,7 @@ resume-tailor poorly. A pass there means no large slip was seen.
 
 ## Cost
 
-The round costs about 49 points of the weekly meter (43 to 54), about $1,000 of runs.
+The round costs about 52 points of the weekly meter (46 to 58), about $1,070 of runs.
 It should end near half the meter. No step starts above 80%.
 
 ## Left out
@@ -99,21 +99,17 @@ It should end near half the meter. No step starts above 80%.
 - Surfaces no run reaches: claude.ai on the web and in the desktop app, live web
   research, live drills and second turns.
 
-## Questions for the owner
+## The owner's decisions
 
-1. **Run size.** The plan runs 10 runs per fixture on Haiku and on mock-interview, and
-   5 elsewhere, for about 49 points. All at 5 runs costs about 33 points, with weaker
-   checks. Recommended: the plan's size, plus resume-tailor at 10 on Sonnet and Opus.
-   That adds about 3 points and $70, and stops two broken runs from tripping its graded
-   item.
-2. **The sentence after the fit ledger.** Recommended: keep "one sentence", written as
-   a list. The alternative is to allow two sentences that each name their rows. That
-   would have passed most saved runs, but it changes the rule instead of meeting it.
+All taken on 10 November 2026, before any run.
+
+1. **Run size:** 10 runs per fixture on Haiku, and on mock-interview and resume-tailor
+   on Sonnet and Opus; 5 for job-underwriter on Sonnet and Opus.
+2. **The sentence after the fit ledger:** "one sentence" stays, written as a list.
 3. **Code names that hold the old name**, such as `--via frontdoor` and
-   `MEASURED_FRONTDOOR`. Recommended: rename them in their own commit after the round,
-   so the round measures with the harness tested here.
-4. **resume-tailor's owed change of shape.** Recommended: decide after the round, from
-   its traces rate.
-5. **The false-flag chance of one round in four or five.** Recommended: accept it. A
-   flag costs a decision, not a re-run, and lowering it means loosening items that
-   caught real losses before.
+   `MEASURED_FRONTDOOR`, are renamed in their own commit after the round, so the round
+   measures with the harness tested here.
+4. **resume-tailor's owed change of shape** is decided after the round, from its traces
+   rate.
+5. **The false-flag chance** of one round in four or five is accepted, since a flag
+   costs a decision, not a re-run.
