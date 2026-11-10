@@ -515,7 +515,7 @@ routing reader does (`run_routing.local_name`). `--layout project`, the default 
 measurement before this one used for the module alone: the room's own
 `.claude/skills/`, a room named for the module, and no plugin or read rule. It
 stays, because the ledger's earlier baselines were measured with it. The quality
-check through Tuesday (m18) ran its alone arm that way, so its two arms differed
+check through Tuesday ran its alone arm that way, so its two arms differed
 in install, read rule and room name as well as in Tuesday.
 
 Every run's meta.json records `via`, `layout`, and, reported and never scored,
@@ -524,7 +524,7 @@ permission, counted by tool, and `save_refused`, whether a save (Write, Edit,
 MultiEdit or NotebookEdit) was among them (`run_fixtures.refusals`). A run that ended before its result event
 has both `null`, never an empty count.
 
-`--via frontdoor` has run: the quality check through Tuesday (m18) ran it on
+`--via frontdoor` has run: the quality check through Tuesday ran it on
 three models, 115 runs each, 345 in all, beside 345 runs of the modules alone, and
 set none aside, so `--plugin-dir` works beside the rooms' `--setting-sources
 project`. The bar each step was held to was fixed by the owner before it ran.
@@ -680,7 +680,7 @@ The response sits between two lines the prompt names, `===== RESPONSE BEGINS
 outside them is text the response wrote. The harness's record follows the end
 line. Version 2 of the prompt put the record straight after the response with
 nothing marking where the response ended, and graders read it as the response's
-own closing text: most closing-expectation failures in the m18 runs cited it. The
+own closing text: most closing-expectation failures in the quality check through Tuesday cited it. The
 fence is prompt version 3; a grade file records its version, and grades saved
 under version 2 keep it.
 
@@ -995,10 +995,10 @@ python evals/compare_arms.py OUT/tuesday OUT/alone > compare.txt
 
 A check family is one defect that more than one check reads, counted once per
 run: one slot, one absent block, or one piece of text breaking one rule. These
-are the families, pooled over m18's 690 runs (Sonnet's checks from its re-check
+are the families, pooled over the 690 runs of the quality check through Tuesday (Sonnet's checks from its re-check
 under 2d7dbfc):
 
-| Family | Checks | Why it is one defect | m18: runs failing it, and with two or more of its checks failing |
+| Family | Checks | Why it is one defect | Quality check: runs failing it, and with two or more of its checks failing |
 |---|---|---|---|
 | hard-gates line | `gates_line`, `gates_form` | one slot, read for its form and its judgement | 63; 32 (every `gates_line` failure) |
 | severity slot | `severity`, `severity_form` | one slot, read the same two ways | 2; 1 |
@@ -1010,7 +1010,7 @@ under 2d7dbfc):
 Folding those leaves 11 of the 71 runs that failed `accept`. Every other pair of
 checks that failed together in 15 or more of those runs is counted apart:
 
-| Checks failing together | m18 runs | Folded | Why |
+| Checks failing together | Runs | Folded | Why |
 |---|---|---|---|
 | `accept`, `zero_calls` | 53 | all 53 | a call where none belongs |
 | `evidence_form`, `quotes` | 49 | no | different cells: in 2 the failing quotation sits in the off-form cell |

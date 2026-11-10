@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare two saved fixture sets, an arm and its control, module by module.
 
-The quality check through Tuesday (m18) was scored by scripts written beside each
+The quality check through Tuesday was scored by scripts written beside each
 step, and its verified summary found what that cost: a rate view blind to checks
 that record only failures, one defect counted as two checks, p-values on grader
 verdicts that two graders of one run make dependent, re-cut quotes mixed with
@@ -39,7 +39,7 @@ names its thresholds before the measurement runs. Per module it reports:
 Every comparison of runs carries an exact two-sided Fisher p-value on runs, never
 on verdicts. Harness-invalid runs are counted and left out of everything else.
 
-    python evals/compare_arms.py m18/opus/tuesday m18/opus/alone
+    python evals/compare_arms.py OUT/tuesday OUT/alone
     python evals/compare_arms.py ARM CONTROL --checks-from RECHECK/tuesday RECHECK/alone
 """
 
@@ -260,7 +260,7 @@ def fold_one_claim(run: dict, fails: list[dict]) -> set[int]:
 
 # (name, member checks, the members whose applying makes the family apply, fold).
 # evals/README.md ("Comparing two arms") states why each is one defect, with the overlaps the
-# m18 runs showed.
+# quality check's runs showed.
 FAMILIES = (
     ("hard-gates line", ("gates_line", "gates_form"), ("gates_line", "gates_form"),
      fold_slot("gates_line", "gates_form")),

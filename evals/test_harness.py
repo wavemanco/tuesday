@@ -2548,7 +2548,7 @@ def test_quotes() -> None:
         f'| E2 | "What did you make of the market report?" | One thing it confirmed for you | [grounded] "{report}" |\n',
         kelverton["prompt"], (), kelverton["candidate_text"])
     check("must pass: fixture 5's candidate_text holds the candidate's own sentences in the message, not only the "
-          "background (m18, mock-interview 5)", [c["why"] for c in got["checks"] if c["verdict"] == "FAIL"], [])
+          "background (quality check, mock-interview 5)", [c["why"] for c in got["checks"] if c["verdict"] == "FAIL"], [])
     check_true("and leaves out the recruiter's email the candidate quotes",
                not any("deepa" in output_checks.normalise_quote(t) for t in kelverton["candidate_text"])
                and "deepa" in output_checks.normalise_quote(kelverton["prompt"]))
@@ -4094,7 +4094,7 @@ def test_audit_quotes() -> None:
           banks('[grounded] "I ran the five hubs over 2027" — strategy brief'), ["FAIL"])
     check("must fail: a dossier field's name is the dossier's material, not another source",
           banks('[grounded] prohibited_claims: "consolidate eight branches"'), ["FAIL"])
-    # The quality check through Tuesday (m18) found two correct sources read as the
+    # The quality check through Tuesday found two correct sources read as the
     # candidate's words: a possessive written right before the quote, the form the
     # rubric's worked example uses, and the dossier's role_profile named after it.
     for cell in ('[grounded] "I ran the weekly content-drop calendar", beside the strategy brief\'s '
@@ -4612,7 +4612,7 @@ def test_relative_dates() -> None:
     check_true("fixture 7's news page at its anchor is its saved text",
                m7["research"]["pages"][2]["text"].startswith("August 2026: Project Larkspur")
                and "from January 2027," in m7["research"]["pages"][2]["text"])
-    # sha256 of [prompt, research.pages] as the m18 runs were sent them (dce0299), so a regrade
+    # sha256 of [prompt, research.pages] as the quality check's runs were sent them (dce0299), so a regrade
     # of a saved run shows graders the request that run answered, byte for byte.
     sent = {7: "51581377a8fc870051bfec8545d9ed01962102e0ad6f1473b80a8df8ada5d4c9",
             8: "451cb97a91b93aa548ec11732e78e9bf7b42429543af320492efb52473fd0ac3"}
@@ -4697,7 +4697,7 @@ def test_relative_dates() -> None:
               verdict_of(rec, "quotes", "requirements"), "PASS")
 
 
-# Real cells, cut from the m18 runs (scratchpad/m18/<model>/<arm>/<stem>.md), so the re-cut
+# Real cells, cut from the quality check's saved runs (kept outside the repository), so the re-cut
 # label and the trace check are tested against what skills wrote.
 MI8_OWN = ("6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log "
            "and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional "
@@ -4750,7 +4750,7 @@ def test_recut_quotes() -> None:
     # opus/alone/mock-interview-2.run4.md, F5, F6 and A4
     got = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
                                      '| A4 | Q | G | [grounded] "solid Excel, never used Power BI" |\n', own2, (), [own2])
-    check("must fail, labelled joined: two quotations joined by a comma (m18, mock-interview 2)",
+    check("must fail, labelled joined: two quotations joined by a comma (quality check, mock-interview 2)",
           [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["joined"])
     edge = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
                                       '| A4 | Q | G | [grounded] "and never used Power BI" |\n',
@@ -4767,7 +4767,7 @@ def test_recut_quotes() -> None:
                                      '| B4 | Q | G | [grounded] "My team\'s on-call burden dropped 60% after I pushed a '
                                      'reliability quarter through against roadmap pressure" |\n', mi6[0], (), mi6)
     check("must fail, labelled joined: the column's two stretches joined by a conjunction and its clause's subject "
-          "(m18, mock-interview 6)",
+          "(quality check, mock-interview 6)",
           [c.get("recut") for c in got["checks"] if c["verdict"] == "FAIL" and c["target"] == "banks"], ["joined"])
     # Synthetic: the second sentence holds every word of the column's one quotation, and is quoted
     own3 = ("I ran the weekly sales review for the north region. After I left, the north region ran the weekly "
@@ -4801,7 +4801,7 @@ def test_traces() -> None:
     e1 = ('| E1 | Experience | "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." '
           '| *(unchanged, moved to lead the ledger-pipeline entry)* | `reorder` | "I own three services in our ledger '
           'pipeline — one handles about 40k requests/minute at peak." | `[grounded]` cv | pending your approval |\n')
-    check("must pass: a trace quoting the candidate's sentence whole (m18, resume-tailor 1)", fails(e1), [])
+    check("must pass: a trace quoting the candidate's sentence whole (quality check, resume-tailor 1)", fails(e1), [])
     check("must fail: the same sentence cut mid-word, a quotation found only inside a longer word",
           fails(e1.replace('pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
                            'pipelin" | `[grounded]`')), [("FAIL", "judgement")])
@@ -4814,24 +4814,24 @@ def test_traces() -> None:
     head5 = "| # | Current line | Proposed line | Operation | Traces to | Status |\n|---|---|---|---|---|---|\n"
     two = ('| 3 | HubSpot daily for 4 years | Daily HubSpot user for 4 years; pull my own performance reporting in HubSpot. '
            '| reorder | "HubSpot daily for 4 years" + "I pull my own numbers in HubSpot reporting" | pending your approval |\n')
-    check("must pass: two quotations of the candidate's, each verbatim (m18, resume-tailor 5)", fails(two, rowan, head5), [])
+    check("must pass: two quotations of the candidate's, each verbatim (quality check, resume-tailor 5)", fails(two, rowan, head5), [])
     # haiku/alone/resume-tailor-2.run4.md, L4: a trace of the candidate's own sentence in the message
     dev = ('| L4 | Summary (optional) | *(no current line)* | "Moving from analytics into data engineering." | `reframe` '
            '| "I\'m trying to move into data engineering from analytics." | `[grounded]` your message | pending your approval |\n')
-    check("must pass: fixture 2's candidate_text holds the candidate's sentence in the message (m18, resume-tailor 2)",
+    check("must pass: fixture 2's candidate_text holds the candidate's sentence in the message (quality check, resume-tailor 2)",
           fails(dev, fixture("resume-tailor", 2)), [])
     check("must pass: a quotation cut at an ellipsis, each piece verbatim",
           fails(two.replace('"I pull my own numbers in HubSpot reporting"', '"I pull my own numbers … reporting"'), rowan, head5), [])
     pointer = ('| 4 | built our lifecycle email programme from scratch, 12 automated flows | No change. | none '
                '| source sentence | — |\n')
-    check("must fail, as format: a cell that refers to its sentence instead of quoting it (m18, resume-tailor 5)",
+    check("must fail, as format: a cell that refers to its sentence instead of quoting it (quality check, resume-tailor 5)",
           fails(pointer, rowan, head5), [("FAIL", "format")])
     sam = fixture("resume-tailor", 4)
     # haiku/tuesday/resume-tailor-4.run2.md, E1: the resume's dash quoted as a comma
     altered = ('| E1 | Skills (assumed) | no Kubernetes entry | "Kubernetes (proof-of-concept for two months, never went to '
                'production)" | surface | "Ran a Kubernetes proof-of-concept for two months last year, never went to '
                'production." | `[grounded]` cv | pending your approval |\n')
-    check("must fail: a quotation tidied, the candidate's dash turned into a comma (m18, resume-tailor 4)",
+    check("must fail: a quotation tidied, the candidate's dash turned into a comma (quality check, resume-tailor 4)",
           fails(altered, sam), [("FAIL", "judgement")])
     check("must pass: the same row quoting the sentence as the resume has it",
           fails(altered.replace("last year, never went", "last year — never went"), sam), [])
@@ -4842,9 +4842,9 @@ def test_traces() -> None:
                  'internal integration playbook the whole team uses."; dossier E1: "surface the integration playbook '
                  'authorship into its own line" | `[grounded]` your CV, dossier | pending your approval |\n')
     check("must pass: the CV's sentence quoted, and beside it the dossier's drafted edit, verbatim with its origin "
-          "named — edit-ledger.md asks for the one and forbids neither (m18, resume-tailor 3)", fails(inherited, nadia), [])
+          "named — edit-ledger.md asks for the one and forbids neither (quality check, resume-tailor 3)", fails(inherited, nadia), [])
     # sonnet/alone/resume-tailor-3.run1.md, E1: the same cell, the dossier item named with no colon
-    check("must pass: the same, the dossier item named right before its quotation with no colon (m18, resume-tailor 3)",
+    check("must pass: the same, the dossier item named right before its quotation with no colon (quality check, resume-tailor 3)",
           fails(inherited.replace("dossier E1: ", "dossier E1 "), nadia), [])
     only = inherited.replace('"Wrote the internal integration playbook the whole team uses."; dossier E1:', "dossier E1:")
     got = output_checks.check_traces(TRACES_HEAD + only, nadia["candidate_text"], nadia["prompt"])
