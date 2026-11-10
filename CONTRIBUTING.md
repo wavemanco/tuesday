@@ -111,6 +111,15 @@ the next one (CI enforces this, because the mistake was made twice in one
 session); and a fix to this class is not verified by the failure count dropping,
 it is verified by the graders naming a surface that no longer exists.
 
+## Fixtures model what users typically send
+
+A standing rule, set by the owner. A fixture is written the way a typical user
+writes the request, and what it expects is what serves that user. A test that
+turns on a detail most users would not give, such as when they copied a page,
+tests a hypothetical, and a skill tuned to pass it is tuned for the wrong case.
+So a quick, reported check that pasted material is still current and genuine is
+not a defect: a typical user does not say how fresh their material is.
+
 ## When an issue survives two iterations
 
 A standing rule, set by the owner. An issue that two fix iterations have not
