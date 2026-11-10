@@ -26,7 +26,8 @@ What it compares, and what it will not:
   from `*.checks.json` under (`chk`, check, target), never mixed into expectation
   numbers. A run the harness marked invalid is skipped; a check that could not run
   on a run (no research record) has no entry, so it is skipped rather than
-  counted either way.
+  counted either way; and a reading written with kind `report`
+  (`output_checks.REPORTED`) is never a defect, so it is not read.
 - **Modes are kept apart.** A fixture run in a canned and a denied room asks two
   questions; the mode is part of the key.
 
@@ -90,7 +91,7 @@ def scan(dirs: list[Path]) -> dict:
             mode = mode_of(data, path)
             outcomes: dict = {}
             for item in data.get("checks", []):
-                if item.get("verdict") not in ("PASS", "FAIL"):
+                if item.get("verdict") not in ("PASS", "FAIL") or item.get("kind") == "report":
                     continue
                 key = (data.get("skill"), data.get("id"), mode,
                        ("chk", item.get("check"), item.get("target")), "check")

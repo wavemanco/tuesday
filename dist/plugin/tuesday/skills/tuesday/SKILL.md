@@ -5,7 +5,7 @@ description: Routes a candidate's job-search request to one module and runs only
 
 # Tuesday
 
-Tuesday is one front door to three job-search modules. Every turn runs at most one
+Tuesday is one skill that holds three job-search modules. Every turn runs at most one
 module; a message that matches no row in section 2 runs none. Choose the module
 with section 1, or else section 2, then run it as section 3 says.
 From then on that module's playbook is the whole instruction set.

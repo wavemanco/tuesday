@@ -73,13 +73,19 @@ An input fixes an output only when its content is in hand: a pasted page or
 survey can, and a report that the user checked something cannot, because that is
 a claim the search could still verify. A target a search was sent for is never
 `skipped` or `n/a`: if it moved nothing, its `yes` row says so, and that row is
-the visible form of a wasted search. A skip is a judgement and an unavailable
-search is a circumstance, and the table exists to keep them apart — which is why
-the inputs decide between them and the host does not. A target the inputs answer
-reads `skipped` whether or not this host could have searched for it. A call sent
-outside every declared target breaks the rule above, and it is still counted and
-still shown: it gets an un-numbered row after the numbered ones, labeled `yes`,
-saying what it was and what it moved.
+the visible form of a wasted search. At L1 or L2, a quick check that pasted
+material is still current and genuine is not a wasted search, since a stale or
+false copy would change what it feeds: at most two calls, searches and fetches
+together, each aimed at a target the material answers and naming the company,
+document or page it checks. That target then reads `yes`, or `unavailable` if
+every call was refused or errored, and its row says the call checked the pasted
+material and what it moved. A skip is a judgement and an unavailable search is a
+circumstance, and the table exists to keep them apart — which is why the inputs
+decide between them and the host does not. A target the inputs answer, with no
+call sent for it, reads `skipped` whether or not this host could have searched
+for it. A call sent outside every declared target breaks the rule above, and it
+is still counted and still shown: it gets an un-numbered row after the numbered
+ones, labeled `yes`, saying what it was and what it moved.
 
 Directly above the table, one line states what was spent — `Research tier: L1 —
 searches 3 of 5, fetches 1 of 2`, or `Research tier: L0 — no searches` — counting
@@ -156,13 +162,16 @@ Each skill's frontmatter description carries an explicit negative boundary so th
 | `mock-interview` | Interview preparation and rehearsal | Not for deciding whether to apply |
 | `job-underwriter` | Evaluate the opportunity, recover evidence, decide | Not for interview rehearsal |
 | `resume-tailor` | Tailoring an existing resume to a named target role | Not for deciding whether to apply, nor for interview rehearsal |
+| `tuesday` | Candidate-side job-search requests, routed to one module per turn | Not for employers screening applicants, job-market questions, networking messages, resume design, proofreading, or shortening a resume with no target role |
 | (future skills) | — | Every new skill adds its boundary here and in its description |
+
+Where Claude chooses among installed skills, install the `tuesday` skill or the modules, never both: side by side they compete for every request. The Claude Code builds carry the modules beside it but hide them from that choice.
 
 A third skill makes every boundary a three-way question rather than a two-way one, and the existing rows are deliberately unchanged until routing is measured with all three present: the suite has already found that a more assertive description suppresses its sibling, so adding exclusions on assumption is as likely to cost triggering as to buy precision.
 
 When a request genuinely spans both ("should I apply, and prep me if yes"), the invoked skill does its own job fully and names the sibling in one sentence — it does not attempt the sibling's job.
 
-**A skill started by its own slash command keeps the turn.** When a message opens with a skill's command (`/mock-interview …`), that skill does its own job for that turn, whatever the rest of the message reads like, and starts no other skill — not a front door that routes between the skills, not a sibling by its name or its command — and does not go looking for one. Where the request reads like a sibling's job, it says so in one sentence, as the paragraph above says, and still does its own: the user chose the skill, and choosing another is theirs.
+**A skill started by its own slash command keeps the turn.** When a message opens with a skill's command (`/mock-interview …`), that skill does its own job for that turn, whatever the rest of the message reads like, and starts no other skill — not the `tuesday` skill that routes between the modules, not a sibling by its name or its command — and does not go looking for one. Where the request reads like a sibling's job, it says so in one sentence, as the paragraph above says, and still does its own: the user chose the skill, and choosing another is theirs.
 
 ## 7. Voice, buttons, and host honesty
 

@@ -856,7 +856,14 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   `gates_line` however the line reads, per `evidence-model.md` "A gate is met,
   not established, or failed"), and `severity` and `severity_form` (every
   `RR5 (\`severity: high\`)` against the risk register's Severity, and the
-  severe-red-flags slot naming exactly its high entries). The hard-gates line's
+  severe-red-flags slot naming exactly its high entries). `ledger_sentence_form`
+  reads whether the sentence after the ledger takes rule 2's list form, each item
+  up to a semicolon opening with its row IDs and a dash, with the function CI
+  holds the worked sentence to (`ledger_rules.ledger_sentence_form`); it is
+  written with kind `report`, which fails no run, starts no retry, is not counted
+  by `recurring.py` and is in none of `compare_arms.py`'s check rows or units
+  (`output_checks.REPORTED`). The
+  hard-gates line's
   closing "candidate constraints not given" clause is judged against the
   fixture's `candidate_constraints` (above); a response with no risk register
   leaves `severity` unchecked.
@@ -946,14 +953,14 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   nothing — one that only asks for a missing gate input — would carry no line,
   and none exists; adding one means exempting it here first.
 
-Each finding is judgement or format and they are counted apart: a qualifier
-beside a status label and a `yes` with no search behind it are different defects
-with different fixes. A third kind, `fixture`, marks a fixture that cannot be
-checked as written, such as a canary whose page is not one of its own; it fails
-the run so that it gets fixed, and is counted apart from both. A table that is
-not there is absent, one that cannot be read is unparseable, and neither is a
-pass. A check that needs the research record is listed as unchecked on a run that
-has none, never passed. A check failure counts like a grader's,
+Each finding that can fail a run is judgement or format and they are counted
+apart: a qualifier beside a status label and a `yes` with no search behind it are
+different defects with different fixes. A third kind, `fixture`, marks a fixture
+that cannot be checked as written, such as a canary whose page is not one of its
+own; it fails the run so that it gets fixed, and is counted apart from both. A
+table that is not there is absent, one that cannot be read is unparseable, and
+neither is a pass. A check that needs the research record is listed as unchecked
+on a run that has none, never passed. A check failure counts like a grader's,
 keyed `chk:<check>:<target>`, and triggers the retry pass the same way.
 
 ### Exit codes
@@ -1043,11 +1050,12 @@ After the modules it prints the measures of the fix round's text change
 sets and in each, every count with its runs: job-underwriter runs whose
 `ledger_sentence` recorded more than one sentence, and whose `ledger_sentence`
 failed for a set claim, over the runs where it applied; runs passing
-`ledger_present`, over job-underwriter's valid runs; for job-underwriter eval 5
-and mock-interview eval 8, runs failing `zero_calls` and runs with a quick check;
-of their runs that sent a call, those failing none of `tally_searches`,
-`tally_fetches`, `skip_has_no_call`, `off_target_shown`, `row` and `tally`; and
-their calls per run.
+`ledger_present`, over job-underwriter's valid runs; the uptake of rule 2's list
+form, runs passing `ledger_sentence_form` (the form, or no sentence) over the runs
+where it applied; for job-underwriter eval 5 and mock-interview eval 8, runs
+failing `zero_calls` and runs with a quick check; of their runs that sent a call,
+those failing none of `tally_searches`, `tally_fetches`, `skip_has_no_call`,
+`off_target_shown`, `row` and `tally`; and their calls per run.
 
 ```bash
 python evals/compare_arms.py OUT/tuesday OUT/alone > compare.txt

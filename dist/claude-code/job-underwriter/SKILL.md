@@ -82,6 +82,8 @@ target — L1's three, then L2's two when L2 ran, numbered in that order — hol
 the target, a Status cell of exactly one of `yes`, `skipped`, `n/a` or
 `unavailable`, and the reason. Each label and its ground are
 `references/interaction-grammar.md` §4's; read it before writing the table.
+`references/interaction-grammar.md` §4 also says what quick check of pasted material
+may still run.
 Searches go only to declared targets. Every `yes` row names the queries and pages
 it rests on, each page by its title or address. Worked table: Evidence status in
 `references/dossier-worked-report.md`.

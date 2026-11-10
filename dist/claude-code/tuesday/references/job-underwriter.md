@@ -16,7 +16,7 @@
 - Input contract and degradation ladder
 - Reference files
 
-**Paths.** The front door runs this playbook: every `references/` path in it, and in the files it names, means the folder that holds this file, never a module's own skill folder, even one a listing shows (the front door's own instructions, section 3).
+**Paths.** The `tuesday` skill runs this playbook: every `references/` path in it, and in the files it names, means the folder that holds this file, never a module's own skill folder, even one a listing shows (the `tuesday` skill's own instructions, section 3).
 
 Underwrite an opportunity on evidence, with the reasoning shown. **Evidence before language** — a polished phrase is not evidence; every material conclusion traces to a source or is labeled as inference. **Candidate fit versus opportunity quality** — the two verdicts live on separate ledgers and are never averaged together.
 
@@ -94,6 +94,8 @@ target — L1's three, then L2's two when L2 ran, numbered in that order — hol
 the target, a Status cell of exactly one of `yes`, `skipped`, `n/a` or
 `unavailable`, and the reason. Each label and its ground are
 `references/interaction-grammar.md` §4's; read it before writing the table.
+`references/interaction-grammar.md` §4 also says what quick check of pasted material
+may still run.
 Searches go only to declared targets. Every `yes` row names the queries and pages
 it rests on, each page by its title or address. Worked table: Evidence status in
 `references/dossier-worked-report.md`.

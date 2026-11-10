@@ -17,7 +17,7 @@
 - Guardrails
 - Reference files
 
-**Paths.** The front door runs this playbook: every `references/` path in it, and in the files it names, means the folder that holds this file, never a module's own skill folder, even one a listing shows (the front door's own instructions, section 3).
+**Paths.** The `tuesday` skill runs this playbook: every `references/` path in it, and in the files it names, means the folder that holds this file, never a module's own skill folder, even one a listing shows (the `tuesday` skill's own instructions, section 3).
 
 Build a prep pack a candidate can actually rehearse from. Two axes organize everything: **personas** describe how the interview will feel (who is asking, in what style), and **question types** describe what is being scored. Every question in the pack carries answer guidance grounded in the candidate's real material plus a rationale explaining why it's included and why it's categorized that way.
 

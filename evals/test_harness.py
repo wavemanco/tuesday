@@ -2327,8 +2327,10 @@ R4 has a credible bridge, and R3 (`medium`) waits on an artifact.
 
 
 def ledger_fails(text: str) -> list[str]:
+    """The checks the fit ledger fails, a reported reading (output_checks.REPORTED) never among
+    them: test_ledger_sentence_form reads that one."""
     return sorted(c["check"] for c in output_checks.check_fit_ledger(text)["checks"]
-                  if c["verdict"] == "FAIL")
+                  if c["verdict"] == "FAIL" and c["check"] not in output_checks.REPORTED)
 
 
 def test_fit_ledger() -> None:
@@ -2416,6 +2418,72 @@ def test_fit_ledger() -> None:
           ledger_fails(LEDGER_OK.replace("**Fit ledger.**\n",
                                          "**Fit ledger:** five of seven are `direct`.\n\nx\n")),
           ["ledger_present"])
+
+
+LEDGER_SENTENCE = "R4 has a credible bridge, and R3 (`medium`) waits on an artifact."
+
+
+def test_ledger_sentence_form() -> None:
+    print("\nchecks: the sentence after the ledger in rule 2's list form, reported and never a defect")
+
+    def form(sentence: str) -> tuple[str, str, str] | None:
+        got = [c for c in output_checks.check_fit_ledger(LEDGER_OK.replace(LEDGER_SENTENCE, sentence))["checks"]
+               if c["check"] == "ledger_sentence_form"]
+        return (got[0]["verdict"], got[0]["kind"], got[0]["why"]) if len(got) == 1 else None
+    worked = "R4 — a credible bridge, its limit named; R3 (`medium`) — confirmed, waiting on an artifact."
+    check("must pass: the worked sentence, an item per row, each its ID, a band allowed, a dash and words",
+          form(worked), ("PASS", "report", "every item opens with its row IDs and a dash"))
+    check("must fail: the sentence the worked example used to teach, as a report",
+          form(LEDGER_SENTENCE)[:2], ("FAIL", "report"))
+    check("and its reason names the item", "'R4 has a credible bridge" in form(LEDGER_SENTENCE)[2], True)
+    for sentence in ("R4 and R5 — bridges with their limits named; R7 — a gap the role can carry.",
+                     "R4, R5 — bridges; R7 — a gap.", "**R4** — a bridge; `R3` (medium) — waits on an artifact.",
+                     "R4 - a bridge; R5 – a discovery gap.", "R4 — a bridge (its limit: named; see RR1)."):
+        check(f"must pass: {sentence!r}", form(sentence)[0], "PASS")
+    for sentence in ("R2–R5 — direct on your own account.", "R4 — a bridge; and R3 waits on an artifact.",
+                     "Both R4 and R3 (`medium`) wait on an artifact.", "R4: a bridge; R3: waits.", "R4 —"):
+        check(f"must fail: {sentence!r}", form(sentence)[0], "FAIL")
+    check("a next slot directly after the ledger is no sentence, and passes", form(
+        "**Opportunity ledger.** RR1 is asserted and not evidenced."), ("PASS", "report", "no sentence after the ledger"))
+    two = "R4 — a credible bridge, its limit named. R3 (`medium`) — confirmed, waiting on an artifact."
+    check("it is read apart from the sentence count: two sentences in the form pass it and fail ledger_sentence",
+          (form(two)[0], ledger_fails(LEDGER_OK.replace(LEDGER_SENTENCE, two))), ("PASS", ["ledger_sentence"]))
+    check("CI and the harness read the form with one function",
+          ledger_rules.ledger_sentence_form(worked) is None and ledger_rules.ledger_sentence_form(LEDGER_SENTENCE)
+          is not None, True)
+
+    case = {"id": 1, "checks": ["fit_ledger"], "candidate_constraints": "known"}
+    got = output_checks.run_checks(case, "denied", LEDGER_OK, None)
+    check("a run whose only failing finding is the reported form is not failed (uncheckable here, for the "
+          "envelope LEDGER_OK lacks)", (got["status"], [c["check"] for c in got["checks"] if c["verdict"] == "FAIL"],
+                                        got["unchecked"]), ("uncheckable", ["ledger_sentence_form"], ["summary_count"]))
+    checks = [{"run": 0, "status": "ok", "checks": [
+        {"check": "ledger_sentence_form", "target": "all", "verdict": "FAIL", "why": "w", "kind": "report"}]}]
+    check("run_fixtures does not classify a reported reading, so it fails nothing and retries nothing",
+          run_fixtures.classify([], checks, [0], 2)["items"], [])
+
+    import compare_arms as ca
+    check("the readings output_checks reports are the form alone", sorted(output_checks.REPORTED),
+          ["ledger_sentence_form"])
+    form_fail = finding("ledger_sentence_form", why="not an item", kind="report")
+    check("must fail: a failing form is in no unit compare_arms counts",
+          ca.defects({"checks": [form_fail, finding("ledger_sentence")], "aimed": None}), {"ledger_sentence": 1})
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"skill": "job-underwriter", "checks": [form_fail, finding("ledger_sentence", verdict="PASS")]},
+            {"skill": "job-underwriter", "checks": [finding("ledger_sentence_form", verdict="PASS", kind="report")]},
+            {"skill": "job-underwriter", "checks": [finding("ledger_sentence_form", verdict="PASS", kind="report")]}])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"skill": "job-underwriter", "checks": [form_fail, finding("ledger_sentence")]}])
+        cases = {("job-underwriter", 1): {"id": 1, "prompt": "Assess.", "expectations": ["a"]}}
+        out = ca.report(arm, ctl, None, cases)
+        block = out[out.index("== text-change measures"):]
+        check_true("its uptake prints in the text-change block as a reported row: passing runs over the runs where "
+                   "it applied, pooled and per arm",
+                   re.search(r"\n  ledger_sentence_form: passing, the list form or no sentence \(reported\)"
+                             r"\s+2/4\s+2/3\s+0/1", block) is not None)
+        check_true("and it is in no check row and no unit row", len(re.findall(r"\n  ledger_sentence_form\b", out)) == 1
+                   and re.search(r"\n  ledger_sentence\s+0/1\s+1/1", out) is not None)
 
 
 # --- 6c. Quotes ---
@@ -4161,6 +4229,16 @@ def test_recurring() -> None:
         check("checks are keyed by check and target, invalid runs skipped",
               sorted(seen[("s", 1, "canned", ("chk", "accept", "2"), "check")]["failed_sets"]),
               ["a", "b"])
+    with tempfile.TemporaryDirectory() as tmp:
+        sets = [Path(tmp) / name for name in ("a", "b")]
+        for d in sets:
+            d.mkdir()
+            (d / "s-1.canned.run0.checks.json").write_text(json.dumps({
+                "skill": "s", "id": 1, "mode": "canned", "status": "ok",
+                "checks": [{"check": "ledger_sentence_form", "target": "all", "verdict": "FAIL", "why": "w",
+                            "kind": "report"}]}))
+        check("a checks file whose only failure is a reported reading yields no recurring entry",
+              list(recurring.scan(sets)), [])
 
 # --- Misfires found by auditing a clean-room measurement ------------------------
 #
@@ -5609,7 +5687,7 @@ def main() -> int:
                  test_declined_grade_prints_no_score, test_artifact_collection,
                  test_skill_installation, test_classify_room, test_execute_timeout,
                  test_execute_nudge, test_via_frontdoor, test_parse_accounting, test_check_accounting,
-                 test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
+                 test_fit_ledger, test_ledger_sentence_form, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
                  test_user_links, test_user_link_fixture, test_quick_check,
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_yes_names_page,

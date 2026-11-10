@@ -57,11 +57,17 @@ FAILURE_ONLY = frozenset({"canary_fixture", "candidate_constraints", "evidence_f
                           "gates_form", "ledger_markup", "severity_form", "tally_remark"})
 RECORDS_PASSES = frozenset({
     "accept", "canary", "canary_absent", "gates_line", "ledger_coverage", "ledger_fit", "ledger_order",
-    "ledger_parenthetical", "ledger_present", "ledger_sentence", "ledger_tier", "ledger_wording",
+    "ledger_parenthetical", "ledger_present", "ledger_sentence", "ledger_sentence_form", "ledger_tier",
+    "ledger_wording",
     "off_target_has_call", "off_target_shown", "quotes", "row", "severity", "skip_has_no_call", "snapshot_band",
     "snapshot_count", "summary_count", "tally", "tally_budget", "tally_fetches", "tally_l0", "tally_searches",
     "tally_user_links", "traces", "unavailable_has_refusal", "user_link_canary", "user_link_canary_absent",
     "vocabulary", "watch_out", "yes_has_call", "yes_names_page", "zero_calls"})
+# The readings recorded on runs that are never a defect, each written with kind `report`: a
+# run's status leaves them out, run_fixtures does not classify them, recurring.py does not count
+# them, and compare_arms prints them as reported rows outside every unit it gates. ledger_sentence_form measures uptake of
+# rule 2's list form apart from the sentence count, which ledger_sentence gates.
+REPORTED = frozenset({"ledger_sentence_form"})
 
 
 # --- Reading the response ---------------------------------------------------
@@ -1361,6 +1367,13 @@ def check_fit_ledger(response: str, constraints: str | None = None, fixture: boo
     # How many sentences follow the ledger, whatever the reason above reports first: a set
     # claim in the first sentence hides a second one from the reason, and the scorer reads both.
     checks[-1]["sentences"] = len(ledger_rules.sentences(after)) if after else 0
+    # Rule 2's list form, read apart from the sentence count (ledger_rules.ledger_sentence_form,
+    # which CI holds the worked sentence to). On a run it measures uptake of the form and is
+    # never a defect, so it is a `report` finding (REPORTED).
+    form = ledger_rules.ledger_sentence_form(after)
+    checks.append(finding("ledger_sentence_form", "all", form is None,
+                          form or ("every item opens with its row IDs and a dash" if after
+                                   else "no sentence after the ledger"), "report"))
 
     # decision.summary is prose that reads the map, read with the one set-claim
     # reader (ledger_rules.map_claim) that CI and snapshot_count use.
@@ -2019,7 +2032,7 @@ def run_checks(case: dict, mode: str, response: str, research_log: list | None,
         checks += part["checks"]
         info += part["info"]
         unchecked += part["unchecked"]
-    failed = any(c["verdict"] == "FAIL" for c in checks)
+    failed = any(c["verdict"] == "FAIL" and c.get("kind") != "report" for c in checks)
     status = "fail" if failed else ("uncheckable" if unchecked else "ok")
     return {"status": status, "mode": mode, "checks": checks, "info": info,
             "unchecked": unchecked}

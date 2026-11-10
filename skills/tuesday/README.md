@@ -8,7 +8,7 @@ Part of [Tuesday](../../README.md), an applicant-side evidence system for job se
 
 Tuesday owns candidate-side job-search requests and runs exactly one module per turn. Its SKILL.md says how: a message that starts with a module's command, or names a module, runs that module (section 1); anything else is routed by a table of signals (section 2); a request that matches no row runs no module and is answered directly. A request that spans two modules runs the module for the first decision and names the other in one sentence, as `interaction-grammar.md` §6 asks of every skill. Its description carries its boundary: candidate-side only, and not for employers screening applicants, job-market questions, networking messages, resume design, proofreading, or shortening a resume with no target role.
 
-Tuesday has no row in the trigger-hygiene table of `interaction-grammar.md` §6, and its SKILL.md has no line pointing to that section's slash-command rule. That section is mirrored into every module and into this skill's `references/`, so adding either would ship text the measurement never saw. Its routing is measured instead, by the suite's routing cases (`evals/README.md` in the repository, "The Tuesday arm").
+Tuesday's row in the trigger-hygiene table of `interaction-grammar.md` §6 carries the boundary its description ends with. Its SKILL.md has no line pointing to that section's slash-command rule: the rule stops a module started by its own command from starting another skill, and Tuesday starts no skill at all, since it runs a module from its own `references/` (section 3).
 
 ## How references/ is made
 

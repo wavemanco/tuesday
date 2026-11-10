@@ -43,7 +43,9 @@ names its thresholds before the measurement runs. Per module it reports:
 - cost: each invocation's stream (its result event's total_cost_usd) and each
   grade file's model usage;
 - after the modules, the text change's measures by check name, pooled over the
-  two sets and in each (text_change_measures).
+  two sets and in each (text_change_measures), among them the uptake of rule 2's
+  list form after the fit ledger (ledger_sentence_form). That reading is never a
+  defect (output_checks.REPORTED), so it is in no check row and no unit.
 
 Every comparison of runs carries an exact two-sided Fisher p-value on runs, never
 on verdicts. Harness-invalid runs are counted and left out of everything else.
@@ -349,7 +351,7 @@ def defects(run: dict) -> dict[str, int]:
             out[name] = len({fails[i]["check"] for i in got})
             absorbed |= got
     for i, f in enumerate(fails):
-        if i not in absorbed:
+        if i not in absorbed and f["check"] not in output_checks.REPORTED:
             out.setdefault(f["check"], 1)
     return out
 
@@ -416,6 +418,12 @@ def unit_applies(run: dict, unit: str, via: tuple[str, ...], only_failures: set[
     if not recording:
         return any(applies(run, m, only_failures) for m in via)
     return any(applies(run, m, only_failures) for m in recording) or bool(defects(run).get(unit))
+
+
+def reported_counts(runs: list[dict], check: str) -> tuple[int, int]:
+    """Runs where a reported reading (output_checks.REPORTED) passed, over the runs where it applied."""
+    applied = [r for r in runs if r["valid"] and applies(r, check, set())]
+    return sum(all(f["verdict"] == "PASS" for f in r["checks"] if f["check"] == check) for r in applied), len(applied)
 
 
 def unit_counts(runs: list[dict], unit: str, via: tuple[str, ...], only_failures: set[str]) -> tuple[int, int, int]:
@@ -570,11 +578,13 @@ def module_report(mod: str, arm: list[dict], ctl: list[dict], names: tuple[str, 
     only = failure_only(a + c)
     lines.append("  automatic checks: failing runs / runs where the check applied")
     for check in check_names(a + c):
+        if check in output_checks.REPORTED:     # never a defect: the text-change block prints its uptake
+            continue
         lines.append(ratio_row(check + (" (records only failures)" if check in only else ""),
                                check_counts(a, check, only), check_counts(c, check, only)))
     lines.append("  each family counted once per run, then the failures outside every family "
                  "(failing runs / runs where it applied; [n / n]: runs with two or more members failing)")
-    present = set(check_names(a + c))
+    present = set(check_names(a + c)) - output_checks.REPORTED
     families = {name: (members, via) for name, members, via, _ in FAMILIES if present & set(via)}
     for unit in [*families, *sorted(present)]:
         members, via = families.get(unit, ((unit,), (unit,)))
@@ -728,6 +738,8 @@ def text_change_measures(runs: list[dict]) -> list[tuple[str, tuple[int, int] | 
                   for f in findings_of(r, "ledger_sentence")) for r in after), len(after))),
         ("ledger_present: passing, of job-underwriter's valid runs",
          (sum(any(f.get("verdict") == "PASS" for f in findings_of(r, "ledger_present")) for r in ju), len(ju))),
+        ("ledger_sentence_form: passing, the list form or no sentence (reported)",
+         reported_counts(ju, "ledger_sentence_form")),
     ]
     sent = []
     for skill, fid in CALL_FIXTURES:

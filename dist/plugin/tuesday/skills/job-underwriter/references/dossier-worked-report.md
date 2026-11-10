@@ -30,7 +30,7 @@ Everything below the rule is the report of one complete `tuesday-dossier.md`, em
 - `important` — direct: R6 · unclear: R5 (Line-managing grants officers)
 - `preferred` — absent: R7 (Social investment experience)
 
-R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on an artifact.
+R4 — a credible bridge, its limit named; R3 (`medium`) — confirmed, waiting on an artifact.
 
 **Opportunity ledger.** Sound but under-specified: authority over awards is asserted and not evidenced (RR1), the salary is withheld (RR4), and the contract basis is unstated against the candidate's permanent-only constraint (RR2). One entry runs the other way — the first-year outcomes are explicit (RR3).
 
@@ -39,6 +39,8 @@ R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed bu
 - **Conditions for go:** (1) award authority verifies concrete in interviews — see risk register RR1; (2) the post confirmed as permanent — R8, RR2; (3) the retrofit bridge is framed honestly as adjacent, never as community-energy expertise.
 
 The hard-gates line names the gate rows by ID with their fits, whatever failed (`risk-and-decision.md` rule 4). Had the user needed sponsorship, R1 would be `hard_gate_fail`, the status `no_go` with that gate as its reason, named by ID as the snapshot names every set of rows it speaks of (rule 1) — **Not worth applying to — R1, a hard gate, fails. Status: `no_go`.** — and the line would open with the failure: ``- **Hard gates:** failed: R1 (UK work eligibility without sponsorship); unconfirmed: R8 (Permanent contract, not fixed-term); met: R9 `direct` ``. Had the user stated no constraints at all, R8 and R9 would not exist, R1 would be `unclear`, and the line would carry the flag the input contract requires: ``- **Hard gates:** none failed; unconfirmed: R1 (UK work eligibility without sponsorship); candidate constraints not given — checks against them unknown``.
+
+An earlier version of the sentence under the ledger joined two readings with ", and"; runs copied them as two sentences, which rule 2 forbids, so each reading is now an item of one list.
 
 ## Role reality
 

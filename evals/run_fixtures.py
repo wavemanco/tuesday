@@ -1317,6 +1317,8 @@ def classify(results: list[dict], checks_results: list[dict], runs: list[int],
         if c.get("run") not in valid:
             continue
         for item in c.get("checks", []):
+            if item.get("kind") == "report":   # never a defect (output_checks.REPORTED)
+                continue
             key = f"chk:{item['check']}:{item['target']}"
             check_keys.setdefault(key, item)
     for key, sample in check_keys.items():
@@ -1590,7 +1592,7 @@ def main() -> int:
                 per_grader.append(f"grader {g} {passed}/{len(vs)} of {total}{gaps}")
             rec = next((c for c in checks[key] if c.get("run") == run), None)
             if rec:
-                failed = [c for c in rec["checks"] if c["verdict"] == "FAIL"]
+                failed = [c for c in rec["checks"] if c["verdict"] == "FAIL" and c.get("kind") != "report"]
                 kinds = [c.get("kind", "judgement") for c in failed]
                 fixture = (f", {kinds.count('fixture')} fixture error"
                            if "fixture" in kinds else "")

@@ -21,7 +21,8 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
                fields the runners read
   triggers     each skill's description carries the negative boundary the
                interaction grammar's trigger-hygiene table reserves for it, and
-               its SKILL.md points to the grammar's slash-command rule at its top
+               each module's SKILL.md points to the grammar's slash-command rule
+               at its top
   parameters   declared output-discipline parameters, and restatements of them
   columns      qualifier, provenance and enum declarations name real columns
   citations, sections, counts, readmes, ledger
@@ -121,8 +122,9 @@ HUB_EXEMPT = {
     "parameters": NO_OUTPUT_OF_ITS_OWN,
     "columns": NO_OUTPUT_OF_ITS_OWN,
     "watch-out": NO_OUTPUT_OF_ITS_OWN,
-    "triggers": "it has no row in interaction-grammar.md §6 and no pointer to that section's slash-command "
-                "rule, for the reason skills/tuesday/README.md gives beside its routing role",
+    "triggers": "it has no line pointing to interaction-grammar.md §6's slash-command rule: that rule stops a "
+                "module started by its own command from starting another skill, and Tuesday starts none, since it "
+                "runs a module from its own references/ (skills/tuesday/README.md, beside its routing role)",
 }
 
 
@@ -647,9 +649,10 @@ def command_rule_problems(grammar: str, skill_texts: dict[str, str]) -> list[str
 
 
 def check_triggers() -> None:
-    """The grammar's trigger-hygiene table reserves an explicit non-goal per skill, and
-    its slash-command rule is pointed to from the top of every SKILL.md body
-    (command_rule_problems)."""
+    """The grammar's trigger-hygiene table reserves an explicit non-goal per skill,
+    Tuesday's included, and its slash-command rule is pointed to from the top of every
+    module's SKILL.md body (command_rule_problems); Tuesday's has no such line, for the
+    reason HUB_EXEMPT gives."""
     group = "triggers"
     exempt(group)
     grammar = (CONVENTIONS / "interaction-grammar.md").read_text(encoding="utf-8")
@@ -664,7 +667,7 @@ def check_triggers() -> None:
     for row in re.finditer(r"^\|\s*`(?P<skill>[a-z0-9-]+)`\s*\|[^|]*\|\s*(?P<boundary>[^|]+?)\s*\|", grammar, re.MULTILINE):
         table[row.group("skill")] = row.group("boundary")
 
-    for skill in modules():
+    for skill in skills():
         boundary = table.get(skill.name)
         if not boundary:
             fail(group, f"{skill.name}: no row in the trigger-hygiene table")
@@ -2177,6 +2180,11 @@ def check_fit_ledger() -> None:
         fail(group, f"{WORKED_DOSSIER}: the fit ledger is followed by more than one sentence (\"{hit.text[:80]}\"); rule 2 allows one")
     elif hit:
         fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger: {hit.why}")
+    # The worked sentence is the shape runs copy, so it is held to rule 2's list form
+    # (ledger_sentence_form), which the harness only records on runs.
+    form = ledger_rules.ledger_sentence_form(after)
+    if form:
+        fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger is not in rule 2's list form: {form}")
     hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot))
     if hit:
         fail(group, f"{WORKED_DOSSIER}: the snapshot's prose: {hit.why}")
@@ -2516,6 +2524,23 @@ def search_entry(query: str, research: dict, mode: str) -> dict:
 
 # How a fixture file's quick_check clause states the calls a quick check may send ("at most two calls").
 QUICK_CHECK_LIMIT = re.compile(r"\bat most (\w+) calls?\b", re.I)
+# interaction-grammar.md §4's sentence that allows a quick check of pasted material, read to the
+# number of calls it allows: "a quick check that pasted material … : at most two calls".
+GRAMMAR_QUICK_CHECK = re.compile(r"\ba quick check\b[^.]*?\bat most (\w+) calls?\b", re.I)
+
+
+def stated_calls(word: str) -> int | None:
+    """The number a call limit states, in digits or in words."""
+    return int(word) if word.isdigit() else ledger_rules.COUNT_WORDS.get(word.lower())
+
+
+def grammar_section(text: str, number: str) -> str:
+    """The body of a numbered `## N.` section of a convention, up to the next `## ` heading."""
+    start = re.search(rf"^## {re.escape(number)}\.\s.*$", text, re.MULTILINE)
+    if not start:
+        return ""
+    end = re.search(r"^## ", text[start.end():], re.MULTILINE)
+    return text[start.end():start.end() + end.start()] if end else text[start.end():]
 
 
 def check_fixtures() -> None:
@@ -2540,13 +2565,27 @@ def check_fixtures() -> None:
     run `yes_names_page` leaves those pages unjudged; and a `research.quick_check`
     whose targets, names, budget or samples do not fit the fixture fails a lawful
     check of the user's material or passes a hunt, as a `quick_check` clause whose
-    number of calls is not the checks' own sets graders and checks apart. Each is read here with the
-    harness's own functions (evals/output_checks.py, evals/research_server.py), in
-    every mode the fixture runs (run_fixtures.modes_of), so the lint and the checks
-    cannot disagree.
+    number of calls is not the checks' own sets graders and checks apart, and
+    interaction-grammar.md §4's quick-check sentence with another number sets the text
+    and the checks apart. Each is read here with the harness's own functions
+    (evals/output_checks.py, evals/research_server.py), in every mode the fixture runs
+    (run_fixtures.modes_of), so the lint and the checks cannot disagree.
     """
     group = "fixtures"
     linted = 0
+    # The text a run reads allows a quick check of pasted material by a number of calls, in
+    # interaction-grammar.md §4; the checks allow output_checks.QUICK_CHECK_CALLS, and the two must agree.
+    allowed = [stated_calls(m.group(1)) for m in GRAMMAR_QUICK_CHECK.finditer(
+        grammar_section((CONVENTIONS / "interaction-grammar.md").read_text(encoding="utf-8"), "4"))]
+    linted += 1
+    if not allowed:
+        fail(group, f"interaction-grammar.md §4 states no number of calls for a quick check of pasted material, "
+                    f"and the checks allow {output_checks.QUICK_CHECK_CALLS} (output_checks.QUICK_CHECK_CALLS)")
+    elif any(n != output_checks.QUICK_CHECK_CALLS for n in allowed):
+        fail(group, f"interaction-grammar.md §4 allows a quick check of pasted material "
+                    f"{' and '.join(str(n) for n in allowed)} call(s), and the checks allow "
+                    f"{output_checks.QUICK_CHECK_CALLS} (output_checks.QUICK_CHECK_CALLS) — the text and the "
+                    f"checks would pass different checks")
     for skill in skills():
         # A `yes` row names the pages it rests on: judged (output_checks.YES_PAGES_CHECK)
         # in every fixture with research of a skill whose SKILL.md states it, and in no
@@ -2562,8 +2601,7 @@ def check_fixtures() -> None:
         if clause is not None:
             linted += 1
             limit = QUICK_CHECK_LIMIT.search(str(clause))
-            said = None if not limit else (int(limit.group(1)) if limit.group(1).isdigit()
-                                           else ledger_rules.COUNT_WORDS.get(limit.group(1).lower()))
+            said = stated_calls(limit.group(1)) if limit else None
             if said != output_checks.QUICK_CHECK_CALLS:
                 fail(group, f"{skill.name} evals.json clause quick_check allows "
                             f"{limit.group(0) if limit else 'no stated number of calls'}, and the checks allow "
@@ -2967,6 +3005,12 @@ RETIRED = [
     (re.compile(r"\beach offers its response modes\b", re.I),
      "\"each offers its response modes\" is the retired placement — the response-modes line comes after each "
      "question or once after the last for all of them (job-underwriter SKILL.md, the closing order)"),
+    # The fix round's rename: Tuesday's old working name, in two words, left every file
+    # Claude reads at once. The one-word identifiers (MEASURED_FRONTDOOR, --via frontdoor)
+    # are commands and constants, renamed apart.
+    (re.compile(r"\bfront[ -]doors?\b", re.I),
+     "\"front door\" is Tuesday's retired working name — write Tuesday, or the `tuesday` skill where the skill "
+     "itself is meant (interaction-grammar.md §6)"),
 ]
 LABELS_DEFINED = re.compile(r"(?=.*\byes\b)(?=.*\bunavailable\b)(?=.*\bcalls?\b)", re.I | re.S)
 

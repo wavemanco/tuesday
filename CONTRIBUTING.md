@@ -337,9 +337,12 @@ row below `direct` named only in words its Requirement cell uses. A band beside 
 row ID, backticked or not — R3 (`medium`), R3 (medium) — is that row's Confidence; a
 band beside a register ID is a severity written like a band and fails, and so does
 one attached to nothing. Everything between the ledger and the next slot is rule 2's
-one sentence; a second sentence there fails. That sentence, the rest of the
-snapshot (the status line included) and the envelope's `decision.summary` are read
-for set claims over the map by one reader, `ledger_rules.set_claims` (through
+one sentence; a second sentence there fails. It must also take rule 2's list form,
+each item up to a semicolon opening with its row IDs, a band beside them allowed,
+then a dash (`ledger_rules.ledger_sentence_form`, which the harness records on runs
+and gates nothing on). That sentence, the rest of the snapshot (the status line
+included) and the envelope's `decision.summary` are read for set claims over the map
+by one reader, `ledger_rules.set_claims` (through
 `map_claim` and `after_ledger_claim`), here and in the harness. What it reads of
 evidence-model.md's rule ("The row is the unit") and what it leaves to the grader
 are stated once, in the comment above `Claim` in `ci/ledger_rules.py`; what is a
@@ -433,23 +436,24 @@ any call there fails `zero_calls` first. A `research.quick_check` lists declared
 targets that accept `skipped` alone and names the prompt carries, sits beside no
 `declined` and within the search budget, has no sample of its targets aimed at a
 target outside them and passes no other target's sample as a quick check, and each
-fixture file's `quick_check` clause allows
-`output_checks.QUICK_CHECK_CALLS` calls. What it does not read: whether a canary's
-spellings are figures, names or titles; whether the declined phrase declines; and
-whether the samples are the queries runs actually send.
+fixture file's `quick_check` clause allows `output_checks.QUICK_CHECK_CALLS` calls,
+as `interaction-grammar.md` §4's quick-check sentence does. What it does not read:
+whether a canary's spellings are figures, names or titles; whether the declined
+phrase declines; and whether the samples are the queries runs actually send.
 
 **Retired wordings stay retired.** `--only wording` reads every skill's `SKILL.md`,
 README and references, conventions/, `evals/README.md`, and every clause,
 expectation and expected output as the runner expands them. It fails "returned
 something" and "every call was refused" without "or errored", the accounting labels
-an errored call broke; the wordings this round's rule changes retired — "only when
-the search budget was fully spent" in a sentence that names neither L0 nor declining
-research, the sole ground for a no-call `unavailable`; `user links read` counted with
-"refused ones included"; failed gate rows named "plainly"; a missing hard-gates slot
-failing only "when the map has gate rows"; and "years" within a sentence after "hard
-gate(s)", unless a negation governs "hard gate" or "years" itself ("not a hard
-gate", "terms, never years") — the rule that retired years from the list; a negation
-of anything else in the sentence ("hard gates, never bridged, are … years") exempts
+an errored call broke; "front door", Tuesday's old working name; the wordings this
+round's rule changes retired — "only when the search budget was fully spent" in a
+sentence that names neither L0 nor declining research, the sole ground for a no-call
+`unavailable`; `user links read` counted with "refused ones included"; failed gate
+rows named "plainly"; a missing hard-gates slot failing only "when the map has gate
+rows"; and "years" within a sentence after "hard gate(s)", unless a negation governs
+"hard gate" or "years" itself ("not a hard gate", "terms, never years") — the rule
+that retired years from the list; a negation of anything else in the sentence ("hard
+gates, never bridged, are … years") exempts
 nothing (`SentenceRule` in `ci/check_skills.py` states the reading). It also
 fails an expectation or clause that defines the yes/unavailable labels without
 "returned a result" and "or errored"; an L0 definition — a paragraph

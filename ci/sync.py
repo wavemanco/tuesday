@@ -52,9 +52,9 @@ CONTENTS = "## Contents"
 # folder (in round 1's runs, diagnosed while round 2 was built). The hub's
 # section 3 states the rule; this line, generated into every playbook, points to
 # it where the paths are read.
-PATHS_NOTE = ("**Paths.** The front door runs this playbook: every `references/` path in it, and in the "
+PATHS_NOTE = ("**Paths.** The `tuesday` skill runs this playbook: every `references/` path in it, and in the "
               "files it names, means the folder that holds this file, never a module's own skill folder, "
-              "even one a listing shows (the front door's own instructions, section 3).")
+              "even one a listing shows (the `tuesday` skill's own instructions, section 3).")
 # The one line the Claude Code builds add to a module's frontmatter. Claude Code alone reads it;
 # a claude.ai upload refuses it, so it is never in skills/ or in a .skill file.
 HIDDEN_KEY = "disable-model-invocation: true"

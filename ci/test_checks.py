@@ -317,6 +317,23 @@ def break_command_pointer_unanchored(root: Path) -> str:
     return "job-underwriter: SKILL.md has 0 lines above its first heading"
 
 
+def break_trigger_hub_row_missing(root: Path) -> str:
+    """Drop Tuesday's row from the grammar's trigger-hygiene table: it is read like a module's."""
+    path = root / "conventions/interaction-grammar.md"
+    text = path.read_text()
+    path.write_text(re.sub(r"^\| `tuesday` \|[^\n]*\n", "", text, count=1, flags=re.MULTILINE))
+    return "tuesday: no row in the trigger-hygiene table"
+
+
+def break_trigger_hub_boundary_word(root: Path) -> str:
+    """A word of Tuesday's row missing from its description, the rest of the boundary intact."""
+    path = root / "skills/tuesday/SKILL.md"
+    text = path.read_text()
+    line = re.search(r"^description: .*$", text, re.MULTILINE).group(0)
+    path.write_text(text.replace(line, line.replace("proofreading, ", ""), 1))
+    return "tuesday: description misses its reserved boundary"
+
+
 def break_command_rule_missing(root: Path) -> str:
     """Drop the slash-command rule's paragraph from the grammar's §6."""
     path = root / "conventions/interaction-grammar.md"
@@ -1249,7 +1266,7 @@ def break_ledger_back_to_prose(root: Path) -> str:
     path = root / DOSSIER
     text = path.read_text()
     start = text.index("**Fit ledger.**")
-    end = text.index("R4 has a credible bridge")
+    end = text.index("R4 — a credible bridge")
     path.write_text(text[:start] + "**Fit ledger.** Five of seven material requirements are `direct` (R1–R3, R6, and the eligibility gate). " + text[end:])
     return "fit ledger: "
 
@@ -1313,14 +1330,14 @@ def keep_ledger_sentence_only(root: Path) -> None:
     """GRADER (round 9): the first probe runs' shape, "the only row below `direct`" under
     a ledger listing more, names R4: "only" is a named-set word, and whether R4 is the
     whole set is agreement, the grader's (the comment above Claim in ci/ledger_rules.py)."""
-    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
-              "R4 is the only row below `direct` that matters,", "keep_ledger_sentence_only")
+    swap_once(root, DOSSIER, "R4 — a credible bridge, its limit named;",
+              "R4 — the only row below `direct` that matters;", "keep_ledger_sentence_only")
 
 
 def break_ledger_sentence_only_unnamed(root: Path) -> str:
     """The same "only", its rows unnamed: it fails as an unnamed set claim."""
-    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on "
-              "an artifact.", "The only rows below `direct` have credible bridges.", "break_ledger_sentence_only_unnamed")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "The only rows below `direct` have credible bridges.",
+              "break_ledger_sentence_only_unnamed")
     return 'the sentence after the fit ledger: "The only rows" is a set claim over the map that names no row'
 
 
@@ -1400,7 +1417,9 @@ def keep_answer_key_other_skill(root: Path) -> None:
 # JU-8): each is a reading of the map the rule forbids, in a shape the narrower
 # patterns did not reach.
 
-AFTER_LEDGER = "R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on an artifact."
+AFTER_LEDGER = "R4 — a credible bridge, its limit named; R3 (`medium`) — confirmed, waiting on an artifact."
+# A must-pass sentence after the ledger is written in rule 2's list form, which the group
+# holds the worked sentence to; a must-fail one may stay in prose, failing the form too.
 
 
 def break_ledger_count_words_between(root: Path) -> str:
@@ -1425,9 +1444,59 @@ def break_ledger_second_paragraph(root: Path) -> str:
 def break_ledger_two_sentences(root: Path) -> str:
     """Rule 2 allows at most one sentence after the ledger, quantifier or not."""
     swap_once(root, DOSSIER, AFTER_LEDGER,
-              "R4 has a credible bridge with its limit named. R3 (`medium`) is confirmed but waits on an artifact.",
+              "R4 — a credible bridge, its limit named. R3 (`medium`) — confirmed, waiting on an artifact.",
               "break_ledger_two_sentences")
     return "is followed by more than one sentence"
+
+
+def break_ledger_form_prose(root: Path) -> str:
+    """The sentence the worked example used to teach, back: one sentence, and no list."""
+    swap_once(root, DOSSIER, AFTER_LEDGER,
+              "R4 has a credible bridge with its limit named, and R3 (`medium`) is confirmed but waits on an artifact.",
+              "break_ledger_form_prose")
+    return "the sentence after the fit ledger is not in rule 2's list form: the item 'R4 has a credible bridge"
+
+
+def break_ledger_form_item_unopened(root: Path) -> str:
+    """A second item that does not open with its row IDs."""
+    swap_once(root, DOSSIER, AFTER_LEDGER,
+              "R4 — a credible bridge, its limit named; and R3 (`medium`) is confirmed, waiting on an artifact.",
+              "break_ledger_form_item_unopened")
+    return "the item 'and R3 (`medium`) is confirmed"
+
+
+def break_ledger_form_no_dash(root: Path) -> str:
+    """Each item its row ID, then a colon where the dash goes."""
+    swap_once(root, DOSSIER, AFTER_LEDGER,
+              "R4: a credible bridge, its limit named; R3 (`medium`): confirmed, waiting on an artifact.",
+              "break_ledger_form_no_dash")
+    return "not in rule 2's list form: the item 'R4: a credible bridge"
+
+
+def break_ledger_form_range(root: Path) -> str:
+    """A range where the item's IDs go: the dash in it is not the item's."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, AFTER_LEDGER.replace("R3 (`medium`) — confirmed", "R2–R3 confirmed"),
+              "break_ledger_form_range")
+    return "the item 'R2–R3 confirmed"
+
+
+def keep_ledger_form_grouped(root: Path) -> None:
+    """An item for a group of rows, the IDs joined by "and", a band beside one of them."""
+    swap_once(root, DOSSIER, AFTER_LEDGER,
+              "R4 and R5 — named limits on the bridges; R3 (`medium`) — confirmed, waiting on an artifact.",
+              "keep_ledger_form_grouped")
+
+
+def keep_ledger_form_one_item(root: Path) -> None:
+    """One item is a list of one."""
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4 — a credible bridge, its limit named.", "keep_ledger_form_one_item")
+
+
+def keep_ledger_form_hyphen(root: Path) -> None:
+    """A spaced hyphen as the dash, and a semicolon inside a parenthesis that ends no item."""
+    swap_once(root, DOSSIER, AFTER_LEDGER,
+              "R4 - a credible bridge (its limit named; see RR1); R3 (`medium`) - confirmed, waiting on an artifact.",
+              "keep_ledger_form_hyphen")
 
 
 def break_ledger_both_after(root: Path) -> str:
@@ -1438,7 +1507,7 @@ def break_ledger_both_after(root: Path) -> str:
 
 def keep_ledger_both_named(root: Path) -> None:
     """"both" over the rows the sentence names: the set is those rows, and nothing is left to resolve."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Both R4 and R3 (`medium`) wait on an artifact.", "keep_ledger_both_named")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4 and R3 (`medium`) — both wait on an artifact.", "keep_ledger_both_named")
 
 
 def break_ledger_universal_in_verdict(root: Path) -> str:
@@ -1700,8 +1769,8 @@ def break_after_ledger_slash(root: Path) -> str:
 def keep_after_ledger_ratios_named(root: Path) -> None:
     """GRADER: the same ratios in the sentence that names R4 and R3: read as counts of
     rows, they name a row and pass the check; N and M are the grader's (the comment above Claim in ci/ledger_rules.py)."""
-    swap_once(root, DOSSIER, "R4 has a credible bridge with its limit named,",
-              "R4 has a credible bridge with its limit named, leaving four out of seven covered, fit at 5/7,",
+    swap_once(root, DOSSIER, "R4 — a credible bridge, its limit named;",
+              "R4 — a credible bridge, its limit named, leaving four out of seven covered, fit at 5/7;",
               "keep_after_ledger_ratios_named")
 
 
@@ -1761,6 +1830,26 @@ def keep_ledger_nested_name(root: Path) -> None:
     """A ledger item's Requirement words may hold a parenthesis: one item grammar (FX-N4)."""
     swap_once(root, DOSSIER, "adjacent: R4 (Community energy knowledge)",
               "adjacent: R4 (Community energy knowledge (generation, grid connection))", "keep_ledger_nested_name")
+
+
+def break_retired_old_name(root: Path) -> str:
+    """Tuesday's old working name back in the line Claude reads first."""
+    swap_once(root, "skills/tuesday/SKILL.md", "Tuesday is one skill that holds three job-search modules.",
+              "Tuesday is one front door to three job-search modules.", "break_retired_old_name")
+    return "skills/tuesday/SKILL.md: \"front door\" is Tuesday's retired working name"
+
+
+def break_retired_old_name_hyphenated(root: Path) -> str:
+    """The same name hyphenated, in a module's README."""
+    path = root / "skills/resume-tailor/README.md"
+    path.write_text(path.read_text() + "\nIt also runs through the front-door skill.\n")
+    return "skills/resume-tailor/README.md: \"front door\" is Tuesday's retired working name"
+
+
+def keep_old_name_identifier(root: Path) -> None:
+    """The one-word identifiers are commands and constants, renamed apart, and pass."""
+    path = root / "skills/tuesday/README.md"
+    path.write_text(path.read_text() + "\nIts routing runs with `run_routing.py --arm frontdoor`.\n")
 
 
 def keep_years_negated_gate(root: Path) -> None:
@@ -2224,6 +2313,14 @@ def break_quick_check_clause_number(root: Path) -> str:
     return "job-underwriter evals.json clause quick_check allows at most three calls, and the checks allow 2"
 
 
+def break_quick_check_grammar_number(root: Path) -> str:
+    """The text a run reads allows another number of calls than the checks."""
+    swap_once(root, "conventions/interaction-grammar.md", "at most two calls", "at most three calls",
+              "break_quick_check_grammar_number")
+    return "interaction-grammar.md §4 allows a quick check of pasted material 3 call(s), and the checks allow 2 " \
+           "(output_checks.QUICK_CHECK_CALLS)"
+
+
 def keep_quick_check_names_capitalised(root: Path) -> None:
     mutate_case(root, JU, 5, lambda c: c["research"]["quick_check"].update(names=["Pellucid", "Datawright"]))
 
@@ -2461,7 +2558,7 @@ def break_set_unnamed_gap_word(root: Path) -> str:
 
 def keep_set_named_inexact(root: Path) -> None:
     """GRADER: named, and the tier has a third row (R4) the sentence leaves out."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Every must-have — R2 and R3 — is `direct`.", "keep_set_named_inexact")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R2 and R3 — every must-have, `direct`.", "keep_set_named_inexact")
 
 
 def keep_set_named_wrong_number(root: Path) -> None:
@@ -2472,13 +2569,13 @@ def keep_set_named_wrong_number(root: Path) -> None:
 
 def keep_set_named_v01(root: Path) -> None:
     """GRADER: the v0.1 count with rows named; the map has nine rows, and five `direct`."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Four of the seven material requirements are `direct`: R1, R2, R3 and R6.",
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R1, R2, R3 and R6 — four of the seven material requirements, `direct`.",
               "keep_set_named_v01")
 
 
 def keep_set_named_unknown_row(root: Path) -> None:
     """GRADER: the map has no R12."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Both R4 and R12 wait on an artifact.", "keep_set_named_unknown_row")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4 and R12 — both wait on an artifact.", "keep_set_named_unknown_row")
 
 
 def break_set_unnamed_count(root: Path) -> str:
@@ -2503,17 +2600,17 @@ def break_set_bare_none_after(root: Path) -> str:
 
 def keep_set_false_universal(root: Path) -> None:
     """GRADER: named, the whole tier, and false of R4, which is `adjacent`."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Every must-have — R2, R3 and R4 — is `direct`.", "keep_set_false_universal")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R2, R3 and R4 — every must-have, `direct`.", "keep_set_false_universal")
 
 
 def keep_set_ids_false(root: Path) -> None:
     """GRADER: a quantifier over the IDs it names, false of R4."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "R3 and R4 are both `direct`.", "keep_set_ids_false")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R3 and R4 — both `direct`.", "keep_set_ids_false")
 
 
 def keep_set_both_three(root: Path) -> None:
     """GRADER: "both" over three IDs."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "R4, R5 and R7 both wait on evidence.", "keep_set_both_three")
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4, R5 and R7 — both wait on evidence.", "keep_set_both_three")
 
 
 def keep_set_two_tiers_partial(root: Path) -> None:
@@ -2541,7 +2638,7 @@ def keep_set_ratio_wrong_m(root: Path) -> None:
 
 def keep_set_ids_link_verb(root: Path) -> None:
     """Over the IDs it names, a linking verb between: R1, R6 and R9 are `direct` too."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "R2 and R3 are both `direct`, and R3 (`medium`) waits on an artifact.",
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R2 and R3 — they are both `direct`; R3 (`medium`) — waits on an artifact.",
               "keep_set_ids_link_verb")
 
 
@@ -2588,7 +2685,7 @@ def keep_unnamed_rule_stated(root: Path) -> None:
 
 
 def keep_set_named_exact_after(root: Path) -> None:
-    swap_once(root, DOSSIER, AFTER_LEDGER, "Every must-have — R2, R3 and R4 — has evidence, and R3 (`medium`) waits on "
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R2, R3 and R4 — every must-have, with evidence; R3 (`medium`) — waits on "
               "an artifact.", "keep_set_named_exact_after")
 
 
@@ -2623,7 +2720,7 @@ def keep_set_named_gap_type(root: Path) -> None:
 
 def keep_set_only_exact_after(root: Path) -> None:
     """The measured named "only", exact on this map, after the ledger."""
-    swap_once(root, DOSSIER, AFTER_LEDGER, "R4, R5, R7 and R8 are the only rows below `direct`.",
+    swap_once(root, DOSSIER, AFTER_LEDGER, "R4, R5, R7 and R8 — the only rows below `direct`.",
               "keep_set_only_exact_after")
 
 
@@ -3719,6 +3816,10 @@ PASSES = [
     ("fit-ledger", "a ratio that counts something else in decision.summary", keep_summary_ratio_of_other_noun),
     ("fit-ledger", "a ledger name whose Requirement words hold a parenthesis", keep_ledger_nested_name),
     ("wording", "years named as not a hard gate", keep_years_negated_gate),
+    ("wording", "a one-word identifier that holds the old name", keep_old_name_identifier),
+    ("fit-ledger", "a list item for a group of rows, a band beside one", keep_ledger_form_grouped),
+    ("fit-ledger", "a list of one item", keep_ledger_form_one_item),
+    ("fit-ledger", "a hyphen as the dash, a semicolon inside a parenthesis", keep_ledger_form_hyphen),
     ("fit-ledger", "the candidate's own ratios and a date in the snapshot", keep_ledger_candidate_ratio),
     ("fit-ledger", "\"both\" over the rows it names, after the ledger", keep_ledger_both_named),
     ("fit-ledger", "a named universal that is exact, after the ledger", keep_set_named_exact_after),
@@ -3906,6 +4007,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("triggers", "the pointer moved below the body's first heading", break_command_pointer_buried),
     ("triggers", "the pointer naming another section of the grammar", break_command_pointer_unanchored),
     ("triggers", "the slash-command rule dropped from the grammar's §6", break_command_rule_missing),
+    ("triggers", "Tuesday's row dropped from the trigger-hygiene table", break_trigger_hub_row_missing),
+    ("triggers", "a word of Tuesday's row missing from its description", break_trigger_hub_boundary_word),
     ("ledger", "a duplicated ledger entry", break_ledger_duplicate),
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),
@@ -4023,6 +4126,10 @@ CASES: list[tuple[str, str, callable]] = [
     ("fit-ledger", "\"four rows\" after the ledger", break_ledger_bare_count),
     ("fit-ledger", "a second paragraph after the ledger", break_ledger_second_paragraph),
     ("fit-ledger", "two sentences after the ledger", break_ledger_two_sentences),
+    ("fit-ledger", "the old worked sentence back, no list", break_ledger_form_prose),
+    ("fit-ledger", "a list item that does not open with its row IDs", break_ledger_form_item_unopened),
+    ("fit-ledger", "list items with a colon for the dash", break_ledger_form_no_dash),
+    ("fit-ledger", "a range where an item's IDs go", break_ledger_form_range),
     ("fit-ledger", "an unnamed \"both\" after the ledger", break_ledger_both_after),
     ("fit-ledger", "a universal over a tier in the verdict line", break_ledger_universal_in_verdict),
     ("fit-ledger", "\"all but\" in decision.summary", break_ledger_summary_all_but),
@@ -4084,6 +4191,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("wording", "\"No network\" back in the L0 definition", break_l0_no_network),
     ("wording", "a story pre-mapped with no quote", break_personas_premap),
     ("wording", "the personas scope line removed", break_personas_scope_line),
+    ("wording", "Tuesday's old working name back in its SKILL.md", break_retired_old_name),
+    ("wording", "Tuesday's old working name, hyphenated, in a module's README", break_retired_old_name_hyphenated),
     ("columns", "a declared enum with no column", break_enum_without_column),
     ("columns", "an enum mapped to a column no worked table has", break_enum_column_missing),
     ("columns", "an enum_columns entry for an undeclared field", break_enum_column_stale),
@@ -4144,6 +4253,8 @@ CASES: list[tuple[str, str, callable]] = [
     ("fixtures", "a quick-check sample aimed at a target outside the check", break_quick_check_sample_outside),
     ("fixtures", "another target's sample passing as a quick check", break_quick_check_hunt_passes),
     ("fixtures", "a quick_check clause allowing another number of calls", break_quick_check_clause_number),
+    ("fixtures", "interaction-grammar.md §4 allowing a quick check another number of calls",
+     break_quick_check_grammar_number),
     ("evals", "an expectation naming an unknown clause", break_clause_unknown),
     ("evals", "a clause nothing uses", break_clause_unused),
     ("evals", "a clause inside a clause", break_clause_nested),

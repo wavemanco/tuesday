@@ -16,7 +16,7 @@
 - Guardrails
 - Reference files
 
-**Paths.** The front door runs this playbook: every `references/` path in it, and in the files it names, means the folder that holds this file, never a module's own skill folder, even one a listing shows (the front door's own instructions, section 3).
+**Paths.** The `tuesday` skill runs this playbook: every `references/` path in it, and in the files it names, means the folder that holds this file, never a module's own skill folder, even one a listing shows (the `tuesday` skill's own instructions, section 3).
 
 Tailor a resume so that every sentence is defensible by the person whose name is on it, under one constraint: **it cannot add a claim.**
 

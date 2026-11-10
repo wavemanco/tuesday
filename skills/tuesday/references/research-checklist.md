@@ -18,6 +18,8 @@ Budget: **at most 6 searches and 2 page fetches.** Targets, in priority order:
 
 Searches outside these targets do not run at L1. A question none of them covers is either an L2 item or an upgrade-menu line.
 
+Material the user pasted answers the target it covers, as a pasted values page answers target 1 and a strategy brief under ~6 months old answers target 3, and that target gets no search beyond the quick check of the material that `interaction-grammar.md` §4 allows.
+
 Freshness rules: values are stable (official page wins, fetch once); loop structure is semi-stable (prefer recent, note the source's age if older); strategy is perishable (under 6 months or label it).
 
 **When results aren't attributable:** some companies return nothing usable — stealth startups, tiny firms, name collisions with bigger entities (a search for a small "Fenwick" drowns in unrelated results). Using a same-named company's values or process is worse than using nothing. Treat any target you can't attribute to *this specific company* as not-established: say so plainly in the pack, use nothing from it, and put the missing facts in the upgrade menu — the user's recruiter can often supply them in one email. What stands in for a missing fact is decided where that fact's rule lives, not here: the values cheat sheet by section 10's condition in `references/output-template.md`, which an unattributable values page does not meet; the loop by Loop detection below, whose archetype fallback applies only where no loop source establishes the loop, so a loop the user's own words establish keeps its rounds whatever target 2 returned.
