@@ -23,7 +23,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 COPIED = ["skills", "dist", "conventions", "ci", "evals", "docs", ".claude-plugin"]
-# Files, not directories: the ledger lives in README.md and the ledger check reads it.
+# Files, not directories: the README links the ledger (docs/tracked-work.md), and the
+# ledger check reads both.
 # docs/ and CONTRIBUTING.md joined when the citations check did: it reads both, and a
 # staged repo without them would let every citation in a spec pass by being unseen.
 COPIED_FILES = ["README.md", "CONTRIBUTING.md"]
@@ -245,15 +246,11 @@ def break_missing_parameter_section(root: Path) -> str:
 
 def break_ledger_duplicate(root: Path) -> str:
     """Duplicate a Tracked-work entry, the way index-based edits actually did."""
-    path = root / "README.md"
+    path = root / "docs" / "tracked-work.md"
+    if not path.exists():
+        raise SystemExit("break_ledger_duplicate found no docs/tracked-work.md — it has gone stale")
     text = path.read_text()
-    # Anchor inside the ledger: the first "- **" in the file belongs to the
-    # conventions list, and duplicating that one proves nothing.
-    section = re.search(r"^## Tracked work\s*$(.*?)(?=^## |\Z)", text,
-                        re.MULTILINE | re.DOTALL)
-    if not section:
-        raise SystemExit("break_ledger_duplicate found no Tracked work section — it has gone stale")
-    entry = re.search(r"^- \*\*.+?\*\*.*$", section.group(1), re.MULTILINE)
+    entry = re.search(r"^- \*\*.+?\*\*.*$", text, re.MULTILINE)
     if not entry:
         raise SystemExit("break_ledger_duplicate found no ledger entry — it has gone stale")
     path.write_text(text.replace(entry.group(0), entry.group(0) + "\n" + entry.group(0), 1))
@@ -262,7 +259,7 @@ def break_ledger_duplicate(root: Path) -> str:
 
 def break_ledger_superseded(root: Path) -> str:
     """Add an entry whose subject collides with one already there."""
-    path = root / "README.md"
+    path = root / "docs" / "tracked-work.md"
     text = path.read_text()
     anchor = "\n- **Routing eval coverage"
     if anchor not in text:
@@ -1241,6 +1238,16 @@ def break_ledger_drops_last_row(root: Path) -> str:
     swap_once(root, DOSSIER, "- `preferred` — absent: R7 (Social investment experience)\n", "",
               "break_ledger_drops_last_row")
     return "fit ledger omits R7"
+
+
+def break_ledger_unlinked(root: Path) -> str:
+    """Every link from the README to the ledger goes, so nothing leads to it."""
+    path = root / "README.md"
+    text = path.read_text()
+    if "](docs/tracked-work.md)" not in text:
+        raise SystemExit("break_ledger_unlinked found no link to docs/tracked-work.md — it has gone stale")
+    path.write_text(text.replace("](docs/tracked-work.md)", "]"))
+    return "does not link the Tracked-work ledger"
 
 
 def break_ledger_duplicate_row(root: Path) -> str:
@@ -4010,6 +4017,7 @@ CASES: list[tuple[str, str, callable]] = [
     ("triggers", "Tuesday's row dropped from the trigger-hygiene table", break_trigger_hub_row_missing),
     ("triggers", "a word of Tuesday's row missing from its description", break_trigger_hub_boundary_word),
     ("ledger", "a duplicated ledger entry", break_ledger_duplicate),
+    ("ledger", "the README no longer links the ledger", break_ledger_unlinked),
     ("ledger", "a superseded entry left beside its successor", break_ledger_superseded),
     ("parameters", "a declared parameter dropped", break_undeclared_parameter),
     ("parameters", "the parameter section removed", break_missing_parameter_section),
