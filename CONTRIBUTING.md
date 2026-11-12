@@ -2,24 +2,24 @@
 
 Three rules protect this repository's structure while it is early; everything else is ordinary.
 
-## Pull requests: collaborators and prior contributors only, for now
+## Pull requests: collaborators only, for now
 
 This is an early repository. The skills' output contracts, the shared
 conventions and the eval harness still change from week to week, and every
 change here is reviewed adversarially and measured on pinned runs before it
 lands. A pull request from outside that loop would be written against a target
 that moves under it, and would cost more to review than it saves. So for now,
-pull requests are open only to the repository's collaborators and to prior
-contributors (anyone with a commit on the default branch). A workflow,
+only the repository's collaborators can open pull requests. The repository's
+pull-request setting on GitHub enforces this, and a workflow,
 `.github/workflows/pr-policy.yml`, closes any other with a comment pointing
-here. Ideas, bug reports and failures you hit using a skill are welcome as
-issues. This is revisited when the contracts settle, and at the latest before
-any public release.
+here, in case the setting is ever off. Ideas, bug reports and failures you hit
+using a skill are welcome as issues, from anyone. This is revisited when the
+contracts settle.
 
 ## Licensing
 
-The repository is MIT-licensed for now (the root `LICENSE`). `conventions/` and
-each skill folder carry their own copy of the same grant, so a packaged skill
+The repository is MIT-licensed (the root `LICENSE`). `conventions/` and each
+skill folder carry their own copy of the same grant, so a packaged skill
 travels with its license. A contribution is made under that grant. The one
 planned exception is the future agent/ directory, below: when it exists it
 will carry its own license, and files are not moved across that boundary in the
