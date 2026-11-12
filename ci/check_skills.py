@@ -13,13 +13,16 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   frontmatter  SKILL.md frontmatter is present, well-formed, and within the
                limits the Skills API enforces on upload
   package      each dist/<skill>.skill matches its source, is rooted at the
-               skill folder, and excludes evals/
+               skill folder, and excludes evals/; the Claude Code builds and
+               the marketplace file are what ci/package.py writes
   mirrors      every references/ mirror is byte-identical to its canonical
                file once the synced-from header is stripped
   evals        every evals JSON parses, its clauses expand, and it carries the
                fields the runners read
   triggers     each skill's description carries the negative boundary the
-               interaction grammar's trigger-hygiene table reserves for it
+               interaction grammar's trigger-hygiene table reserves for it, and
+               each module's SKILL.md points to the grammar's slash-command rule
+               at its top
   parameters   declared output-discipline parameters, and restatements of them
   columns      qualifier, provenance and enum declarations name real columns
   citations, sections, counts, readmes, ledger
@@ -28,12 +31,21 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   answer-keys  installed skill text shares no run of words with its fixtures
   fixtures     the fixture fields the harness reads are what it assumes
   wording      retired wordings stay retired
-  watch-out    each skill's one watch-out sentence, and every copy of it, exact
+  watch-out    each skill's one watch-out line, and every copy of it, exact
+  guidance     Anthropic's skill-authoring limits: contents lists, SKILL.md size,
+               a third-person description, and every reference linked
+  frontdoor    the front door, skills/tuesday/: its references/ are what ci/sync.py
+               generates, its module set is skills/ without it, and it and its
+               references are the text round 3 measured
+  builds       the Claude Code builds hide each module with one added line and
+               nothing else, that line ships nowhere else, and the plugin's
+               manifest and marketplace entry name `tuesday`
 """
 
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import json
 import re
@@ -43,7 +55,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "evals"))
-from fixture_clauses import ClauseError, expand_spec, unused_clauses  # noqa: E402
+from fixture_clauses import DATE_ANCHOR, ClauseError, anchor_of, date_refs, dated, expand_spec, unused_clauses  # noqa: E402
 import output_checks  # noqa: E402  (the harness's readers, for the checks that lint what it reads)
 import research_server  # noqa: E402  (the canned room's own search, for the fixtures lint)
 import run_fixtures  # noqa: E402  (the modes a fixture runs in)
@@ -51,6 +63,9 @@ sys.path.insert(0, str(REPO / "ci"))
 # The fit-ledger and snapshot rules, shared with evals/output_checks.py so the two
 # checks of one rule cannot disagree (ci/ledger_rules.py says why).
 import ledger_rules  # noqa: E402
+# The front door's generator, its digest and the hiding transform, shared with the
+# packager and the eval harness (ci/sync.py says why).
+import sync  # noqa: E402
 from ledger_rules import (BANDS, COUNT_WORDS, FIT_ORDER, PRIORITY_ORDER, ROW_ID,  # noqa: E402,F401
                           COUNTED, FRACTION, TIER_WORDS)
 SKILLS_DIR = REPO / "skills"
@@ -87,6 +102,37 @@ def skills() -> list[Path]:
     return sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir() and (p / "SKILL.md").exists())
 
 
+def modules() -> list[Path]:
+    """Every skill but the front door: the skills that each do one job (sync.modules)."""
+    return [SKILLS_DIR / name for name in sync.modules(SKILLS_DIR)]
+
+
+# The front door, skills/tuesday/, is a skill like the modules, and every per-skill group reads
+# it except the ones below, each for the reason given here, once. The documentation groups
+# (citations, sections, counts, wording) read its SKILL.md and README but not its references/,
+# which are generated copies of module files those groups read where they are written; and
+# answer-keys reads its installed text against every module's fixtures, since a room run
+# through the front door installs every module's text (evals/README.md, "Through Tuesday").
+NO_OUTPUT_OF_ITS_OWN = ("it delivers no output of its own: a turn's output is one module's, under the "
+                        "declarations in that module's playbook, a copy of the module's SKILL.md body")
+HUB_EXEMPT = {
+    "evals": "what it does is choose a module, which no one skill's fixtures can test; its evals are the "
+             "suite's routing cases (evals/suite-routing.json, evals/suite-explicit.json), run with "
+             "run_routing.py --arm frontdoor, and a fixture file of its own would be run by nothing",
+    "parameters": NO_OUTPUT_OF_ITS_OWN,
+    "columns": NO_OUTPUT_OF_ITS_OWN,
+    "watch-out": NO_OUTPUT_OF_ITS_OWN,
+    "triggers": "it has no line pointing to interaction-grammar.md §6's slash-command rule: that rule stops a "
+                "module started by its own command from starting another skill, and Tuesday starts none, since it "
+                "runs a module from its own references/ (skills/tuesday/README.md, beside its routing role)",
+}
+
+
+def exempt(group: str) -> None:
+    """Say, in the group's output, that the front door is not read here and why."""
+    print(f"  --   {group}: {sync.HUB_NAME} is exempt: {HUB_EXEMPT[group]}")
+
+
 def parse_frontmatter(text: str) -> dict[str, str] | None:
     """Minimal frontmatter reader — avoids a PyYAML dependency in CI.
 
@@ -108,13 +154,61 @@ def parse_frontmatter(text: str) -> dict[str, str] | None:
     return fields
 
 
+# A plain (unquoted) YAML scalar may not hold ": " or end with ":" (both read as a
+# mapping), may not start with an indicator, and loses everything after " #" to a
+# comment. parse_frontmatter reads such a value whole, as Claude Code's lenient
+# fallback does; a strict parser (a claude.ai upload, a package validator) rejects
+# it or cuts it short. Read here without a YAML dependency, so the forms are exact.
+YAML_LEADING_INDICATORS = ",[]{}#&*!%@`"
+
+
+def plain_scalar_problems(text: str) -> list[tuple[str, str]]:
+    """(key, why) for each unquoted frontmatter value a strict YAML parser misreads.
+
+    A value that opens with a quote or a block indicator (| or >) is not plain and
+    is not read; nor is a key with no value on its line, whose indented lines are a
+    nested mapping (`metadata:`). A plain value's continuation lines are read with it.
+    """
+    match = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
+    if not match:
+        return []
+    problems: list[tuple[str, str]] = []
+    key, plain = None, False
+    for line in match.group(1).split("\n"):
+        header = re.match(r"^([A-Za-z][A-Za-z0-9_-]*):(?:[ \t]+(.*))?$", line)
+        if header:
+            key, value = header.group(1), (header.group(2) or "").strip()
+            plain = bool(value) and value[0] not in "\"'|>"
+            first = True
+        elif key and plain and line.strip():
+            value, first = line.strip(), False
+        else:
+            continue
+        if not plain:
+            continue
+        if first and (value[0] in YAML_LEADING_INDICATORS
+                      or (value[0] in "-?:" and (len(value) == 1 or value[1] in " \t"))):
+            problems.append((key, f"starts with the YAML indicator '{value[0]}'"))
+        if ": " in value or value.endswith(":"):
+            at = value.find(": ") if ": " in value else len(value) - 1
+            problems.append((key, f"holds a ':' before a space or the line's end, read as a mapping "
+                                  f"(at '…{value[max(0, at - 20):at + 2]}')"))
+        if " #" in value:
+            problems.append((key, "holds ' #', and everything after it is read as a comment"))
+    return problems
+
+
 def check_frontmatter() -> None:
     group = "frontmatter"
     for skill in skills():
-        fm = parse_frontmatter((skill / "SKILL.md").read_text(encoding="utf-8"))
+        text = (skill / "SKILL.md").read_text(encoding="utf-8")
+        fm = parse_frontmatter(text)
         if fm is None:
             fail(group, f"{skill.name}: no YAML frontmatter")
             continue
+        for key, why in plain_scalar_problems(text):
+            fail(group, f"{skill.name}: frontmatter {key} is an unquoted YAML value that {why} — "
+                        f"a strict parser rejects it; reword it")
 
         unexpected = set(fm) - ALLOWED_FRONTMATTER
         if unexpected:
@@ -164,12 +258,102 @@ def packaged_files(skill: Path) -> set[str]:
             continue
         if path.suffix == ".pyc":
             continue
+        if skill.name == sync.HUB_NAME and not sync.hub_ships(rel.as_posix()):
+            continue   # its README.md ships nowhere (sync.HUB_SHIPS)
         included.add(f"{skill.name}/{rel.as_posix()}")
     return included
 
 
+# The Claude Code builds (README.md, "Install"): the personal install, each skill folder to
+# copy into ~/.claude/skills/; and the plugin, those same folders under skills/ beside a
+# manifest, listed by the marketplace file at the repository root.
+CLAUDE_CODE = DIST / "claude-code"
+PLUGIN = DIST / "plugin" / sync.HUB_NAME
+MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
+# What round 3 measured, recorded once, and the plugin version that ships it. hub_sha256 and
+# frontdoor_sha256 are the front door's two hashes (sync.digests) on b2f424b, where every result
+# file of the measurement records them. builds_sha256 (frontdoor_digests) hashes every file of
+# dist/claude-code/, which the plugin's skills/ equals: each module's shipped files with the
+# hiding line, and the hub's. Rebuilt from b2f424b's own sources (its module folders, its measured
+# hub and its generator), the tree hashes to the same value. That tree is what round 3 installed
+# but for the run-id suffix the harness gives each name, and the hub's LICENSE, the modules'
+# LICENSE byte for byte. plugin_version is the manifest's: an installed plugin keeps its version
+# until the version string changes (Claude Code's plugin docs), so an update to the hashes moves it.
+MEASURED_FRONTDOOR = {
+    "hub_sha256": "e698b12d47be1436e9c7074491c31b7601fe9682a01c99ca29f0d3fcc83d50dd",
+    "frontdoor_sha256": "a3405730323913aacfc998707701d6305113a3a81338e9dc6c779cb69f35875f",
+    "builds_sha256": "8e9184efd286a437e747a81c139b127fc84e2d5c9212b2865142503d59f43a9c",
+    "plugin_version": "0.1.0",
+}
+MEASURED_HASHES = [key for key in MEASURED_FRONTDOOR if key.endswith("_sha256")]
+PLUGIN_MANIFEST = {
+    "name": sync.HUB_NAME,
+    "version": MEASURED_FRONTDOOR["plugin_version"],
+    "description": "Applicant-side job search on evidence: Tuesday runs the module a request needs, "
+                   "job-underwriter (whether to apply), resume-tailor (a resume tailored to a role) "
+                   "or mock-interview (interview prep and drills), each also its own command.",
+}
+# The marketplace's name is what a user types after `@`, and a user registers one marketplace per
+# name, so it is the repository's owner and name rather than a word another author might pick
+# (Claude Code's plugin-marketplaces docs).
+MARKETPLACE_FILE = {
+    "name": "wavemanco-tuesday",
+    "description": "Tuesday, an applicant-side evidence system for job seekers, as a Claude Code plugin.",
+    "owner": {"name": "moondocksaint"},
+    "plugins": [{"name": sync.HUB_NAME, "source": f"./{PLUGIN.relative_to(REPO).as_posix()}"}],
+}
+
+
+def as_json(data: dict) -> bytes:
+    return (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def builds() -> dict[str, bytes]:
+    """Every file of the Claude Code builds and the marketplace file, by repository path.
+
+    A skill is built from the files its .skill package carries (packaged_files); a
+    module's SKILL.md gains the hiding line (sync.hide) and the front door's is unchanged.
+    The plugin's skills/ holds the same folders as dist/claude-code/.
+    """
+    out: dict[str, bytes] = {}
+    for skill in skills():
+        for name in sorted(packaged_files(skill)):
+            data = (SKILLS_DIR / name).read_bytes()
+            if name == f"{skill.name}/SKILL.md" and skill.name != sync.HUB_NAME:
+                data = sync.hide(data.decode("utf-8")).encode("utf-8")
+            for tree in (CLAUDE_CODE, PLUGIN / "skills"):
+                out[f"{tree.relative_to(REPO).as_posix()}/{name}"] = data
+    out[f"{PLUGIN.relative_to(REPO).as_posix()}/.claude-plugin/plugin.json"] = as_json(PLUGIN_MANIFEST)
+    out[MARKETPLACE.relative_to(REPO).as_posix()] = as_json(MARKETPLACE_FILE)
+    return out
+
+
+def frontdoor_digests() -> dict[str, str]:
+    """The hashes MEASURED_FRONTDOOR records, of the sources as they are now: the hub's two
+    (sync.digests), and builds_sha256 over dist/claude-code/ as builds() makes it."""
+    prefix = f"{CLAUDE_CODE.relative_to(REPO).as_posix()}/"
+    tree = {name[len(prefix):]: data for name, data in builds().items() if name.startswith(prefix)}
+    return {**sync.digests(SKILLS_DIR / sync.HUB_NAME), "builds_sha256": sync.tree_digest(tree)}
+
+
+def built_files() -> dict[str, bytes]:
+    """The files on disk where builds() writes: both trees and the marketplace file."""
+    found = {p.relative_to(REPO).as_posix(): p.read_bytes()
+             for tree in (CLAUDE_CODE, PLUGIN) if tree.is_dir() for p in tree.rglob("*") if p.is_file()}
+    if MARKETPLACE.is_file():
+        found[MARKETPLACE.relative_to(REPO).as_posix()] = MARKETPLACE.read_bytes()
+    return found
+
+
 def check_package() -> None:
     group = "package"
+    wanted, found = builds(), built_files()
+    for name in sorted(set(wanted) | set(found)):
+        if found.get(name) != wanted.get(name):
+            state = "is missing" if name not in found else "is built from nothing" if name not in wanted else "is stale"
+            fail(group, f"{name} {state} — run python ci/package.py")
+    if all(found.get(n) == wanted.get(n) for n in set(wanted) | set(found)):
+        ok(group, f"the Claude Code builds and the marketplace file are what ci/package.py writes, {len(wanted)} files")
     for skill in skills():
         artifact = DIST / f"{skill.name}.skill"
         if not artifact.exists():
@@ -300,7 +484,8 @@ def check_mirrors() -> None:
 
 def check_evals() -> None:
     group = "evals"
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         path = skill / "evals" / "evals.json"
         if not path.exists():
             fail(group, f"{skill.name}: no evals/evals.json")
@@ -329,6 +514,23 @@ def check_evals() -> None:
             fail(group, f"{skill.name}: duplicate eval ids: {ids}")
         for case in cases:
             label = f"{skill.name} eval {case.get('id')}"
+            # A date relative to the run is written out at the run's date, and a run saved
+            # before runs recorded one at the fixture's date_anchor: references with no
+            # anchor, an anchor with none, and a reference the loader cannot read fail.
+            refs = date_refs(case) if isinstance(case, dict) else []
+            if refs and anchor_of(case) is None:
+                fail(group, f"{label}: writes dates relative to the run ({refs[0]}) and declares no "
+                            f"{DATE_ANCHOR} as an ISO date — a run saved before runs recorded their date "
+                            f"would be graded against text it was never sent")
+            elif not refs and DATE_ANCHOR in case:
+                fail(group, f"{label}: declares a {DATE_ANCHOR} and writes no date relative to the run — "
+                            f"a key that does nothing")
+            elif refs:
+                try:
+                    case = dated(case)
+                except ClauseError as exc:
+                    fail(group, f"{skill.name}: {exc}")
+                    continue
             # A reference the loader cannot expand — a clause inside a clause, a name
             # with a capital or a space — reaches the grader as literal braces.
             for field in ("expected_output", "expectations"):
@@ -358,19 +560,109 @@ def check_evals() -> None:
             fail(group, f"evals/suite-routing.json does not parse: {exc}")
             return
         routes = set(spec.get("routes", []))
-        installed = {s.name for s in skills()}
+        installed = {s.name for s in modules()}
         if not installed <= routes:
             fail(group, f"suite-routing routes {sorted(routes)} do not cover every skill: {sorted(installed)}")
         for case in spec.get("cases", []):
             if case.get("expected") not in routes:
                 fail(group, f"suite-routing case {case.get('id')}: expected '{case.get('expected')}' is not a declared route")
+            if case.get("expected") == "either":
+                sib = case.get("siblings")
+                if not (isinstance(sib, list) and len(set(sib)) >= 2 and set(sib) <= installed):
+                    fail(group, f"suite-routing case {case.get('id')}: an 'either' case must list the two or more "
+                                f"installed skills it spans as 'siblings', got {sib!r}")
         ok(group, f"suite-routing: {len(spec.get('cases', []))} case(s) over routes {sorted(routes)}")
+        check_routing_variants(group, spec, installed)
+
+
+def check_routing_variants(group: str, suite: dict, installed: set[str]) -> None:
+    """The attachment diagnostic's variant files (evals/README.md, "The attachment
+    diagnostic") are output of `evals/routing_variants.py`, never edited. Each is
+    held to the suite's route rules, its ids to ones no suite case uses, each
+    variant to the suite case it names, and the whole file to what the generator
+    writes from the committed suite, so a hand edit, or a suite edit not
+    regenerated, fails here rather than measuring something no script made."""
+    import routing_variants  # evals/, on the path above
+    try:
+        built = routing_variants.build(suite)
+    except SystemExit as exc:
+        fail(group, f"evals/routing_variants.py cannot build from the suite: {exc}")
+        return
+    by_id = {c.get("id"): c for c in suite.get("cases", [])}
+    for name, text in built.items():
+        path = REPO / "evals" / name
+        if not path.exists():
+            fail(group, f"evals/{name} is missing — run python evals/routing_variants.py")
+            continue
+        try:
+            spec = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            fail(group, f"evals/{name} does not parse: {exc}")
+            continue
+        routes = set(spec.get("routes", []))
+        if not installed <= routes:
+            fail(group, f"evals/{name} routes {sorted(routes)} do not cover every skill: {sorted(installed)}")
+        for case in spec.get("cases", []):
+            n, source = case.get("id"), by_id.get(case.get("derived_from"))
+            if case.get("expected") not in routes:
+                fail(group, f"evals/{name} case {n}: expected '{case.get('expected')}' is not a declared route")
+            if n in by_id:
+                fail(group, f"evals/{name} case {n}: its id collides with a suite case's")
+            if source is None:
+                fail(group, f"evals/{name} case {n}: derived_from {case.get('derived_from')!r} is no suite case")
+            elif case.get("expected") != source.get("expected"):
+                fail(group, f"evals/{name} case {n}: expected '{case.get('expected')}', but suite case "
+                            f"{source.get('id')} expects '{source.get('expected')}'")
+        if path.read_text(encoding="utf-8") != text:
+            fail(group, f"evals/{name} is not what evals/routing_variants.py generates from the suite — "
+                        f"regenerate it, never edit it")
+        else:
+            ok(group, f"{name}: {len(spec.get('cases', []))} variant(s), as generated from the suite")
+
+
+# The slash-command rule's label: the grammar's §6 states the rule under it, and
+# each skill's pointer names it. A command reads SKILL.md first, so the pointer sits
+# above the body's first heading, where it is read before anything else is decided.
+COMMAND_RULE = "keeps the turn"
+
+
+def command_rule_problems(grammar: str, skill_texts: dict[str, str]) -> list[str]:
+    """Why the slash-command rule is not stated once in the grammar's §6 and pointed to
+    from the top of every skill's SKILL.md body; empty when it is."""
+    problems = []
+    section = re.search(r"^## 6\..*?(?=^## 7\.|\Z)", grammar, re.MULTILINE | re.DOTALL)
+    labels = re.findall(r"^\*\*([^*]+)\*\*", section.group(0), re.MULTILINE) if section else []
+    stated = [lab for lab in labels if COMMAND_RULE in lab and "slash command" in lab]
+    if len(stated) != 1:
+        problems.append(f"interaction-grammar.md §6 states the slash-command rule under {len(stated)} bold labels "
+                        f"carrying '{COMMAND_RULE}' and 'slash command' — it is stated there once")
+    for name, text in sorted(skill_texts.items()):
+        top = skill_body(text).split("\n## ", 1)[0]
+        pointers = [line for line in top.splitlines()
+                    if f"`/{name}`" in line and COMMAND_RULE in line
+                    and "`references/interaction-grammar.md` §6" in line]
+        if len(pointers) != 1:
+            problems.append(f"{name}: SKILL.md has {len(pointers)} lines above its first heading naming `/{name}`, "
+                            f"'{COMMAND_RULE}' and `references/interaction-grammar.md` §6 — a command loads "
+                            f"SKILL.md first, so the pointer to the slash-command rule is one line there")
+    return problems
 
 
 def check_triggers() -> None:
-    """The grammar's trigger-hygiene table reserves an explicit non-goal per skill."""
+    """The grammar's trigger-hygiene table reserves an explicit non-goal per skill,
+    Tuesday's included, and its slash-command rule is pointed to from the top of every
+    module's SKILL.md body (command_rule_problems); Tuesday's has no such line, for the
+    reason HUB_EXEMPT gives."""
     group = "triggers"
+    exempt(group)
     grammar = (CONVENTIONS / "interaction-grammar.md").read_text(encoding="utf-8")
+    problems = command_rule_problems(grammar, {s.name: (s / "SKILL.md").read_text(encoding="utf-8")
+                                               for s in modules()})
+    for problem in problems:
+        fail(group, problem)
+    if not problems:
+        ok(group, f"the slash-command rule is stated once in the grammar's §6 and pointed to from the top of "
+                  f"each of {len(modules())} SKILL.md bodies")
     table = {}
     for row in re.finditer(r"^\|\s*`(?P<skill>[a-z0-9-]+)`\s*\|[^|]*\|\s*(?P<boundary>[^|]+?)\s*\|", grammar, re.MULTILINE):
         table[row.group("skill")] = row.group("boundary")
@@ -405,7 +697,17 @@ def load_evals(path: Path) -> list[dict] | None:
         cases = expand_spec(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return None
-    return cases if isinstance(cases, list) else None
+    if not isinstance(cases, list):
+        return None
+    # Each fixture as a run saved before run dates were recorded was sent it: its relative
+    # dates written at its date_anchor. One the evals group refuses is read as it stands.
+    out = []
+    for case in cases:
+        try:
+            out.append(dated(case) if isinstance(case, dict) else case)
+        except ClauseError:
+            out.append(case)
+    return out
 
 
 def check_parameters() -> None:
@@ -427,7 +729,8 @@ def check_parameters() -> None:
         fail(group, "output-discipline.md names no parameters — the check would pass vacuously")
         return
 
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         text = (skill / "SKILL.md").read_text(encoding="utf-8")
         section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
                             re.MULTILINE | re.DOTALL)
@@ -592,7 +895,8 @@ def check_columns() -> None:
     the point of a slot.
     """
     group = "columns"
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         text = (skill / "SKILL.md").read_text(encoding="utf-8")
         section = re.search(r"^## Output discipline\s*$(.*?)(?=^## |\Z)", text,
                             re.MULTILINE | re.DOTALL)
@@ -1032,6 +1336,7 @@ def citing_files() -> list[Path]:
     files += sorted(CONVENTIONS.glob("*.md")) + sorted((REPO / "docs").glob("*.md"))
     for skill in skills():
         files += [skill / "SKILL.md", skill / "README.md"]
+    for skill in modules():   # the front door's references/ are generated copies (HUB_EXEMPT's comment)
         files += [r for r in sorted((skill / "references").glob("*.md"))
                   if not SYNCED_HEADER.match(r.read_text(encoding="utf-8"))]   # mirrors inherit canonical's cites
     return [f for f in files if f.exists() and f != CITATIONS]
@@ -1224,7 +1529,7 @@ def check_sections() -> None:
     targets: dict[str, Path] = {}
     for path in list(CONVENTIONS.glob("*.md")) + list((REPO / "docs").glob("*.md")):
         targets[path.name] = path
-    for skill in skills():
+    for skill in modules():
         for ref in (skill / "references").glob("*.md"):
             targets.setdefault(ref.name, ref)
     # Files a reference can name but that have no numbered sections to point at.
@@ -1609,7 +1914,7 @@ def check_counts() -> None:
     targets: dict[str, Path] = {}
     for path in list(CONVENTIONS.glob("*.md")) + list((REPO / "docs").glob("*.md")):
         targets[path.name] = path
-    for skill in skills():
+    for skill in modules():
         for ref in (skill / "references").glob("*.md"):
             targets.setdefault(ref.name, ref)
     by_noun: dict[str, dict[str, set[int]]] = {}
@@ -1719,7 +2024,11 @@ def check_readmes() -> None:
 LEDGER_LINE = re.compile(r"^- `?(" + "|".join(PRIORITY_ORDER) + r")`? — (.+)$")
 LEDGER_GROUP = re.compile(r"^(" + "|".join(FIT_ORDER) + r"): (.+)$")
 LEDGER_ITEM = ledger_rules.LEDGER_ITEM
-WORKED_DOSSIER = "skills/job-underwriter/references/dossier-template.md"
+# The worked dossier is two files, split so no step reads more than it needs: the
+# report (snapshot, map, register, target accounting) and the JSON envelope that
+# closes the same emitted file. The check reads them as the one dossier they are.
+WORKED_DOSSIER = "skills/job-underwriter/references/dossier-worked-report.md"
+WORKED_ENVELOPE = "skills/job-underwriter/references/dossier-worked-envelope.md"
 
 
 def parse_fit_ledger(snapshot: str) -> tuple[list[tuple[str, str, str, str | None]], list[str]]:
@@ -1805,12 +2114,12 @@ def check_fit_ledger() -> None:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         table[cells[cid]] = {"requirement": cells[creq], "priority": cells[cpri].strip("`"),
                              "fit": cells[cfit].strip("`"), "confidence": cells[cconf].strip("`")}
-    blocks = re.findall(r"```json\n(.*?)\n```", text, re.DOTALL)
+    blocks = re.findall(r"```json\n(.*?)\n```", (REPO / WORKED_ENVELOPE).read_text(encoding="utf-8"), re.DOTALL)
     try:
         envelope = json.loads(blocks[-1])["sections"]["evidence_map"]
         env = {r["requirement_id"]: r for r in envelope}
     except (IndexError, KeyError, TypeError, ValueError):
-        fail(group, f"{WORKED_DOSSIER}: no evidence_map in the last json block")
+        fail(group, f"{WORKED_ENVELOPE}: no evidence_map in the last json block")
         return
 
     seen: dict[str, int] = {}
@@ -1858,7 +2167,7 @@ def check_fit_ledger() -> None:
     # reads and what it leaves to the grader, above Claim in ci/ledger_rules.py).
     counted = ledger_rules.map_claim(summary)
     if counted:
-        fail(group, f"{WORKED_DOSSIER}: decision.summary: {counted.why}")
+        fail(group, f"{WORKED_ENVELOPE}: decision.summary: {counted.why}")
 
     # Everything between the ledger and the next slot is rule 2's "at most one
     # sentence" (after_ledger_claim), where every word of the lists and every ratio
@@ -1871,6 +2180,11 @@ def check_fit_ledger() -> None:
         fail(group, f"{WORKED_DOSSIER}: the fit ledger is followed by more than one sentence (\"{hit.text[:80]}\"); rule 2 allows one")
     elif hit:
         fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger: {hit.why}")
+    # The worked sentence is the shape runs copy, so it is held to rule 2's list form
+    # (ledger_sentence_form), which the harness only records on runs.
+    form = ledger_rules.ledger_sentence_form(after)
+    if form:
+        fail(group, f"{WORKED_DOSSIER}: the sentence after the fit ledger is not in rule 2's list form: {form}")
     hit = ledger_rules.map_claim(ledger_rules.snapshot_prose(snapshot))
     if hit:
         fail(group, f"{WORKED_DOSSIER}: the snapshot's prose: {hit.why}")
@@ -2033,6 +2347,11 @@ ANSWER_KEY_CONTRACT = {
     "confirmed, limited inspectable proof - expect a probe":
         "the verification caveat evidence-conventions.md tells a skill to name beside a `medium` claim; a "
         "dossier carries it in these words, and mock-interview eval 4's prompt is a dossier",
+    "high confidence, inspectable":
+        "a dossier's verified evidence carries each claim with its band; job-underwriter's worked envelope "
+        "and mock-interview eval 4's prompt are both dossiers, and the front door installs the one beside the other",
+    "medium confidence: confirmed, limited inspectable proof, expect a probe":
+        "the `medium` caveat as a dossier's verified evidence carries it, in the same two dossiers",
 }
 # Window sizes, measured on the clean tree (CONTRIBUTING.md says what each caught).
 # A quoted span is a worked example, so three content words in a row shared with a
@@ -2090,11 +2409,13 @@ def answer_key_spans(text: str) -> tuple[list[tuple[int, str]], str]:
 
 def fixture_haystack(cases: list[dict]) -> list[tuple[str, str]]:
     """(where, text) for everything a clean room shows the model of this skill's
-    fixtures: each prompt, and each canned research page's title and text."""
+    fixtures: each prompt, and each canned page's title and text — research pages
+    and the pages served at links the user gave to read."""
     out = []
     for case in cases:
         out.append((f"eval {case.get('id')}'s prompt", case.get("prompt", "")))
-        for page in (case.get("research") or {}).get("pages", []) or []:
+        research = case.get("research") or {}
+        for page in [*(research.get("pages") or []), *(research.get("user_pages") or [])]:
             out.append((f"eval {case.get('id')}'s page {page.get('url', '?')}",
                         f"{page.get('title', '')}\n{page.get('text', '')}"))
     return out
@@ -2126,12 +2447,16 @@ def check_answer_keys() -> None:
     of more than one word) fails on QUOTED_RUN content words in a row; the prose
     outside quotes and code spans, fenced code included, fails on PROSE_RUN words in
     a row. A snake_case identifier is one word (key_tokens). ANSWER_KEY_CONTRACT lists the
-    contract wording a fixture repeats by design, each with its reason.
+    contract wording a fixture repeats by design, each with its reason. The front door,
+    which has no fixtures, is read against every module's: a fixture run through it
+    installs every module's text.
     """
     group = "answer-keys"
     checked = 0
     for skill in skills():
-        cases = load_evals(skill / "evals" / "evals.json") or []
+        hub = skill.name == sync.HUB_NAME
+        cases = [c for m in (modules() if hub else [skill]) for c in load_evals(m / "evals" / "evals.json") or []]
+        whose = "a module's" if hub else "this skill's own"
         content_index: dict[tuple[str, ...], str] = {}
         prose_index: dict[tuple[str, ...], str] = {}
         for where, text in fixture_haystack(cases):
@@ -2166,7 +2491,7 @@ def check_answer_keys() -> None:
                 hit = shared_run(tokens, QUOTED_RUN, content_index)
                 if hit:
                     line = text[:at].count("\n") + 1
-                    fail(group, f"{rel}:{line}: \"{' '.join(span.split())[:70]}\" is quoted from this skill's own "
+                    fail(group, f"{rel}:{line}: \"{' '.join(span.split())[:70]}\" is quoted from {whose} "
                                 f"fixtures (\"{hit[0]}\", {hit[1]}) — a worked example the clean room installs as "
                                 f"an answer key")
             tokens = []
@@ -2175,13 +2500,13 @@ def check_answer_keys() -> None:
             runs = {run for run in key_runs(tokens, PROSE_RUN) if "|" not in run}
             checked += 1
             for run in sorted(runs & set(prose_index)):
-                fail(group, f"{rel}: \"{' '.join(run)}\" repeats this skill's own fixtures unquoted "
+                fail(group, f"{rel}: \"{' '.join(run)}\" repeats {whose} fixtures unquoted "
                             f"({prose_index[run]}) — a worked example the clean room installs as an answer key")
     if checked == 0:
         fail(group, "no quoted spans read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
         ok(group, f"{checked} quoted spans and files of prose in installed skill text, none sharing a run of "
-                  f"words with the skill's own fixtures")
+                  f"words with the fixtures a room installs it for")
 
 
 def search_entry(query: str, research: dict, mode: str) -> dict:
@@ -2197,6 +2522,27 @@ def search_entry(query: str, research: dict, mode: str) -> dict:
     return {"kind": "search", "query_or_url": query, "targets": targets}
 
 
+# How a fixture file's quick_check clause states the calls a quick check may send ("at most two calls").
+QUICK_CHECK_LIMIT = re.compile(r"\bat most (\w+) calls?\b", re.I)
+# interaction-grammar.md §4's sentence that allows a quick check of pasted material, read to the
+# number of calls it allows: "a quick check that pasted material … : at most two calls".
+GRAMMAR_QUICK_CHECK = re.compile(r"\ba quick check\b[^.]*?\bat most (\w+) calls?\b", re.I)
+
+
+def stated_calls(word: str) -> int | None:
+    """The number a call limit states, in digits or in words."""
+    return int(word) if word.isdigit() else ledger_rules.COUNT_WORDS.get(word.lower())
+
+
+def grammar_section(text: str, number: str) -> str:
+    """The body of a numbered `## N.` section of a convention, up to the next `## ` heading."""
+    start = re.search(rf"^## {re.escape(number)}\.\s.*$", text, re.MULTILINE)
+    if not start:
+        return ""
+    end = re.search(r"^## ", text[start.end():], re.MULTILINE)
+    return text[start.end():start.end() + end.start()] if end else text[start.end():]
+
+
 def check_fixtures() -> None:
     """The fixture fields the harness reads are what the harness assumes (D5).
 
@@ -2207,26 +2553,84 @@ def check_fixtures() -> None:
     "known" or "unknown" leaves the hard-gates closing clause unjudged; a
     `research.declined` with no decline in the prompt makes lazy no-call
     `unavailable` rows lawful; a `research.user_links` entry that is also a research
-    page takes that page's fetch out of the target accounting; and a research
+    page takes that page's fetch out of the target accounting; a user link a canned
+    room serves no `user_pages` entry for is answered "No page at", which returns
+    and is counted as read; a user page's `canary` that its page lacks, or that the
+    prompt or another page also carries, proves nothing about the read; and a research
     target's `terms` decide which calls were aimed at it, so a sample of another
     target that is aimed at an `n/a` or `skipped` one — by its terms, or in a canned
     room by a page the server returns — fails a correct row, and a target whose terms
-    match none of its own queries passes every hunt. Each is read here with the
-    harness's own functions (evals/output_checks.py, evals/research_server.py), in
-    every mode the fixture runs (run_fixtures.modes_of), so the lint and the checks
-    cannot disagree.
+    match none of its own queries passes every hunt; a fixture with research, of a
+    skill whose SKILL.md states that every `yes` row names its pages, that does not
+    run `yes_names_page` leaves those pages unjudged; and a `research.quick_check`
+    whose targets, names, budget or samples do not fit the fixture fails a lawful
+    check of the user's material or passes a hunt, as a `quick_check` clause whose
+    number of calls is not the checks' own sets graders and checks apart, and
+    interaction-grammar.md §4's quick-check sentence with another number sets the text
+    and the checks apart. Each is read here with the harness's own functions
+    (evals/output_checks.py, evals/research_server.py), in every mode the fixture runs
+    (run_fixtures.modes_of), so the lint and the checks cannot disagree.
     """
     group = "fixtures"
     linted = 0
+    # The text a run reads allows a quick check of pasted material by a number of calls, in
+    # interaction-grammar.md §4; the checks allow output_checks.QUICK_CHECK_CALLS, and the two must agree.
+    allowed = [stated_calls(m.group(1)) for m in GRAMMAR_QUICK_CHECK.finditer(
+        grammar_section((CONVENTIONS / "interaction-grammar.md").read_text(encoding="utf-8"), "4"))]
+    linted += 1
+    if not allowed:
+        fail(group, f"interaction-grammar.md §4 states no number of calls for a quick check of pasted material, "
+                    f"and the checks allow {output_checks.QUICK_CHECK_CALLS} (output_checks.QUICK_CHECK_CALLS)")
+    elif any(n != output_checks.QUICK_CHECK_CALLS for n in allowed):
+        fail(group, f"interaction-grammar.md §4 allows a quick check of pasted material "
+                    f"{' and '.join(str(n) for n in allowed)} call(s), and the checks allow "
+                    f"{output_checks.QUICK_CHECK_CALLS} (output_checks.QUICK_CHECK_CALLS) — the text and the "
+                    f"checks would pass different checks")
     for skill in skills():
+        # A `yes` row names the pages it rests on: judged (output_checks.YES_PAGES_CHECK)
+        # in every fixture with research of a skill whose SKILL.md states it, and in no
+        # other, so the check can neither go quiet nor judge a rule a skill never gave.
+        states_pages = bool(output_checks.YES_PAGES_RULE.search((skill / "SKILL.md").read_text(encoding="utf-8")))
+        # The quick_check clause tells graders how many calls a quick check of the user's material
+        # may send; the checks allow output_checks.QUICK_CHECK_CALLS, and the two must agree.
+        try:
+            raw = json.loads((skill / "evals" / "evals.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raw = {}
+        clause = (raw.get("clauses") or {}).get("quick_check") if isinstance(raw, dict) else None
+        if clause is not None:
+            linted += 1
+            limit = QUICK_CHECK_LIMIT.search(str(clause))
+            said = stated_calls(limit.group(1)) if limit else None
+            if said != output_checks.QUICK_CHECK_CALLS:
+                fail(group, f"{skill.name} evals.json clause quick_check allows "
+                            f"{limit.group(0) if limit else 'no stated number of calls'}, and the checks allow "
+                            f"{output_checks.QUICK_CHECK_CALLS} (output_checks.QUICK_CHECK_CALLS) — graders and "
+                            f"checks would pass different checks")
         for case in load_evals(skill / "evals" / "evals.json") or []:
             label = f"{skill.name} eval {case.get('id')}"
             prompt = output_checks.normalise_quote(case.get("prompt", ""))
             checks = case.get("checks") or []
+            runs_pages = output_checks.YES_PAGES_CHECK in checks
+            if case.get("research"):
+                linted += 1
+                if states_pages and not runs_pages:
+                    fail(group, f"{label}: SKILL.md states that every `yes` row names its pages and this fixture "
+                                f"does not run the {output_checks.YES_PAGES_CHECK} check — its rows' pages would go "
+                                f"unchecked")
+                elif runs_pages and not states_pages:
+                    fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check, and SKILL.md does not "
+                                f"state that every `yes` row names its pages — a rule the skill never gave would "
+                                f"be judged")
+            elif runs_pages:
+                fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check with no research block — "
+                            f"it never runs")
             text = case.get("candidate_text")
-            if "quotes" in checks and not isinstance(text, list):
-                fail(group, f"{label}: runs the quotes check and declares no candidate_text list — the evidence "
-                            f"column would go unchecked ([] says nothing the candidate gave is quotable)")
+            quoting = [c for c in ("quotes", output_checks.TRACES_CHECK) if c in checks]
+            if quoting and not isinstance(text, list):
+                fail(group, f"{label}: runs the {quoting[0]} check and declares no candidate_text list — the "
+                            f"quotations it reads would go unchecked ([] says nothing the candidate gave is "
+                            f"quotable)")
             for entry in text if isinstance(text, list) else []:
                 linted += 1
                 if not isinstance(entry, str) or output_checks.normalise_quote(entry) not in prompt:
@@ -2281,6 +2685,56 @@ def check_fixtures() -> None:
                 elif any(output_checks.same_url(c.get("page") or "", link) for c in canaries if c.get("page")):
                     fail(group, f"{label}: user link {link} is a canary's page — a user link is never research")
 
+            # The page a canned room serves at a user link (`research.user_pages`), by
+            # fetch alone. A link with none is answered "No page at …", which returns,
+            # so a run would be credited with reading a page it never saw. A user
+            # page's `canary` is a fact only that page carries: on the page, and in
+            # neither the prompt nor any other page, or its reaching the response
+            # proves nothing about the read.
+            upages = research.get("user_pages")
+            if upages is not None and not isinstance(upages, list):
+                fail(group, f"{label}: research.user_pages is {type(upages).__name__}, not a list")
+                upages = []
+            for upage in upages or []:
+                if not isinstance(upage, dict):
+                    fail(group, f"{label}: research.user_pages holds {str(upage)[:60]!r}, not a page")
+            upages = [u for u in upages or [] if isinstance(u, dict)]
+            declared_links = [link for link in links or [] if isinstance(link, str) and link.strip()]
+            for upage in upages:
+                linted += 1
+                url = str(upage.get("url") or "")
+                if not url.strip() or not str(upage.get("text") or "").strip():
+                    fail(group, f"{label}: a research.user_pages entry has no url or no text")
+                    continue
+                if not any(output_checks.same_url(url, link) for link in declared_links):
+                    fail(group, f"{label}: user page {url} is not one of research.user_links — the room would "
+                                f"serve it and the checks would count its read as research")
+                spellings = upage.get("canary") or []
+                spellings = [s for s in ([spellings] if isinstance(spellings, str) else spellings) if str(s).strip()]
+                if not spellings:
+                    continue
+
+                def holds(text: str) -> list[str]:
+                    body = output_checks.normalise_ws(output_checks.unify_dashes(text))
+                    return [sp for sp in spellings if output_checks.canary_in(
+                        output_checks.normalise_ws(output_checks.unify_dashes(sp)), body)]
+                if not holds(f"{upage.get('title', '')} {upage.get('text', '')}"):
+                    fail(group, f"{label}: no spelling of the canary of user link {url} is on its page")
+                elsewhere = [("the prompt", case.get("prompt", ""))] + [
+                    (f"page {p.get('url')}", f"{p.get('title', '')} {p.get('text', '')}")
+                    for p in pages + [u for u in upages if u is not upage]]
+                for where, text in elsewhere:
+                    hit = holds(text)
+                    if hit:
+                        fail(group, f"{label}: the canary of user link {url} ({hit[0]!r}) is also in {where} — "
+                                    f"a canary is a fact only its page carries")
+            if "canned" in modes:
+                for link in declared_links:
+                    if not any(output_checks.same_url(str(u.get("url") or ""), link) for u in upages):
+                        fail(group, f"{label}: user link {link} has no page in research.user_pages — a canned room "
+                                    f"answers \"No page at\" it, which returns, and the run would be credited with "
+                                    f"reading a page it never saw")
+
             for canary in canaries:
                 linted += 1
                 n, page = canary.get("target"), canary.get("page")
@@ -2303,15 +2757,85 @@ def check_fixtures() -> None:
                     fail(group, f"{label}: no spelling of the canary for target {n} is in its page {page}")
 
             # Where no correct run sends a call (zero_calls, or declined), a collision
-            # cannot fail a correct n/a: any call there fails zero_calls first.
+            # cannot fail a correct n/a: any call there fails zero_calls first, but for a
+            # quick check's, which the quick-check sample rule below covers.
             no_call = bool(research.get("zero_calls")) or declined is True
             targets = research.get("targets") or []
             # The room aimed_at reads a search for the company by name in: the
-            # request and every target (output_checks.identity_search).
-            room = {"prompt": case.get("prompt", ""), "targets": targets}
+            # request, with every declared user link read as a correct run reads it,
+            # and every target (output_checks.identity_search).
+            room = {"prompt": output_checks.request_text(case.get("prompt", ""), research,
+                                                         research.get("user_links")),
+                    "targets": targets}
 
             def aimed(query: str, target: dict, mode: str) -> bool:
                 return output_checks.aimed_at(search_entry(query, research, mode), target, pages, mode, room)
+
+            # A quick check of the user's material (`research.quick_check`, output_checks.quick_check):
+            # the targets that material fixes, and the names it carries. Each rule below keeps a
+            # lawful check from failing, or a hunt from passing as one.
+            quick = research.get("quick_check")
+            checked: set = set()
+            if quick is not None:
+                linted += 1
+                numbers = {t.get("n") for t in targets}
+                declared = quick.get("targets") if isinstance(quick, dict) else None
+                names = quick.get("names") if isinstance(quick, dict) else None
+                if not isinstance(declared, list) or not declared:
+                    fail(group, f"{label}: research.quick_check declares no targets")
+                    declared = []
+                for n in declared:
+                    if n not in numbers:
+                        fail(group, f"{label}: quick-check target {n!r} is not one of this fixture's targets")
+                        continue
+                    checked.add(n)
+                    target = next(t for t in targets if t.get("n") == n)
+                    for mode in modes:
+                        if output_checks.accepted(target, mode) != ["skipped"]:
+                            fail(group, f"{label}: quick-check target {n} accepts "
+                                        f"{output_checks.accepted(target, mode)} in a {mode} room, not skipped alone — "
+                                        f"a quick check is of material that fixes its target")
+                if not isinstance(names, list) or not any(isinstance(x, str) and x.strip() for x in names):
+                    fail(group, f"{label}: research.quick_check names nothing — no call could name the material it checks")
+                for name in names if isinstance(names, list) else []:
+                    if not isinstance(name, str) or not name.strip() or name.strip().lower() not in case.get("prompt", "").lower():
+                        fail(group, f"{label}: quick-check name {name!r} is not in the prompt — a check of the user's "
+                                    f"material names what the user gave")
+                if declined is True:
+                    fail(group, f"{label}: declares a quick check beside research.declined — research the user "
+                                f"declined sends no call, a check included")
+                cap = (research.get("budget") or {}).get("searches")
+                if not isinstance(cap, int) or cap < output_checks.QUICK_CHECK_CALLS:
+                    fail(group, f"{label}: a quick check may send {output_checks.QUICK_CHECK_CALLS} calls "
+                                f"(output_checks.QUICK_CHECK_CALLS), above this fixture's search budget of {cap!r}")
+            # A declared target's sample aimed at a target outside the declaration would fail a
+            # correct check. Where no correct run sends a call this is the one collision that can
+            # fail a correct row, so the collision check below is narrowed to it there.
+            for target in targets:
+                if target.get("n") not in checked:
+                    continue
+                for query in target.get("on_target_samples") or []:
+                    for mode in modes:
+                        hit = [o.get("n") for o in targets if o.get("n") not in checked and aimed(query, o, mode)]
+                        if hit:
+                            fail(group, f"{label}: quick-check target {target.get('n')}'s sample {query!r} is aimed at "
+                                        f"target(s) {hit} outside the quick check in a {mode} room — a correct check "
+                                        f"would fail")
+                            break
+            # The other direction: a sample of a target the material does not fix is a call for
+            # something the user did not give (the unnamed hiring manager), and must not pass as a check.
+            for target in targets:
+                if not checked or target.get("n") in checked:
+                    continue
+                for query in (target.get("on_target_samples") or []) + (target.get("hunt_samples") or []):
+                    for mode in modes:
+                        qc = output_checks.quick_check(research, mode, [search_entry(query, research, mode)],
+                                                       case.get("prompt", ""))
+                        if qc and qc["ok"]:
+                            fail(group, f"{label}: target {target.get('n')}'s sample {query!r} passes as a quick "
+                                        f"check of the user's material in a {mode} room — a hunt for a target the "
+                                        f"material does not fix would pass zero_calls")
+                            break
 
             for target in targets:
                 names = target.get("identity")
@@ -2389,8 +2913,8 @@ def check_fixtures() -> None:
     if linted == 0:
         fail(group, "no fixture field read — the check would pass vacuously")
     elif not any(f.startswith(f"[{group}]") for f in failures):
-        ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links "
-                  f"and research targets agree with what the harness reads")
+        ok(group, f"{linted} canaries, candidate_text entries, candidate_constraints, declined grounds, user links, "
+                  f"user pages, research targets, quick checks and page-naming checks agree with what the harness reads")
 
 
 class SentenceRule:
@@ -2481,6 +3005,12 @@ RETIRED = [
     (re.compile(r"\beach offers its response modes\b", re.I),
      "\"each offers its response modes\" is the retired placement — the response-modes line comes after each "
      "question or once after the last for all of them (job-underwriter SKILL.md, the closing order)"),
+    # The fix round's rename: Tuesday's old working name, in two words, left every file
+    # Claude reads at once. The one-word identifiers (MEASURED_FRONTDOOR, --via frontdoor)
+    # are commands and constants, renamed apart.
+    (re.compile(r"\bfront[ -]doors?\b", re.I),
+     "\"front door\" is Tuesday's retired working name — write Tuesday, or the `tuesday` skill where the skill "
+     "itself is meant (interaction-grammar.md §6)"),
 ]
 LABELS_DEFINED = re.compile(r"(?=.*\byes\b)(?=.*\bunavailable\b)(?=.*\bcalls?\b)", re.I | re.S)
 
@@ -2494,7 +3024,8 @@ def wording_surfaces() -> list[tuple[str, str]]:
         if path.exists():
             out.append((str(path.relative_to(REPO)), path.read_text(encoding="utf-8")))
     for skill in skills():
-        for path in [skill / "SKILL.md", skill / "README.md"] + sorted((skill / "references").glob("*.md")):
+        generated = skill.name == sync.HUB_NAME   # its references/ are copies (HUB_EXEMPT's comment)
+        for path in [skill / "SKILL.md", skill / "README.md"] + ([] if generated else sorted((skill / "references").glob("*.md"))):
             if path.exists() and path.name != "citations.md":
                 out.append((str(path.relative_to(REPO)), path.read_text(encoding="utf-8")))
         raw_path = skill / "evals" / "evals.json"
@@ -2631,23 +3162,24 @@ WARNING_NAME = re.compile(r"\*\*warnings?:?\*\*|^[\s>*_-]*warnings?\s*:|\bwarnin
 
 
 def check_watch_outs() -> None:
-    """Each skill declares one watch-out sentence, and every copy of it is exact.
+    """Each skill declares one watch-out line, and every copy of it is exact.
 
     output-discipline.md rule 7 defines the slot: the last line of every delivered
-    output, `**Watch-out:** ` and the skill's `watch_out` sentence, copied exactly.
-    The sentence is stated once, in SKILL.md, and copied where it must be read
-    whole — the root README's table, each fixture's closing expectation (a grader
-    sees the fixture, not SKILL.md), a worked example's last line — and a copy
-    edited in one place and not another is the drift this suite keeps finding. So:
-    the convention defines the slot and names its parameter; each sentence is one
-    sentence of at most WATCH_OUT_WORDS words, with no brackets, pipe or code span,
-    and never named a warning; each closing_order ends with `watch-out`; every
-    labelled line in a skill's own SKILL.md, README and references is the declared
-    line; every fixture carries the declared line in an expectation, and any
-    expectation that labels one carries it exactly; the README's table has one row
-    per skill quoting its sentence exactly; CONTRIBUTING.md keeps the standing rule
-    the README links to; and nothing that states or grades a rule labels the slot
-    a warning. What it does not read: whether a sentence is plain, or names what
+    output, the skill's whole `watch_out` line — label included — copied exactly.
+    The line is stated once, in SKILL.md, and copied where it must be read whole —
+    each fixture's closing expectation (a grader sees the fixture, not SKILL.md), a
+    worked example's last line, and the root README's table, which quotes the
+    sentence after the label as rule 7 says — and a copy edited in one place and not
+    another is the drift this suite keeps finding. So: the convention defines the
+    slot and names its parameter; each declared line begins `**Watch-out:** ` and
+    the rest is one sentence of at most WATCH_OUT_WORDS words, with no brackets,
+    pipe or code span, and never named a warning; each closing_order ends with
+    `watch-out`; every labelled line in a skill's own SKILL.md, README and
+    references is the declared line; every fixture carries the declared line in an
+    expectation, and any expectation that labels one carries it exactly; the
+    README's table has one row per skill quoting its sentence exactly;
+    CONTRIBUTING.md keeps the standing rule the README links to; and nothing that
+    states or grades a rule labels the slot a warning. What it does not read: whether a sentence is plain, or names what
     the measured defect is, or the README table's "Why it's there" column — that
     is review's. A known limit: nor does it read the prose that states the closing
     order ("nothing follows the questions", "the questions close the message"), so
@@ -2663,14 +3195,21 @@ def check_watch_outs() -> None:
     if rule and re.search(r"\bwarning", rule.group(1), re.I):
         fail(group, "conventions/output-discipline.md rule 7 uses \"warning\" — the slot is a watch-out, by no other name")
     declared: dict[str, str] = {}
-    for skill in skills():
+    exempt(group)
+    for skill in modules():
         text = (skill / "SKILL.md").read_text(encoding="utf-8")
-        sentence = output_checks.declared_watch_out(text)
+        line = output_checks.declared_watch_out(text)
+        if line is None:
+            fail(group, f"{skill.name}: SKILL.md declares no watch_out line under '## Output discipline'")
+            continue
+        checked += 1
+        sentence = output_checks.watch_out_sentence(line)
         if sentence is None:
-            fail(group, f"{skill.name}: SKILL.md declares no watch_out sentence under '## Output discipline'")
+            fail(group, f"{skill.name}: watch_out is not the whole line — it begins "
+                        f"{output_checks.WATCH_OUT_LABEL!r} and a space, then the sentence, so the line is copied "
+                        f"rather than assembled: {line[:90]!r}")
             continue
         declared[skill.name] = sentence
-        checked += 1
         words = len(sentence.split())
         inner = re.findall(r"[.!?](?=[\s\"”']+[A-Z])", sentence)
         if not re.search(r"[.!?][\"”']?$", sentence) or inner:
@@ -2687,7 +3226,6 @@ def check_watch_outs() -> None:
         if not order or order.group(1).split(",")[-1].strip() != "watch-out":
             fail(group, f"{skill.name}: closing_order does not end with watch-out "
                         f"({order.group(1) if order else 'undeclared'!s})")
-        line = output_checks.watch_out_line(sentence)
         surfaces = [("SKILL.md", text)]
         for path in [skill / "README.md"] + sorted((skill / "references").glob("*.md")):
             if path.exists():
@@ -2710,7 +3248,7 @@ def check_watch_outs() -> None:
             for n, e in enumerate(expectations, 1):
                 if output_checks.WATCH_OUT_LABEL in e and line not in e:
                     fail(group, f"{skill.name} eval {case.get('id')} #{n}: labels a watch-out line that is not the "
-                                f"declared sentence")
+                                f"declared line")
 
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     section = WATCH_OUT_HEADING.search(readme)
@@ -2734,8 +3272,8 @@ def check_watch_outs() -> None:
         if not tables:
             fail(group, "README.md's watch-out section has no table")
         for name, cells in rows.items():
-            if name not in {s.name for s in skills()}:
-                fail(group, f"README.md's watch-out table names {name!r}, which is not a skill")
+            if name not in {s.name for s in modules()}:
+                fail(group, f"README.md's watch-out table names {name!r}, which is not a module")
         for name, sentence in declared.items():
             checked += 1
             cells = rows.get(name, [])
@@ -2743,7 +3281,7 @@ def check_watch_outs() -> None:
                 fail(group, f"README.md's watch-out table has {len(cells)} rows for {name}, not one")
             elif " ".join(cells[0].split()) != " ".join(sentence.split()):
                 fail(group, f"README.md's watch-out table quotes {name}'s sentence as {cells[0][:90]!r}, not its "
-                            f"SKILL.md watch_out — change the parameter and the copy together")
+                            f"SKILL.md watch_out after the label — change the parameter and the copy together")
     contributing = (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
     standing = STANDING_RULE.search(contributing)
     if not standing:
@@ -2756,10 +3294,360 @@ def check_watch_outs() -> None:
         if hit:
             fail(group, f"{where}: {hit.group(0).strip()!r} names a line a warning — the slot is a watch-out")
     if checked and not any(f.startswith(f"[{group}]") for f in failures):
-        ok(group, f"{len(declared)} watch-out sentences, one sentence each, and {checked} copies and fixtures "
+        ok(group, f"{len(declared)} watch-out lines, one label and one sentence each, and {checked} copies and fixtures "
                   f"agree with them")
     elif not checked:
-        fail(group, "no watch-out sentence read — the check would pass vacuously")
+        fail(group, "no watch-out line read — the check would pass vacuously")
+
+
+# --- Anthropic's skill-authoring guidance ------------------------------------
+# The limits the guidance sets for what a skill ships, as numbers this file can
+# hold. The SKILL.md body is estimated at four characters a token, the estimate the
+# owner set; the guidance recommends a body under about 5,000 tokens and requires
+# under 500 lines.
+MAX_BODY_LINES = 500
+MAX_BODY_TOKENS = 5000
+CHARS_PER_TOKEN = 4
+TOC_OVER_LINES = 100
+CONTENTS = "## Contents"
+# A third-person verb ends in "s" ("Decides", "Generates", "Tailors", "Assesses");
+# a bare imperative does not ("Decide", "Generate", "Tailor", "Use"). A verb whose
+# bare form already ends in "ss" ("Assess", "Process") is a bare imperative when it
+# stops there, so a first word ending in "ss" fails too.
+THIRD_PERSON = re.compile(r"^[A-Za-z]+(?<!s)s\b|^[A-Za-z]+ses\b")
+
+
+def skill_body(text: str) -> str:
+    """SKILL.md without its frontmatter: what loads when the skill triggers."""
+    match = re.match(r"^---\n.*?\n---\n", text, re.DOTALL)
+    return text[match.end():] if match else text
+
+
+def contents_problem(text: str) -> str | None:
+    """Why a reference file does not start with a table of contents, or None.
+
+    Starts with means: after the synced-from header, if any, and the file's H1, the
+    first thing is a '## Contents' heading, then a list of at least one item.
+    """
+    body = text[SYNCED_HEADER.match(text).end():] if SYNCED_HEADER.match(text) else text
+    lines = body.splitlines()
+    try:
+        h1 = next(i for i, line in enumerate(lines) if line.startswith("# "))
+    except StopIteration:
+        return "has no H1 for a contents list to sit under"
+    rest = [line for line in lines[h1 + 1:] if line.strip()]
+    if not rest or rest[0].strip() != CONTENTS:
+        return f"does not open with '{CONTENTS}' directly under its H1"
+    after = lines[lines.index(rest[0], h1 + 1) + 1:]
+    while after and not after[0].strip():
+        after = after[1:]
+    if not after or not after[0].lstrip().startswith("- "):
+        return f"has a '{CONTENTS}' heading with no list under it"
+    return None
+
+
+def check_guidance() -> None:
+    """What Anthropic's skill-authoring guidance asks of a shipped skill, held here.
+
+    Each limit was met by hand once and drifted: two SKILL.md bodies passed 5,000
+    tokens one rationale paragraph at a time, every description opened with a bare
+    imperative, and 22 reference files over 100 lines had no contents list for a
+    reader who previews the top of a file. What this reads: a contents list at the
+    top of every reference file over TOC_OVER_LINES lines, as shipped (a mirror's
+    header counted, since a mirror ships with it); each SKILL.md body under
+    MAX_BODY_LINES lines and MAX_BODY_TOKENS estimated tokens; each description
+    opening in the third person, read from its first word alone (THIRD_PERSON);
+    and every file in references/ linked from SKILL.md by the path that resolves
+    in the installed skill, `references/<name>`. The frontmatter keys, the
+    description's length and its angle brackets are the frontmatter group's. What
+    it does not read: whether a contents list matches the file's headings, whether
+    the rest of a description is in the third person, and whether a link sits at
+    the step that needs the file.
+    """
+    group = "guidance"
+    for skill in skills():
+        text = (skill / "SKILL.md").read_text(encoding="utf-8")
+        body = skill_body(text)
+        lines = len(body.splitlines())
+        tokens = len(body) // CHARS_PER_TOKEN
+        if lines >= MAX_BODY_LINES:
+            fail(group, f"{skill.name}: SKILL.md body is {lines} lines, at or over the {MAX_BODY_LINES}-line limit")
+        if tokens >= MAX_BODY_TOKENS:
+            fail(group, f"{skill.name}: SKILL.md body is about {tokens} tokens ({len(body)} chars / {CHARS_PER_TOKEN}), "
+                        f"over the {MAX_BODY_TOKENS}-token estimate — move rationale to a reference file")
+        if lines < MAX_BODY_LINES and tokens < MAX_BODY_TOKENS:
+            ok(group, f"{skill.name}: SKILL.md body is {lines} lines and about {tokens} tokens")
+
+        fm = parse_frontmatter(text) or {}
+        desc = fm.get("description", "")
+        if desc and not THIRD_PERSON.match(desc):
+            first = desc.split()[0]
+            fail(group, f"{skill.name}: description opens with '{first}', a bare imperative — write it in the third "
+                        f"person ('Generates…', not 'Generate…')")
+        elif desc:
+            ok(group, f"{skill.name}: description opens in the third person ('{desc.split()[0]}')")
+
+        for ref in sorted((skill / "references").glob("*.md")):
+            if f"references/{ref.name}" not in body:
+                fail(group, f"{skill.name}: SKILL.md never links references/{ref.name} by that path — a reference "
+                            f"is linked directly from SKILL.md, one level deep")
+            ref_text = ref.read_text(encoding="utf-8")
+            n = len(ref_text.splitlines())
+            if n > TOC_OVER_LINES:
+                problem = contents_problem(ref_text)
+                if problem:
+                    fail(group, f"{skill.name}: references/{ref.name} is {n} lines and {problem} — a reference "
+                                f"file over {TOC_OVER_LINES} lines starts with a table of contents")
+                else:
+                    ok(group, f"{skill.name}: references/{ref.name} ({n} lines) opens with its contents")
+
+
+TABLE_CELLS = re.compile(r"^\|(.*)\|\s*$")
+
+
+def hub_modules(hub_text: str) -> dict[str, set[str]]:
+    """The modules the hub's SKILL.md routes to, by each place that names them: the slash
+    commands its body lists (`/<module>` in a code span); the module each row of its routing
+    table runs (the first word of the table's last column, headed "Run", when that word is a
+    kebab-case name); and the modules its description names, read for the modules alone."""
+    body = sync.body(hub_text)
+    commands = set(re.findall(r"`/([a-z0-9]+(?:-[a-z0-9]+)*)`", body))
+    routes, in_table = set(), False
+    for line in body.splitlines():
+        cells = TABLE_CELLS.match(line.strip())
+        if not cells:
+            in_table = False
+            continue
+        last = cells.group(1).split("|")[-1].strip()
+        if not in_table:
+            in_table = last == "Run"
+        elif not set(last) <= set(":- "):
+            first = re.match(r"([a-z0-9]+(?:-[a-z0-9]+)+)\b", last)
+            routes |= {first.group(1)} if first else set()
+    description = (parse_frontmatter(hub_text) or {}).get("description", "")
+    named = {m.name for m in modules() if re.search(rf"(?<![\w-]){re.escape(m.name)}(?![\w-])", description)}
+    return {"slash commands in its body": commands, "rows of its routing table": routes,
+            "modules its description names": named}
+
+
+def check_frontdoor() -> None:
+    """The front door, skills/tuesday/, held to what it is: a hub over the modules, carrying
+    copies of their text, and the text round 3 measured.
+
+    Its references/ are exactly what ci/sync.py generates from the module sources, and a
+    generation the sources do not allow (a clash, a playbook naming a file that would not be
+    there) fails here. Every module has a playbook there, every file a playbook names is
+    there, and the hub links no file that is not; that it links every file is the guidance
+    group's, which reads the hub like every skill. skills/tuesday/ holds SKILL.md, LICENSE,
+    references/ with no folder in it, and README.md, which ships nowhere; any other file or
+    folder there fails. The hub's module set, read from its
+    slash-command list and its routing table, is skills/ without it, and its description
+    names every module (hub_modules). Every shipped file of the hub and the modules hashes to
+    MEASURED_FRONTDOOR (frontdoor_digests).
+    Each case in evals/suite-explicit.json opens with a module's slash command and expects
+    that module. What it does not read: whether a link's read-when clause or a routing row
+    is right, or whether the routing table agrees with the module descriptions; review and
+    the routing measurement hold those.
+    """
+    group = "frontdoor"
+    hub = SKILLS_DIR / sync.HUB_NAME
+    if not (hub / "SKILL.md").is_file():
+        fail(group, f"skills/{sync.HUB_NAME}/SKILL.md is missing")
+        return
+    text = (hub / "SKILL.md").read_text(encoding="utf-8")
+    try:
+        generated = sync.generate(SKILLS_DIR)
+    except SystemExit as exc:
+        fail(group, f"ci/sync.py cannot generate the front door's references: {exc}")
+        return
+    unheld = []
+    for path in sorted(hub.rglob("*")):
+        rel = path.relative_to(hub).as_posix()
+        if (path.is_dir() and rel != "references") or (
+                path.is_file() and not sync.hub_ships(rel) and rel not in sync.HUB_SOURCE_ONLY):
+            unheld.append(rel + ("/" if path.is_dir() else ""))
+    for rel in unheld:
+        fail(group, f"skills/{sync.HUB_NAME}/{rel} is not one of the front door's files: it holds SKILL.md, "
+                    f"LICENSE and references/, one flat folder, which ship, and README.md, which ships nowhere")
+    if not unheld:
+        ok(group, f"skills/{sync.HUB_NAME}/ holds SKILL.md, LICENSE, a flat references/ and README.md, nothing else")
+    refs = hub / "references"
+    shipped = {p.relative_to(refs).as_posix(): p.read_text(encoding="utf-8", errors="replace")
+               for p in sorted(refs.rglob("*")) if p.is_file()} if refs.is_dir() else {}
+    differ = [n for n in sorted(set(generated) | set(shipped)) if shipped.get(n) != generated.get(n, {}).get("text")]
+    for name in differ:
+        state = ("is missing" if name not in shipped else "is generated by nothing" if name not in generated
+                 else f"differs from what ci/sync.py generates from {generated[name]['from']}")
+        fail(group, f"skills/{sync.HUB_NAME}/references/{name} {state} — run python ci/sync.py, never edit it")
+    if not differ:
+        ok(group, f"references/ is what ci/sync.py generates, {len(generated)} files")
+
+    for module in modules():
+        playbook = shipped.get(f"{module.name}.md")
+        if playbook is None:
+            fail(group, f"no playbook for {module.name}: references/{module.name}.md is not in the front door")
+            continue
+        absent = sorted(set(sync.LINK.findall(playbook)) - set(shipped))
+        for name in absent:
+            fail(group, f"references/{module.name}.md names references/{name}, which the front door does not carry")
+    dangling = sorted(sync.hub_links(text) - set(shipped))
+    for name in dangling:
+        fail(group, f"the hub links references/{name}, which its references/ folder does not hold")
+    if not dangling:
+        ok(group, f"every module has a playbook, every file a playbook names is carried, "
+                  f"and the hub links only files it carries")
+
+    wanted = {m.name for m in modules()}
+    for where, found in hub_modules(text).items():
+        if found != wanted:
+            fail(group, f"the hub's {where} are {sorted(found)}, not the modules {sorted(wanted)} — a module "
+                        f"added or removed is a hub edit in the same change")
+        else:
+            ok(group, f"the hub's {where} are the {len(wanted)} modules")
+
+    measured = frontdoor_digests()
+    changed = [k for k in MEASURED_HASHES if measured[k] != MEASURED_FRONTDOOR[k]]
+    if changed:
+        fail(group, f"the front door's text is not what round 3 measured ({', '.join(changed)} differ): a change "
+                    f"to a shipped file of the hub or a module ships only once measured, or once MEASURED_FRONTDOOR "
+                    f"is updated on purpose, its plugin_version moved with it; now "
+                    + ", ".join(f"{k} {measured[k]}" for k in changed))
+    else:
+        ok(group, f"every shipped file of the hub and the modules is what round 3 measured (frontdoor_sha256 "
+                  f"{measured['frontdoor_sha256'][:8]}, builds_sha256 {measured['builds_sha256'][:8]})")
+
+    explicit = REPO / "evals" / "suite-explicit.json"
+    try:
+        cases = json.loads(explicit.read_text(encoding="utf-8"))["cases"]
+    except (OSError, ValueError, KeyError) as exc:
+        fail(group, f"evals/suite-explicit.json cannot be read: {exc}")
+        return
+    for case in cases:
+        command = re.match(r"/([a-z0-9-]+)(?=\s|$)", case.get("prompt", ""))
+        if not command or command.group(1) not in wanted:
+            fail(group, f"suite-explicit case {case.get('id')}: the prompt does not open with a module's slash command")
+        elif case.get("expected") != command.group(1):
+            fail(group, f"suite-explicit case {case.get('id')}: invokes /{command.group(1)} but expects "
+                        f"{case.get('expected')!r}")
+    ok(group, f"suite-explicit: {len(cases)} case(s), each expecting the module its command names")
+
+
+def rel_hub(path: Path) -> str:
+    return path.relative_to(REPO).as_posix()
+
+
+def check_builds() -> None:
+    """The Claude Code builds are the source with each module hidden, and nothing else changed.
+
+    In dist/claude-code/ and in the plugin's skills/, each module's SKILL.md is its source
+    with one line added inside the frontmatter, sync.HIDDEN_KEY, and the front door's is its
+    source, byte for byte (that every other file is its source is the package group's). The
+    key ships nowhere else: no file under skills/, no entry of a dist/*.skill file, since a
+    claude.ai upload refuses it. The front door's build, in both trees and in dist/tuesday.skill,
+    holds the files it ships (sync.HUB_SHIPS) and no other: no README.md. The plugin's skills/ is
+    dist/claude-code/ file for file, each skill folder named as its frontmatter `name`. The plugin
+    manifest is JSON naming the plugin
+    `tuesday` with a description and MEASURED_FRONTDOOR's plugin_version, and the marketplace file is JSON with a name,
+    an owner's name, and one entry, `tuesday`, whose source is the plugin's folder and whose
+    name is the manifest's. What it does not read: whether Claude Code loads the plugin;
+    `claude plugin validate` and a session do (evals/README.md, "Through Tuesday").
+    """
+    group = "builds"
+    key = sync.HIDDEN_KEY.split(":")[0]
+    for tree in (CLAUDE_CODE, PLUGIN / "skills"):
+        rel = tree.relative_to(REPO)
+        for skill in skills():
+            built, source = tree / skill.name / "SKILL.md", skill / "SKILL.md"
+            if not built.is_file():
+                fail(group, f"{rel}/{skill.name}/SKILL.md is missing — run python ci/package.py")
+                continue
+            got, was = built.read_text(encoding="utf-8"), source.read_text(encoding="utf-8")
+            if skill.name == sync.HUB_NAME:
+                if got != was:
+                    fail(group, f"{rel}/{skill.name}/SKILL.md differs from its source: the front door ships unchanged")
+                else:
+                    ok(group, f"{rel}/{skill.name}/SKILL.md is its source, unchanged")
+                continue
+            added = [d[2:] for d in difflib.ndiff(was.splitlines(), got.splitlines()) if d[:2] in ("+ ", "- ")]
+            fm = re.match(r"\A---\n.*?\n---\n", got, re.DOTALL)
+            if added != [sync.HIDDEN_KEY] or not fm or f"\n{sync.HIDDEN_KEY}\n" not in fm.group(0):
+                fail(group, f"{rel}/{skill.name}/SKILL.md must differ from its source by one line added inside "
+                            f"the frontmatter, '{sync.HIDDEN_KEY}'; it differs by {added[:3]}")
+            else:
+                ok(group, f"{rel}/{skill.name}/SKILL.md is its source with '{sync.HIDDEN_KEY}' added")
+        hub_build = tree / sync.HUB_NAME
+        extra = sorted(rel for rel in (p.relative_to(hub_build).as_posix() for p in hub_build.rglob("*")
+                                       if p.is_file()) if not sync.hub_ships(rel)) if hub_build.is_dir() else []
+        for rel in extra:
+            fail(group, f"{rel_hub(hub_build)}/{rel} is in the front door's build: it ships SKILL.md, LICENSE "
+                        f"and references/ alone")
+        if not extra:
+            ok(group, f"{rel_hub(hub_build)}/ holds only what the front door ships")
+        for folder in sorted(p for p in tree.iterdir() if p.is_dir()) if tree.is_dir() else []:
+            name = (parse_frontmatter((folder / "SKILL.md").read_text(encoding="utf-8")) or {}).get("name") \
+                if (folder / "SKILL.md").is_file() else None
+            if name != folder.name:
+                fail(group, f"{rel}/{folder.name}/ holds a skill named {name!r}: a skill folder is named as its `name`")
+
+    hub_skill = DIST / f"{sync.HUB_NAME}.skill"
+    if hub_skill.is_file():
+        with zipfile.ZipFile(hub_skill) as archive:
+            extra = sorted(n for n in archive.namelist() if not n.endswith("/")
+                           and not sync.hub_ships(n.removeprefix(f"{sync.HUB_NAME}/")))
+        for name in extra:
+            fail(group, f"{hub_skill.relative_to(REPO)}:{name} is in the front door's build: it ships SKILL.md, "
+                        f"LICENSE and references/ alone")
+
+    carriers = [p.relative_to(REPO).as_posix() for p in sorted(SKILLS_DIR.rglob("*"))
+                if p.is_file() and key in p.read_text(encoding="utf-8", errors="replace")]
+    for artifact in sorted(DIST.glob("*.skill")):
+        with zipfile.ZipFile(artifact) as archive:
+            carriers += [f"{artifact.relative_to(REPO)}:{n}" for n in archive.namelist()
+                         if key in archive.read(n).decode("utf-8", errors="replace")]
+    for tree in (CLAUDE_CODE, PLUGIN):
+        for path in sorted(tree.rglob("*")) if tree.is_dir() else []:
+            if path.is_file() and key in path.read_text(encoding="utf-8", errors="replace") and not (
+                    path.name == "SKILL.md" and path.parent.name in {m.name for m in modules()}):
+                carriers.append(path.relative_to(REPO).as_posix())
+    for where in carriers:
+        fail(group, f"{where} carries {key}, which ships only in a hidden module's SKILL.md in the Claude Code builds")
+    if not carriers:
+        ok(group, f"{key} is in no source file, no .skill file, and no other build file")
+
+    plugin_files = {p.relative_to(PLUGIN / "skills").as_posix(): p.read_bytes()
+                    for p in (PLUGIN / "skills").rglob("*") if p.is_file()} if (PLUGIN / "skills").is_dir() else {}
+    cc_files = {p.relative_to(CLAUDE_CODE).as_posix(): p.read_bytes()
+                for p in CLAUDE_CODE.rglob("*") if p.is_file()} if CLAUDE_CODE.is_dir() else {}
+    if plugin_files != cc_files:
+        fail(group, f"{(PLUGIN / 'skills').relative_to(REPO)}/ differs from {CLAUDE_CODE.relative_to(REPO)}/: "
+                    f"{sorted(set(plugin_files) ^ set(cc_files) or {n for n in cc_files if plugin_files.get(n) != cc_files[n]})[:3]}")
+    else:
+        ok(group, f"the plugin's skills/ is {CLAUDE_CODE.relative_to(REPO)}/, file for file")
+
+    try:
+        manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        market = json.loads(MARKETPLACE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        fail(group, f"the plugin manifest or the marketplace file cannot be read as JSON: {exc}")
+        return
+    if manifest.get("name") != sync.HUB_NAME or not all(isinstance(manifest.get(k), str) and manifest.get(k)
+                                                         for k in ("version", "description")):
+        fail(group, f"the plugin manifest must name the plugin {sync.HUB_NAME!r} and carry a version and a "
+                    f"description: {manifest}")
+    elif manifest["version"] != MEASURED_FRONTDOOR["plugin_version"]:
+        fail(group, f"the plugin manifest's version {manifest['version']!r} is not MEASURED_FRONTDOOR's "
+                    f"plugin_version {MEASURED_FRONTDOOR['plugin_version']!r}: the version moves with the measured text")
+    else:
+        ok(group, f"the plugin manifest is JSON naming {sync.HUB_NAME!r}, version {manifest['version']}, "
+                  f"MEASURED_FRONTDOOR's")
+    entries = market.get("plugins") if isinstance(market.get("plugins"), list) else []
+    source = f"./{PLUGIN.relative_to(REPO).as_posix()}"
+    if not market.get("name") or not (market.get("owner") or {}).get("name") or [
+            (e.get("name"), e.get("source")) for e in entries] != [(manifest.get("name"), source)]:
+        fail(group, f"{MARKETPLACE.relative_to(REPO)} must carry a name, an owner's name, and one plugin entry "
+                    f"named as the manifest, {manifest.get('name')!r}, from {source!r}")
+    else:
+        ok(group, f"{MARKETPLACE.relative_to(REPO)} lists {manifest['name']}@{market['name']} from {source}")
 
 
 GROUPS = {
@@ -2780,6 +3668,9 @@ GROUPS = {
     "evals": check_evals,
     "triggers": check_triggers,
     "watch-out": check_watch_outs,
+    "guidance": check_guidance,
+    "frontdoor": check_frontdoor,
+    "builds": check_builds,
 }
 
 

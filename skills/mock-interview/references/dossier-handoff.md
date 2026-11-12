@@ -1,6 +1,6 @@
 # The dossier: reading the handoff, writing the feedback
 
-Tuesday's skills compose in any order or not at all. The dossier (`tuesday-dossier.md`) is how a candidate carries work between them without the skills coupling to each other: job-underwriter writes what it learned underwriting a role, mock-interview reads it and writes back what rehearsal exposed. Canonical rules live in `conventions/dossier-schema.md`; this file is the operative copy of what *this* skill does with it.
+Tuesday's skills compose in any order or not at all. The dossier (`tuesday-dossier.md`) is how a candidate carries work between them without the skills coupling to each other: job-underwriter writes what it learned underwriting a role, mock-interview reads it and writes back what rehearsal exposed. Canonical rules live in `references/dossier-schema.md`, the mirrored schema; this file is the operative copy of what *this* skill does with it.
 
 The invariant that outranks everything here: **the dossier is an enhancer, never a gate.** A pack built without one is a complete pack. Never ask for a dossier as a precondition, never degrade the pack into an advertisement for job-underwriter, and never imply the candidate did prep wrong by not having one. Mention in the upgrade menu what it would add — one line — and move on.
 

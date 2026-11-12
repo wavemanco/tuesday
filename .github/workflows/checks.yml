@@ -16,6 +16,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The checks only read the repository.
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -31,6 +35,9 @@ jobs:
       # needed. The skills themselves are dependency-free by repository rule.
       - name: Repository checks
         run: python ci/check_skills.py
+
+      - name: Generated copies are current
+        run: python ci/sync.py --check
 
       - name: Checks self-test
         run: python ci/test_checks.py

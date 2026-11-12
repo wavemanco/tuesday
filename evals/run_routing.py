@@ -22,6 +22,19 @@ Usage:
     python evals/run_routing.py                 # all cases, 3 runs each
     python evals/run_routing.py --runs 1        # quick pass
     python evals/run_routing.py --case 9 --case 10
+    python evals/run_routing.py --cases evals/routing-arm-b.json   # another case file
+    python evals/run_routing.py --arm frontdoor                    # the front door, skills/tuesday
+    python evals/run_routing.py --arm frontdoor --cases evals/suite-explicit.json
+    python evals/run_routing.py --arm frontdoor --layout plugin     # the skills outside the case folder
+
+Two arms (evals/README.md, "The Tuesday arm"). `skills`, the default, installs
+the three module skills as they ship. `frontdoor` installs the front door,
+`skills/tuesday/`, as it ships, beside the three modules with
+`disable-model-invocation: true` added, as the Claude Code builds add it.
+
+`--layout` says where either arm's skills are installed (evals/README.md, "Layouts"):
+the case folder's `.claude/skills/` (`project`, the default), a config folder of each
+run's own (`personal`), or a plugin (`plugin`, the front-door arm only).
 """
 
 from __future__ import annotations
@@ -29,6 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import posixpath
 import re
 import select
 import shutil
@@ -40,45 +54,252 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from child_env import child_env  # noqa: E402
+
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
+SUITE = REPO / "evals" / "suite-routing.json"
+ARMS = ("skills", "frontdoor")
+LAYOUTS = ("project", "personal", "plugin")
+# The folder, beside the case folders, that holds each case's skills outside its own
+# folder. Its name is neutral, as is each folder under it (`case-<id>`, or `case-<id>-<run>`
+# for a run's config folder), so no folder path the model meets carries the hub's name but
+# the hub's own folder.
+OUTSIDE = {"personal": "config", "plugin": "plugins"}
+HUB = "tuesday"
+# Outcomes that are not evidence about routing: set aside, never scored.
+SET_ASIDE = ("timeout", "error", "void")
+# The bar re-runs an arm with more than this share of its runs set aside, void ones
+# counted with timeouts and errors: a mostly-void arm would otherwise be scored on
+# whatever survived, and its zero counts read as gates met.
+SET_ASIDE_LIMIT = 0.10
+# Where a Bash command's words split: its operators, and the characters around a word.
+SHELL_SEPARATOR = re.compile(r"&&|\|\||[;|&\n()]")
+SHELL_WORD = re.compile(r"""[^\s"'`<>=]+""")
+# An E2 run that loaded the named module and reached no other: the explicit case's pass.
+FOCUSED = "focused"
+# Seconds a run gets when --timeout is not given. A skills-arm routing run stops at its
+# first fire; a run read to the end of its turn (the front-door arm, an explicit case)
+# carries the module's whole job, which outlasts that. Round 2's measurement ran its
+# front-door arm at the shorter default by an omitted flag, and six mock-interview runs
+# that had routed right were cut off and set aside (evals/README.md).
+TIMEOUT_FIRST_FIRE = 240
+TIMEOUT_WHOLE_TURN = 900
+
+sys.path.insert(0, str(REPO / "ci"))
+import sync  # noqa: E402  (ci/: the front door's generator, its digest, and the hiding transform)
+from sync import HIDDEN_KEY, hide  # noqa: E402,F401
 
 
-def install_skills(root: Path, run_id: str,
+def install_one(skill: str, dest: Path, name: str, override: Path | None = None) -> None:
+    """Copy `skills/<skill>/` to `dest` as it ships, its frontmatter `name` set to `name`.
+
+    Install what ships: the packager keeps evals/ out of the .skill file, so a copy
+    that carried them would put files in front of the model that no installed user
+    ever has, and the hub ships its SKILL.md, LICENSE and references/ alone
+    (`sync.hub_shipped`), never its README. A skill's directory name and its frontmatter
+    `name` must agree, so both are renamed together. `override` substitutes a different SKILL.md.
+    """
+    if skill == HUB:
+        for rel in sync.hub_shipped(REPO / "skills" / skill):
+            (dest / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / "skills" / skill / rel, dest / rel)
+    else:
+        shutil.copytree(REPO / "skills" / skill, dest,
+                        ignore=shutil.ignore_patterns("evals", "__pycache__", "*.pyc", ".DS_Store"))
+    skill_md = dest / "SKILL.md"
+    if override:
+        skill_md.write_text(override.read_text())
+    text = skill_md.read_text()
+    renamed = re.sub(rf"^name:\s*{re.escape(skill)}\s*$", f"name: {name}", text,
+                     count=1, flags=re.MULTILINE)
+    if renamed == text:
+        raise SystemExit(f"{skill}: frontmatter name not found to rename")
+    skill_md.write_text(renamed)
+
+
+def install_skills(dest_root: Path, run_id: str,
                    overrides: dict[str, Path] | None = None) -> dict[str, str]:
-    """Copy each skill into the throwaway project; return skill -> installed name.
+    """Copy each module skill into `dest_root`, the layout's skills folder; return skill ->
+    installed name. The hub is never one of them: SKILLS names the three modules.
 
     The name carries a per-run suffix so a match in the stream can only have come
     from this run's copy, never from a skill the host machine happens to have
-    installed. A skill's directory name and its frontmatter `name` must agree, so
-    both are renamed together.
+    installed.
 
     `overrides` substitutes a different SKILL.md for a skill without touching the
     working tree — how a description generation is A/B'd against the one that
     ships. Extract the old one with `git show <ref>:skills/<name>/SKILL.md`.
     """
-    dest_root = root / ".claude" / "skills"
     dest_root.mkdir(parents=True, exist_ok=True)
     names = {}
     for skill in SKILLS:
-        name = f"{skill}-{run_id}"
-        names[skill] = name
-        dest = dest_root / name
-        # Install what ships: the packager keeps evals/ out of the .skill file,
-        # so a copy that carried them would put files in front of the model that
-        # no installed user ever has.
-        shutil.copytree(REPO / "skills" / skill, dest,
-                        ignore=shutil.ignore_patterns("evals", "__pycache__", "*.pyc", ".DS_Store"))
-        skill_md = dest / "SKILL.md"
-        if overrides and skill in overrides:
-            skill_md.write_text(overrides[skill].read_text())
-        text = skill_md.read_text()
-        renamed = re.sub(rf"^name:\s*{re.escape(skill)}\s*$", f"name: {name}", text,
-                         count=1, flags=re.MULTILINE)
-        if renamed == text:
-            raise SystemExit(f"{skill}: frontmatter name not found to rename")
-        skill_md.write_text(renamed)
+        names[skill] = f"{skill}-{run_id}"
+        install_one(skill, dest_root / names[skill], names[skill], (overrides or {}).get(skill))
     return names
+
+
+def install_frontdoor(dest_root: Path, run_id: str) -> dict[str, str]:
+    """The front-door arm: the three modules, hidden, and the hub, `skills/tuesday/` as it
+    ships, in `dest_root`, the layout's skills folder; return name -> installed name.
+
+    The hub's references/ are committed, generated by ci/sync.py; an install refuses a
+    working tree where they are out of date with the modules, since the run would then
+    measure neither what ships nor the modules beside it.
+    """
+    stale = [p for p in sync.out_of_date() if p.startswith(f"skills/{HUB}/")]
+    if stale:
+        raise SystemExit(f"the front door's references are out of date ({', '.join(stale[:3])}): "
+                         f"run python ci/sync.py")
+    names = install_skills(dest_root, run_id)
+    for skill, name in names.items():
+        skill_md = dest_root / name / "SKILL.md"
+        skill_md.write_text(hide(skill_md.read_text()))
+    names[HUB] = f"{HUB}-{run_id}"
+    install_one(HUB, dest_root / names[HUB], names[HUB])
+    return names
+
+
+def install_plugin(plugin: Path, run_id: str, module: str | None = None) -> dict[str, str]:
+    """The plugin layout: the front-door arm's skills under `plugin/skills/` — or, given `module`,
+    that one module alone and visible, as the fixture runner's module-alone arm installs it in this
+    layout (evals/README.md, "Through Tuesday") — and the manifest that makes the folder a plugin,
+    named by `plugin_prefix`; return name -> installed name."""
+    if module:
+        names = {module: f"{module}-{run_id}"}
+        install_one(module, plugin / "skills" / names[module], names[module])
+    else:
+        names = install_frontdoor(plugin / "skills", run_id)
+    manifest = plugin / ".claude-plugin" / "plugin.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": plugin_prefix(names, "plugin"), "version": "0.0.0",
+                                    "description": "A throwaway copy for one routing run"}) + "\n")
+    return names
+
+
+def home(root: Path, layout: str, run: int = 0) -> Path | None:
+    """The folder outside the case folder that holds a run's skills: the run's own config folder,
+    `config/<case>-<run>`, in the personal layout; the case's plugin in the plugin layout; None in
+    the project layout."""
+    if layout == "personal":
+        return root.parent / OUTSIDE[layout] / f"{root.name}-{run}"
+    return root.parent / OUTSIDE[layout] / root.name if layout in OUTSIDE else None
+
+
+def skills_root(root: Path, layout: str, run: int = 0) -> Path:
+    """The folder that holds a run's installed skills, the hub and the modules side by side."""
+    return (home(root, layout, run) or root / ".claude") / "skills"
+
+
+def config_dir(root: Path, layout: str, run: int = 0) -> Path | None:
+    """The config folder a run starts with (child_env), in the personal layout; else None, and the
+    run keeps the runner's."""
+    return home(root, layout, run) if layout == "personal" else None
+
+
+def runner_config() -> Path:
+    """The config folder the runner's own sessions use: its CLAUDE_CONFIG_DIR, else ~/.claude."""
+    return Path(child_env().get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+
+
+def keep_transcripts(config: Path | None) -> None:
+    """Copy a run's transcripts from its own config folder into the runner's, where the other
+    layouts' runs write theirs, before the temporary folder that holds it is removed."""
+    if config is not None and (config / "projects").is_dir():
+        shutil.copytree(config / "projects", runner_config() / "projects", dirs_exist_ok=True)
+
+
+def plugin_prefix(names: dict[str, str], layout: str) -> str | None:
+    """The plugin's name, which prefixes every skill it holds: the installed name of the skill it
+    lists, in the plugin layout — the hub's, `tuesday-<run id>`, or in a plugin holding one module
+    alone (`install_plugin`) that module's; None in the others."""
+    if layout != "plugin":
+        return None
+    return names[HUB] if HUB in names else next(iter(names.values()))
+
+
+def installed_command(name: str, prefix: str | None = None) -> str:
+    """A skill's id as the CLI lists it and its command types it: `<plugin>:<name>` in a plugin."""
+    return f"{prefix}:{name}" if prefix else name
+
+
+def skill_id(skill: str) -> str:
+    """A Skill call's name as the CLI reads it: trimmed, and without one leading `/`."""
+    skill = skill.strip()
+    return skill[1:] if skill.startswith("/") else skill
+
+
+def local_name(skill: str) -> str:
+    """A listed or called skill's name without a plugin prefix: the part of its id (skill_id)
+    after the colon."""
+    return skill_id(skill).split(":")[-1]
+
+
+def tuesday_base(skill: str) -> str:
+    """A listed or called skill's name without a plugin prefix or a run suffix."""
+    return re.sub(r"-[0-9a-f]{8}$", "", local_name(skill))
+
+
+def foreign_tuesday(listed: list, names: dict[str, str]) -> list[str]:
+    """Tuesday skills in the init list that this run did not install (a synced copy, D22).
+
+    Any such skill can take the fire meant for the run's own copy, so the run is void.
+    """
+    ours = set(names.values())
+    bases = set(SKILLS) | {HUB}
+    return [s for s in listed if isinstance(s, str) and tuesday_base(s) in bases and local_name(s) not in ours]
+
+
+def timeout_for(arm: str, prompt: str, given: int | None = None) -> int:
+    """The seconds one run gets: `--timeout` when given, else what its reader waits for."""
+    if given:
+        return given
+    whole_turn = arm == "frontdoor" or bool(explicit_command(prompt))
+    return TIMEOUT_WHOLE_TURN if whole_turn else TIMEOUT_FIRST_FIRE
+
+
+def explicit_command(prompt: str) -> str | None:
+    """The module a prompt invokes by its slash command (`/mock-interview …`), or None."""
+    match = re.match(r"/([a-z0-9-]+)(?=\s|$)", prompt)
+    return match.group(1) if match and match.group(1) in SKILLS else None
+
+
+def explicit_prompt(prompt: str, names: dict[str, str], prefix: str | None = None) -> str:
+    """The prompt with its slash command renamed to the installed copy's command.
+
+    The runner suffixes every installed skill, so `/mock-interview` would invoke
+    nothing in the throwaway project: E2 has to type `/mock-interview-<run id>`,
+    and in the plugin layout, under the plugin's `prefix`, `/tuesday-<run id>:mock-interview-<run id>`.
+    """
+    command = explicit_command(prompt)
+    if command is None:
+        return prompt
+    return f"/{installed_command(names[command], prefix)}" + prompt[len(command) + 1:]
+
+
+def child_command(prompt: str, root: Path, names: dict[str, str], model: str | None,
+                  layout: str = "project", run: int = 0) -> list[str]:
+    """The `claude -p` command one run starts: the prompt as E2 types it in this layout, the
+    case's plugin folder in the plugin layout, and outside the project layout leave to read the
+    files in the run's skills folder, which a project install has by sitting in the case folder
+    (evals/README.md, "Layouts")."""
+    cmd = ["claude", "-p", explicit_prompt(prompt, names, plugin_prefix(names, layout)),
+           "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
+    if model:
+        cmd += ["--model", model]
+    if layout == "plugin":
+        cmd += ["--plugin-dir", str(home(root, layout))]
+    if layout in OUTSIDE:
+        cmd += ["--allowedTools", read_rule(root, layout, run)]
+    return cmd
+
+
+def read_rule(root: Path, layout: str, run: int = 0) -> str:
+    """The permission rule that lets the Read tool open any file in a run's skills folder outside
+    the case folder (evals/README.md, "Layouts")."""
+    return f"Read(/{skills_root(root, layout, run).absolute().as_posix()}/**)"
 
 
 def result_outcome(event: dict) -> str:
@@ -91,6 +312,14 @@ def result_outcome(event: dict) -> str:
     if event.get("is_error") or event.get("subtype") not in (None, "success"):
         return "error"
     return "neither"
+
+
+def exit_outcome(reader: "RunReader", returncode: int | None) -> str:
+    """The outcome of a run whose process exited before its stream decided one. Outside the
+    project layout a non-zero exit with no result event read is a run the CLI failed, `error`,
+    as a failed sign-in under the personal layout's config folder can be; otherwise the stream
+    read settles it, as it did before the layouts."""
+    return "error" if returncode and reader.layout != "project" else reader.exited()
 
 
 def write_attachments(root: Path, case: dict) -> None:
@@ -106,31 +335,452 @@ def write_attachments(root: Path, case: dict) -> None:
         (root / name).write_text(content)
 
 
-def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None) -> str:
-    """Run one query; return the skill that fired, 'neither', 'timeout', or 'error'.
+def case_project(tmp: Path, case: dict, run_id: str, overrides: dict[str, Path] | None = None,
+                 arm: str = "skills", layout: str = "project", runs: int = 1) -> tuple[Path, dict[str, str]]:
+    """One throwaway project per case: the skills where its layout puts them, and that case's
+    attachments only. In the personal layout each of the case's `runs` gets a config folder of
+    its own, the same skills in each, so no run meets another's transcript or settings.
 
-    Two outcomes are kept distinct from 'neither' on purpose. A run cut short
-    ('timeout') and a run the CLI failed ('error', typically a rate limit) say
-    nothing about routing; folding either into 'neither' lets a slow or throttled
-    harness manufacture negatives that look like findings.
-
-    Watches partial stream events so the verdict lands as soon as the model
-    reaches for a skill, rather than after the skill's work completes.
+    The runner used to write every case's attachments into one shared root, on the
+    stated assumption that file names were distinct across cases. They were not:
+    five cases attach a `jd.txt`, so in a run of several cases each saw the last
+    case's posting, and a self-contained case ran beside documents no prompt of
+    its own mentioned. A project per case shows each prompt exactly its own files.
     """
-    cmd = ["claude", "-p", prompt, "--output-format", "stream-json", "--verbose",
-           "--include-partial-messages"]
-    if model:
-        cmd += ["--model", model]
-    # CLAUDECODE guards interactive terminal nesting; a subprocess run is safe.
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    if layout == "plugin" and arm != "frontdoor":
+        raise SystemExit("--layout plugin is for the front-door arm: today's three skills do not ship as a plugin")
+    root = tmp / f"case-{case['id']}"
+    root.mkdir()
+    skills = skills_root(root, layout)
+    if arm == "frontdoor":
+        if overrides:
+            raise SystemExit("--skill-md substitutes a module description; the front-door arm hides them")
+        names = install_plugin(home(root, layout), run_id) if layout == "plugin" else install_frontdoor(skills, run_id)
+    else:
+        names = install_skills(skills, run_id, overrides)
+    if layout == "personal":
+        for run in range(1, runs):
+            shutil.copytree(skills, skills_root(root, layout, run))
+    write_attachments(root, case)
+    return root, names
 
-    def match(blob: str) -> str | None:
-        for skill, name in names.items():
+
+def load_cases(path: Path, ids: list[int] | None = None) -> list[dict]:
+    """The cases of a routing case file, limited to `ids` when given.
+
+    A variant file (`--cases`) has the suite's shape. An id asked for that the
+    file does not hold is an error, not an empty selection: a typo would
+    otherwise report "0/0 passed" as a clean run.
+    """
+    cases = json.loads(Path(path).read_text(encoding="utf-8"))["cases"]
+    if ids:
+        missing = sorted(set(ids) - {c["id"] for c in cases})
+        if missing:
+            raise SystemExit(f"{path}: no case with id {missing}")
+        cases = [c for c in cases if c["id"] in ids]
+    return cases
+
+
+class RunReader:
+    """One run's stream events in, its outcome out, once the stream has decided one.
+
+    Its reading is pure, so every label has a test (CONTRIBUTING.md, "Harnesses
+    report three outcomes, not two"); only `record`, for an explicit run, reads a
+    file. Feed it parsed events with `feed`; it returns the outcome
+    once the stream has decided one, else None. `exited` and `timed_out` settle a
+    run whose stream never did.
+
+    The labels, by arm:
+
+    - `skills`: the module whose installed name a Skill or Read call carries. The
+      run is read up to that call and no further.
+    - `frontdoor`: the module whose playbook, `tuesday-<id>/references/<m>.md`, is
+      read first after the hub fires; `tuesday-unrouted` when the hub fired and the
+      run ended with no playbook read; `hidden-<m>` when a hidden module is called,
+      or any tool call names its folder, at any point in the turn, which the arm
+      exists to prevent. The run is read to its end: round 2 found a hidden
+      module's files read after the routing decision, where a reader that stopped
+      at the decision never looked.
+    - explicit (a prompt that starts with `/<m>`, either arm): read to the end of
+      the run. `focused` when the named module loaded and no other module was
+      reached; otherwise the first other module reached — `hidden-<other>` when
+      it was called by any name or its folder named, `<other>` when its playbook
+      was named (`<other>.md`, read through the hub or not) — or `unconfirmed`
+      when nothing showed the command loaded. The hub firing is not a failure in
+      itself: it is recorded apart (`hub_fired`), since what it does next is
+      what the case tests. The CLI's stream-json does not carry the command's
+      expansion (measured: none in a run whose transcript holds it), so `record`
+      looks for it in the session transcript (`command_loaded`) before settling.
+      A timeout is set aside even after a confirmed load, so E2 runs with a
+      longer `--timeout` (evals/README.md).
+    - a Skill call is read by the name it gives, too (`skill_named`): a module or
+      the hub called by its shipped name, with no run suffix, or under a plugin
+      prefix, is that module or the hub, in the front-door arm and in E2. The
+      name is read as the CLI reads it, trimmed and without one leading `/`.
+    - every arm: `neither`, `timeout`, `error`, and `void` when the init event lists
+      a Tuesday skill this run did not install.
+    - every layout (evals/README.md, "Layouts"): the hub's name is the hub only where
+      no colon follows it, so a module's plugin-qualified id, `tuesday-<id>:<m>-<id>`,
+      is that module and no hub fire.
+
+    In the front-door arm and in E2, `record` also carries `hub_fired` and
+    `reached`, every other module reached in the order reached (the labels
+    above), and in E2 `loaded`, whether the named module loaded. Outside the
+    project layout it also carries the measures reported and never scored:
+    `skills_root_named`, `refused`, `output_tokens`, the `seconds` `run_once`
+    gives it, and in a run with a hub `hub_path_contact`.
+    """
+
+    def __init__(self, names: dict[str, str], arm: str = "skills", explicit: str | None = None,
+                 layout: str = "project", root: Path | None = None, run: int = 0):
+        self.names = {m: n for m, n in names.items() if m != HUB}
+        self.hub = names.get(HUB)
+        self.arm, self.explicit = arm, explicit
+        self.all_names = names
+        self.layout = layout
+        # The command E2 types, as the transcript records its expansion.
+        self.command = installed_command(names[explicit], plugin_prefix(names, layout)) if explicit else None
+        # The case folder, where the session starts: a relative path in a tool call is read from it.
+        self.cwd = root.absolute().as_posix() if root else None
+        # The run's own config folder (personal layout), where its transcript is; None: the runner's.
+        self.config = config_dir(root, layout, run) if root else None
+        # A skills folder of this layout, any case's or run's, ending a path or followed by a glob.
+        self.skills_folder = re.compile(
+            rf"(?:^|/){OUTSIDE[layout]}/case-[^/]+/skills(?:/[*?\[{{].*)?$") if layout in OUTSIDE else None
+        # The hub's SKILL.md or a playbook, by its path in the hub's folder.
+        self.hub_file = re.compile(rf"(?:^|/){re.escape(self.hub)}/(?:SKILL|references/(?:"
+                                   + "|".join(map(re.escape, SKILLS)) + r"))\.md$") if self.hub else None
+        self.hub_called = False
+        self.hub_path_contact = False
+        self.skills_root_named = False
+        self.refused: list | None = None
+        self.output_tokens: int | None = None
+        self.init_skills: list | None = None
+        self.slash_commands: list | None = None
+        self.hub_fired = False
+        self.expanded = False
+        self.loaded = False
+        self.reached: list[str] = []
+        self.routed: str | None = None
+        self.session: dict = {}
+        self.message_ids: list[str] = []
+        self.pending: str | None = None
+        self.accumulated = ""
+        self._transcript: bool | None = None
+
+    @property
+    def whole_turn(self) -> bool:
+        """Whether the run is read to its end rather than to its first fire."""
+        return bool(self.explicit) or self.arm == "frontdoor"
+
+    def reach(self, label: str) -> None:
+        if label not in self.reached:
+            self.reached.append(label)
+
+    def names_hub(self, blob: str) -> bool:
+        """Whether a tool call's input names the hub: its installed name followed by anything
+        but a colon. Followed by a colon it is the plugin prefix of another skill's id, and
+        `tuesday-<id>:mock-interview-<id>` is that module. Nothing following it is a partial
+        input cut there, and the next piece decides."""
+        return bool(self.hub) and re.search(rf"{re.escape(self.hub)}(?=[^:])", blob) is not None
+
+    def observe(self, tool: str | None, given) -> None:
+        """Read one whole tool call for the measures reported and never scored, by the paths
+        its input names (`paths_named`)."""
+        if tool == "Skill":
+            skill = given.get("skill") if isinstance(given, dict) else None
+            if isinstance(skill, str) and tuesday_base(skill) == HUB:
+                self.hub_called = True
+            return
+        paths = paths_named(tool, given, self.cwd)
+        if self.skills_folder and any(self.skills_folder.search(p) for p in paths):
+            self.skills_root_named = True
+        if not self.hub_called and self.hub_file and any(self.hub_file.search(p) for p in paths):
+            self.hub_path_contact = True
+
+    def match(self, blob: str) -> str | None:
+        """Read one tool call's input: return the outcome it decides in the skills arm;
+        in the front-door arm and in E2, record what it reached and return None."""
+        if not self.whole_turn:
+            for module, name in self.names.items():
+                if name in blob:
+                    return module
+            return None
+        if self.names_hub(blob):
+            self.hub_fired = True
+        for module, name in self.names.items():
             if name in blob:
-                return skill
+                if module == self.explicit:
+                    self.loaded = True
+                else:
+                    self.reach(f"hidden-{module}")
+        named = []
+        for module in self.names:
+            if module == self.explicit:
+                continue
+            # A playbook's file name, whole. In E2, any mention of another playbook:
+            # through the hub's path, or a Bash `cat` from inside its folder. In the
+            # front-door arm the call must also name the hub's folder: its full path,
+            # or `cd` into it and `cat <module>.md` in one call, the form round 2's
+            # measurement scored unrouted twice (evals/README.md). No module ships a
+            # file of a playbook's name, so the hub's folder is where one is read.
+            hit = re.search(rf"(?<![\w-]){re.escape(module)}\.md(?![\w-])", blob)
+            if hit and (self.explicit or self.names_hub(blob)):
+                named.append((hit.start(), module))
+        # One call can name two playbooks: the first named is the first reached.
+        for _, module in sorted(named):
+            self.reach(module)
+            if not self.explicit and self.routed is None:
+                self.routed = module
         return None
 
-    state = {"pending": None, "accumulated": ""}
+    def skill_named(self, given) -> str | None:
+        """Read a Skill call by the name it gives, when that name is not this run's
+        installed copy: the shipped name (`job-underwriter`), a plugin's
+        (`anthropic-skills:job-underwriter`) or another run's. `match` finds only this
+        run's suffixed names, so a call by the name the hub's own table uses went
+        unseen. The skills arm, outside E2, reads names as it always has. Records
+        what it reached; decides no outcome."""
+        skill = given.get("skill") if isinstance(given, dict) else None
+        if not isinstance(skill, str) or not self.whole_turn:
+            return None
+        skill = skill_id(skill)
+        if local_name(skill) in self.all_names.values():
+            return None
+        base = tuesday_base(skill)
+        if base == HUB:
+            self.hub_fired = True
+        elif base in self.names and base != self.explicit:
+            # The named module by another name loads nothing; it neither passes nor fails.
+            self.reach(f"hidden-{base}")
+        return None
+
+    def feed(self, event: dict) -> str | None:
+        kind = event.get("type")
+        if kind == "system" and event.get("subtype") == "init":
+            self.init_skills = list(event.get("skills") or [])
+            self.slash_commands = list(event.get("slash_commands") or [])
+            self.session = {"session_id": event.get("session_id"), "cwd": event.get("cwd")}
+            if foreign_tuesday(self.init_skills, self.all_names):
+                return "void"
+        elif kind == "stream_event":
+            se = event.get("event", {})
+            sk = se.get("type", "")
+            if sk == "content_block_start":
+                block = se.get("content_block", {})
+                if block.get("type") == "tool_use" and block.get("name") in ("Skill", "Read"):
+                    self.pending, self.accumulated = block.get("name"), ""
+            elif sk == "content_block_delta" and self.pending:
+                delta = se.get("delta", {})
+                if delta.get("type") == "input_json_delta":
+                    self.accumulated += delta.get("partial_json", "")
+                    return self.match(self.accumulated)
+            elif sk in ("content_block_stop", "message_stop"):
+                if self.pending:
+                    hit = self.match(self.accumulated)
+                    if not hit and self.pending == "Skill":
+                        try:
+                            hit = self.skill_named(json.loads(self.accumulated))
+                        except json.JSONDecodeError:
+                            pass
+                    self.pending = None
+                    if hit:
+                        return hit
+                # Deliberately no early exit here: a model often writes a
+                # sentence of reasoning before reaching for the skill, so
+                # the end of a message is not the end of the decision.
+                # Only `result` (or process exit) settles a negative.
+        elif kind == "assistant":
+            mid = event.get("message", {}).get("id")
+            if mid and mid not in self.message_ids:
+                self.message_ids.append(mid)
+            for item in event.get("message", {}).get("content", []):
+                if item.get("type") == "tool_use":
+                    blob = json.dumps(item.get("input", {}))
+                    self.observe(item.get("name"), item.get("input"))
+                    hit = self.match(blob)
+                    if not hit and item.get("name") == "Skill":
+                        hit = self.skill_named(item.get("input"))
+                    if hit:
+                        return hit
+        elif kind == "user" and self.explicit:
+            # The CLI's expansion of a slash command arrives as user content, not a
+            # tool call: the sign that `/name` loaded the module.
+            content = (event.get("message") or {}).get("content")
+            texts = [content] if isinstance(content, str) else \
+                [c.get("text", "") for c in content or [] if isinstance(c, dict) and c.get("type") == "text"]
+            if any(self.names[self.explicit] in text for text in texts):
+                self.expanded = True
+        elif kind == "result":
+            self.refused = [d.get("tool_name") for d in event.get("permission_denials") or [] if isinstance(d, dict)]
+            self.output_tokens = (event.get("usage") or {}).get("output_tokens")
+            outcome = result_outcome(event)
+            return outcome if outcome == "error" else self.settle()
+        return None
+
+    def settle(self) -> str:
+        """The outcome of a run read to its end (or, in the skills arm, of one that
+        ended without a deciding tool call)."""
+        if self.explicit:
+            if self.reached:
+                return self.reached[0]
+            return FOCUSED if self.expanded or self.loaded else "unconfirmed"
+        hidden = [r for r in self.reached if r.startswith("hidden-")]
+        if hidden:
+            return hidden[0]
+        if self.routed:
+            return self.routed
+        return "tuesday-unrouted" if self.hub_fired else "neither"
+
+    def exited(self) -> str:
+        return self.settle()
+
+    def timed_out(self) -> str:
+        """A run cut off is set aside, an E2 run whose module had loaded and an E1 run
+        already routed included: the rest of the turn, which the cut-off never showed,
+        is where a hidden reach or another module's playbook would be."""
+        return "timeout"
+
+    def transcript_loaded(self) -> bool:
+        """Whether the session transcript shows the named command expanded (cached)."""
+        if self._transcript is None:
+            self._transcript = transcript_confirms(self)
+        return self._transcript
+
+    def record(self, outcome: str, seconds: float | None = None) -> dict:
+        """The run's record: its outcome, and what this reader holds beside it. `seconds` is the
+        run's wall time from its start to this outcome, which only the runner knows."""
+        rec = {"outcome": outcome, "init_skills": self.init_skills}
+        if self.explicit:
+            loaded = self.expanded or self.loaded
+            if not loaded and outcome not in SET_ASIDE:
+                loaded = self.transcript_loaded()
+            if outcome == "unconfirmed" and loaded:
+                outcome = FOCUSED
+            rec.update(outcome=outcome, slash_commands=self.slash_commands, loaded=loaded)
+        if self.whole_turn:
+            rec.update(hub_fired=self.hub_fired, reached=list(self.reached))
+        if self.layout != "project":
+            rec.update(skills_root_named=self.skills_root_named, refused=self.refused,
+                       output_tokens=self.output_tokens, seconds=seconds)
+            if self.hub:
+                rec["hub_path_contact"] = self.hub_path_contact
+        return rec
+
+
+def strings_in(value) -> list[str]:
+    """Every string in a tool call's input, however deep."""
+    if isinstance(value, str):
+        return [value]
+    items = value.values() if isinstance(value, dict) else value if isinstance(value, list) else []
+    return [s for item in items for s in strings_in(item)]
+
+
+def paths_named(tool: str | None, given, cwd: str | None) -> list[str]:
+    """Every word of a tool call's input read as a path, absolute and normalised, so `.` and `..`
+    are resolved: a relative one from the case folder (`cwd`), or from the folder a `cd` earlier
+    in the same string moved to. A Glob's pattern is read from its path, as the tool reads it.
+    A word after `~`, or after a `cd` that cannot be followed, is not read; globs stay as written."""
+    texts = strings_in(given)
+    if tool == "Glob" and isinstance(given, dict) and isinstance(given.get("pattern"), str):
+        texts.append(posixpath.join(given.get("path") or "", given["pattern"]))
+    found = []
+    for text in texts:
+        here = cwd
+        for segment in SHELL_SEPARATOR.split(text):
+            words = SHELL_WORD.findall(segment)
+            if words[:1] == ["cd"]:
+                here = resolve_path(here, words[1]) if len(words) > 1 else None
+                found += [here] if here else []
+                continue
+            found += [p for p in (resolve_path(here, w) for w in words) if p]
+    return found
+
+
+def resolve_path(here: str | None, word: str) -> str | None:
+    """A word as an absolute, normalised path from the folder `here`; None when it cannot be."""
+    if word.startswith("~") or word == "-":
+        return None
+    if word.startswith("/"):
+        return posixpath.normpath(word)
+    return posixpath.normpath(posixpath.join(here, word)) if here else None
+
+
+def command_loaded(lines: list[str], message_id: str, installed: str) -> bool:
+    """Whether the transcript shows `/installed` expanded ahead of this run's reply.
+
+    Child runs inherit the parent's session id, so runs of one case can share a
+    transcript file. The run is found by its own assistant message id, and only
+    the entries on its parent chain are read, so another run's expansion in the
+    same file never confirms this one.
+    """
+    entries, start = {}, None
+    for line in lines:
+        try:
+            entry = json.loads(line)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if not isinstance(entry, dict) or not entry.get("uuid"):
+            continue
+        entries[entry["uuid"]] = entry
+        if entry.get("type") == "assistant" and (entry.get("message") or {}).get("id") == message_id:
+            start = start or entry
+    marker = f"<command-name>/{installed}</command-name>"
+    entry, seen = start, set()
+    while entry and entry["uuid"] not in seen:
+        seen.add(entry["uuid"])
+        content = (entry.get("message") or {}).get("content")
+        texts = [content] if isinstance(content, str) else \
+            [c.get("text", "") for c in content or [] if isinstance(c, dict) and c.get("type") == "text"]
+        if entry.get("type") == "user" and any(marker in text for text in texts):
+            return True
+        entry = entries.get(entry.get("parentUuid"))
+    return False
+
+
+def transcript_path(session: dict, config: Path | None = None) -> Path | None:
+    """Where the CLI keeps a session's transcript: the projects/ of the config folder the run
+    started with (child_env: `config`, else the runner's), under the cwd with every character
+    but letters and digits turned to '-'."""
+    if not session.get("session_id") or not session.get("cwd"):
+        return None
+    return ((config or runner_config()) / "projects" / re.sub(r"[^A-Za-z0-9]", "-", session["cwd"])
+            / f"{session['session_id']}.jsonl")
+
+
+def transcript_confirms(reader: "RunReader") -> bool:
+    """Whether an E2 run's transcript shows its command expanded, found by the run's own reply."""
+    if not reader.message_ids:
+        return False
+    path = transcript_path(reader.session, reader.config)
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines() if path else []
+    except OSError:
+        return False
+    return command_loaded(lines, reader.message_ids[0], reader.command)
+
+
+def run_once(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None,
+             arm: str = "skills", layout: str = "project", run: int = 0) -> dict:
+    """Run one query, the case's `run`-th; return {"outcome", "init_skills"} (and the slash
+    commands, for E2).
+
+    Outcomes other than a route are kept distinct from 'neither' on purpose. A
+    run cut short ('timeout'), a run the CLI failed ('error', typically a rate
+    limit) and a run that could see a Tuesday skill it did not install ('void')
+    say nothing about routing; folding any of them into 'neither' lets the
+    harness manufacture negatives that look like findings.
+
+    Watches partial stream events so, in the skills arm, the verdict lands as soon
+    as the model reaches for a skill, rather than after the skill's work
+    completes. A front-door or explicit run is read to the end of its turn
+    (`RunReader`), so it needs the longer `--timeout` evals/README.md gives.
+    """
+    reader = RunReader(names, arm, explicit_command(prompt), layout, root, run)
+    cmd = child_command(prompt, root, names, model, layout, run)
+    # Only the room's own skills: no synced account skills, no parent session, and in the
+    # personal layout the run's own config folder (child_env).
+    env = child_env(config_dir=reader.config)
 
     def consume(buffer: str) -> tuple[str | None, str]:
         """Parse whole lines out of the buffer; return a verdict once one lands."""
@@ -143,47 +793,28 @@ def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, mo
                 event = json.loads(line)
             except json.JSONDecodeError:
                 continue
-
-            if event.get("type") == "stream_event":
-                se = event.get("event", {})
-                kind = se.get("type", "")
-                if kind == "content_block_start":
-                    block = se.get("content_block", {})
-                    if block.get("type") == "tool_use" and block.get("name") in ("Skill", "Read"):
-                        state["pending"], state["accumulated"] = block.get("name"), ""
-                elif kind == "content_block_delta" and state["pending"]:
-                    delta = se.get("delta", {})
-                    if delta.get("type") == "input_json_delta":
-                        state["accumulated"] += delta.get("partial_json", "")
-                        hit = match(state["accumulated"])
-                        if hit:
-                            return hit, buffer
-                elif kind in ("content_block_stop", "message_stop"):
-                    if state["pending"]:
-                        hit = match(state["accumulated"])
-                        if hit:
-                            return hit, buffer
-                        state["pending"] = None
-                    # Deliberately no early exit here: a model often writes a
-                    # sentence of reasoning before reaching for the skill, so
-                    # the end of a message is not the end of the decision.
-                    # Only `result` (or process exit) settles a negative.
-
-            elif event.get("type") == "assistant":
-                for item in event.get("message", {}).get("content", []):
-                    if item.get("type") != "tool_use":
-                        continue
-                    hit = match(json.dumps(item.get("input", {})))
-                    if hit:
-                        return hit, buffer
-            elif event.get("type") == "result":
-                return result_outcome(event), buffer
+            if isinstance(event, dict):
+                outcome = reader.feed(event)
+                if outcome:
+                    return outcome, buffer
         return None, buffer
 
+    start = time.time()
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                             cwd=str(root), env=env)
+
+    def returncode() -> int | None:
+        """The exit status once the stream has ended; None if the process is still running."""
+        try:
+            return proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            return None
+
+    def done(outcome: str) -> dict:
+        """The run's record, with its wall time from start to this outcome."""
+        return reader.record(outcome, round(time.time() - start, 1))
+
     buffer = ""
-    start = time.time()
     try:
         while time.time() - start < timeout:
             exited = proc.poll() is not None
@@ -206,43 +837,54 @@ def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, mo
             # still sitting unparsed in the pipe — so a run that fired a skill
             # and finished quickly was recorded as 'neither'. Every negative this
             # harness reports has to be a negative it actually read.
-            verdict, buffer = consume(buffer)
-            if verdict:
-                return verdict
+            outcome, buffer = consume(buffer)
+            if outcome:
+                return done(outcome)
             if exited:
                 # Trailing line with no newline.
                 if buffer.strip():
-                    verdict, _ = consume(buffer + "\n")
-                    if verdict:
-                        return verdict
-                return "neither"
+                    outcome, _ = consume(buffer + "\n")
+                    if outcome:
+                        return done(outcome)
+                return done(exit_outcome(reader, returncode()))
         else:
-            return "timeout"
+            return done(reader.timed_out())
     finally:
         if proc.poll() is None:
             proc.kill()
             proc.wait()
-    return "neither"
+        keep_transcripts(reader.config)
+    return done(reader.exited())
 
 
-def verdict(expected: str, fired: list[str]) -> tuple[bool, str]:
-    """An 'either' case passes when exactly one sibling fires, consistently.
+def which_fired(prompt: str, root: Path, names: dict[str, str], timeout: int, model: str | None,
+                arm: str = "skills", layout: str = "project") -> str:
+    """Run one query; return its outcome label alone (see `run_once`)."""
+    return run_once(prompt, root, names, timeout, model, arm, layout)["outcome"]
 
-    Timed-out and errored runs are set aside rather than counted as negatives,
-    and reported alongside the verdict so a case decided on one surviving run
-    cannot pass for a clean one.
+
+def verdict(expected: str, fired: list[str], siblings: list[str] | None = None) -> tuple[bool, str]:
+    """A spanning ('either') case passes when every run that reached a verdict fired
+    one of the skills it spans — its `siblings` in the suite — whichever one.
+
+    Timed-out, errored and void runs are set aside rather than counted as
+    negatives, and reported alongside the verdict so a case decided on one
+    surviving run cannot pass for a clean one. Every other label is a route:
+    `tuesday-unrouted` and `hidden-<m>` fail any case, as a wrong skill does.
     """
-    aborted = {kind: fired.count(kind) for kind in ("timeout", "error") if kind in fired}
-    fired = [f for f in fired if f not in ("timeout", "error")]
+    aborted = {kind: fired.count(kind) for kind in SET_ASIDE if kind in fired}
+    fired = [f for f in fired if f not in SET_ASIDE]
     if not fired:
         detail = ", ".join(f"{n} {kind}" for kind, n in aborted.items())
         return False, f"inconclusive: no run reached a verdict ({detail})"
     suffix = (" [" + ", ".join(f"{n} {kind}" for kind, n in aborted.items()) + "]") if aborted else ""
     unique = set(fired)
     if expected == "either":
-        if unique <= {"job-underwriter", "mock-interview"} and unique:
-            return True, f"one sibling fired every run ({'/'.join(sorted(unique))}){suffix}"
-        return False, f"a spanning request must reach a sibling; got {sorted(unique)}{suffix}"
+        if not siblings:
+            raise ValueError("an 'either' case must declare the skills it spans as 'siblings'")
+        if unique <= set(siblings):
+            return True, f"a sibling fired every run ({'/'.join(sorted(unique))}){suffix}"
+        return False, f"a spanning request must reach one of {sorted(siblings)}; got {sorted(unique)}{suffix}"
     if unique == {expected}:
         return True, f"{expected} on every run{suffix}"
     if expected in unique:
@@ -250,61 +892,261 @@ def verdict(expected: str, fired: list[str]) -> tuple[bool, str]:
     return False, f"routed to {sorted(unique)}, expected {expected}{suffix}"
 
 
-def main() -> int:
+def reach(cases: list[dict], runs_by_case: dict[int, list[dict]]) -> dict:
+    """How often the runs of the routing cases reached a skill at all, and how often the wrong one.
+
+    The attachment diagnostic (evals/README.md) is decided on this rate, not on
+    pass counts: a case that fires its skill on four runs of five fails, and is
+    four reaches. Timed-out, errored and void runs are set aside, never counted
+    as misses. A wrong skill is one that is not the case's route — for an
+    `either` case, not one of the `siblings` it declares. In the front-door arm a
+    reach is a playbook read; the hub firing with none read (`tuesday_unrouted`)
+    and a hidden module reached (`hidden`) are counted apart, and
+    `reached_tuesday` counts the runs whose record says the hub fired
+    (`hub_fired`), whatever their outcome: a run that routed and then reached a
+    hidden module is `hidden-<m>`, and the hub still fired in it. An explicit
+    case (a prompt opening with a module's command) is not a routing case: its
+    runs are summarised by `explicit_summary`, and none is counted here.
+    """
+    decided = reached = wrong = unrouted = hidden = hub = set_aside = 0
+    by_skill: dict[str, int] = {}
+    for case in cases:
+        if explicit_command(case["prompt"]):
+            continue
+        for run in runs_by_case.get(case["id"], []):
+            got = run["outcome"]
+            if got in SET_ASIDE:
+                set_aside += 1
+                continue
+            decided += 1
+            unrouted += got == "tuesday-unrouted"
+            hidden += got.startswith("hidden-")
+            hub += bool(run.get("hub_fired"))
+            if got in SKILLS:
+                reached += 1
+                by_skill[got] = by_skill.get(got, 0) + 1
+                allowed = case.get("siblings", []) if case["expected"] == "either" else [case["expected"]]
+                if got not in allowed:
+                    wrong += 1
+    return {"decided": decided, "reached": reached, "wrong_skill": wrong, "by_skill": by_skill,
+            "tuesday_unrouted": unrouted, "reached_tuesday": hub, "hidden": hidden, "set_aside": set_aside}
+
+
+def passes_on(case: dict) -> str:
+    """The label every run of a case must carry to pass: `focused` for an explicit
+    case (its `expected` names the module its command starts), else `expected`."""
+    return FOCUSED if explicit_command(case["prompt"]) else case["expected"]
+
+
+def explicit_summary(cases: list[dict], runs_by_case: dict[int, list[dict]]) -> dict:
+    """E2 across its explicit cases: focused runs, hub fires and other modules reached.
+
+    Set-aside runs (timeout, error, void) are counted apart and nothing else is
+    read from them. A hub fire is reported, never scored: the run is scored on
+    whether another module was reached, which `reached` already holds whether it
+    went through the hub or not. `other_reached` counts runs by the first other
+    module each reached (their outcome); `reached_any` counts every label any run
+    reached, so a run that reached two modules shows in both.
+    """
+    out = {"decided": 0, "focused": 0, "unconfirmed": 0, "hub_fired": 0, "hub_fired_focused": 0,
+           "other_reached": {}, "reached_any": {}, "set_aside": 0}
+    for case in cases:
+        if not explicit_command(case["prompt"]):
+            continue
+        for run in runs_by_case.get(case["id"], []):
+            got = run["outcome"]
+            if got in SET_ASIDE:
+                out["set_aside"] += 1
+                continue
+            out["decided"] += 1
+            out["focused"] += got == FOCUSED
+            out["unconfirmed"] += got == "unconfirmed"
+            hub = bool(run.get("hub_fired"))
+            out["hub_fired"] += hub
+            out["hub_fired_focused"] += hub and got == FOCUSED
+            if got not in (FOCUSED, "unconfirmed"):
+                out["other_reached"][got] = out["other_reached"].get(got, 0) + 1
+            for label in run.get("reached") or []:
+                out["reached_any"][label] = out["reached_any"].get(label, 0) + 1
+    return out
+
+
+def median(values: list[float]) -> float | None:
+    """The middle value, or the mean of the middle two; None for no values."""
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if not ordered:
+        return None
+    return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
+
+
+def reported(cases: list[dict], runs_by_case: dict[int, list[dict]]) -> dict:
+    """The measures recorded and never scored, over the arm's decided runs, routing and explicit
+    cases alike: runs with `hub_path_contact`, runs with `skills_root_named`, refused tool calls
+    and the runs that had any, and `refused_unread`, the runs that ended before their result
+    event: their refusals were never read, so they are not counted as none. Wall time and
+    output tokens are summed and given as a median per run; tokens are read from the result
+    event, so `tokens_read` counts the runs that had one."""
+    out = {"decided": 0, "hub_path_contact": 0, "skills_root_named": 0, "refused": 0, "runs_refused": 0,
+           "refused_unread": 0}
+    seconds, tokens = [], []
+    for case in cases:
+        for run in runs_by_case.get(case["id"], []):
+            if run["outcome"] in SET_ASIDE:
+                continue
+            out["decided"] += 1
+            out["hub_path_contact"] += bool(run.get("hub_path_contact"))
+            out["skills_root_named"] += bool(run.get("skills_root_named"))
+            refused = run.get("refused")
+            if refused is None:
+                out["refused_unread"] += 1
+            else:
+                out["refused"] += len(refused)
+                out["runs_refused"] += bool(refused)
+            if run.get("seconds") is not None:
+                seconds.append(run["seconds"])
+            if run.get("output_tokens") is not None:
+                tokens.append(run["output_tokens"])
+    out.update(seconds=round(sum(seconds), 1), seconds_median=median(seconds),
+               output_tokens=sum(tokens), output_tokens_median=median(tokens), tokens_read=len(tokens))
+    return out
+
+
+def summary_lines(summary: dict, explicit: dict, arm: str, measures: dict | None = None) -> list[str]:
+    """The lines a run prints after its cases: the reach lines for the routing cases,
+    the `explicit:` line for the explicit ones, each only when its suite had runs,
+    so a passing E2 never prints a reach rate of 0; and outside the project layout the
+    `reported` line, `measures`."""
+    lines = []
+    if summary["decided"] or summary["set_aside"]:
+        rate = f"{100 * summary['reached'] / summary['decided']:.0f}%" if summary["decided"] else "n/a"
+        lines.append(f"reached a skill on {summary['reached']}/{summary['decided']} decided runs ({rate}); "
+                     f"wrong skill on {summary['wrong_skill']}; "
+                     f"{summary['set_aside']} timed out, errored or void, set aside")
+        if arm == "frontdoor":
+            lines.append(f"tuesday fired on {summary['reached_tuesday']}/{summary['decided']} "
+                         f"({summary['tuesday_unrouted']} unrouted); hidden modules reached {summary['hidden']}")
+    if explicit["decided"] or explicit["set_aside"]:
+        lines.append(f"explicit: focused on {explicit['focused']}/{explicit['decided']} decided runs; "
+                     f"another module reached on {sum(explicit['other_reached'].values())} "
+                     f"{dict(sorted(explicit['other_reached'].items()))}; unconfirmed {explicit['unconfirmed']}; "
+                     f"the hub fired on {explicit['hub_fired']} (reported, not scored; "
+                     f"{explicit['hub_fired_focused']} of them focused); "
+                     f"{explicit['set_aside']} timed out, errored or void, set aside")
+    if measures is not None:
+        n = measures["decided"]
+        hub = (f"the hub's files reached by path before any Skill call to it on {measures['hub_path_contact']}/{n}; "
+               if arm == "frontdoor" else "")
+        lines.append(f"reported, not scored: {hub}the skills folder named on {measures['skills_root_named']}/{n}; "
+                     f"{measures['refused']} tool calls refused, on {measures['runs_refused']} runs "
+                     f"({measures['refused_unread']} ended before their result event, uncounted); "
+                     f"wall time {measures['seconds']}s, median {measures['seconds_median']}s a run; "
+                     f"output tokens {measures['output_tokens']}, median {measures['output_tokens_median']} a run, "
+                     f"on the {measures['tokens_read']} runs that reached their result event")
+    return lines
+
+
+def set_aside_problem(summary: dict) -> str | None:
+    """Why an arm's runs cannot be scored, or None: more than SET_ASIDE_LIMIT of them set aside.
+
+    The bar re-runs such an arm. Void runs count with timeouts and errors: a host
+    whose init list carries a synced Tuesday skill voids every run, and an arm
+    scored on what survived would read its empty counts as gates met.
+    """
+    total = summary["decided"] + summary["set_aside"]
+    if total and summary["set_aside"] / total > SET_ASIDE_LIMIT:
+        return (f"{summary['set_aside']} of {total} runs timed out, errored or were void "
+                f"(over {SET_ASIDE_LIMIT:.0%}): this arm is not scored; fix the cause and re-run it")
+    return None
+
+
+def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=3, help="runs per case (routing is probabilistic)")
+    ap.add_argument("--arm", choices=ARMS, default="skills",
+                    help="skills: the three modules as they ship; frontdoor: skills/tuesday, modules hidden")
+    ap.add_argument("--layout", choices=LAYOUTS, default="project",
+                    help="where the skills are installed: project, the case folder's .claude/skills/; personal, "
+                         "a config folder of the case's own; plugin, a plugin (front-door arm only)")
+    ap.add_argument("--cases", type=Path, default=SUITE, metavar="FILE",
+                    help="the case file to run (default: evals/suite-routing.json)")
     ap.add_argument("--case", type=int, action="append", help="limit to case id(s)")
     ap.add_argument("--model", default=None)
-    ap.add_argument("--timeout", type=int, default=240)
+    ap.add_argument("--timeout", type=int, default=None,
+                    help=f"seconds per run (default: {TIMEOUT_WHOLE_TURN} for a run read to the end of its "
+                         f"turn, the front-door arm or an explicit case; {TIMEOUT_FIRST_FIRE} otherwise)")
     ap.add_argument("--workers", type=int, default=3, help="parallel runs; high values invite rate limiting")
     ap.add_argument("--json-out", default=None, help="write full results here")
     ap.add_argument("--skill-md", action="append", default=[], metavar="SKILL=PATH",
                     help="substitute a SKILL.md for one skill, to A/B a description generation")
-    args = ap.parse_args()
+    return ap
 
-    spec = json.loads((REPO / "evals" / "suite-routing.json").read_text())
-    cases = [c for c in spec["cases"] if not args.case or c["id"] in args.case]
+
+def main() -> int:
+    args = parser().parse_args()
+    cases = load_cases(args.cases, args.case)
 
     with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
         overrides = {}
         for item in args.skill_md:
             skill, _, path = item.partition("=")
             if skill not in SKILLS or not path:
                 raise SystemExit(f"--skill-md expects one of {SKILLS} as SKILL=PATH, got {item!r}")
             overrides[skill] = Path(path)
-        names = install_skills(root, uuid.uuid4().hex[:8], overrides)
-
-        # Attachments are written once into the shared project root; filenames are
-        # distinct across cases so they do not collide.
-        for case in cases:
-            write_attachments(root, case)
+        run_id = uuid.uuid4().hex[:8]
+        projects = {c["id"]: case_project(Path(tmp), c, run_id, overrides, args.arm, args.layout, args.runs)
+                    for c in cases}
+        frozen = sync.digests() if args.arm == "frontdoor" else {}
 
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
-            outcomes = list(pool.map(
-                lambda job: which_fired(job[0]["prompt"], root, names, args.timeout, args.model),
+            records = list(pool.map(
+                lambda job: run_once(job[0]["prompt"], *projects[job[0]["id"]],
+                                     timeout_for(args.arm, job[0]["prompt"], args.timeout), args.model,
+                                     args.arm, args.layout, job[1]),
                 jobs,
             ))
 
     fired_by_case: dict[int, list[str]] = {}
-    for (case, _), got in zip(jobs, outcomes):
-        fired_by_case.setdefault(case["id"], []).append(got)
+    runs_by_case: dict[int, list[dict]] = {}
+    for (case, _), record in zip(jobs, records):
+        fired_by_case.setdefault(case["id"], []).append(record["outcome"])
+        runs_by_case.setdefault(case["id"], []).append(record)
 
     results, passed = [], 0
     for case in cases:
         fired = fired_by_case[case["id"]]
-        ok, note = verdict(case["expected"], fired)
+        expected = passes_on(case)
+        ok, note = verdict(expected, fired, case.get("siblings"))
         passed += ok
-        results.append({"id": case["id"], "expected": case["expected"],
-                        "fired": fired, "passed": ok, "note": note})
-        print(f"{'PASS' if ok else 'FAIL'}  case {case['id']:>2}  expected {case['expected']:<16} {note}")
+        results.append({"id": case["id"], "expected": expected,
+                        "timeout": timeout_for(args.arm, case["prompt"], args.timeout),
+                        **({"command": case["expected"]} if expected == FOCUSED else {}),
+                        **{k: case[k] for k in ("derived_from", "arm") if k in case},
+                        "fired": fired, "runs": runs_by_case[case["id"]], "passed": ok, "note": note})
+        print(f"{'PASS' if ok else 'FAIL'}  case {case['id']:>2}  expected {expected:<16} {note}")
 
-    print(f"\n{passed}/{len(cases)} routing cases passed ({args.runs} run(s) each)")
+    print(f"\n{passed}/{len(cases)} routing cases passed ({args.runs} run(s) each, arm {args.arm}, "
+          f"layout {args.layout}, from {args.cases})")
+    summary = reach(cases, runs_by_case)
+    explicit = explicit_summary(cases, runs_by_case)
+    measures = reported(cases, runs_by_case) if args.layout != "project" else None
+    for line in summary_lines(summary, explicit, args.arm, measures):
+        print(line)
+    unscored = set_aside_problem({k: summary[k] + explicit[k] for k in ("decided", "set_aside")})
+    if unscored:
+        print(f"\nWARNING: {unscored}")
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(
-            {"runs_per_case": args.runs, "passed": passed, "total": len(cases), "results": results},
+            {"cases_file": str(args.cases), "arm": args.arm, "layout": args.layout, **frozen, "model": args.model,
+             "runs_per_case": args.runs, "unscored": unscored,
+             "passed": passed, "total": len(cases), "reach": summary,
+             **({"explicit": explicit} if explicit["decided"] or explicit["set_aside"] else {}),
+             **({"reported": measures} if measures is not None else {}),
+             "results": results},
             indent=2) + "\n")
+    if unscored:
+        return 3
     return 0 if passed == len(cases) else 1
 
 

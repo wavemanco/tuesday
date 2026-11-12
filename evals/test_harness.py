@@ -34,6 +34,9 @@ and never a skill failure it was not.
 from __future__ import annotations
 
 import json
+import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -47,6 +50,10 @@ import ledger_rules  # noqa: E402  (ci/, put on the path by output_checks)
 import recurring
 import run_fixtures
 import run_routing
+import routing_variants
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
+import sync  # noqa: E402  (ci/: the front door's generator and the generated-copy sync)
 
 FAILURES: list[str] = []
 SERVER = Path(__file__).resolve().parent / "research_server.py"
@@ -97,10 +104,1341 @@ def test_routing_declines() -> None:
 
     ok, _ = run_routing.verdict("neither", ["neither"] * 3)
     check("a clean negative passes", ok, True)
-    ok, _ = run_routing.verdict("either", ["job-underwriter", "mock-interview", "job-underwriter"])
+    ju_mi = ["job-underwriter", "mock-interview"]
+    ok, _ = run_routing.verdict("either", ["job-underwriter", "mock-interview", "job-underwriter"], ju_mi)
     check("a spanning case passes when some sibling fires every run", ok, True)
-    ok, _ = run_routing.verdict("either", ["job-underwriter", "neither", "job-underwriter"])
+    ok, _ = run_routing.verdict("either", ["job-underwriter", "neither", "job-underwriter"], ju_mi)
     check("a spanning case fails when a run reaches neither sibling", ok, False)
+    # Case 21 spans job-underwriter and resume-tailor. A hard-coded pair once scored
+    # its correct resume-tailor fires as misses; the case's own siblings decide now.
+    ju_rt = ["job-underwriter", "resume-tailor"]
+    ok, _ = run_routing.verdict("either", ["resume-tailor", "job-underwriter", "resume-tailor"], ju_rt)
+    check("a spanning case passes on any of its own siblings", ok, True)
+    ok, _ = run_routing.verdict("either", ["mock-interview", "job-underwriter", "job-underwriter"], ju_rt)
+    check("a skill the spanning case does not span fails it", ok, False)
+    try:
+        run_routing.verdict("either", ["job-underwriter"])
+        check("an 'either' verdict without siblings is refused", False, True)
+    except ValueError:
+        check("an 'either' verdict without siblings is refused", True, True)
+
+
+def test_routing_cases() -> None:
+    print("\nrouting: --cases picks the case file, and each case runs in a project of its own")
+    suite_path = Path(__file__).resolve().parent / "suite-routing.json"
+    suite = json.loads(suite_path.read_text())
+    default = run_routing.parser().parse_args([])
+    check("without --cases the runner reads the suite", default.cases.resolve(), suite_path)
+    check("and runs every suite case, in the suite's order",
+          run_routing.load_cases(default.cases, default.case), suite["cases"])
+    check("--case still limits the suite to the ids asked for",
+          [c["id"] for c in run_routing.load_cases(default.cases, [9, 3])], [3, 9])
+    try:
+        run_routing.load_cases(default.cases, [3, 999])
+        check("an id the file does not hold is an error, not an empty run", "no error", "SystemExit")
+    except SystemExit as exc:
+        check_true("an id the file does not hold is an error, not an empty run", "999" in str(exc))
+    arm_b = Path(__file__).resolve().parent / routing_variants.OUTPUTS["B"]
+    args = run_routing.parser().parse_args(["--cases", str(arm_b), "--case", "203"])
+    picked = run_routing.load_cases(args.cases, args.case)
+    check("--cases reads another file, and --case selects within it",
+          [(c["id"], c["derived_from"]) for c in picked], [(203, 3)])
+
+    # Five suite cases attach a jd.txt. One shared project root, as the runner had,
+    # showed every case the last case's posting.
+    cases = [{"id": 1, "attachments": {"jd.txt": "first posting"}},
+             {"id": 2, "attachments": {"jd.txt": "second posting"}}, {"id": 3}]
+    with tempfile.TemporaryDirectory() as tmp:
+        made = {c["id"]: run_routing.case_project(Path(tmp), c, "ab12cd34") for c in cases}
+        check("two cases attaching the same file name each see their own",
+              [(made[n][0] / "jd.txt").read_text() for n in (1, 2)], ["first posting", "second posting"])
+        check("a case with no attachment sees no other case's",
+              sorted(p.name for p in made[3][0].iterdir()), [".claude"])
+        check("every project installs every skill under this run's names",
+              [sorted(p.name for p in (made[n][0] / ".claude" / "skills").iterdir()) for n in (1, 3)],
+              [sorted(f"{s}-ab12cd34" for s in run_routing.SKILLS)] * 2)
+        check("and the runner is told those names", made[1][1],
+              {s: f"{s}-ab12cd34" for s in run_routing.SKILLS})
+
+    summary = run_routing.reach(
+        [{"id": 1, "expected": "job-underwriter", "prompt": "p"},
+         {"id": 2, "expected": "either", "siblings": ["job-underwriter", "mock-interview"], "prompt": "p"}],
+        {1: runs("job-underwriter", "neither", "resume-tailor", "timeout", "error"),
+         2: runs("mock-interview", "resume-tailor", "neither")})
+    check("the reach rate counts decided runs only; a wrong skill is one off the case's route or siblings",
+          {k: summary[k] for k in ("decided", "reached", "wrong_skill", "set_aside")},
+          {"decided": 6, "reached": 4, "wrong_skill": 2, "set_aside": 2})
+    check("and fires are listed by skill",
+          summary["by_skill"], {"job-underwriter": 1, "resume-tailor": 2, "mock-interview": 1})
+
+
+def test_child_env() -> None:
+    print("\nrooms: a measured session inherits no synced skills and no parent session")
+    import child_env
+    base = {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy", "CLAUDECODE": "1",
+            "CLAUDE_CODE_SYNC_SKILLS": "1", "CLAUDE_CODE_SESSION_ID": "abc",
+            "CLAUDE_CODE_REMOTE_SESSION_ID": "cse_abc"}
+    env = child_env.child_env(base)
+    check("the sync flag, the parent session (local and remote id) and the nesting guard are dropped",
+          sorted(k for k in base if k not in env),
+          ["CLAUDECODE", "CLAUDE_CODE_REMOTE_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_SYNC_SKILLS"])
+    check("everything else is kept, the proxy included", {k: env[k] for k in ("PATH", "HTTPS_PROXY")},
+          {"PATH": "/usr/bin", "HTTPS_PROXY": "http://proxy"})
+    check("without a config folder the parent's CLAUDE_CONFIG_DIR is kept, or none set, as before",
+          (child_env.child_env({**base, "CLAUDE_CONFIG_DIR": "/runner"})["CLAUDE_CONFIG_DIR"],
+           "CLAUDE_CONFIG_DIR" in env), ("/runner", False))
+    check("a config folder given (the personal layout) is the child's CLAUDE_CONFIG_DIR, over the parent's",
+          child_env.child_env({**base, "CLAUDE_CONFIG_DIR": "/runner"}, Path("/tmp/x/config/case-1"))["CLAUDE_CONFIG_DIR"],
+          "/tmp/x/config/case-1")
+    for runner in ("run_routing.py", "run_fixtures.py"):
+        source = (Path(__file__).resolve().parent / runner).read_text()
+        check_true(f"{runner} starts its sessions with child_env()", re.search(r"\benv = child_env\(", source))
+        check_true(f"{runner} builds no environment of its own", "os.environ.items()" not in source)
+
+
+def test_routing_timeouts() -> None:
+    print("\nrouting: a run read to the end of its turn gets the long timeout without a flag")
+    t = run_routing.timeout_for
+    check("skills arm, routing case: stops at its first fire, so the short default",
+          t("skills", "help me decide on this role"), run_routing.TIMEOUT_FIRST_FIRE)
+    check("front-door arm, routing case: read to the end of the turn",
+          t("frontdoor", "help me decide on this role"), run_routing.TIMEOUT_WHOLE_TURN)
+    check("an explicit case is read to the end in either arm",
+          (t("skills", "/mock-interview prep me"), t("frontdoor", "/mock-interview prep me")),
+          (run_routing.TIMEOUT_WHOLE_TURN, run_routing.TIMEOUT_WHOLE_TURN))
+    check("a given --timeout wins everywhere", (t("skills", "x", 30), t("frontdoor", "/mock-interview x", 30)), (30, 30))
+    check("the long default is longer than the short one",
+          run_routing.TIMEOUT_WHOLE_TURN > run_routing.TIMEOUT_FIRST_FIRE, True)
+    check("the parser leaves --timeout unset unless given", run_routing.parser().parse_args([]).timeout, None)
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("every run's timeout comes from timeout_for",
+               "timeout_for(args.arm, job[0][\"prompt\"], args.timeout)" in source and "args.timeout, args.model" not in source)
+
+
+def test_routing_variants() -> None:
+    print("\nrouting: the diagnostic's variant files are the generator's output")
+    here = Path(__file__).resolve().parent
+    suite = json.loads((here / "suite-routing.json").read_text())
+    built = routing_variants.build(suite)
+    check("each committed variant file is exactly what the generator writes from the suite",
+          {name: (here / name).read_text() == text for name, text in built.items()},
+          {name: True for name in routing_variants.OUTPUTS.values()})
+    by_id = {c["id"]: c for c in suite["cases"]}
+    arms = {arm: json.loads(built[name])["cases"] for arm, name in routing_variants.OUTPUTS.items()}
+    check("arm B derives from the six attachment cases, arm C from the nine self-contained positives",
+          {arm: [c["derived_from"] for c in cases] for arm, cases in arms.items()},
+          {"B": [3, 9, 15, 17, 18, 21], "C": [1, 2, 4, 5, 6, 7, 8, 10, 16]})
+    every = [c for cases in arms.values() for c in cases]
+    check("no variant id is a suite id, and none repeats",
+          (sorted(set(by_id) & {c["id"] for c in every}), len({c["id"] for c in every}) == len(every)), ([], True))
+    check("every variant keeps its source's route", [c["id"] for c in every
+                                                     if c["expected"] != by_id[c["derived_from"]]["expected"]], [])
+    check_true("arm B: the message opens with the suite's, carries each attachment verbatim, and the files stay",
+               all(c["prompt"].startswith(by_id[c["derived_from"]]["prompt"] + "\n\n")
+                   and c["attachments"] == by_id[c["derived_from"]]["attachments"]
+                   and all(f"{name}:\n{text}" in c["prompt"] for name, text in c["attachments"].items())
+                   for c in arms["B"]))
+    words = lambda text: text.split()  # noqa: E731
+    lead = routing_variants.ATTACHED_SENTENCE
+    moved = [c for c in arms["C"] if "unchanged" not in c]
+    check_true("arm C: the message is the fixed sentence and intent spans, the file the rest — "
+               "together exactly the suite's words",
+               all(c["prompt"].startswith(lead + " ") and sorted(c["attachments"]) == [routing_variants.ATTACHED_FILE]
+                   and not set(c["attachments"]) & set(by_id[c["derived_from"]].get("attachments") or {})
+                   for c in moved)
+               and all(sorted(words(c["prompt"][len(lead):]) + words(c["attachments"][routing_variants.ATTACHED_FILE]))
+                       == sorted(words(by_id[c["derived_from"]]["prompt"])) for c in moved))
+    check("parity: every arm-A message, and every arm-C message, names what its ask is about",
+          {arm: [n for n in ids if not routing_variants.topic_nouns(text(n))] for arm, ids, text in
+           (("A", routing_variants.ARM_B_CASES, lambda n: by_id[n]["prompt"]),
+            ("C", [c["id"] for c in arms["C"]], lambda n: next(c for c in arms["C"] if c["id"] == n)["prompt"]))},
+          {"A": [], "C": []})
+    check_true("and a moved message keeps its topic noun from its own spans, not from the fixed sentence",
+               all(routing_variants.topic_nouns(c["prompt"][len(lead):]) for c in moved)
+               and not routing_variants.topic_nouns(lead))
+    check("arm C: only case 8, which carries no domain content, runs as it stands",
+          [(c["derived_from"], c["prompt"] == by_id[c["derived_from"]]["prompt"], "attachments" in c)
+           for c in arms["C"] if "unchanged" in c], [(8, True, False)])
+    # Arms A and D run suite cases by hand-typed --case lists in the README; each must
+    # pick the cases its paired variant arm derives from, or the per-case pairing breaks.
+    readme = (here / "README.md").read_text()
+    typed = {arm.upper(): [int(n) for n in re.findall(r"--case (\d+)", ids)] for arm, ids in
+             re.findall(r"--json-out arm-([ad])\.json \\\n((?:\s*--case \d+)+)", readme)}
+    check("the README's arm A and D commands run exactly the cases arms B and C derive from",
+          typed, {"A": list(routing_variants.ARM_B_CASES), "D": list(routing_variants.ARM_C_CASES)})
+    edited = json.loads(json.dumps(suite))
+    next(c for c in edited["cases"] if c["id"] == 6)["prompt"] = "How should I tailor my answers to her?"
+    try:
+        routing_variants.build(edited)
+        check("a suite edit that breaks an intent span stops the generator", "built", "SystemExit")
+    except SystemExit as exc:
+        check_true("a suite edit that breaks an intent span stops the generator", "case 6" in str(exc))
+
+
+# --- The front-door arm: generation, clashes, install, labels, explicit naming ---
+
+def module_tree(root: Path, files: dict[str, dict[str, str]], bodies: dict[str, str] | None = None) -> Path:
+    """A synthetic skills/ folder: module -> {reference name: text}."""
+    for module, refs in files.items():
+        (root / module / "references").mkdir(parents=True)
+        text = (bodies or {}).get(module, f"# {module}\n\nRead `references/{next(iter(refs))}`.\n")
+        (root / module / "SKILL.md").write_text(f"---\nname: {module}\ndescription: Does {module}.\n---\n\n{text}")
+        for name, ref in refs.items():
+            (root / module / "references" / name).write_text(ref)
+    return root
+
+
+def test_frontdoor_generation() -> None:
+    print("\nfront door: references/ is generated, deterministically, from the module sources")
+    repo = Path(__file__).resolve().parent.parent
+    files = sync.generate()
+    check("generating twice gives the same files", files == sync.generate(), True)
+    check("a playbook per module", sorted(n for n in files if n[:-3] in run_routing.SKILLS),
+          [f"{s}.md" for s in run_routing.SKILLS])
+    for module in run_routing.SKILLS:
+        source = (repo / "skills" / module / "SKILL.md").read_text()
+        playbook = files[f"{module}.md"]["text"]
+        check(f"{module}'s playbook is its SKILL.md body with the frontmatter stripped, its contents listed, "
+              f"and only clash paths moved",
+              playbook, sync.with_paths_note(sync.with_contents(
+                  sync.body(source).replace("references/rationale.md", f"references/{module}-rationale.md"))))
+        listing_end = playbook.index("\n\n", playbook.index("## Contents\n\n") + len("## Contents\n\n"))
+        check(f"{module}'s playbook says where its paths resolve, first thing after its contents list",
+              playbook[listing_end:listing_end + 2 + len(sync.PATHS_NOTE)], "\n\n" + sync.PATHS_NOTE)
+        lines = playbook.splitlines()
+        check(f"{module}'s playbook opens with '## Contents' directly under its H1, as a file over 100 lines must",
+              [line for line in lines[:3] if line.strip()], [lines[0], "## Contents"])
+        headings = [line.lstrip("#").strip() for line in sync.body(source).splitlines()
+                    if line.startswith(("## ", "### "))]
+        listed = [line.strip()[2:] for line in playbook.partition("## Contents\n\n")[2].split("\n\n", 1)[0].splitlines()]
+        check(f"{module}'s contents list names its ## and ### headings, in order", listed, headings)
+        check_true(f"{module}'s playbook names only files the hub carries",
+                   set(sync.LINK.findall(playbook)) <= set(files))
+        check(f"{module}'s rationale.md, which clashes, is carried as {module}-rationale.md, unchanged",
+              files[f"{module}-rationale.md"]["text"],
+              (repo / "skills" / module / "references" / "rationale.md").read_text())
+    check("no file is carried under its clashing name", "rationale.md" in files, False)
+    mirror = (repo / "skills" / "resume-tailor" / "references" / "citations.md").read_text()
+    check("a convention mirror is one byte-identical file", files["citations.md"]["text"], mirror)
+    check("every distinct module reference and mirror is carried once, beside one playbook per module",
+          len(files), len({(p.name, p.read_text()) for m in sync.modules()
+                           for p in (repo / "skills" / m / "references").glob("*.md")})
+          + len(run_routing.SKILLS))
+    hub = sync.HUB.read_text()
+    check("the committed hub links every generated file directly, and nothing else",
+          sync.hub_links(hub), set(files))
+    # Round 2: Haiku read a playbook's files from the hidden module's own folder.
+    section3 = hub.partition("## 3. Run the chosen module")[2].partition("\n## ")[0]
+    check_true("the hub's section 3, which the paths note points to, says whose references/ a path means "
+               "and rules out the modules' own folders",
+               "this skill's own `references/`" in section3 and "never read from them" in " ".join(section3.split()))
+    check_true("the paths note names no references/ file, so it adds no link the hub must carry",
+               not sync.LINK.findall(sync.PATHS_NOTE))
+    check_true("the paths note points to the hub without saying SKILL.md, which section 3 item 1 says "
+               "means the playbook inside one",
+               "SKILL.md" not in sync.PATHS_NOTE and "section 3" in sync.PATHS_NOTE)
+
+
+def test_frontdoor_clashes() -> None:
+    print("\nfront door: a name clash is resolved by renaming, or refused")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = module_tree(Path(tmp) / "a", {
+            "alpha": {"notes.md": "alpha's notes", "shared.md": "same text", "own.md": "see rationale and notes.md"},
+            "beta": {"notes.md": "beta's notes", "shared.md": "same text"}},
+            bodies={"alpha": "# Alpha\n\nRead `references/notes.md`, then `references/own.md` and "
+                             "`references/shared.md`; not `conventions/notes.md`.\n"})
+        files = sync.generate(root)
+        check("different text under one name: each module's copy gets its module's prefix",
+              {n: files[n]["text"] for n in ("alpha-notes.md", "beta-notes.md")},
+              {"alpha-notes.md": "alpha's notes", "beta-notes.md": "beta's notes"})
+        check("the same text under one name is one shared file", files["shared.md"]["text"], "same text")
+        check("the playbook's path moves to its own module's copy; other paths are untouched",
+              files["alpha.md"]["text"],
+              "# Alpha\n\n" + sync.PATHS_NOTE + "\n\nRead `references/alpha-notes.md`, then "
+              "`references/own.md` and `references/shared.md`; not `conventions/notes.md`.\n")
+        check("a module's own file that names a clashing file points at that module's copy",
+              files["own.md"]["text"], "see rationale and alpha-notes.md")
+
+        bad = module_tree(Path(tmp) / "b", {
+            "alpha": {"notes.md": "a", "shared.md": "read notes.md"},
+            "beta": {"notes.md": "b", "shared.md": "read notes.md"}})
+        try:
+            sync.generate(bad)
+            check("a shared file naming a clashing file is refused, not guessed", "generated", "refused")
+        except SystemExit as exc:
+            check_true("a shared file naming a clashing file is refused, not guessed", "cannot be resolved" in str(exc))
+
+        collide = module_tree(Path(tmp) / "c", {
+            "alpha": {"notes.md": "a", "alpha-notes.md": "already here"},
+            "beta": {"notes.md": "b"}})
+        try:
+            sync.generate(collide)
+            check("a renamed file that would overwrite another is refused", "generated", "refused")
+        except SystemExit as exc:
+            check_true("a renamed file that would overwrite another is refused", "already is" in str(exc))
+
+        playbook_name = module_tree(Path(tmp) / "d", {"alpha": {"beta.md": "alpha's note on beta"},
+                                                     "beta": {"x.md": "x"}})
+        files = sync.generate(playbook_name)
+        check("a module file named like a playbook is renamed, so the playbook keeps its name",
+              (files["alpha-beta.md"]["text"], files["beta.md"]["from"]),
+              ("alpha's note on beta", "skills/beta/SKILL.md (body)"))
+
+        fenced = module_tree(Path(tmp) / "f", {"alpha": {"x.md": "x"}},
+                             bodies={"alpha": "# Alpha\n\nIntro.\n\n## One\n\n```text\n## not a heading\n```\n\n"
+                                              "### One a\n\n## Two\n"})
+        check("a playbook's contents list its ## and ### headings, ### nested, and skip fenced code",
+              sync.generate(fenced)["alpha.md"]["text"],
+              "# Alpha\n\n## Contents\n\n- One\n  - One a\n- Two\n\n" + sync.PATHS_NOTE + "\n\nIntro.\n\n"
+              "## One\n\n```text\n## not a heading\n```\n\n### One a\n\n## Two\n")
+        listed = "# Alpha\n\n## Contents\n\n- One\n\n## One\n"
+        check("a playbook that already opens with its contents is left as it is",
+              sync.with_contents(listed), listed)
+        check("the paths note goes after an existing contents list, under a bare H1, or first with no H1",
+              (sync.with_paths_note(listed), sync.with_paths_note("# A\n\nBody.\n"),
+               sync.with_paths_note("Body.\n")),
+              (f"# Alpha\n\n## Contents\n\n- One\n\n{sync.PATHS_NOTE}\n\n## One\n",
+               f"# A\n\n{sync.PATHS_NOTE}\n\nBody.\n", f"{sync.PATHS_NOTE}\n\nBody.\n"))
+
+        dangling = module_tree(Path(tmp) / "e", {"alpha": {"x.md": "x"}},
+                               bodies={"alpha": "Read `references/missing.md`.\n"})
+        try:
+            sync.generate(dangling)
+            check("a playbook naming a file the hub would not carry is refused", "generated", "refused")
+        except SystemExit as exc:
+            check_true("a playbook naming a file the hub would not carry is refused", "missing.md" in str(exc))
+
+
+def test_frontdoor_install() -> None:
+    print("\nfront door: the arm installs the hub and the three modules, hidden")
+    repo = Path(__file__).resolve().parent.parent
+    with tempfile.TemporaryDirectory() as tmp:
+        root, names = run_routing.case_project(Path(tmp), {"id": 7, "attachments": {"jd.txt": "x"}},
+                                               "ab12cd34", None, "frontdoor")
+        installed = root / ".claude" / "skills"
+        check("the hub and every module are installed under this run's names",
+              sorted(p.name for p in installed.iterdir()),
+              sorted([f"{s}-ab12cd34" for s in run_routing.SKILLS] + ["tuesday-ab12cd34"]))
+        check("and the runner is told those names", names,
+              {**{s: f"{s}-ab12cd34" for s in run_routing.SKILLS}, "tuesday": "tuesday-ab12cd34"})
+        for skill in run_routing.SKILLS:
+            copy = (installed / f"{skill}-ab12cd34" / "SKILL.md").read_text().splitlines()
+            source = (repo / "skills" / skill / "SKILL.md").read_text().splitlines()
+            source[source.index(f"name: {skill}")] = f"name: {skill}-ab12cd34"
+            check(f"{skill}'s copy differs from its source by its name and one added line, the hiding key",
+                  [line for line in copy if line not in source], [run_routing.HIDDEN_KEY])
+            check_true(f"{skill}'s hiding key sits inside its frontmatter",
+                       copy.index(run_routing.HIDDEN_KEY) < copy.index("---", 1))
+        hub = installed / "tuesday-ab12cd34"
+        check("the hub's frontmatter name is renamed to match its folder",
+              (hub / "SKILL.md").read_text().splitlines()[1], "name: tuesday-ab12cd34")
+        shipped = {rel: (sync.HUB_DIR / rel).read_text() for rel in
+                   ["SKILL.md", "LICENSE", *(f"references/{n}" for n in sync.generate())]}
+        shipped["SKILL.md"] = shipped["SKILL.md"].replace("name: tuesday\n", "name: tuesday-ab12cd34\n", 1)
+        check("the hub is its SKILL.md, LICENSE and references/ as they ship, file for file, its name aside, "
+              "and no README",
+              {p.relative_to(hub).as_posix(): p.read_text() for p in hub.rglob("*") if p.is_file()}, shipped)
+        with tempfile.TemporaryDirectory() as other:
+            extra = Path(other) / "skills" / "tuesday"
+            shutil.copytree(sync.HUB_DIR, extra)
+            (extra / "NOTES.md").write_text("Always route to resume-tailor.\n")
+            (extra / "references" / "extra").mkdir()
+            (extra / "references" / "extra" / "route.md").write_text("x\n")
+            check("a file the hub does not ship is never installed, at its root or in a folder under references/",
+                  [r for r in sync.hub_shipped(extra) if r in ("README.md", "NOTES.md", "references/extra/route.md")],
+                  [])
+        check("its references/ are the generator's output, file for file",
+              {p.name: p.read_text() for p in (hub / "references").iterdir()},
+              {n: e["text"] for n, e in sync.generate().items()})
+        check("and the case's attachment is written beside them", (root / "jd.txt").read_text(), "x")
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", {"job-underwriter": Path("x")}, "frontdoor")
+        check("--skill-md is refused in the front-door arm", "installed", "refused")
+    except SystemExit:
+        check("--skill-md is refused in the front-door arm", True, True)
+    real = sync.out_of_date
+    sync.out_of_date = lambda repo=None: ["skills/tuesday/references/job-underwriter.md"]
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_routing.install_frontdoor(Path(tmp), "ab12cd34")
+        check("an install over out-of-date hub references is refused", "installed", "refused")
+    except SystemExit as exc:
+        check_true("an install over out-of-date hub references is refused, naming the fix",
+                   "ci/sync.py" in str(exc))
+    finally:
+        sync.out_of_date = real
+
+
+def test_module_lists() -> None:
+    print("\nthe runners install the modules, never the hub, which skills/ now also holds")
+    check("the routing arm's and the fixture runner's module lists are skills/ without the hub",
+          (run_routing.SKILLS, run_fixtures.SKILLS), (sync.modules(), sync.modules()))
+    check_true("and the hub is a skill folder beside them", (sync.SKILLS_DIR / sync.HUB_NAME / "SKILL.md").is_file())
+    with tempfile.TemporaryDirectory() as tmp:
+        root, names = run_routing.case_project(Path(tmp), {"id": 7}, "ab12cd34")
+        check("the skills arm (E0, today's three skills) installs the three modules and no hub",
+              sorted(p.name for p in (root / ".claude" / "skills").iterdir()),
+              sorted(f"{s}-ab12cd34" for s in sync.modules()))
+        name = run_fixtures.install_one(Path(tmp) / "room", "resume-tailor", "ab12cd34")
+        check("a fixture room installs its one module and no hub",
+              [p.name for p in (Path(tmp) / "room" / ".claude" / "skills").iterdir()], [name])
+
+
+def test_sync() -> None:
+    print("\nci/sync.py: every generated copy, the mirrors and the front door's references, in one pass")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        (repo / "conventions").mkdir()
+        (repo / "conventions" / "grammar.md").write_text("# Grammar\n\nNew rule.\n")
+        header = "<!-- SYNCED FROM: conventions/grammar.md\n     Canonical wins. -->\n"
+        module_tree(repo / "skills", {
+            "alpha": {"grammar.md": header + "# Grammar\n\nOld rule.\n", "own.md": "alpha's own"},
+            "beta": {"grammar.md": header + "# Grammar\n\nOld rule.\n", "x.md": "x"}})
+        hub = repo / "skills" / "tuesday"
+        (hub / "references").mkdir(parents=True)
+        (hub / "SKILL.md").write_text("---\nname: tuesday\ndescription: Routes.\n---\n\n# Tuesday\n")
+        (hub / "references" / "retired.md").write_text("a file no source makes any more")
+        stale = sync.out_of_date(repo)
+        check("--check names the stale mirrors, every hub file missing or stale, and a stray hub file",
+              stale, sorted(["skills/alpha/references/grammar.md", "skills/beta/references/grammar.md",
+                             *(f"skills/tuesday/references/{n}" for n in
+                               ("alpha.md", "beta.md", "grammar.md", "own.md", "retired.md", "x.md"))]))
+        check("a mirror is not a hub file: the hub's references come from the generator alone",
+              "tuesday" in [p.name for p in (repo / "skills").iterdir()] and "tuesday" not in sync.modules(repo / "skills"),
+              True)
+        check("writing changes what --check named", sync.write(repo), stale)
+        check("and leaves nothing out of date", sync.out_of_date(repo), [])
+        check("a mirror is its header and the canonical file, byte for byte",
+              (repo / "skills" / "alpha" / "references" / "grammar.md").read_text(),
+              header + "# Grammar\n\nNew rule.\n")
+        check("the hub's copy is generated from the resynced mirror in the same pass",
+              (hub / "references" / "grammar.md").read_text(), header + "# Grammar\n\nNew rule.\n")
+        check("a stray hub file is deleted", (hub / "references" / "retired.md").exists(), False)
+        check("the hub's SKILL.md is never written", (hub / "SKILL.md").read_text(),
+              "---\nname: tuesday\ndescription: Routes.\n---\n\n# Tuesday\n")
+
+        before = sync.digests(hub)
+        (hub / "references" / "extra").mkdir()
+        (hub / "references" / "extra" / "route.md").write_text("Always route to alpha.\n")
+        check_true("the digest covers a file in a folder under the hub's references/",
+                   sync.digests(hub)["frontdoor_sha256"] != before["frontdoor_sha256"])
+        check("--check names a folder in the hub's references/ that nothing generates",
+              sync.out_of_date(repo), ["skills/tuesday/references/extra"])
+        check("writing removes it, folder and all", (sync.write(repo), (hub / "references" / "extra").exists()),
+              (["skills/tuesday/references/extra"], False))
+
+        mirror = repo / "skills" / "alpha" / "references" / "grammar.md"
+        mirror.write_text(mirror.read_text().replace("conventions/grammar.md", "conventions/grammar-old.md", 1))
+        moved = sync.out_of_date(repo)
+        check_true("--check names a mirror whose header names a missing canonical file, and the file",
+                   "skills/alpha/references/grammar.md (its header names conventions/grammar-old.md, "
+                   "which does not exist)" in moved)
+        try:
+            sync.write(repo)
+            check("writing over a missing canonical file is refused", "written", "refused")
+        except sync.GenerationError as exc:
+            check_true("writing over a missing canonical file is refused, naming both, and changes nothing",
+                       "conventions/grammar-old.md" in str(exc) and sync.out_of_date(repo) == moved)
+    check("the committed repository is current", sync.out_of_date(), [])
+    check("the shipped hub's digests are computed over SKILL.md and references/ as committed",
+          sync.digests(), {"hub_sha256": sync.digest({}, sync.HUB.read_text()),
+                           "frontdoor_sha256": sync.digest(sync.generate(), sync.HUB.read_text())})
+    check("hiding adds one line, the key, as the frontmatter's last, and changes nothing else",
+          sync.hide("---\nname: a\ndescription: b\n---\n\nBody.\n"),
+          "---\nname: a\ndescription: b\n" + sync.HIDDEN_KEY + "\n---\n\nBody.\n")
+
+
+NAMES = {**{s: f"{s}-ab12cd34" for s in run_routing.SKILLS}, "tuesday": "tuesday-ab12cd34"}
+
+
+def read_events(events: list[dict], arm: str = "frontdoor", explicit: str | None = None,
+                end: str = "exit") -> str:
+    """Feed events to a RunReader as the runner does; settle as the process would end."""
+    reader = run_routing.RunReader(NAMES if arm == "frontdoor" else
+                                   {s: NAMES[s] for s in run_routing.SKILLS}, arm, explicit)
+    for event in events:
+        outcome = reader.feed(event)
+        if outcome:
+            return outcome
+    return reader.timed_out() if end == "timeout" else reader.exited()
+
+
+def call(name: str, given: dict) -> dict:
+    return {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": given}]}}
+
+
+def partial(name: str, chunks: list[str]) -> list[dict]:
+    """A tool call as the partial stream delivers it: start, input in pieces, stop."""
+    return ([{"type": "stream_event", "event": {"type": "content_block_start",
+                                                "content_block": {"type": "tool_use", "name": name}}}]
+            + [{"type": "stream_event", "event": {"type": "content_block_delta",
+                                                  "delta": {"type": "input_json_delta", "partial_json": c}}}
+               for c in chunks]
+            + [{"type": "stream_event", "event": {"type": "content_block_stop"}}])
+
+
+def init(*skills: str) -> dict:
+    return {"type": "system", "subtype": "init", "skills": list(skills), "slash_commands": list(skills)}
+
+
+DONE = {"type": "result", "subtype": "success"}
+HUB_DIR = "/tmp/case-1/.claude/skills/tuesday-ab12cd34"
+
+
+def runs(*outcomes: str, hub: bool = False) -> list[dict]:
+    """Run records as `run_once` returns them, one per outcome, for `reach`."""
+    return [{"outcome": o, "hub_fired": hub} for o in outcomes]
+
+
+def test_frontdoor_labels() -> None:
+    print("\nfront door: every run gets exactly one of the arm's labels")
+    ours = init(*NAMES.values())
+    fire = call("Skill", {"skill": "tuesday-ab12cd34"})
+    check("the playbook read first after tuesday fires is the route",
+          read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/citations.md"}),
+                       call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"}),
+                       call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"})]), "resume-tailor")
+    check("a playbook path arriving in pieces is read once whole",
+          read_events([ours, fire] + partial("Read", ['{"file_path": "' + HUB_DIR, "/references/mock-",
+                                                      'interview.md"}'])), "mock-interview")
+    # Round 2: Opus and Haiku read the right playbook with `cd <hub>/references && cat <m>.md`
+    # and did its job; a reader that knew only the full path scored both tuesday-unrouted.
+    check("a playbook read by `cat` after a `cd` into the hub's folder, in one call, is the route",
+          read_events([ours, fire, call("Bash", {"command": f"cd {HUB_DIR}/references && cat mock-interview.md"}),
+                       DONE]), "mock-interview")
+    check("and so is one read by a path relative to the hub's folder",
+          read_events([ours, fire, call("Bash", {"command": f"cd {HUB_DIR} && ls -R references && "
+                                                             "cat references/resume-tailor.md"}), DONE]), "resume-tailor")
+    check("a playbook's file name with no hub folder in the call is no route",
+          read_events([ours, fire, call("Bash", {"command": "cat resume-tailor.md"}), DONE]), "tuesday-unrouted")
+    check("one call naming two playbooks routes to the first it names",
+          read_events([ours, fire, call("Bash", {"command": f"cd {HUB_DIR}/references && cat resume-tailor.md "
+                                                             "job-underwriter.md"}), DONE]), "resume-tailor")
+    check("a renamed clash file is not its module's playbook",
+          read_events([ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter-rationale.md"}),
+                       DONE]), "tuesday-unrouted")
+    check("tuesday firing with no playbook read is tuesday-unrouted, a miss",
+          read_events([ours, fire, DONE]), "tuesday-unrouted")
+    check("a hidden module reached for by name is hidden-<module>",
+          read_events([ours, call("Skill", {"skill": "mock-interview-ab12cd34"})]), "hidden-mock-interview")
+    check("so is a hidden module's file read directly, even after tuesday fired",
+          read_events([ours, fire, call("Read", {"file_path": "/tmp/case-1/.claude/skills/"
+                                                              "job-underwriter-ab12cd34/references/evidence-model.md"})]),
+          "hidden-job-underwriter")
+    check("a hidden module called by its shipped name, with no run suffix, is hidden-<module>",
+          read_events([ours, call("Skill", {"skill": "job-underwriter"}), DONE]), "hidden-job-underwriter")
+    check("and so when it is called after the hub fired, before any playbook read",
+          read_events([ours, fire, call("Skill", {"skill": "resume-tailor"}),
+                       call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]), "hidden-resume-tailor")
+    check("a shipped-name call read from the partial stream is the same call",
+          read_events([ours] + partial("Skill", ['{"skill": "job-', 'underwriter"}'])), "hidden-job-underwriter")
+    check("the hub called by its shipped name is the hub firing",
+          read_events([ours, call("Skill", {"skill": "tuesday"}), DONE]), "tuesday-unrouted")
+    # Round 2: Haiku routed right, then read the playbook's files from the hidden
+    # module's own folder, which a listing had shown it. A reader that stopped at
+    # the routing decision scored that run job-underwriter.
+    routed = [ours, fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"})]
+    check("the run is read past the routing decision: a hidden module reached for later is hidden-<module>",
+          read_events(routed + [call("Skill", {"skill": "resume-tailor-ab12cd34"}), DONE]), "hidden-resume-tailor")
+    check("and so is the routed module's own hidden folder, entered by Bash to read the playbook's files",
+          read_events(routed + [call("Bash", {"command": "cd /tmp/case-21/.claude/skills/job-underwriter-ab12cd34/"
+                                                         "references && cat risk-and-decision.md"}), DONE]),
+          "hidden-job-underwriter")
+    reader = run_routing.RunReader(NAMES, "frontdoor")
+    check("the routing decision is not settled until the turn ends: the reader returns nothing at the playbook",
+          [reader.feed(e) for e in routed], [None, None, None])
+    check("a listing that merely prints hidden paths reaches nothing: only a tool call's input is read",
+          read_events(routed + [{"type": "user", "message": {"content": [{"type": "tool_result", "content":
+                       "./.claude/skills/job-underwriter-ab12cd34/references/risk-and-decision.md"}]}}, DONE]),
+          "job-underwriter")
+    check("a run routed and then cut off by the timeout is set aside: the rest of the turn was never seen",
+          read_events(routed, end="timeout"), "timeout")
+    check("the skills arm reads Skill names as it did at e1e6a13: a shipped name it did not install is no fire",
+          read_events([init(*(NAMES[s] for s in run_routing.SKILLS)), call("Skill", {"skill": "job-underwriter"}),
+                       DONE], arm="skills"), "neither")
+    check("no fire at all is neither", read_events([ours, DONE]), "neither")
+    check("an errored run is error, even after tuesday fired",
+          read_events([ours, fire, {"type": "result", "is_error": True}]), "error")
+    check("a run cut off by the timeout is timeout, even after tuesday fired",
+          read_events([ours, fire], end="timeout"), "timeout")
+    check("a run that lists a synced Tuesday skill it did not install is void",
+          read_events([init(*NAMES.values(), "anthropic-skills:mock-interview"), fire]), "void")
+    check("so is one listing another run's copy",
+          read_events([init(*NAMES.values(), "tuesday-ffff0000"), fire]), "void")
+    check("an unrelated skill in the list is not a Tuesday skill",
+          read_events([init(*NAMES.values(), "pdf", "skill-creator"), fire, DONE]), "tuesday-unrouted")
+    check("the skills arm still labels the module whose name a call carries",
+          read_events([init(*(NAMES[s] for s in run_routing.SKILLS)),
+                       call("Skill", {"skill": "resume-tailor-ab12cd34"})], arm="skills"), "resume-tailor")
+    check("and calls a void run void too",
+          read_events([init("job-underwriter")], arm="skills"), "void")
+    reader = run_routing.RunReader(NAMES, "frontdoor")
+    reader.feed(init("tuesday-ab12cd34", "pdf"))
+    check("the init skill list is recorded with the outcome, with the hub fire and what was reached",
+          reader.record("neither"), {"outcome": "neither", "init_skills": ["tuesday-ab12cd34", "pdf"],
+                                     "hub_fired": False, "reached": []})
+    reader = run_routing.RunReader(NAMES, "frontdoor")
+    for event in routed + [call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]:
+        reader.feed(event)
+    check("every playbook a front-door run reads is recorded in order; the first is the route",
+          (reader.feed(DONE), reader.record("job-underwriter")["reached"], reader.hub_fired),
+          ("job-underwriter", ["job-underwriter", "resume-tailor"], True))
+    reader = run_routing.RunReader({s: NAMES[s] for s in run_routing.SKILLS}, "skills")
+    reader.feed(init(*(NAMES[s] for s in run_routing.SKILLS)))
+    check("the skills arm records only the outcome and the init list, as before",
+          sorted(reader.record("neither")), ["init_skills", "outcome"])
+
+    ok, note = run_routing.verdict("job-underwriter", ["job-underwriter", "void", "job-underwriter"])
+    check("a void run is set aside like a timeout, and reported", (ok, "1 void" in note), (True, True))
+    ok, _ = run_routing.verdict("neither", ["neither", "tuesday-unrouted", "neither"])
+    check("tuesday firing on a negative fails it, routed or not", ok, False)
+    ok, _ = run_routing.verdict("job-underwriter", ["job-underwriter", "hidden-job-underwriter"])
+    check("a hidden module firing fails the case even when it is the right module", ok, False)
+    cases21 = [{"id": n, "expected": "neither", "prompt": "p"} for n in range(1, 22)]
+    all_void = run_routing.reach(cases21, {n: runs(*["void"] * 4, "neither") for n in range(1, 22)})
+    check("a mostly-void arm is not scored, though its hidden and wrong counts read zero",
+          (all_void["hidden"], all_void["wrong_skill"], bool(run_routing.set_aside_problem(all_void))), (0, 0, True))
+    check_true("and the reason names void with timeouts and errors",
+               "timed out, errored or were void" in (run_routing.set_aside_problem(all_void) or ""))
+    check("one set-aside run in ten is within the bar; two are over it",
+          [bool(run_routing.set_aside_problem(run_routing.reach(
+              [{"id": 1, "expected": "neither", "prompt": "p"}], {1: runs(*["void"] * k, *["neither"] * (10 - k))})))
+           for k in (1, 2)],
+          [False, True])
+    check("an arm with no runs has nothing to set aside",
+          run_routing.set_aside_problem(run_routing.reach([], {})), None)
+    summary = run_routing.reach([{"id": 1, "expected": "job-underwriter", "prompt": "p"}],
+                                {1: runs("job-underwriter", "tuesday-unrouted", "mock-interview", hub=True)
+                                    + runs("hidden-mock-interview", "void", "neither")})
+    check("reach counts playbook reads as reaches, and unrouted, hidden and void runs apart",
+          {k: summary[k] for k in ("decided", "reached", "wrong_skill", "tuesday_unrouted", "reached_tuesday",
+                                   "hidden", "set_aside")},
+          {"decided": 5, "reached": 2, "wrong_skill": 1, "tuesday_unrouted": 1, "reached_tuesday": 3,
+           "hidden": 1, "set_aside": 1})
+    # Round 2's case 21 on Haiku: the hub fired and routed on every run, and one run
+    # then reached the hidden module. Hub fires are read from `hub_fired`, not outcomes.
+    case21 = [{"id": 21, "expected": "either", "siblings": ["job-underwriter", "resume-tailor"], "prompt": "p"}]
+    summary = run_routing.reach(case21, {21: runs(*["job-underwriter"] * 4, "hidden-job-underwriter", hub=True)})
+    check("tuesday fired counts every run whose record says the hub fired, a hidden reach after routing included",
+          (summary["reached_tuesday"], summary["hidden"], summary["decided"]), (5, 1, 5))
+    check("a hidden reach with no hub fire is not counted as one",
+          run_routing.reach(case21, {21: runs("hidden-job-underwriter")})["reached_tuesday"], 0)
+    explicit_cases = [{"id": 1, "expected": "mock-interview", "prompt": "/mock-interview x"}]
+    explicit_runs = {1: runs(*["focused"] * 5, hub=True)}
+    summary = run_routing.reach(explicit_cases, explicit_runs)
+    check("an explicit case is not a routing case: reach counts none of its runs",
+          (summary["decided"], summary["reached"], summary["set_aside"]), (0, 0, 0))
+    lines = run_routing.summary_lines(summary, run_routing.explicit_summary(explicit_cases, explicit_runs),
+                                      "frontdoor")
+    check_true("so a fully focused E2 prints its explicit line and no reach rate of 0",
+               len(lines) == 1 and lines[0].startswith("explicit: focused on 5/5 decided runs"))
+    lines = run_routing.summary_lines(run_routing.reach(case21, {21: runs("job-underwriter", hub=True)}),
+                                      run_routing.explicit_summary(case21, {}), "frontdoor")
+    check("a routing suite prints the reach and tuesday lines, and no explicit line",
+          [line.split(" on ")[0] for line in lines], ["reached a skill", "tuesday fired"])
+
+
+def test_explicit_naming() -> None:
+    print("\nfront door: E2 types the installed name, and reads only the named module as a pass")
+    here = Path(__file__).resolve().parent
+    names = {s: f"{s}-ab12cd34" for s in run_routing.SKILLS}
+    check("a leading slash command is renamed to the installed copy's name, the rest kept",
+          run_routing.explicit_prompt("/mock-interview should I apply?\nPosting below.", names),
+          "/mock-interview-ab12cd34 should I apply?\nPosting below.")
+    check("a prompt with no module command is sent as written",
+          [run_routing.explicit_prompt(p, names) for p in ("should I apply?", "/mock-interviewer x", "use /resume-tailor")],
+          ["should I apply?", "/mock-interviewer x", "use /resume-tailor"])
+    cases = run_routing.load_cases(here / "suite-explicit.json")
+    check("suite-explicit holds design §6's four cases, each expecting the module its command names",
+          [(run_routing.explicit_command(c["prompt"]), c["expected"]) for c in cases],
+          [("mock-interview", "mock-interview"), ("job-underwriter", "job-underwriter"),
+           ("resume-tailor", "resume-tailor"), ("mock-interview", "mock-interview")])
+    check_true("and every one is sent under the installed name",
+               all(run_routing.explicit_prompt(c["prompt"], names).startswith(f"/{c['expected']}-ab12cd34 ")
+                   for c in cases))
+    ours = init(*NAMES.values())
+    expansion = {"type": "user", "message": {"content": [{"type": "text", "text":
+                 "<command-name>/mock-interview-ab12cd34</command-name>"}]}}
+    own = call("Read", {"file_path": "/tmp/case-1/.claude/skills/mock-interview-ab12cd34/references/personas.md"})
+    reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+    check("E2: the named module's own files opened does not end the run: what follows is the case",
+          [reader.feed(ours), reader.feed(own)], [None, None])
+    check("E2: the named module's own files opened, then a clean end, is focused",
+          read_events([ours, own, DONE], explicit="mock-interview"), "focused")
+    check("E2: a focused case passes; one run that reached another module fails it",
+          (run_routing.verdict(run_routing.passes_on({"prompt": "/mock-interview x", "expected": "mock-interview"}),
+                               ["focused"] * 5)[0],
+           run_routing.verdict("focused", ["focused"] * 4 + ["job-underwriter"])[0]), (True, False))
+    check("a routing case still passes on its expected label",
+          run_routing.passes_on({"prompt": "should I apply?", "expected": "job-underwriter"}), "job-underwriter")
+    # Round 2: every run in which the hub fired deferred to the named module and read
+    # no other playbook. The hub firing is reported apart; what it does next is scored.
+    hub_fire = call("Skill", {"skill": "tuesday-ab12cd34"})
+    own_via_hub = call("Read", {"file_path": f"{HUB_DIR}/references/mock-interview.md"})
+    check("E2: the hub firing, then deferring to the named module's own playbook, is focused",
+          read_events([ours, expansion, hub_fire, own_via_hub,
+                       call("Read", {"file_path": f"{HUB_DIR}/references/output-discipline.md"}), DONE],
+                      explicit="mock-interview"), "focused")
+    check("E2: so is the hub called by its shipped name",
+          read_events([ours, expansion, call("Skill", {"skill": "tuesday"}), DONE], explicit="mock-interview"),
+          "focused")
+    check("E2: the hub firing, then another playbook read through it, is that playbook",
+          read_events([ours, own, hub_fire, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}),
+                       DONE], explicit="mock-interview"), "job-underwriter")
+    check("E2: another playbook named in a Bash call from inside the hub's folder is reached too",
+          read_events([ours, expansion, hub_fire,
+                       call("Bash", {"command": f"cd {HUB_DIR}/references && cat job-underwriter.md"}), DONE],
+                      explicit="mock-interview"), "job-underwriter")
+    check("E2: a renamed clash file is not its module's playbook, and the named module's own playbook is not another's",
+          read_events([ours, expansion, call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter-rationale.md"}),
+                       call("Bash", {"command": f"wc -c {HUB_DIR}/references/mock-interview.md"}), DONE],
+                      explicit="mock-interview"), "focused")
+    check("E2: the timeout is set aside even after its own files opened: the rest of the turn was never seen",
+          (read_events([ours, own], explicit="mock-interview", end="timeout"),
+           read_events([ours], explicit="mock-interview", end="timeout")), ("timeout", "timeout"))
+    check("E2: the command's expansion seen, then a clean end, is focused",
+          read_events([ours, expansion, DONE], explicit="mock-interview"), "focused")
+    check("E2: a clean end with no sign the command loaded is unconfirmed, not a pass",
+          read_events([ours, DONE], explicit="mock-interview"), "unconfirmed")
+    check("E2: another module reached for by name fails it, whatever was loaded",
+          read_events([ours, expansion, call("Skill", {"skill": "job-underwriter-ab12cd34"}), DONE],
+                      explicit="mock-interview"), "hidden-job-underwriter")
+    check("E2: another module called by its shipped name, no run suffix, fails it too",
+          read_events([ours, call("Skill", {"skill": "job-underwriter"}), DONE], explicit="mock-interview"),
+          "hidden-job-underwriter")
+    check("E2: so does another module under a plugin prefix",
+          read_events([ours, call("Skill", {"skill": "anthropic-skills:resume-tailor"}), DONE],
+                      explicit="mock-interview"), "hidden-resume-tailor")
+    check("E2: so does another module's folder named in a Bash call",
+          read_events([ours, expansion, call("Bash", {"command": "ls .claude/skills/job-underwriter-ab12cd34/"}), DONE],
+                      explicit="mock-interview"), "hidden-job-underwriter")
+    check("E2: listing the skills folder without naming a module reaches nothing",
+          read_events([ours, expansion, call("Bash", {"command": "ls .claude/skills/ .claude/skills/*/"}), DONE],
+                      explicit="mock-interview"), "focused")
+    check("E2: the first other module reached is the outcome",
+          read_events([ours, expansion, call("Skill", {"skill": "resume-tailor"}), hub_fire,
+                       call("Read", {"file_path": f"{HUB_DIR}/references/job-underwriter.md"}), DONE],
+                      explicit="mock-interview"), "hidden-resume-tailor")
+    check("E2: the named module called by its shipped name loads nothing, and neither passes nor fails",
+          read_events([ours, call("Skill", {"skill": "mock-interview"}), DONE], explicit="mock-interview"),
+          "unconfirmed")
+    reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+    for event in [ours, expansion, hub_fire, call("Skill", {"skill": "job-underwriter-ab12cd34"}),
+                  call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]:
+        reader.feed(event)
+    outcome = reader.feed(DONE)
+    check("E2: the record carries whether the named module loaded, the hub fire, and every module reached, "
+          "in order",
+          {k: v for k, v in reader.record(outcome).items() if k not in ("init_skills", "slash_commands")},
+          {"outcome": "hidden-job-underwriter", "loaded": True, "hub_fired": True,
+           "reached": ["hidden-job-underwriter", "resume-tailor"]})
+    runs = {1: [{"outcome": "focused", "hub_fired": True, "reached": []},
+                {"outcome": "focused", "hub_fired": False, "reached": []},
+                {"outcome": "hidden-job-underwriter", "hub_fired": True,
+                 "reached": ["hidden-job-underwriter", "job-underwriter"]},
+                {"outcome": "timeout", "hub_fired": True, "reached": ["job-underwriter"]}],
+            2: [{"outcome": "unconfirmed", "hub_fired": False, "reached": []}],
+            3: [{"outcome": "job-underwriter", "hub_fired": False, "reached": ["job-underwriter"]}]}
+    summary = run_routing.explicit_summary(
+        [{"id": 1, "prompt": "/mock-interview x"}, {"id": 2, "prompt": "/resume-tailor y"},
+         {"id": 3, "prompt": "should I apply?"}], runs)
+    check("E2 summary: focused, unconfirmed and hub fires counted over decided runs, a set-aside run apart, "
+          "a routing case not read",
+          summary, {"decided": 4, "focused": 2, "unconfirmed": 1, "hub_fired": 2, "hub_fired_focused": 1,
+                    "other_reached": {"hidden-job-underwriter": 1},
+                    "reached_any": {"hidden-job-underwriter": 1, "job-underwriter": 1}, "set_aside": 1})
+    # The CLI's stream-json never carries the expansion: a smoke run whose transcript
+    # holds it streamed none. The transcript is read instead, by the run's own reply.
+    def entry(uuid, parent, kind, content, mid=None):
+        message = {"content": content, **({"id": mid} if mid else {})}
+        return json.dumps({"uuid": uuid, "parentUuid": parent, "type": kind, "message": message})
+    shared = [entry("a1", None, "user", "<command-message>mock-interview-ab12cd34</command-message>\n"
+                                        "<command-name>/mock-interview-ab12cd34</command-name>"),
+              entry("b1", None, "user", "a run of the same case whose command did not expand"),
+              entry("a2", "a1", "user", [{"type": "text", "text": "Base directory for this skill: …"}]),
+              entry("b2", "b1", "assistant", [{"type": "text", "text": "reply"}], "msg_B"),
+              entry("a3", "a2", "assistant", [{"type": "text", "text": "reply"}], "msg_A")]
+    check("E2 transcript: the expansion on this run's own chain confirms the load",
+          run_routing.command_loaded(shared, "msg_A", "mock-interview-ab12cd34"), True)
+    check("E2 transcript: another run's expansion in the same file does not",
+          run_routing.command_loaded(shared, "msg_B", "mock-interview-ab12cd34"), False)
+    check("E2 transcript: nor does an expansion of another installed name, or a reply not in the file",
+          (run_routing.command_loaded(shared, "msg_A", "mock-interview-ffff0000"),
+           run_routing.command_loaded(shared, "msg_C", "mock-interview-ab12cd34")), (False, False))
+    check("E2 transcript: found under the cwd with every non-alphanumeric character turned to '-'",
+          run_routing.transcript_path({"session_id": "s1", "cwd": "/tmp/tmpab_1/case-3"}).parts[-2:],
+          ("-tmp-tmpab-1-case-3", "s1.jsonl"))
+    check("E2 transcript: no session in the init event, no path", run_routing.transcript_path({}), None)
+    # End to end: Sonnet's streams never carry the expansion, so a run whose hub fired and
+    # deferred is `focused` only through `record` reading the transcript (round 2, case 1
+    # runs 2 and 4). The reader finds the file from the init event and its own reply.
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = f"{tmp}/case-1"
+        folder = Path(tmp) / "config" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", cwd)
+        folder.mkdir(parents=True)
+        (folder / "s1.jsonl").write_text("\n".join(shared) + "\n", encoding="utf-8")
+        (folder / "s2.jsonl").write_text("\n".join(shared[1:]) + "\n", encoding="utf-8")
+
+        def transcript_run(session: str, mid: str, *events: dict) -> run_routing.RunReader:
+            reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+            for event in [{**ours, "session_id": session, "cwd": cwd},
+                          {"type": "assistant", "message": {"id": mid, "content": [{"type": "text", "text": "x"}]}},
+                          *events]:
+                reader.feed(event)
+            return reader
+
+        def recorded(reader: run_routing.RunReader, outcome: str) -> tuple:
+            rec = reader.record(outcome)
+            return rec["outcome"], rec["loaded"]
+
+        saved = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(Path(tmp) / "config")
+        try:
+            hub_then_own = transcript_run("s1", "msg_A", hub_fire, own_via_hub)
+            check("E2 record: a stream with no expansion settles unconfirmed",
+                  (hub_then_own.feed(DONE), hub_then_own.expanded, hub_then_own.loaded),
+                  ("unconfirmed", False, False))
+            check("E2 record: the transcript showing the command expanded turns unconfirmed into focused",
+                  recorded(hub_then_own, "unconfirmed"), ("focused", True))
+            check("E2 record: a run that reached another module keeps that outcome, now marked loaded",
+                  recorded(transcript_run("s1", "msg_A", hub_fire), "hidden-job-underwriter"),
+                  ("hidden-job-underwriter", True))
+            check("E2 record: no expansion on this run's chain, or no transcript at all, stays unconfirmed",
+                  (recorded(transcript_run("s1", "msg_B"), "unconfirmed"),
+                   recorded(transcript_run("s2", "msg_A"), "unconfirmed"),
+                   recorded(transcript_run("s9", "msg_A"), "unconfirmed")),
+                  (("unconfirmed", False),) * 3)
+            check("E2 record: a set-aside run is not rescued by the transcript",
+                  recorded(transcript_run("s1", "msg_A"), "timeout"), ("timeout", False))
+        finally:
+            if saved is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = saved
+    check("E2: a tool result echoing the name is not the expansion",
+          read_events([ours, {"type": "user", "message": {"content": [
+              {"type": "tool_result", "content": "mock-interview-ab12cd34"}]}}, DONE], explicit="mock-interview"),
+          "unconfirmed")
+
+
+def files_of(folder: Path) -> dict[str, str]:
+    """Every file under a folder, by its path inside it: what an install wrote, file for file."""
+    return {p.relative_to(folder).as_posix(): p.read_text() for p in sorted(folder.rglob("*")) if p.is_file()}
+
+
+def test_layouts_install() -> None:
+    print("\nlayouts: each installs where it says, and nothing but the documents in the case folder outside it")
+    check("--layout defaults to project, the layout every earlier measurement used",
+          run_routing.parser().parse_args([]).layout, "project")
+    check("and accepts the two outside the working folder",
+          [run_routing.parser().parse_args(["--layout", lay]).layout for lay in ("personal", "plugin")],
+          ["personal", "plugin"])
+    case = {"id": 7, "attachments": {"jd.txt": "x"}}
+    with tempfile.TemporaryDirectory() as tmp:
+        made = {}
+        for arm, layout in (("skills", "project"), ("frontdoor", "project"), ("skills", "personal"),
+                            ("frontdoor", "personal"), ("frontdoor", "plugin")):
+            base = Path(tmp) / f"{arm}-{layout}"
+            base.mkdir()
+            made[arm, layout] = (base, *run_routing.case_project(base, case, "ab12cd34", None, arm, layout))
+        for (arm, layout), (base, root, _) in made.items():
+            if layout != "project":
+                check(f"{arm} arm, {layout} layout: the case folder holds the case's documents and nothing else",
+                      sorted(p.relative_to(root).as_posix() for p in root.rglob("*")), ["jd.txt"])
+        project = {arm: made[arm, "project"][1] / ".claude" / "skills" for arm in ("skills", "frontdoor")}
+        base, root, names = made["skills", "personal"]
+        check("personal layout: the skills sit in skills/ of a config folder of the run's own, beside the case folder",
+              files_of(base / "config" / "case-7-0" / "skills"), files_of(project["skills"]))
+        check("each run starts with its own config folder, by its index",
+              [run_routing.config_dir(root, "personal", n) for n in (0, 2)],
+              [base / "config" / "case-7-0", base / "config" / "case-7-2"])
+        check("and the runner is told the names the project layout gives", names,
+              {s: f"{s}-ab12cd34" for s in run_routing.SKILLS})
+        base, root, names = made["frontdoor", "personal"]
+        check("personal layout, front-door arm: the hub and the hidden modules, file for file as the project layout's",
+              files_of(base / "config" / "case-7-0" / "skills"), files_of(project["frontdoor"]))
+        runs = Path(tmp) / "runs"
+        runs.mkdir()
+        root3, _ = run_routing.case_project(runs, case, "ab12cd34", None, "frontdoor", "personal", 3)
+        check("a case of three runs gets three config folders, the same skills in each, and nothing else beside it",
+              ({p.name for p in (runs / "config").iterdir()},
+               [files_of(run_routing.skills_root(root3, "personal", n)) == files_of(project["frontdoor"])
+                for n in range(3)]), ({"case-7-0", "case-7-1", "case-7-2"}, [True] * 3))
+        check("the other layouts keep one folder for every run of a case",
+              [run_routing.skills_root(made["frontdoor", lay][1], lay, 2) == run_routing.skills_root(
+                  made["frontdoor", lay][1], lay) for lay in ("project", "plugin")], [True, True])
+        base, root, names = made["frontdoor", "plugin"]
+        plugin = run_routing.home(root, "plugin")
+        check("plugin layout: the plugin is a folder of the case's own, under a neutral name, beside the case folder",
+              plugin, base / "plugins" / "case-7")
+        check("it holds the manifest and skills/, nothing else",
+              sorted(p.name for p in plugin.iterdir()), [".claude-plugin", "skills"])
+        check("the manifest names the plugin as the hub is installed, tuesday-<run id>",
+              json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["name"], "tuesday-ab12cd34")
+        check("its skills/ holds the hub and the hidden modules, file for file as the project layout's",
+              files_of(plugin / "skills"), files_of(project["frontdoor"]))
+        check("folder and frontmatter names are the project layout's, so the runner is told the same names",
+              names, NAMES)
+        check("its runs keep the runner's config folder", run_routing.config_dir(root, "plugin"), None)
+        for (arm, layout), (base, root, names) in made.items():
+            if arm == "frontdoor":
+                hub = run_routing.skills_root(root, layout) / names["tuesday"]
+                stray = [p for p in base.rglob("*") if p.is_dir() and "tuesday-ab12cd34" in p.as_posix()
+                         and p != hub and hub not in p.parents]
+                check(f"{layout} layout: no folder path carries the hub's name but the hub's own folder", stray, [])
+        check("outside the project layout the reader knows the layout's skills folder for what it is",
+              [bool(run_routing.RunReader(NAMES, "frontdoor", None, lay, made["frontdoor", lay][1]).skills_folder.search(
+                  run_routing.skills_root(made["frontdoor", lay][1], lay).as_posix())) for lay in ("personal", "plugin")],
+              [True, True])
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", None, "skills", "plugin")
+            check("--arm skills --layout plugin is refused", "installed", "refused")
+        except SystemExit as exc:
+            check_true("--arm skills --layout plugin is refused: today's three skills do not ship as a plugin",
+                       "plugin" in str(exc))
+        check("and nothing is installed", list(Path(tmp).iterdir()), [])
+    root = Path("/tmp/tmpab/case-7")
+    today = ["claude", "-p", "/mock-interview-ab12cd34 prep me", "--output-format", "stream-json", "--verbose",
+             "--include-partial-messages", "--model", "m"]
+    check("project layout: the command a run starts is today's",
+          run_routing.child_command("/mock-interview prep me", root, NAMES, "m"), today)
+    check("personal layout: today's command, and leave for Read in the run's own skills folder; the config folder "
+          "travels in the environment",
+          run_routing.child_command("/mock-interview prep me", root, NAMES, "m", "personal", 2),
+          today + ["--allowedTools", "Read(//tmp/tmpab/config/case-7-2/skills/**)"])
+    check("plugin layout: E2 types the namespaced command, the run loads the case's plugin folder, and Read may open "
+          "its skills folder",
+          run_routing.child_command("/mock-interview prep me", root, NAMES, None, "plugin", 2),
+          ["claude", "-p", "/tuesday-ab12cd34:mock-interview-ab12cd34 prep me", "--output-format", "stream-json",
+           "--verbose", "--include-partial-messages", "--plugin-dir", "/tmp/tmpab/plugins/case-7",
+           "--allowedTools", "Read(//tmp/tmpab/plugins/case-7/skills/**)"])
+    check("a routing prompt is sent as written in every layout",
+          [run_routing.child_command("should I apply?", root, NAMES, None, lay)[2] for lay in run_routing.LAYOUTS],
+          ["should I apply?"] * 3)
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("main installs every case in the layout asked for, a config folder for each run, and runs each "
+               "job by its index (test_layout_runs follows one run through)",
+               "case_project(Path(tmp), c, run_id, overrides, args.arm, args.layout, args.runs)" in source
+               and "args.arm, args.layout, job[1])," in source)
+
+
+PLUGIN_SKILLS = "/tmp/tmpab/plugins/case-1/skills"
+PLUGIN_HUB = f"{PLUGIN_SKILLS}/tuesday-ab12cd34"
+QUALIFIED = {m: f"tuesday-ab12cd34:{n}" for m, n in NAMES.items()}
+
+
+def layout_reader(events: list[dict], layout: str = "plugin", explicit: str | None = None,
+                  arm: str = "frontdoor", end: str = "exit") -> tuple[str, "run_routing.RunReader"]:
+    """Feed events to a RunReader of case 1's run 0 in a layout; return the outcome as the runner
+    settles it, and the reader."""
+    names = NAMES if arm == "frontdoor" else {s: NAMES[s] for s in run_routing.SKILLS}
+    reader = run_routing.RunReader(names, arm, explicit, layout, Path("/tmp/tmpab/case-1"))
+    for event in events:
+        outcome = reader.feed(event)
+        if outcome:
+            return outcome, reader
+    return (reader.timed_out() if end == "timeout" else reader.exited()), reader
+
+
+def test_layout_naming() -> None:
+    print("\nlayouts: names, commands and detection hold in every layout")
+    ours = init(*QUALIFIED.values())
+    hub_q = call("Skill", {"skill": QUALIFIED["tuesday"]})
+
+    def outcome_hub(events, **kw):
+        outcome, reader = layout_reader(events, **kw)
+        return outcome, reader.hub_fired
+    check("a module's plugin-qualified id is that module, never a hub fire, though it holds the hub's name",
+          outcome_hub([ours, call("Skill", {"skill": QUALIFIED["mock-interview"]}), DONE]),
+          ("hidden-mock-interview", False))
+    check("so too in the partial stream, where the plugin prefix arrives before the module's name",
+          outcome_hub([ours] + partial("Skill", ['{"skill": "tuesday-ab12cd34', ':mock-interview-', 'ab12cd34"}'])
+                      + [DONE]), ("hidden-mock-interview", False))
+    check("the hub's own id, tuesday-<id>:tuesday-<id>, is the hub firing, and the playbook read next the route",
+          outcome_hub([ours, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/resume-tailor.md"}), DONE]),
+          ("resume-tailor", True))
+    check("and arriving in pieces it is the hub firing too",
+          outcome_hub([ours] + partial("Skill", ['{"skill": "tuesday-ab12cd34', ':tuesday-ab12cd34', '"}']) + [DONE]),
+          ("tuesday-unrouted", True))
+    check("a module's shipped name under the plugin's prefix is that module, no hub fire",
+          outcome_hub([ours, call("Skill", {"skill": "tuesday-ab12cd34:job-underwriter"}), DONE]),
+          ("hidden-job-underwriter", False))
+    check("the hub's shipped name under the prefix is the hub",
+          outcome_hub([ours, call("Skill", {"skill": "tuesday-ab12cd34:tuesday"}), DONE]), ("tuesday-unrouted", True))
+    check("a module's folder in the plugin, reached after routing, is that module",
+          outcome_hub([ours, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/job-underwriter.md"}),
+                       call("Read", {"file_path": f"{PLUGIN_SKILLS}/job-underwriter-ab12cd34/references/"
+                                                  "evidence-model.md"}), DONE]), ("hidden-job-underwriter", True))
+    check("a playbook read by `cd` into the hub's folder in the plugin and `cat` is the route",
+          outcome_hub([ours, hub_q, call("Bash", {"command": f"cd {PLUGIN_HUB}/references && cat mock-interview.md"}),
+                       DONE]), ("mock-interview", True))
+    check("a module's qualified call naming another playbook in its input reaches that module alone: the hub's "
+          "name before a colon opens no playbook",
+          layout_reader([ours, call("Skill", {"skill": QUALIFIED["mock-interview"],
+                                              "args": "then read resume-tailor.md"}), DONE])[1].reached,
+          ["hidden-mock-interview"])
+    config_hub = "/tmp/tmpab/config/case-1-0/skills/tuesday-ab12cd34"
+    personal = init(*NAMES.values())
+    check("personal layout: the hub by its name, then a playbook in the config folder's hub, is the route",
+          outcome_hub([personal, call("Skill", {"skill": "tuesday-ab12cd34"}),
+                       call("Read", {"file_path": f"{config_hub}/references/job-underwriter.md"}), DONE],
+                      layout="personal"), ("job-underwriter", True))
+    check("personal layout: a module's folder beside the hub is that module",
+          outcome_hub([personal, call("Bash", {"command": "cat /tmp/tmpab/config/case-1-0/skills/"
+                                                          "resume-tailor-ab12cd34/SKILL.md"}), DONE],
+                      layout="personal"), ("hidden-resume-tailor", False))
+    check("a Skill call's name is read as the CLI reads it, trimmed and one leading slash dropped: "
+          "a module's shipped name, its qualified id, the hub's bare and qualified ids",
+          [outcome_hub([ours, call("Skill", {"skill": name}), DONE]) for name in
+           ("/mock-interview", " /tuesday-ab12cd34:job-underwriter-ab12cd34", "/tuesday", "/tuesday-ab12cd34:tuesday")],
+          [("hidden-mock-interview", False), ("hidden-job-underwriter", False), ("tuesday-unrouted", True),
+           ("tuesday-unrouted", True)])
+    check("E2: another module's shipped name with a slash is that module; the named module's is no other",
+          [outcome_hub([ours, expansion, call("Skill", {"skill": name}), DONE], explicit="mock-interview")
+           for expansion in [{"type": "user", "message": {"content": "<command-name>/tuesday-ab12cd34:"
+                                                          "mock-interview-ab12cd34</command-name>"}}]
+           for name in ("/job-underwriter", "/mock-interview")],
+          [("hidden-job-underwriter", False), ("focused", False)])
+    expansion_q = {"type": "user", "message": {"content": [{"type": "text", "text":
+                   "<command-name>/tuesday-ab12cd34:mock-interview-ab12cd34</command-name>"}]}}
+    check("E2, plugin layout: another module's qualified id is that module, and no hub fire",
+          outcome_hub([ours, expansion_q, call("Skill", {"skill": QUALIFIED["job-underwriter"]}), DONE],
+                      explicit="mock-interview"), ("hidden-job-underwriter", False))
+    check("E2, plugin layout: the hub's id, then deferring to the named module's playbook, is focused, a hub fire",
+          outcome_hub([ours, expansion_q, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/mock-interview.md"}),
+                       DONE], explicit="mock-interview"), ("focused", True))
+    check("E2, plugin layout: the expansion of the namespaced command is the sign the named module loaded",
+          outcome_hub([ours, expansion_q, DONE], explicit="mock-interview"), ("focused", False))
+
+    names = {s: f"{s}-ab12cd34" for s in run_routing.SKILLS}
+    check("the plugin's prefix is the hub's installed name, in the plugin layout only",
+          [run_routing.plugin_prefix(NAMES, lay) for lay in run_routing.LAYOUTS], [None, None, "tuesday-ab12cd34"])
+    check("E2 types the namespaced command under the plugin's prefix, the rest of the prompt kept",
+          run_routing.explicit_prompt("/mock-interview should I apply?\nPosting below.", names, "tuesday-ab12cd34"),
+          "/tuesday-ab12cd34:mock-interview-ab12cd34 should I apply?\nPosting below.")
+    cases = run_routing.load_cases(Path(__file__).resolve().parent / "suite-explicit.json")
+    check_true("every explicit case is sent under its namespaced command in the plugin layout",
+               all(run_routing.explicit_prompt(c["prompt"], names, "tuesday-ab12cd34")
+                   .startswith(f"/tuesday-ab12cd34:{c['expected']}-ab12cd34 ") for c in cases))
+    check("a prompt with no module command is sent as written under a plugin too",
+          run_routing.explicit_prompt("use /resume-tailor", names, "tuesday-ab12cd34"), "use /resume-tailor")
+    check("E2's reader looks for the command as typed: namespaced in the plugin layout, bare in the others",
+          [run_routing.RunReader(NAMES, "frontdoor", "mock-interview", lay).command for lay in run_routing.LAYOUTS],
+          ["mock-interview-ab12cd34", "mock-interview-ab12cd34", "tuesday-ab12cd34:mock-interview-ab12cd34"])
+
+    check("void rule: this run's own plugin-qualified ids are its own",
+          run_routing.foreign_tuesday(list(QUALIFIED.values()), NAMES), [])
+    check("void rule: another run's plugin, a shipped tuesday plugin's hub and modules, and a synced skill are not",
+          run_routing.foreign_tuesday(["tuesday-ffff0000:mock-interview-ffff0000", "tuesday-ffff0000:tuesday-ffff0000",
+                                       "tuesday:tuesday", "tuesday:job-underwriter",
+                                       "anthropic-skills:resume-tailor"], NAMES),
+          ["tuesday-ffff0000:mock-interview-ffff0000", "tuesday-ffff0000:tuesday-ffff0000",
+           "tuesday:tuesday", "tuesday:job-underwriter", "anthropic-skills:resume-tailor"])
+    check("void rule: a plugin named like the hub that lists no Tuesday skill cannot take the fire",
+          run_routing.foreign_tuesday(["tuesday-ffff0000:pdf", "tuesday:pdf", "example:pdf", "session-start-hook"],
+                                      NAMES), [])
+    check("a plugin-layout run whose init list holds another run's plugin is void",
+          layout_reader([init(*QUALIFIED.values(), "tuesday-ffff0000:mock-interview-ffff0000"), hub_q])[0], "void")
+
+
+def test_layout_transcript() -> None:
+    print("\nlayouts: E2 reads its transcript from the run's own config folder")
+    check("personal layout: the transcript is under the run's config folder, whatever the runner's",
+          run_routing.transcript_path({"session_id": "s1", "cwd": "/tmp/tmpab/case-3"},
+                                      Path("/tmp/tmpab/config/case-3-1")),
+          Path("/tmp/tmpab/config/case-3-1/projects/-tmp-tmpab-case-3/s1.jsonl"))
+
+    def entry(uuid, parent, kind, content, mid=None):
+        message = {"content": content, **({"id": mid} if mid else {})}
+        return json.dumps({"uuid": uuid, "parentUuid": parent, "type": kind, "message": message})
+
+    def transcript(command: str) -> str:
+        return "\n".join([entry("a1", None, "user", f"<command-name>/{command}</command-name>"),
+                          entry("a2", "a1", "assistant", [{"type": "text", "text": "reply"}], "msg_A")]) + "\n"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = f"{tmp}/case-1"
+        folder = re.sub(r"[^A-Za-z0-9]", "-", cwd)
+        runner, case_config = Path(tmp) / "runner", Path(tmp) / "config" / "case-1-1"
+        (runner / "projects" / folder).mkdir(parents=True)
+        (case_config / "projects" / folder).mkdir(parents=True)
+        (runner / "projects" / folder / "p1.jsonl").write_text(
+            transcript("tuesday-ab12cd34:mock-interview-ab12cd34"), encoding="utf-8")
+        (case_config / "projects" / folder / "s1.jsonl").write_text(transcript("mock-interview-ab12cd34"),
+                                                                     encoding="utf-8")
+
+        def recorded(session: str, layout: str, run: int = 1) -> tuple:
+            reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview", layout, Path(cwd), run)
+            for event in [{**init(*NAMES.values()), "session_id": session, "cwd": cwd},
+                          {"type": "assistant", "message": {"id": "msg_A", "content": [{"type": "text", "text": "x"}]}}]:
+                reader.feed(event)
+            rec = reader.record(reader.feed(DONE))
+            return rec["outcome"], rec["loaded"]
+
+        saved = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(runner)
+        try:
+            check("personal layout: the expansion in the run's own config folder confirms the load",
+                  recorded("s1", "personal"), ("focused", True))
+            check("another run's config folder is not this run's: run 0 finds nothing there",
+                  recorded("s1", "personal", 0), ("unconfirmed", False))
+            check("the same run read from the runner's config folder, as before this round, finds nothing",
+                  recorded("s1", "project"), ("unconfirmed", False))
+            check("plugin layout: the runner's transcript, holding the namespaced command, confirms the load",
+                  recorded("p1", "plugin"), ("focused", True))
+            run_routing.keep_transcripts(case_config)
+            check("a personal-layout run's transcripts are copied into the runner's config folder, beside the "
+                  "other layouts' runs, and what was there is kept",
+                  sorted(p.name for p in (runner / "projects" / folder).iterdir()), ["p1.jsonl", "s1.jsonl"])
+            run_routing.keep_transcripts(None)
+            check("a run with no config folder of its own copies nothing",
+                  sorted(p.name for p in (runner / "projects" / folder).iterdir()), ["p1.jsonl", "s1.jsonl"])
+            check("an expansion of the bare name where the namespaced command was typed confirms nothing",
+                  run_routing.command_loaded(transcript("mock-interview-ab12cd34").splitlines(), "msg_A",
+                                             "tuesday-ab12cd34:mock-interview-ab12cd34"), False)
+        finally:
+            if saved is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = saved
+
+
+def test_reported_measures() -> None:
+    print("\nlayouts: measures are recorded per run and summarised per arm, and never scored")
+    ours = init(*QUALIFIED.values())
+    hub_q = call("Skill", {"skill": QUALIFIED["tuesday"]})
+
+    def contact(*events: dict) -> bool:
+        return layout_reader([ours, *events, DONE])[1].hub_path_contact
+    check("the hub's SKILL.md read by its path before any Skill call to the hub is hub_path_contact",
+          contact(call("Read", {"file_path": f"{PLUGIN_HUB}/SKILL.md"})), True)
+    check("so is a playbook read by `cd` into the hub's folder and `cat`, or by a path through `..`, before the "
+          "Skill call",
+          [contact(call("Bash", {"command": f"cd {PLUGIN_HUB}/references && cat job-underwriter.md"}), hub_q),
+           contact(call("Bash", {"command": f"cd {PLUGIN_HUB} && cat SKILL.md"})),
+           contact(call("Read", {"file_path": f"{PLUGIN_SKILLS}/mock-interview-ab12cd34/../tuesday-ab12cd34/"
+                                              "references/resume-tailor.md"}))], [True, True, True])
+    check("a playbook read after the hub fired through the Skill tool is no contact",
+          contact(hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/job-underwriter.md"})), False)
+    check("nor after the hub's Skill call by its shipped name, with a leading slash or without",
+          [contact(call("Skill", {"skill": name}), call("Read", {"file_path": f"{PLUGIN_HUB}/SKILL.md"}))
+           for name in ("tuesday", "/tuesday-ab12cd34", "/tuesday-ab12cd34:tuesday-ab12cd34")], [False] * 3)
+    check("a module's SKILL.md, or a file of the hub's that is no playbook, is no contact with the hub",
+          (contact(call("Read", {"file_path": f"{PLUGIN_SKILLS}/mock-interview-ab12cd34/SKILL.md"})),
+           contact(call("Read", {"file_path": f"{PLUGIN_HUB}/references/evidence-model.md"}))), (False, False))
+    check("a call that names the hub's folder and opens a module's SKILL.md elsewhere is no contact with the hub "
+          "(round 2's `cd <hub> ... cd ../<module>` shape, a listing then a cat, a Grep for the hub's name)",
+          [contact(call("Bash", {"command": f"cd {PLUGIN_HUB} && ls -la references/ 2>/dev/null; "
+                                            "cd ../job-underwriter-ab12cd34 && wc -l SKILL.md && cat SKILL.md | head -5"})),
+           contact(call("Bash", {"command": f"ls {PLUGIN_HUB}/references | head; "
+                                            f"cat {PLUGIN_SKILLS}/mock-interview-ab12cd34/SKILL.md"})),
+           contact(call("Grep", {"pattern": "tuesday-ab12cd34", "path": "/tmp/tmpab/", "glob": "SKILL.md"}))],
+          [False, False, False])
+    check("a module's qualified Skill call is no Skill call to the hub",
+          contact(call("Skill", {"skill": QUALIFIED["resume-tailor"]}),
+                  call("Read", {"file_path": f"{PLUGIN_HUB}/SKILL.md"})), True)
+
+    def named(command: dict, layout: str = "plugin") -> bool:
+        return layout_reader([ours, call(*command.popitem()), DONE], layout=layout)[1].skills_root_named
+    check("the plugin's skills/ named by its path, with or without a trailing slash, is skills_root_named",
+          [named({"Bash": {"command": f"ls {PLUGIN_SKILLS}/"}}), named({"Bash": {"command": f"ls {PLUGIN_SKILLS}"}})],
+          [True, True])
+    check("so is a glob over it, or its path from the case folder",
+          [named({"Bash": {"command": f"ls {PLUGIN_SKILLS}/*/references"}}),
+           named({"Glob": {"pattern": "*/SKILL.md", "path": PLUGIN_SKILLS}}),
+           named({"Bash": {"command": "ls ../plugins/case-1/skills"}})], [True, True, True])
+    check("so is a path that resolves to it: through a skill's folder and `..`, `.` after it, a `cd` before it",
+          [named({"Bash": {"command": f"ls {PLUGIN_HUB}/.."}}),
+           named({"Bash": {"command": f"cd {PLUGIN_HUB}/.. && ls"}}),
+           named({"Bash": {"command": f"cd {PLUGIN_HUB} && ls .."}}),
+           named({"Glob": {"pattern": "*/SKILL.md", "path": f"{PLUGIN_HUB}/.."}}),
+           named({"Bash": {"command": f"ls {PLUGIN_SKILLS}/."}}),
+           named({"Bash": {"command": "cd /tmp/tmpab/plugins/case-1 && ls skills"}})], [True] * 6)
+    check("and another case's skills folder, which holds the same hub and modules",
+          named({"Bash": {"command": "ls ../plugins/case-2/skills"}}), True)
+    check("a path into one skill's folder, or a folder whose name merely starts the same, does not name it",
+          [named({"Read": {"file_path": f"{PLUGIN_HUB}/references/mock-interview.md"}}),
+           named({"Bash": {"command": f"ls {PLUGIN_SKILLS}-old"}})], [False, False])
+    check("nor does a path above it: `find ..` is not counted, so the measure is a lower bound",
+          [named({"Bash": {"command": "find .. -name SKILL.md"}}), named({"Bash": {"command": "ls ../plugins"}})],
+          [False, False])
+    check("personal layout: a run's config folder's skills/ is named, its own or another's; the runner's own "
+          "personal skills are not it",
+          [named({"Bash": {"command": "ls /tmp/tmpab/config/case-1-0/skills/"}}, "personal"),
+           named({"Bash": {"command": "ls ../config/case-2-3/skills"}}, "personal"),
+           named({"Bash": {"command": "ls ~/.claude/skills"}}, "personal")], [True, True, False])
+
+    denials = [{"tool_name": "Bash", "tool_use_id": "t1"}, {"tool_name": "Write", "tool_use_id": "t2"}]
+    _, reader = layout_reader([ours, hub_q, {**DONE, "permission_denials": denials, "usage": {"output_tokens": 812}}])
+    check("refused tool calls and output tokens are read from the result event, and the seconds given are kept",
+          {k: v for k, v in reader.record("tuesday-unrouted", 41.5).items() if k in ("refused", "output_tokens", "seconds")},
+          {"refused": ["Bash", "Write"], "output_tokens": 812, "seconds": 41.5})
+    _, reader = layout_reader([ours, hub_q, DONE])
+    check("a run with a result event and no denial refused none", reader.record("tuesday-unrouted")["refused"], [])
+    _, reader = layout_reader([ours, hub_q], end="timeout")
+    check("a run that never reached its result event has no count and no tokens, never zero",
+          (reader.record("timeout")["refused"], reader.record("timeout")["output_tokens"]), (None, None))
+    read = [ours, hub_q, call("Read", {"file_path": f"{PLUGIN_HUB}/references/mock-interview.md"})]
+    outside = [layout_reader(read, layout=lay)[1] for lay in ("plugin", "personal")]
+    check("outside the project layout a CLI that exits non-zero before any result event is error, whatever the "
+          "stream read (a failed sign-in)",
+          [run_routing.exit_outcome(r, code) for r in outside for code in (1, -9)], ["error"] * 4)
+    check("a clean exit, or a status not yet read, is settled from the stream",
+          [run_routing.exit_outcome(r, code) for r in outside for code in (0, None)], ["mock-interview"] * 4)
+    _, project = layout_reader([init(*NAMES.values()), call("Skill", {"skill": "tuesday-ab12cd34"}),
+                                call("Read", {"file_path": "/tmp/tmpab/case-1/.claude/skills/tuesday-ab12cd34/"
+                                                           "references/mock-interview.md"})], layout="project")
+    check("in the project layout a non-zero exit is settled from the stream, as before the layouts",
+          run_routing.exit_outcome(project, 1), "mock-interview")
+    outcome, reader = layout_reader([init(*(NAMES[s] for s in run_routing.SKILLS)),
+                                     call("Skill", {"skill": "job-underwriter-ab12cd34"})],
+                                    layout="personal", arm="skills")
+    check("a skills-arm run stops at its first fire, so its refusals and tokens go unread, and it has no hub to contact",
+          (outcome, reader.record(outcome, 12.0)),
+          ("job-underwriter", {"outcome": "job-underwriter", "init_skills": [NAMES[s] for s in run_routing.SKILLS],
+                               "skills_root_named": False, "refused": None, "output_tokens": None, "seconds": 12.0}))
+    _, reader = layout_reader([ours, hub_q, DONE])
+    check("a front-door run outside the project layout records all five",
+          sorted(k for k in reader.record("tuesday-unrouted") if k in ("hub_path_contact", "skills_root_named", "refused",
+                                                                      "output_tokens", "seconds")),
+          ["hub_path_contact", "output_tokens", "refused", "seconds", "skills_root_named"])
+    _, reader = layout_reader([init(*NAMES.values()), call("Skill", {"skill": "tuesday-ab12cd34"}), DONE],
+                              layout="project")
+    check("a project-layout run records none of them: its record is as before",
+          sorted(reader.record("tuesday-unrouted", 3.0)), ["hub_fired", "init_skills", "outcome", "reached"])
+
+    cases = [{"id": 1, "expected": "job-underwriter", "prompt": "p"}, {"id": 2, "expected": "mock-interview",
+                                                                       "prompt": "/mock-interview x"}]
+    runs_by_case = {1: [{"outcome": "job-underwriter", "hub_path_contact": True, "skills_root_named": True,
+                         "refused": ["Bash", "Bash"], "seconds": 100.0, "output_tokens": 9000},
+                        {"outcome": "hidden-job-underwriter", "hub_path_contact": False, "skills_root_named": True,
+                         "refused": [], "seconds": 60.5, "output_tokens": 7000},
+                        {"outcome": "timeout", "hub_path_contact": True, "skills_root_named": True, "refused": None,
+                         "seconds": 900.0, "output_tokens": None}],
+                    2: [{"outcome": "focused", "hub_path_contact": False, "skills_root_named": False, "refused": None,
+                         "seconds": 20.0, "output_tokens": None}]}
+    measures = run_routing.reported(cases, runs_by_case)
+    check("the arm's summary counts decided runs, routing and explicit cases alike; a set-aside run is not read; "
+          "wall time and tokens are summed, with a median a run, tokens over the runs that read them",
+          measures, {"decided": 3, "hub_path_contact": 1, "skills_root_named": 2, "refused": 2, "runs_refused": 1,
+                     "refused_unread": 1, "seconds": 180.5, "seconds_median": 60.5, "output_tokens": 16000,
+                     "output_tokens_median": 8000.0, "tokens_read": 2})
+    check("an arm with no decided run has no median", run_routing.reported(cases, {})["seconds_median"], None)
+    lines = run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                      run_routing.explicit_summary(cases, runs_by_case), "frontdoor", measures)
+    check("the run prints them as reported, not scored",
+          lines[-1], "reported, not scored: the hub's files reached by path before any Skill call to it on 1/3; "
+                     "the skills folder named on 2/3; 2 tool calls refused, on 1 runs (1 ended before their result "
+                     "event, uncounted); wall time 180.5s, median 60.5s a run; output tokens 16000, median 8000.0 a "
+                     "run, on the 2 runs that reached their result event")
+    check_true("the skills arm's line leaves out the hub, which it does not install",
+               run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                         run_routing.explicit_summary(cases, runs_by_case), "skills",
+                                         measures)[-1].startswith("reported, not scored: the skills folder"))
+    check("and a project-layout run prints no such line",
+          [line for line in run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                                      run_routing.explicit_summary(cases, runs_by_case), "frontdoor")
+           if line.startswith("reported")], [])
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("every results file records its layout, and outside the project layout the reported measures",
+               '"layout": args.layout' in source and '{"reported": measures} if measures is not None' in source
+               and 'measures = reported(cases, runs_by_case) if args.layout != "project" else None' in source)
+
+
+STUB_CLI = r'''#!{python}
+"""A stand-in for the claude CLI: it writes what one run would, from the command and environment it got."""
+import json, os, re, sys, time
+prompt, config, cwd = sys.argv[2], os.environ.get("CLAUDE_CONFIG_DIR", ""), os.getcwd()
+with open(os.environ["STUB_LOG"], "a") as log:
+    log.write(json.dumps({"argv": sys.argv[1:], "config": config}) + "\n")
+
+
+def emit(event):
+    sys.stdout.write(json.dumps(event) + "\n")
+    sys.stdout.flush()
+
+
+emit({"type": "system", "subtype": "init", "skills": [], "session_id": "s1", "cwd": cwd})
+if prompt == "crash":
+    os.close(1)
+    time.sleep(0.5)
+    os._exit(1)
+folder = os.path.join(config, "projects", re.sub(r"[^A-Za-z0-9]", "-", cwd))
+os.makedirs(folder, exist_ok=True)
+with open(os.path.join(folder, "s1.jsonl"), "w") as f:
+    f.write(json.dumps({"uuid": "a1", "parentUuid": None, "type": "user",
+                        "message": {"content": "<command-name>" + prompt.split()[0] + "</command-name>"}}) + "\n")
+    f.write(json.dumps({"uuid": "a2", "parentUuid": "a1", "type": "assistant",
+                        "message": {"id": "msg_A", "content": []}}) + "\n")
+folders = [os.path.relpath(a[len("Read(/"):-len("/**)")], cwd) for a in sys.argv if a.startswith("Read(/")]
+emit({"type": "assistant", "message": {"id": "msg_A", "content": [
+    {"type": "tool_use", "name": "Bash", "input": {"command": "ls " + " ".join(folders)}}]}})
+emit({"type": "result", "subtype": "success", "usage": {"output_tokens": 321},
+      "permission_denials": [{"tool_name": "Bash"}]})
+'''
+
+
+def test_layout_runs() -> None:
+    print("\nlayouts: one run followed through run_once, against a stand-in CLI")
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        stub, runner, log = tmp / "bin", tmp / "runner", tmp / "log.jsonl"
+        stub.mkdir()
+        (stub / "claude").write_text(STUB_CLI.replace("{python}", sys.executable))
+        (stub / "claude").chmod(0o755)
+        saved = {k: os.environ.get(k) for k in ("PATH", "CLAUDE_CONFIG_DIR", "STUB_LOG")}
+        os.environ.update(PATH=f"{stub}{os.pathsep}{os.environ.get('PATH', '')}", CLAUDE_CONFIG_DIR=str(runner),
+                          STUB_LOG=str(log))
+        try:
+            def started() -> dict:
+                return json.loads(log.read_text().splitlines()[-1])
+
+            def run(base: str, case: dict, arm: str, layout: str, index: int = 0, runs: int = 1) -> dict:
+                (tmp / base).mkdir()
+                root, names = run_routing.case_project(tmp / base, case, "ab12cd34", None, arm, layout, runs)
+                return run_routing.run_once(case["prompt"], root, names, 30, None, arm, layout, index)
+
+            e2 = {"id": 1, "prompt": "/mock-interview prep me"}
+            rec = run("personal", e2, "frontdoor", "personal", 1, 2)
+            got = started()
+            check("personal layout, run 1: the CLI starts with that run's config folder, and Read is let into "
+                  "its skills folder",
+                  (got["config"], got["argv"][-2:]),
+                  (str(tmp / "personal/config/case-1-1"),
+                   ["--allowedTools", f"Read(/{tmp}/personal/config/case-1-1/skills/**)"]))
+            check("E2 confirms the load from that run's transcript; the skills folder named from the case folder "
+                  "is read as such; refusals, tokens and a wall time are recorded",
+                  {k: rec.get(k) for k in ("outcome", "loaded", "skills_root_named", "refused", "output_tokens")},
+                  {"outcome": "focused", "loaded": True, "skills_root_named": True, "refused": ["Bash"],
+                   "output_tokens": 321})
+            check_true("the run's seconds are its wall time",
+                       isinstance(rec.get("seconds"), float) and rec["seconds"] >= 0)
+            slug = re.sub(r"[^A-Za-z0-9]", "-", str(tmp / "personal" / "case-1"))
+            check_true("and its transcript is kept in the runner's config folder",
+                       (runner / "projects" / slug / "s1.jsonl").is_file())
+            rec = run("plugin", e2, "frontdoor", "plugin")
+            got = started()
+            check("plugin layout: the runner's config folder, the case's plugin, and Read let into its skills folder",
+                  (got["config"], got["argv"][-4:]),
+                  (str(runner), ["--plugin-dir", str(tmp / "plugin/plugins/case-1"),
+                                 "--allowedTools", f"Read(/{tmp}/plugin/plugins/case-1/skills/**)"]))
+            check("E2 confirms the namespaced command's load from the runner's transcript",
+                  {k: rec.get(k) for k in ("outcome", "loaded", "skills_root_named")},
+                  {"outcome": "focused", "loaded": True, "skills_root_named": True})
+            crash = {"id": 2, "prompt": "crash"}
+            check("a CLI that closes its stream and then exits non-zero is error outside the project layout, "
+                  "read from its exit status once it has exited",
+                  run("crash-personal", crash, "skills", "personal")["outcome"], "error")
+            check("and in the project layout settled from the stream, as before the layouts",
+                  run("crash-project", crash, "skills", "project"), {"outcome": "neither", "init_skills": []})
+        finally:
+            for key, value in saved.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
 
 # --- Decline path 3: the CLI declining to answer is not a short answer ---
@@ -220,9 +1558,9 @@ CORPUS = {
 }
 
 
-def drive_server(requests: list[dict], tmp: Path) -> tuple[list[dict], Path, Path]:
+def drive_server(requests: list[dict], tmp: Path, served: dict | None = None) -> tuple[list[dict], Path, Path]:
     corpus = tmp / "corpus.json"
-    corpus.write_text(json.dumps(CORPUS))
+    corpus.write_text(json.dumps(served or CORPUS))
     log = tmp / "calls.jsonl"
     cwd = tmp / "cwd"
     cwd.mkdir()
@@ -641,6 +1979,103 @@ def test_execute_nudge() -> None:
         check("the room is valid", meta["harness"]["status"], "ok")
 
 
+def test_via_frontdoor() -> None:
+    print("\nfixtures --via frontdoor: the front door installed as the plugin ships it, a fire only through the hub")
+    source = (Path(__file__).resolve().parent / "run_fixtures.py").read_text()
+    check_true("--via defaults to the module alone, accepts frontdoor, and reaches every run",
+               run_fixtures.VIAS == ("skill", "frontdoor")
+               and 'ap.add_argument("--via", choices=VIAS, default="skill",' in source
+               and "args.model, j[2], args.via, args.layout)" in source)
+    with tempfile.TemporaryDirectory() as tmp:
+        room = Path(tmp) / "rooms" / "case-3-denied-ab12cd34"
+        room.mkdir(parents=True)
+        plugin, names = run_fixtures.install_in_plugin(room, "ab12cd34")
+        check("the room holds nothing: the plugin sits beside it, where the routing arm's plugin layout puts it",
+              (list(room.iterdir()), plugin), ([], run_routing.home(room, "plugin")))
+        reference = Path(tmp) / "reference"
+        check("its files and names are the routing arm's plugin layout's",
+              (files_of(plugin), names), (files_of(reference) if run_routing.install_plugin(reference, "ab12cd34")
+                                          else None, NAMES))
+        rule = run_routing.read_rule(room, "plugin")
+        # The save rule names the room; where the temporary folder is reached through a symlink (as on
+        # macOS), a second names its resolved path.
+        save = [f"Edit(/{room.absolute().as_posix()}/**)"] + (
+            [f"Edit(/{room.resolve().as_posix()}/**)"] if room.resolve() != room.absolute() else [])
+        denied = run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), room)
+        check("a denied room gains the plugin, a rule to read its skills folder and a rule to save in the room",
+              denied, run_fixtures.room_flags("denied") + ["--allowedTools", rule, *save, "--plugin-dir", str(plugin)])
+        paths = {"mcp": Path("/x/mcp.json")}
+        canned = run_fixtures.plugin_flags(run_fixtures.room_flags("canned", paths), room)
+        at = canned.index("--allowedTools") + 1
+        check("a canned room keeps one --allowedTools list, the read and save rules joined to its search tools",
+              (canned.count("--allowedTools"), canned[at:at + len(save) + 3]),
+              (1, [rule, *save, "mcp__web__search", "mcp__web__fetch"]))
+
+    hub = f"{Path('/r/rooms/plugins/case-3-denied-ab12cd34/skills')}/tuesday-ab12cd34"
+    own = [ev_init(list(QUALIFIED.values())), ev_tool("s", "Skill", {"skill": QUALIFIED["tuesday"]})]
+    def fire(*events, skill="resume-tailor"):
+        return run_fixtures.frontdoor_fire(stream(*events), NAMES, skill, Path("/r/rooms/case-3-denied-ab12cd34"))
+    read = lambda module: ev_tool("r", "Read", {"file_path": f"{hub}/references/{module}.md"})
+    check("the module's playbook read through the hub is a fire",
+          fire(*own, read("resume-tailor"), ev_result()), "fired")
+    check("another module's playbook is that module, not a fire",
+          fire(*own, read("job-underwriter"), ev_result()), "job-underwriter")
+    check("the hub with no playbook read is unrouted",
+          fire(*own, ev_text("Which would you like?"), ev_result()), "tuesday-unrouted")
+    check("the right playbook, then a hidden module's folder, is that hidden reach",
+          fire(*own, read("resume-tailor"),
+               ev_tool("h", "Read", {"file_path": f"{hub}/../resume-tailor-ab12cd34/SKILL.md"}), ev_result()),
+          "hidden-resume-tailor")
+    check("nothing fired is neither", fire(ev_init(list(QUALIFIED.values())), ev_text("hi"), ev_result()), "neither")
+    check("a room listing a Tuesday skill it did not install is void",
+          fire(ev_init(list(QUALIFIED.values()) + ["anthropic-skills:resume-tailor"]), read("resume-tailor"),
+               ev_result()), "void")
+
+    case = {"id": 3, "prompt": "Tailor this.", "expectations": ["a"]}
+    seen = []
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        nudged = prompt.startswith("Use the")
+        seen.append((Path(cwd), list(extra_args), prompt, installed))
+        folder = run_routing.home(Path(cwd), "plugin") / "skills" / installed.split(":")[-1]
+        module = "resume-tailor" if nudged else "job-underwriter"
+        lines = stream(ev_init([installed, installed.split(":")[0] + ":resume-tailor-" + installed[-8:]]),
+                       ev_tool("s", "Skill", {"skill": installed}),
+                       ev_tool("r", "Read", {"file_path": f"{folder}/references/{module}.md"}),
+                       ev_text("second answer" if nudged else "first answer"), ev_result())
+        parsed = run_fixtures.parse_stream(lines, installed)
+        parsed["stdout"] = "\n".join(lines) + "\n"
+        return parsed
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            import contextlib
+            import io
+            with contextlib.redirect_stdout(io.StringIO()):
+                meta = run_fixtures.execute("resume-tailor", case, out, 0, 1, None, None, "frontdoor")
+        finally:
+            run_fixtures.claude = real
+        check("a run that routed to another module is not a fire, and says so, and is nudged",
+              [i["fire"] for i in meta["invocations"]], ["job-underwriter", "fired"])
+        second = meta["invocations"][-1]
+        check("its nudge names the hub, by its plugin id, in a fresh room",
+              [(prompt.startswith(f"Use the {name} skill"), name.count("tuesday-"), room) for room, _, prompt, name in seen[1:]],
+              [(True, 2, seen[-1][0])] if len(seen) == 2 and seen[0][0] != seen[1][0] else "two rooms")
+        check("each room is named for the case, never for the module whose route is measured",
+              ["resume-tailor" in str(room) for room, *_ in seen], [False, False])
+        check("each run loads the plugin from beside its room",
+              [args[args.index("--plugin-dir") + 1] for _, args, *_ in seen],
+              [str(run_routing.home(room, "plugin")) for room, *_ in seen])
+        check("the nudged run read resume-tailor's playbook through the hub, graded as valid",
+              (second["fire"], meta["harness"]["status"], meta["via"]), ("fired", "ok", "frontdoor"))
+        check("the graded response is the nudged one", (out / "resume-tailor-3.run0.md").read_text(), "second answer")
+        status, why = run_fixtures.classify_room("denied", dict(invocation(fire="job-underwriter", servers=()),
+                                                                via="frontdoor"), [])
+        check("a run that did not reach the module through the hub is harness-invalid, and the reason says so",
+              (status, why), ("harness-invalid",
+                              ["the module's playbook was not read through the front door (job-underwriter)"]))
+
+
 # --- 6a. Research accounting, read from verbatim saved outputs ---
 
 # Cut verbatim from saved runs, so the parser is tested against what skills actually
@@ -892,8 +2327,10 @@ R4 has a credible bridge, and R3 (`medium`) waits on an artifact.
 
 
 def ledger_fails(text: str) -> list[str]:
+    """The checks the fit ledger fails, a reported reading (output_checks.REPORTED) never among
+    them: test_ledger_sentence_form reads that one."""
     return sorted(c["check"] for c in output_checks.check_fit_ledger(text)["checks"]
-                  if c["verdict"] == "FAIL")
+                  if c["verdict"] == "FAIL" and c["check"] not in output_checks.REPORTED)
 
 
 def test_fit_ledger() -> None:
@@ -981,6 +2418,72 @@ def test_fit_ledger() -> None:
           ledger_fails(LEDGER_OK.replace("**Fit ledger.**\n",
                                          "**Fit ledger:** five of seven are `direct`.\n\nx\n")),
           ["ledger_present"])
+
+
+LEDGER_SENTENCE = "R4 has a credible bridge, and R3 (`medium`) waits on an artifact."
+
+
+def test_ledger_sentence_form() -> None:
+    print("\nchecks: the sentence after the ledger in rule 2's list form, reported and never a defect")
+
+    def form(sentence: str) -> tuple[str, str, str] | None:
+        got = [c for c in output_checks.check_fit_ledger(LEDGER_OK.replace(LEDGER_SENTENCE, sentence))["checks"]
+               if c["check"] == "ledger_sentence_form"]
+        return (got[0]["verdict"], got[0]["kind"], got[0]["why"]) if len(got) == 1 else None
+    worked = "R4 — a credible bridge, its limit named; R3 (`medium`) — confirmed, waiting on an artifact."
+    check("must pass: the worked sentence, an item per row, each its ID, a band allowed, a dash and words",
+          form(worked), ("PASS", "report", "every item opens with its row IDs and a dash"))
+    check("must fail: the sentence the worked example used to teach, as a report",
+          form(LEDGER_SENTENCE)[:2], ("FAIL", "report"))
+    check("and its reason names the item", "'R4 has a credible bridge" in form(LEDGER_SENTENCE)[2], True)
+    for sentence in ("R4 and R5 — bridges with their limits named; R7 — a gap the role can carry.",
+                     "R4, R5 — bridges; R7 — a gap.", "**R4** — a bridge; `R3` (medium) — waits on an artifact.",
+                     "R4 - a bridge; R5 – a discovery gap.", "R4 — a bridge (its limit: named; see RR1)."):
+        check(f"must pass: {sentence!r}", form(sentence)[0], "PASS")
+    for sentence in ("R2–R5 — direct on your own account.", "R4 — a bridge; and R3 waits on an artifact.",
+                     "Both R4 and R3 (`medium`) wait on an artifact.", "R4: a bridge; R3: waits.", "R4 —"):
+        check(f"must fail: {sentence!r}", form(sentence)[0], "FAIL")
+    check("a next slot directly after the ledger is no sentence, and passes", form(
+        "**Opportunity ledger.** RR1 is asserted and not evidenced."), ("PASS", "report", "no sentence after the ledger"))
+    two = "R4 — a credible bridge, its limit named. R3 (`medium`) — confirmed, waiting on an artifact."
+    check("it is read apart from the sentence count: two sentences in the form pass it and fail ledger_sentence",
+          (form(two)[0], ledger_fails(LEDGER_OK.replace(LEDGER_SENTENCE, two))), ("PASS", ["ledger_sentence"]))
+    check("CI and the harness read the form with one function",
+          ledger_rules.ledger_sentence_form(worked) is None and ledger_rules.ledger_sentence_form(LEDGER_SENTENCE)
+          is not None, True)
+
+    case = {"id": 1, "checks": ["fit_ledger"], "candidate_constraints": "known"}
+    got = output_checks.run_checks(case, "denied", LEDGER_OK, None)
+    check("a run whose only failing finding is the reported form is not failed (uncheckable here, for the "
+          "envelope LEDGER_OK lacks)", (got["status"], [c["check"] for c in got["checks"] if c["verdict"] == "FAIL"],
+                                        got["unchecked"]), ("uncheckable", ["ledger_sentence_form"], ["summary_count"]))
+    checks = [{"run": 0, "status": "ok", "checks": [
+        {"check": "ledger_sentence_form", "target": "all", "verdict": "FAIL", "why": "w", "kind": "report"}]}]
+    check("run_fixtures does not classify a reported reading, so it fails nothing and retries nothing",
+          run_fixtures.classify([], checks, [0], 2)["items"], [])
+
+    import compare_arms as ca
+    check("the readings output_checks reports are the form alone", sorted(output_checks.REPORTED),
+          ["ledger_sentence_form"])
+    form_fail = finding("ledger_sentence_form", why="not an item", kind="report")
+    check("must fail: a failing form is in no unit compare_arms counts",
+          ca.defects({"checks": [form_fail, finding("ledger_sentence")], "aimed": None}), {"ledger_sentence": 1})
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"skill": "job-underwriter", "checks": [form_fail, finding("ledger_sentence", verdict="PASS")]},
+            {"skill": "job-underwriter", "checks": [finding("ledger_sentence_form", verdict="PASS", kind="report")]},
+            {"skill": "job-underwriter", "checks": [finding("ledger_sentence_form", verdict="PASS", kind="report")]}])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"skill": "job-underwriter", "checks": [form_fail, finding("ledger_sentence")]}])
+        cases = {("job-underwriter", 1): {"id": 1, "prompt": "Assess.", "expectations": ["a"]}}
+        out = ca.report(arm, ctl, None, cases)
+        block = out[out.index("== text-change measures"):]
+        check_true("its uptake prints in the text-change block as a reported row: passing runs over the runs where "
+                   "it applied, pooled and per arm",
+                   re.search(r"\n  ledger_sentence_form: passing, the list form or no sentence \(reported\)"
+                             r"\s+2/4\s+2/3\s+0/1", block) is not None)
+        check_true("and it is in no check row and no unit row", len(re.findall(r"\n  ledger_sentence_form\b", out)) == 1
+                   and re.search(r"\n  ledger_sentence\s+0/1\s+1/1", out) is not None)
 
 
 # --- 6c. Quotes ---
@@ -1108,6 +2611,20 @@ def test_quotes() -> None:
     check("a two-word quote in the evidence column is checked too, and a true one passes",
           fails('"Looker instance" — your message; '
                 '"Built the company\'s Looker instance from scratch" — your message'), [])
+    kelverton = fixture("mock-interview", 5)
+    report = "the market report their strategy team circulated internally last quarter, which I've read"
+    # opus/alone/mock-interview-5.run3.md, E2, its quotation also placed in the evidence column
+    got = output_checks.check_quotes(
+        "| # | Requirement | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+        f'| F4 | Commercial point of view | "{report}" — your message | medium |\n\n'
+        "| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+        f'| E2 | "What did you make of the market report?" | One thing it confirmed for you | [grounded] "{report}" |\n',
+        kelverton["prompt"], (), kelverton["candidate_text"])
+    check("must pass: fixture 5's candidate_text holds the candidate's own sentences in the message, not only the "
+          "background (quality check, mock-interview 5)", [c["why"] for c in got["checks"] if c["verdict"] == "FAIL"], [])
+    check_true("and leaves out the recruiter's email the candidate quotes",
+               not any("deepa" in output_checks.normalise_quote(t) for t in kelverton["candidate_text"])
+               and "deepa" in output_checks.normalise_quote(kelverton["prompt"]))
 
 
 def test_evidence_cells() -> None:
@@ -1213,8 +2730,12 @@ def test_provenance_pool() -> None:
     check("with no fit snapshot table, that is one format failure, not one per Provenance cell",
           sorted((c["target"], c["verdict"], c["kind"]) for c in got if c["check"] == "quotes"),
           [("banks", "PASS", "judgement"), ("fit_snapshot", "FAIL", "format")])
-    check("a candidate sentence the fit snapshot does not quote fails: Provenance quotes it as it appears there",
-          banks("Led 30+ end-to-end client integrations of the vendor's REST APIs"), ["FAIL"])
+    got = output_checks.run_checks(mi4, "denied", pack("Led 30+ end-to-end client integrations of the vendor's REST APIs"),
+                                   None)["checks"]
+    check("must pass, labelled: a candidate sentence the fit snapshot does not quote is a re-cut quote, passed and "
+          "reported (the owner's decision 2)",
+          [(c["verdict"], c.get("recut")) for c in got if c["check"] == "quotes" and c["target"] == "banks"],
+          [("PASS", "unquoted"), ("PASS", None)])
 
     # A plain acknowledgment's source may be a dossier item named by its field
     # (question-rubric.md, "A plain acknowledgment"): the cell names the field
@@ -2001,9 +3522,11 @@ def test_set_claim_subjects() -> None:
 
 
 def fixture(skill: str, case_id: int) -> dict:
-    from fixture_clauses import load_cases
+    """A repository fixture as a run saved before run dates were recorded was sent it: its
+    relative dates written out at its `date_anchor` (fixture_clauses.dated)."""
+    from fixture_clauses import dated, load_cases
     path = Path(__file__).resolve().parent.parent / "skills" / skill / "evals" / "evals.json"
-    return next(c for c in load_cases(path) if c["id"] == case_id)
+    return dated(next(c for c in load_cases(path) if c["id"] == case_id))
 
 
 def test_user_links() -> None:
@@ -2038,10 +3561,16 @@ def test_user_links() -> None:
         got = output_checks.check_accounting(
             accounting(rows, "Research tier: L0 — no searches; user links read 1"), research, "canned",
             [entry(url, kind="fetch", targets=[1])], ju5["prompt"])
-        check(f"ju 5: a fetch of {url} is research: zero_calls, target 1's skip, the count and "
-              f"the user-link claim all fail",
+        check(f"ju 5: a fetch of {url} is research, here a quick check of the pasted page, so zero_calls "
+              f"passes, while target 1's skip, the count and the user-link claim all fail",
               [verdict_of(got, "zero_calls"), verdict_of(got, "skip_has_no_call", 1),
-               verdict_of(got, "tally_searches"), verdict_of(got, "tally_user_links")], ["FAIL"] * 4)
+               verdict_of(got, "tally_searches"), verdict_of(got, "tally_user_links")], ["PASS"] + ["FAIL"] * 3)
+    three = [entry(u, kind="fetch", targets=[1]) for u in ("https://pellucidlearning.com/about", "https://pellucidlearning.com",
+                                                          "https://www.pellucidlearning.com/careers")]
+    got = output_checks.check_accounting(accounting(rows, "Research tier: L0 — no searches; user links read 1"), research,
+                                         "canned", three, ju5["prompt"])
+    check("ju 5: three such fetches are more than a quick check sends: zero_calls fails",
+          verdict_of(got, "zero_calls"), "FAIL")
 
     l0 = dict(RESEARCH, user_links=["https://example.org/jd"])
     jd = [entry("https://example.org/jd", kind="fetch")]
@@ -2120,6 +3649,240 @@ def test_user_links() -> None:
         entry("Kestrel values", targets=[1], urls=["https://kestrel.test/values", "https://kestrel.test/careers"])]})
     check_true("a search line names the URLs the room returned for it, so which pages a run saw is graded "
                "from the record", "2 result(s): https://kestrel.test/values, https://kestrel.test/careers" in shown)
+
+
+def test_user_link_fixture() -> None:
+    print("\nchecks: job-underwriter eval 6, a posting the user linked, read in a canned room")
+    case = fixture("job-underwriter", 6)
+    research, prompt = case["research"], case["prompt"]
+    link = research["user_links"][0]
+    check_true("ju 6 declares one user link, the room serves a page at it, and the prompt carries the link "
+               "and none of its canary", len(research["user_links"]) == 1 and link in prompt
+               and [u["url"] for u in research["user_pages"]] == [link]
+               and not any(output_checks.canary_in(s, prompt) for s in research["user_pages"][0]["canary"]))
+
+    # The room: the page at the user's link is served by fetch, never by search,
+    # and carries no target, so the record never charges it to one.
+    def call(i, tool, **args):
+        return {"jsonrpc": "2.0", "id": i, "method": "tools/call", "params": {"name": tool, "arguments": args}}
+    served = {"entity_tokens": research["entity_tokens"], "pages": research["pages"],
+              "user_pages": research["user_pages"]}
+    with tempfile.TemporaryDirectory() as tmp:
+        replies, log_path, _ = drive_server(
+            [{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+             call(1, "fetch", url=link), call(2, "search", query="Quillfield revenue operations lead posting salary"),
+             call(3, "fetch", url="https://jobs.tallyboard.example/quillfield")], Path(tmp), served)
+        by_id = {r["id"]: r["result"]["content"][0]["text"] for r in replies if r.get("id") in (1, 2, 3)}
+        lines = {l["id"]: l for l in map(json.loads, log_path.read_text().splitlines()) if l.get("id") in (1, 2, 3)}
+        check_true("a fetch of the user's link returns its page, canary and all", "£61,500" in by_id[1])
+        check("and is logged as a hit tagged with no target", (lines[1]["outcome"], lines[1]["targets"]), ("hit", []))
+        check_true("a search carrying the posting's own words never returns it",
+                   link not in by_id[2] and link not in lines[2]["returned_urls"])
+        check("the board's parent path is no user page: the room says so", lines[3]["outcome"], "fetch_miss")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        room = out / "rooms" / "job-underwriter-6-canned-ab12cd34"
+        room.mkdir(parents=True)
+        paths = run_fixtures.research_paths(out, room, "a")
+        run_fixtures.write_research_files(case, paths)
+        check("the runner writes the user's page into the room's corpus",
+              json.loads(paths["corpus"].read_text())["user_pages"], research["user_pages"])
+
+    read = entry(link, kind="fetch", urls=[link])
+    calls = [entry("Quillfield about", targets=[1], urls=["https://quillfield.co.uk/about"]),
+             entry("revenue operations lead salary UK 2026", targets=[2],
+                   urls=["https://ledgerline.example/2026-uk-revenue-operations-pay-guide"]),
+             entry("Tamsin Achebe Quillfield", targets=[3], urls=["https://www.linkedin.example/in/tamsin-achebe"])]
+    rows = {1: "yes", 2: "yes", 3: "yes"}
+    line = "Research tier: L1 — searches 3 of 5, fetches 0 of 2; user links read 1"
+    said = "The posting's own range, £61,500–£67,000, sits around Ledgerline's median."
+
+    def judge(tally=line, body=said, log=(read, *calls), mode="canned", extra=""):
+        return output_checks.check_accounting(accounting(rows, tally, body + extra), research, mode,
+                                              None if log is None else list(log), prompt)
+    names = ("tally_user_links", "tally_searches", "tally_fetches")
+    canary = lambda got: verdict_of(got, "user_link_canary", "user link")  # noqa: E731
+
+    good = judge()
+    check("must pass: the link read once, named on the line, in neither count, its canary carried",
+          [verdict_of(good, n) for n in names] + [canary(good)]
+          + [verdict_of(good, "yes_has_call", n) for n in (1, 2, 3)],
+          ["PASS"] * 7)
+    check("and no call is unattributed, so no off-target row is owed",
+          (verdict_of(good, "off_target_shown"), any("unattributed call" in i for i in good["info"])), (None, False))
+    check("must pass: the link fetched twice is still one link read",
+          verdict_of(judge(log=(read, read, *calls)), "tally_user_links"), "PASS")
+    check("must pass: a figure spelled \"61.5k\" carries the canary",
+          canary(judge(body="The posting pays from £61.5k.")), "PASS")
+    check("must fail: the line leaves the read off", verdict_of(judge(line.split(";")[0]), "tally_user_links"),
+          "FAIL")
+    check("must fail: the read counted as one of the skill's own fetches",
+          [verdict_of(judge("Research tier: L1 — searches 3 of 5, fetches 1 of 2; user links read 1"), n)
+           for n in ("tally_fetches", "tally_user_links")], ["FAIL", "PASS"])
+    check("must fail: the read counted as a fetch instead of a user link",
+          [verdict_of(judge("Research tier: L1 — searches 3 of 5, fetches 1 of 2"), n)
+           for n in ("tally_fetches", "tally_user_links")], ["FAIL", "FAIL"])
+    check("must fail: the read counted as one of the skill's own searches",
+          verdict_of(judge("Research tier: L1 — searches 4 of 5, fetches 0 of 2; user links read 1"),
+                     "tally_searches"), "FAIL")
+    check("must fail: the link read and its canary missing from the response",
+          canary(judge(body="The posting's range sits around Ledgerline's median.")), "FAIL")
+    check("must fail: a near figure is not the canary (\"161,500\")",
+          canary(judge(body="It pays £161,500.")), "FAIL")
+    board = entry("https://jobs.tallyboard.example/quillfield", kind="fetch")
+    got = judge(log=(read, board, *calls))
+    check("must fail: a fetch of the board's parent path is research, so a line that leaves it out fails "
+          "and the call is unattributed", (verdict_of(got, "tally_fetches"), verdict_of(got, "off_target_shown")),
+          ("FAIL", "FAIL"))
+    got = judge(log=calls)
+    check("the link never fetched: \"read 1\" fails, and its canary is not asked for",
+          (verdict_of(got, "tally_user_links"), canary(got)), ("FAIL", None))
+    got = judge(line.split(";")[0], body="", log=(entry(link, "refused", kind="fetch"), *calls))
+    check("a read the host refused: not counted, the canary not asked for",
+          (verdict_of(got, "tally_user_links"), canary(got),
+           any("user link not opened" in i for i in got["info"])), ("PASS", None, True))
+    got = judge(log=None)
+    check("no research log: the canary is unchecked, not passed",
+          (canary(got), "user_link_canary" in got["unchecked"]), (None, True))
+    for body, want in ((said, "FAIL"), ("", "PASS")):
+        got = judge(line.split(";")[0], body=body, log=[], mode="denied")
+        check(f"a denied room, where no fetch can return: the canary {'present fails' if body else 'absent passes'}",
+              verdict_of(got, "user_link_canary_absent", "user link"), want)
+    # A search for the company by name in the posting's own words: the posting is part
+    # of the request once its link was read, and not before (`request_text`).
+    by_name = entry("Quillfield revenue operations lead Bristol hybrid")
+    got = judge(log=(read, by_name, *calls[1:]))
+    check("must pass: once the link was read, a search by name in the posting's words is target 1's",
+          (verdict_of(got, "yes_has_call", 1), verdict_of(got, "off_target_shown")), ("PASS", None))
+    got = judge(line.split(";")[0], log=(by_name, *calls[1:]))
+    check("must fail: with the link never read, the same search is aimed at no target",
+          (verdict_of(got, "yes_has_call", 1), verdict_of(got, "off_target_shown")), ("FAIL", "FAIL"))
+    room = {"prompt": output_checks.request_text(prompt, research, [link]), "targets": research["targets"]}
+    check("a posting-only word joins the name as a prompt word would: \"Quillfield CFO\" is target 1's, "
+          "not shown as off-target (identity_search's docstring)",
+          [t["n"] for t in research["targets"] if output_checks.aimed_at(entry("Quillfield CFO"), t, [], "canned", room)],
+          [1])
+    check("an unread or undeclared link adds nothing to the request",
+          [output_checks.request_text(prompt, research, links) for links in ([], ["https://jobs.tallyboard.example"])],
+          [prompt, prompt])
+    block = run_fixtures.observed_block({"research_log": [read, *calls]}, research)
+    check_true("the grader's record counts three searches, no fetch, and lists the link as a user link read",
+               block.startswith("Recorded: 3 research call(s) — 3 search(es), 0 fetch(es)")
+               and "User links read: 1 link(s)" in block and block.index(link) > block.index("User links read"))
+    shown = [[link in text for text in output_checks.room_pages_text(
+        [*research["pages"], *research["user_pages"]], log)] for log in ([read], calls)]
+    check("a canned room's quotable text holds the user's page once it was read, and not before",
+          [any(s) for s in shown], [True, False])
+
+
+def test_quick_check() -> None:
+    print("\nchecks: a quick, reported check that the user's pasted material is still current passes (decision 3)")
+    ju5, mi8, mi7 = fixture("job-underwriter", 5), fixture("mock-interview", 8), fixture("mock-interview", 7)
+    check("the fixtures declare which targets the material fixes, and the names it carries",
+          [(c["research"]["quick_check"]["targets"], c["research"]["quick_check"]["names"]) for c in (ju5, mi8, mi7)],
+          [([1, 2], ["pellucid", "datawright"]), ([1, 2, 3, 5], ["ashgrove"]), ([5], ["saltmarsh"])])
+    check("a quick check sends at most two calls, searches and fetches together", output_checks.QUICK_CHECK_CALLS, 2)
+    check_true("eval 5's prompt drops its copy times and the posting's status, and eval 8 keeps its copy date",
+               "THE JD, from pellucidlearning.com/careers/senior-data-engineer: '" in ju5["prompt"]
+               and not any(w in ju5["prompt"] for w in ("09:12", "09:10", "Accepting applications", "copied"))
+               and "copied this morning" in mi8["prompt"])
+
+    def run(case, mode, log, rows, tally):
+        return output_checks.check_accounting(accounting(rows, tally), case["research"], mode, log, case["prompt"])
+
+    def verdicts(got, *keys):
+        return [verdict_of(got, *k.split(":")) for k in keys]
+    post = "https://pellucidlearning.com/careers/senior-data-engineer"
+    calls = [entry(post, kind="fetch", targets=[1]), entry("Pellucid Learning Series C funding", targets=[1])]
+    got = run(ju5, "canned", calls, {1: "yes", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 1 of 2")
+    check("must pass: eval 5 canned, a posting fetch and a Pellucid search, row 1 yes, tally 1 of 5 and 1 of 2",
+          verdicts(got, "zero_calls", "accept:1", "yes_has_call:1", "tally_searches", "tally_fetches"), ["PASS"] * 5)
+    check("and zero_calls records the calls and the quick check, as does the checked row",
+          [(c.get("calls"), c.get("quick_check")) for c in got["checks"] if c["check"] in ("zero_calls",)]
+          + [(None, c.get("quick_check")) for c in got["checks"] if c["check"] == "accept" and c["target"] == "1"],
+          [(2, 2), (None, 2)])
+    refused = [dict(e, outcome="refused") for e in calls]
+    got = run(ju5, "denied", refused, {1: "unavailable", 2: "skipped", 3: "n/a"},
+              "Research tier: L1 — searches 1 of 5, fetches 1 of 2")
+    check("must pass: the same calls refused in a denied room, row 1 unavailable",
+          verdicts(got, "zero_calls", "accept:1", "tally_searches", "tally_fetches"), ["PASS"] * 4)
+    got = run(ju5, "canned", [entry("Datawright 2026 Data Engineering Pay Report", targets=[2])],
+              {1: "skipped", 2: "yes", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must pass: a search for the Datawright report by title, row 2 yes",
+          verdicts(got, "zero_calls", "accept:2", "yes_has_call:2"), ["PASS"] * 3)
+    got = run(mi8, "canned", [entry("Ashgrove Credit Union news 2026", targets=[3])],
+              {1: "skipped", 2: "skipped", 3: "yes", 4: "n/a", 5: "skipped"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must pass: an Ashgrove news search on eval 8, row 3 yes",
+          verdicts(got, "zero_calls", "accept:3", "yes_has_call:3"), ["PASS"] * 3)
+    got = run(mi7, "canned", [entry("Saltmarsh Games live operations producer posting")],
+              {1: "unavailable", 2: "unavailable", 3: "unavailable", 4: "unavailable", 5: "yes"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must pass: a Saltmarsh posting search on eval 7, row 5 yes, the row recording the check",
+          (verdicts(got, "accept:5", "yes_has_call:5"),
+           [c.get("quick_check") for c in got["checks"] if c["check"] == "accept" and c["target"] == "5"]),
+          (["PASS", "PASS"], [1]))
+
+    three = [*calls, entry("https://pellucidlearning.com/about", kind="fetch", targets=[1])]
+    got = run(ju5, "canned", three, {1: "yes", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 2 of 2")
+    check("must fail: three Pellucid calls are beyond a quick check",
+          (verdicts(got, "zero_calls", "accept:1"), "above the 2 a quick check sends" in next(
+              c["why"] for c in got["checks"] if c["check"] == "zero_calls")), (["FAIL", "FAIL"], True))
+    got = run(ju5, "canned", [entry("senior data engineer salary US 2026", targets=[2])],
+              {1: "skipped", 2: "yes", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a market-pay search naming nothing is a hunt, not a check",
+          (verdicts(got, "zero_calls", "accept:2"), "names none of the user's material" in next(
+              c["why"] for c in got["checks"] if c["check"] == "zero_calls")), (["FAIL", "FAIL"], True))
+    got = run(ju5, "canned", [entry("Pellucid Learning head of data")], {1: "skipped", 2: "skipped", 3: "yes"},
+              "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a call for the hiring manager the request does not name",
+          verdicts(got, "zero_calls", "accept:3"), ["FAIL", "FAIL"])
+    got = run(ju5, "denied", [entry("Pellucid Learning hiring manager", outcome="refused")],
+              {1: "unavailable", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a bare search for the hiring manager, in the request's own words, is no check of the company",
+          verdicts(got, "zero_calls"), ["FAIL"])
+    got = run(mi8, "denied", [entry("Ashgrove Credit Union hiring manager LinkedIn", outcome="refused")],
+              {1: "skipped", 2: "unavailable", 3: "skipped", 4: "n/a", 5: "skipped"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must fail: a search for eval 8's hiring manager is no check of the interview process",
+          verdicts(got, "zero_calls"), ["FAIL"])
+    got = run(ju5, "canned", [entry(post, kind="fetch", targets=[1]), entry("Pellucid Learning head of data")],
+              {1: "yes", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 1 of 2")
+    check("must fail: a quick check beside a call outside it: every call must belong to the check",
+          verdicts(got, "zero_calls", "skip_has_no_call:3"), ["FAIL", "FAIL"])
+    got = run(ju5, "canned", [entry("Pellucid Learning tutoring platform Glassdoor reviews")],
+              {1: "skipped", 2: "skipped", 3: "n/a"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2")
+    check("must fail: a stray review-site search", verdicts(got, "zero_calls"), ["FAIL"])
+    got = run(ju5, "canned", [entry(post, kind="fetch", targets=[1])], {1: "skipped", 2: "skipped", 3: "n/a"},
+              "Research tier: L1 — searches 0 of 5, fetches 1 of 2")
+    check("must fail: a checked row still written skipped", verdicts(got, "zero_calls", "skip_has_no_call:1"),
+          ["PASS", "FAIL"])
+    got = run(ju5, "canned", [entry(post, kind="fetch", targets=[1])], {1: "yes", 2: "skipped", 3: "n/a"},
+              "Research tier: L0 — no searches")
+    check("must fail: a check under \"L0 — no searches\"", verdicts(got, "zero_calls", "tally_searches"), ["PASS", "FAIL"])
+    got = run(mi8, "canned", [entry("Ashgrove Credit Union news 2026", targets=[3])],
+              {1: "skipped", 2: "skipped", 3: "unavailable", 4: "n/a", 5: "skipped"},
+              "Research tier: L1 — searches 1 of 6, fetches 0 of 2")
+    check("must fail: a returned check written unavailable in a canned room",
+          verdicts(got, "zero_calls", "accept:3", "unavailable_has_refusal:3"), ["PASS", "PASS", "FAIL"])
+    got = run(mi7, "canned", [entry("Saltmarsh Games live operations producer posting"),
+                              entry("Saltmarsh Games live ops producer job listing"),
+                              entry("Saltmarsh Games jobs live operations producer")],
+              {1: "unavailable", 2: "unavailable", 3: "unavailable", 4: "unavailable", 5: "yes"},
+              "Research tier: L1 — searches 3 of 6, fetches 0 of 2")
+    check("must fail: three checks of eval 7's job description", verdicts(got, "accept:5"), ["FAIL"])
+    plain = {"targets": [{"n": 1, "terms": ["careers"], "accept": ["skipped"]}], "budget": {"searches": 5, "fetches": 2},
+             "zero_calls": True}
+    got = output_checks.check_accounting(accounting({1: "yes"}, "Research tier: L1 — searches 1 of 5, fetches 0 of 2"),
+                                         plain, "canned", [entry("Kestrel careers", targets=[1])], "Prep me for Kestrel.")
+    check("must fail: a yes on a target in a fixture with no quick_check", verdicts(got, "zero_calls", "accept:1"),
+          ["FAIL", "FAIL"])
+    declined = dict(ju5["research"], declined=True, zero_calls=False)
+    got = output_checks.check_accounting(accounting({1: "yes", 2: "skipped", 3: "n/a"},
+                                                    "Research tier: L1 — searches 1 of 5, fetches 1 of 2"),
+                                         declined, "canned", calls, ju5["prompt"])
+    check("must fail: research the user declined stays strict, a check included",
+          verdicts(got, "zero_calls", "accept:1"), ["FAIL", "FAIL"])
 
 
 def test_budget_spent_unavailable() -> None:
@@ -2237,6 +4000,114 @@ def test_off_target_rows() -> None:
     got = output_checks.check_accounting(canary + head + rows + extra, RESEARCH, "canned", None)
     check("with no research log the off-target checks are unchecked",
           (verdict_of(got, "off_target_shown"), "off_target_shown" in got["unchecked"]), (None, True))
+
+
+def test_yes_names_page() -> None:
+    print("\nchecks: a `yes` row names a page a call aimed at its target returned (yes_names_page)")
+    case = fixture("job-underwriter", 6)
+    research, prompt = case["research"], case["prompt"]
+    about, guide = "https://quillfield.co.uk/about", "https://ledgerline.example/2026-uk-revenue-operations-pay-guide"
+    profile = "https://www.linkedin.example/in/tamsin-achebe"
+    pay_query = "Revenue Operations Lead salary UK B2B software"
+    calls = [entry("Quillfield invoicing software company Bristol", targets=[1], urls=[about]),
+             entry(pay_query, targets=[2], urls=[guide]),
+             entry("Tamsin Achebe Quillfield", targets=[3], urls=[profile])]
+    named = {1: 'Searched "Quillfield invoicing software company Bristol": "About Quillfield" (quillfield.co.uk/about)',
+             2: f'Searched "{pay_query}": "Ledgerline 2026 UK Revenue Operations Pay Guide". Moved the market line',
+             3: 'Searched "Tamsin Achebe Quillfield": "Tamsin Achebe — Head of Revenue Operations, Quillfield"'}
+
+    def judge(why: dict, log=tuple(calls), extra: str = "", on: bool = True):
+        cells = {**named, **why}
+        rows = "".join(f"| {n}. target | yes | {cells[n]} |\n" for n in (1, 2, 3))
+        text = ("Research tier: L1 — searches 3 of 5, fetches 0 of 2\n\n| Target | Status | What it moved |\n"
+                f"|---|---|---|\n{rows}{extra}")
+        return output_checks.check_accounting(text, research, "canned", None if log is None else list(log),
+                                              prompt, yes_pages=on)
+
+    def page(got, target) -> str | None:
+        return verdict_of(got, output_checks.YES_PAGES_CHECK, target)
+
+    got = judge({})
+    check("must pass: each row names its page — by title and address, by title, by a profile's whole title",
+          [page(got, n) for n in (1, 2, 3)], ["PASS", "PASS", "PASS"])
+    check("must pass: a row naming its page by full URL",
+          page(judge({1: f"Searched for the company; read {about}."}), 1), "PASS")
+    check("must pass: a row naming its page by bare host",
+          page(judge({2: f'Searched "{pay_query}"; the guide at Ledgerline.example sets the band'}), 2), "PASS")
+    check("must pass: a title trimmed of its leading segment, case and punctuation aside",
+          page(judge({3: 'Searched "Tamsin Achebe Quillfield": the profile head of revenue operations '
+                         '— quillfield'}), 3), "PASS")
+    empty = [calls[0], entry(pay_query, targets=[2]), calls[2]]
+    check("must pass: every call aimed at the target returned empty, and the row says so",
+          page(judge({2: f'Searched "{pay_query}", which returned nothing usable; the band is [generic]'},
+                     empty), 2), "PASS")
+    elsewhere = [calls[0], entry(pay_query, targets=[2], urls=[about]), calls[2]]
+    check("must pass: in a canned room, the target's calls brought back only another target's page, said so",
+          page(judge({2: f'Searched "{pay_query}": not established'}, elsewhere), 2), "PASS")
+    stray = entry("Quillfield layoffs glassdoor", urls=["https://forum.example/quillfield-layoffs"])
+    off = "| Off-target: Quillfield layoffs | yes | {} |\n"
+    got = judge({}, (*calls, stray),
+                off.format('Searched "Quillfield layoffs glassdoor": forum.example/quillfield-layoffs; moved nothing'))
+    check("must pass: an un-numbered off-target row naming the page its stray call returned",
+          (page(got, "off-target 1"), verdict_of(got, "off_target_shown")), ("PASS", "PASS"))
+
+    check("must fail: a row naming its queries only",
+          page(judge({2: f'Searched "{pay_query}". Moved the market line'}), 2), "FAIL")
+    check("must fail: a page the log never returned",
+          page(judge({2: f'Searched "{pay_query}": "UK RevOps Salary Report" (payscale.example/revops)'}), 2), "FAIL")
+    check("must fail: a page returned only to another target's call",
+          page(judge({2: f'Searched "{pay_query}": "About Quillfield" (quillfield.co.uk/about)'}), 2), "FAIL")
+    check("must fail: a host the query itself carries is not the page",
+          page(judge({1: 'Searched "quillfield.co.uk about"'},
+                     [entry("quillfield.co.uk about", targets=[1], urls=[about]), *calls[1:]]), 1), "FAIL")
+    check("must fail: a page named only by description",
+          page(judge({1: 'Searched "Quillfield invoicing software company Bristol": the About page'}), 1), "FAIL")
+    check("must fail: an empty result the row does not own up to",
+          page(judge({2: f'Searched "{pay_query}". Moved the market line'}, empty), 2), "FAIL")
+    check("must fail: \"not established\" when the target's own page came back",
+          page(judge({2: f'Searched "{pay_query}": not established'}), 2), "FAIL")
+    got = judge({}, (*calls, stray), off.format('Searched "Quillfield layoffs glassdoor"; moved nothing'))
+    check("must fail: an un-numbered row naming only its query", page(got, "off-target 1"), "FAIL")
+    got = judge({}, (*calls, stray), off.format('Searched "Quillfield layoffs glassdoor": "About Quillfield" '
+                                                '(quillfield.co.uk/about)'))
+    check("must fail: an un-numbered row naming a page only a targeted call returned",
+          page(got, "off-target 1"), "FAIL")
+    check("must fail: a person's name heading a profile's title is not, alone, the profile",
+          page(judge({3: 'Searched "Tamsin Achebe Quillfield": Tamsin Achebe has run revenue operations '
+                         'there since 2023'}), 3), "FAIL")
+    check("title_forms keeps no trimmed form under half the title or under two words",
+          (sorted(output_checks.title_forms("Tamsin Achebe — Head of Revenue Operations, Quillfield")),
+           sorted(output_checks.title_forms("Careers — Quillfield"))),
+          (["head of revenue operations quillfield", "tamsin achebe head of revenue operations quillfield"],
+           ["careers quillfield"]))
+    quoted = '"Ledgerline 2026 UK Revenue Operations Pay Guide"'
+    check("must fail: a query sent quoted and written unquoted is still the query, not the page",
+          page(judge({2: "Searched Ledgerline 2026 UK Revenue Operations Pay Guide. Moved the market line"},
+                     [calls[0], entry(quoted, targets=[2], urls=[guide]), calls[2]]), 2), "FAIL")
+
+    got = judge({}, None)
+    check("with no research log the check is unchecked, never a pass",
+          (page(got, 1), output_checks.YES_PAGES_CHECK in got["unchecked"]), (None, True))
+    got = judge({2: f'Searched "{pay_query}"'}, on=False)
+    check("a fixture that does not run the check gets no verdict", page(got, 2), None)
+    refused = [calls[0], entry(pay_query, "refused", targets=[2]), calls[2]]
+    got = judge({2: f'Searched "{pay_query}"'}, refused)
+    check("a row none of whose calls returned is left to yes_has_call",
+          (page(got, 2), verdict_of(got, "yes_has_call", 2)), (None, "FAIL"))
+
+    response = ("Research tier: L1 — searches 3 of 5, fetches 0 of 2\n\n| Target | Status | What it moved |\n"
+                "|---|---|---|\n" + "".join(f"| {n}. target | yes | {named[n]} |\n" for n in (1, 2, 3)))
+    ran = output_checks.run_checks(case, "canned", response, list(calls))
+    check("run_checks runs it for a job-underwriter fixture that names it",
+          [c["verdict"] for c in ran["checks"] if c["check"] == output_checks.YES_PAGES_CHECK], ["PASS"] * 3)
+    mi = fixture("mock-interview", 7)
+    ran = output_checks.run_checks(mi, "canned", response, list(calls))
+    check("and never for a mock-interview fixture, whose skill does not state the rule",
+          [c for c in ran["checks"] if c["check"] == output_checks.YES_PAGES_CHECK], [])
+    for skill, states in (("job-underwriter", True), ("mock-interview", False), ("resume-tailor", False)):
+        text = (Path(__file__).resolve().parent.parent / "skills" / skill / "SKILL.md").read_text()
+        check(f"YES_PAGES_RULE reads {skill}'s SKILL.md as {'stating' if states else 'not stating'} the rule",
+              bool(output_checks.YES_PAGES_RULE.search(text)), states)
 
 
 def test_canary_gate() -> None:
@@ -2358,6 +4229,16 @@ def test_recurring() -> None:
         check("checks are keyed by check and target, invalid runs skipped",
               sorted(seen[("s", 1, "canned", ("chk", "accept", "2"), "check")]["failed_sets"]),
               ["a", "b"])
+    with tempfile.TemporaryDirectory() as tmp:
+        sets = [Path(tmp) / name for name in ("a", "b")]
+        for d in sets:
+            d.mkdir()
+            (d / "s-1.canned.run0.checks.json").write_text(json.dumps({
+                "skill": "s", "id": 1, "mode": "canned", "status": "ok",
+                "checks": [{"check": "ledger_sentence_form", "target": "all", "verdict": "FAIL", "why": "w",
+                            "kind": "report"}]}))
+        check("a checks file whose only failure is a reported reading yields no recurring entry",
+              list(recurring.scan(sets)), [])
 
 # --- Misfires found by auditing a clean-room measurement ------------------------
 #
@@ -2383,6 +4264,12 @@ def test_audit_quotes() -> None:
         got = output_checks.check_quotes(pack(provenance), prompt, corpus, own)["checks"]
         return sorted(c["verdict"] for c in got if c["check"] == "quotes" and c["target"] == "banks"
                       and c["verdict"] == "FAIL") or ["PASS"]
+
+    def recut(provenance):
+        """The passing re-cut findings' labels, beside any failure: a re-cut quote passes, labelled."""
+        got = output_checks.check_quotes(pack(provenance), prompt, (), own)["checks"]
+        return [(c["verdict"], c.get("recut")) for c in got if c["check"] == "quotes" and c["target"] == "banks"
+                and (c["verdict"] == "FAIL" or "recut" in c)]
     for cell in ('[grounded] "we\'d like you to present a short POV on operator partnerships" — recruiter\'s email',
                  '[grounded] strategy brief: "consolidate eight branches into five hubs over 2027"',
                  '[grounded] "consolidate eight branches into five hubs over 2027" (strategy brief)',
@@ -2406,16 +4293,34 @@ def test_audit_quotes() -> None:
           ["FAIL"])
     check("must fail: an origin-tagged quote that no source holds",
           banks('[grounded] "consolidate nine branches into two hubs" — strategy brief'), ["FAIL"])
-    check("must fail: a candidate negative tagged as their own, absent from the snapshot (mi7.denied.run2 B2)",
-          banks('[grounded] "Never led a team" — your own stated negative'), ["FAIL"])
-    check("must fail: a candidate sentence stays the candidate's whatever origin it claims, and must stand in "
-          "the snapshot", banks('[grounded] "Never led a team" — LinkedIn'), ["FAIL"])
+    check("must pass, labelled unquoted: a candidate negative tagged as their own, absent from the snapshot, is a "
+          "re-cut quote (mi7.denied.run2 B2)",
+          recut('[grounded] "Never led a team" — your own stated negative'), [("PASS", "unquoted")])
+    check("must pass, labelled unquoted: a candidate sentence stays the candidate's whatever origin it claims, "
+          "and is read as a re-cut quote", recut('[grounded] "Never led a team" — LinkedIn'), [("PASS", "unquoted")])
     check("must fail: a candidate quote with an insertion ([years]) is no quote",
           banks('[grounded] "I ran the weekly [years] content-drop calendar"'), ["FAIL"])
     check("must fail: a spliced quote (\"I\" for \"I've\") is no quote of a source either",
           banks('[grounded] "I ran the five hubs over 2027" — strategy brief'), ["FAIL"])
     check("must fail: a dossier field's name is the dossier's material, not another source",
           banks('[grounded] prohibited_claims: "consolidate eight branches"'), ["FAIL"])
+    # The quality check through Tuesday found two correct sources read as the
+    # candidate's words: a possessive written right before the quote, the form the
+    # rubric's worked example uses, and the dossier's role_profile named after it.
+    for cell in ('[grounded] "I ran the weekly content-drop calendar", beside the strategy brief\'s '
+                 '"consolidate eight branches into five hubs over 2027"',
+                 '[grounded] the recruiter\'s "we\'d like you to present a short POV on operator partnerships"',
+                 '[grounded] the recruiter\'s email "we\'d like you to present a short POV"',
+                 '[grounded] "consolidate eight branches into five hubs" (dossier role_profile R5)'):
+        check(f"must pass: a source named as the rubric names one: {cell[:70]!r}", banks(cell), ["PASS"])
+    check("must fail: a contraction is no possessive: that's names no source",
+          banks('[grounded] and that\'s "consolidate eight branches into five hubs over 2027"'), ["FAIL"])
+    check("must fail: a possessive source still has to hold the quote",
+          banks('[grounded] the recruiter\'s "consolidate nine branches into two hubs"'), ["FAIL"])
+    check("must pass, labelled unquoted: the candidate's own material named possessively stays theirs, a re-cut quote",
+          recut('[grounded] your CV\'s "Never led a team"'), [("PASS", "unquoted")])
+    check("must fail: a dossier field other than role_profile is still the dossier's material",
+          banks('[grounded] "consolidate eight branches" (dossier prohibited_claims)'), ["FAIL"])
 
     # B: a canned room's pages are quotable by their title and URL too, and only the
     # pages the run's log shows returned.
@@ -2597,20 +4502,27 @@ def test_watch_out() -> None:
     """The chat ends with the skill's watch-out line, exactly; no produced file holds it."""
     print("\nchecks: the watch-out line (output-discipline.md rule 7)")
     repo = Path(__file__).resolve().parent.parent
-    sentences = {s: output_checks.declared_watch_out((repo / "skills" / s / "SKILL.md").read_text())
-                 for s in run_fixtures.SKILLS}
-    check("every skill declares a watch_out sentence", [s for s, v in sentences.items() if not v], [])
-    sentence = sentences["resume-tailor"]
-    line = output_checks.watch_out_line(sentence)
+    lines = {s: output_checks.declared_watch_out((repo / "skills" / s / "SKILL.md").read_text())
+             for s in run_fixtures.SKILLS}
+    check("every skill declares a watch_out line", [s for s, v in lines.items() if not v], [])
+    check("every declared line is the whole line, label included, so it is copied and never assembled",
+          [s for s, v in lines.items() if not (v or "").startswith(output_checks.WATCH_OUT_LABEL + " ")], [])
+    line = lines["resume-tailor"]
+    sentence = output_checks.watch_out_sentence(line)
+    check("watch_out_sentence is the declared line after its label", (sentence or "").startswith("The words I quote"),
+          True)
+    check("and is None for a line that does not begin with the label",
+          (output_checks.watch_out_sentence(sentence), output_checks.watch_out_sentence("Watch out: " + sentence),
+           output_checks.watch_out_sentence(output_checks.WATCH_OUT_LABEL + " ")), (None, None, None))
     body = "## Edit ledger\n\n| # | Current |\n|---|---|\n| E1 | x |\n\nC1 — What did you own?\nAnswer in text, or say skip.\n"
     marker = "\n----- file the response produced: {} -----\n"
 
     def verdicts(response: str) -> dict:
-        got = output_checks.check_watch_out(response, sentence)
+        got = output_checks.check_watch_out(response, line)
         return {c["target"]: c["verdict"] for c in got["checks"]}
 
     def why(response: str, target: str = "chat") -> str:
-        got = output_checks.check_watch_out(response, sentence)
+        got = output_checks.check_watch_out(response, line)
         return next(c["why"] for c in got["checks"] if c["target"] == target)
 
     check("must pass: the line is the chat's last line", verdicts(body + "\n" + line + "\n"), {"chat": "PASS"})
@@ -2628,8 +4540,8 @@ def test_watch_out() -> None:
     check_true("and says it is not word for word", "not the skill's sentence word for word" in why(para))
     curly = body + "\n" + line.replace("you wrote", "you’d written") + "\n"
     check("must fail: one word changed", verdicts(curly), {"chat": "FAIL"})
-    ju = sentences["job-underwriter"]
-    ju_body = body + "\n" + output_checks.watch_out_line(ju)
+    ju = lines["job-underwriter"]
+    ju_body = body + "\n" + ju
     for label, swapped in (("curly quotes", ju_body.replace('"only"', "“only”")),
                            ("a double hyphen for the dash", ju_body.replace(" — ", " -- "))):
         got = {c["target"]: c["verdict"] for c in output_checks.check_watch_out(swapped + "\n", ju)["checks"]}
@@ -2643,6 +4555,16 @@ def test_watch_out() -> None:
     check_true("and says the line appears once", "the line appears once" in why(twice))
     bare = body + "\n" + sentence + "\n"
     check("must fail: the sentence without its label", verdicts(bare), {"chat": "FAIL"})
+    check_true("and says the label is what is missing", "not under its label" in why(bare))
+    for label, variant in (("Watch out:", "Watch out: "), ("bold Watch out:", "**Watch out:** "),
+                           ("unbolded Watch-out:", "Watch-out: "), ("Watch-outs:", "**Watch-outs:** "),
+                           ("lower-case watch-out:", "**watch-out:** ")):
+        got = body + "\n" + variant + sentence + "\n"
+        check(f"must fail: the exact sentence under a variant label, {label}", verdicts(got), {"chat": "FAIL"})
+        check_true(f"and says the label is not the skill's ({label})", "not under its label" in why(got))
+    para_label = body + "\nWatch out: Check each quote and each new line against your original resume.\n"
+    check("must fail: a paraphrase under a variant label", verdicts(para_label), {"chat": "FAIL"})
+    check_true("and says it is not word for word", "not the skill's sentence word for word" in why(para_label))
     warning_elsewhere = "Warning: this posting has no salary.\n" + body + "\n" + line + "\n"
     check("must pass: a warning elsewhere in the chat is not the slot", verdicts(warning_elsewhere), {"chat": "PASS"})
     resume = "# Priya Shah\n\nProgramme manager.\n\n" + line + "\n"
@@ -2660,9 +4582,12 @@ def test_watch_out() -> None:
     check("must pass: a produced file without it", verdicts(clean), {"chat": "PASS", "pack.md": "PASS"})
 
     case = {"id": 1, "prompt": "p", "expectations": ["e"]}
-    got = output_checks.run_checks(case, "denied", body + "\n" + line + "\n", None, watch_out=sentence)
-    check("run_checks runs it when given the sentence", verdict_of(got, "watch_out", "chat"), "PASS")
-    got = output_checks.run_checks(case, "denied", body, None, watch_out=sentence)
+    got = output_checks.run_checks(case, "denied", body + "\n" + line + "\n", None, watch_out=line)
+    check("run_checks runs it when given the declared line", verdict_of(got, "watch_out", "chat"), "PASS")
+    got = output_checks.run_checks(case, "denied", body + "\n" + sentence + "\n", None, watch_out=line)
+    check("and fails the run whose line drops the label", (verdict_of(got, "watch_out", "chat"), got["status"]),
+          ("FAIL", "fail"))
+    got = output_checks.run_checks(case, "denied", body, None, watch_out=line)
     check("and fails the run without the line", (verdict_of(got, "watch_out", "chat"), got["status"]),
           ("FAIL", "fail"))
     got = output_checks.run_checks(case, "denied", body, None, watch_out="")
@@ -2677,35 +4602,1100 @@ def test_watch_out() -> None:
             case = fixture(skill, 1)
             stem = run_fixtures.stem_for(skill, case, "denied", 1)
             (out / f"{stem}.meta.json").write_text(json.dumps({"harness": {"status": "ok", "reasons": []}}))
-            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_line(sentences[skill]) + "\n")
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + lines[skill] + "\n")
             rec = run_fixtures.check_run(skill, case, out, 1, "denied")
-            check(f"check_run holds {skill} eval 1 to its own SKILL.md sentence",
+            check(f"check_run holds {skill} eval 1 to its own SKILL.md line",
                   verdict_of(rec, "watch_out", "chat"), "PASS")
-            other = next(s for s in run_fixtures.SKILLS if s != skill)
-            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_line(sentences[other]) + "\n")
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + output_checks.watch_out_sentence(lines[skill]) + "\n")
             rec = run_fixtures.check_run(skill, case, out, 1, "denied")
-            check(f"and fails {skill} on a sibling's sentence", verdict_of(rec, "watch_out", "chat"), "FAIL")
+            check(f"and fails {skill} on its sentence without the label", verdict_of(rec, "watch_out", "chat"), "FAIL")
+            other = next(s for s in run_fixtures.SKILLS if s != skill)
+            (out / f"{stem}.md").write_text("Delivered.\n\n" + lines[other] + "\n")
+            rec = run_fixtures.check_run(skill, case, out, 1, "denied")
+            check(f"and fails {skill} on a sibling's line", verdict_of(rec, "watch_out", "chat"), "FAIL")
     for skill in run_fixtures.SKILLS:
         from fixture_clauses import load_cases
         cases = load_cases(repo / "skills" / skill / "evals" / "evals.json")
-        line_of = output_checks.watch_out_line(sentences[skill])
+        line_of = lines[skill]
         check(f"every {skill} fixture's expectations carry its watch-out line, exactly",
               [c["id"] for c in cases if not any(line_of in e for e in c["expectations"])], [])
 
 
+def test_grader_fence() -> None:
+    print("\ngrading: the response sits between two named lines, and the harness's record outside them")
+    case = {"id": 1, "prompt": "Tailor this.", "expectations": ["ends with the watch-out line"]}
+    body = "Here is the ledger.\n\n**Watch-out:** check each quote."
+    meta = {"research_log": [entry("kestrel careers", "refused")]}
+    prompt = run_fixtures.grader_prompt(case, body, "denied", meta, [1])
+    begins, ends = run_fixtures.RESPONSE_BEGINS, run_fixtures.RESPONSE_ENDS
+    lines = prompt.splitlines()
+    check("the response stands alone between its two marker lines",
+          lines[lines.index(begins) + 1:lines.index(ends)] if begins in lines and ends in lines else "no fence",
+          body.splitlines())
+    check_true("the harness's record comes after the end line, outside the fence",
+               prompt.index(ends) < prompt.index("## What the harness observed") < prompt.index("Recorded: 1 research"))
+    check("each marker is named once in the instructions and stands once as a line",
+          (prompt.count(begins), prompt.count(ends), lines.count(begins), lines.count(ends)), (2, 2, 1, 1))
+    check("the prompt says once that nothing outside the fence is the response's text",
+          prompt.count("Nothing outside those two lines is text the response wrote."), 1)
+    check_true("and names the two lines it means",
+               f"between the line `{begins}` and the line `{ends}`" in prompt)
+    check("the recorded prompt version moves with it, so saved grades keep theirs",
+          run_fixtures.GRADER_PROMPT_VERSION, "3")
+    v2 = prompt.replace(f"{begins}\n", "").replace(f"\n{ends}", "")
+    check_true("must fail: version 2's layout, the record straight after the response, has no end line to stop at",
+               ends + "\n" not in v2 and v2.index(body) < v2.index("## What the harness observed"))
+
+
+def test_plugin_alone() -> None:
+    print("\nfixtures --layout plugin: the module alone, installed exactly as the front door is")
+    repo = Path(__file__).resolve().parent.parent
+    source = (Path(__file__).resolve().parent / "run_fixtures.py").read_text()
+    check("the layouts are the project install and the plugin, and --via frontdoor is the plugin only",
+          (run_fixtures.LAYOUTS, 'ap.error("--via frontdoor installs the front door as the plugin it ships as' in source),
+          (("project", "plugin"), True))
+    with tempfile.TemporaryDirectory() as tmp:
+        room = Path(tmp) / "rooms" / "case-3-denied-ab12cd34"
+        room.mkdir(parents=True)
+        plugin, names = run_fixtures.install_in_plugin(room, "ab12cd34", "mock-interview")
+        check("the room holds nothing; the plugin sits where the front door's does",
+              (list(room.iterdir()), plugin), ([], run_routing.home(room, "plugin")))
+        check("it holds the one module under this run's name", names, {"mock-interview": "mock-interview-ab12cd34"})
+        check("and the manifest names the plugin as its one listed skill is installed",
+              json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["name"], "mock-interview-ab12cd34")
+        installed = plugin / "skills" / "mock-interview-ab12cd34"
+        copy = (installed / "SKILL.md").read_text()
+        check_true("the module is visible: no hiding key, its name renamed and nothing else",
+                   run_routing.HIDDEN_KEY not in copy and copy == (repo / "skills/mock-interview/SKILL.md").read_text()
+                   .replace("name: mock-interview\n", "name: mock-interview-ab12cd34\n", 1))
+        check("the module's files are the project install's, file for file",
+              files_of(installed), files_of(Path(tmp) / "p" / ".claude" / "skills" / "mock-interview-ab12cd34")
+              if run_fixtures.install_one(Path(tmp) / "p", "mock-interview", "ab12cd34") else None)
+        front = Path(tmp) / "rooms" / "case-3-denied-cd34ef56"
+        front.mkdir()
+        run_fixtures.install_in_plugin(front, "cd34ef56")
+        flags = [run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), r) for r in (room, front)]
+        same = [[a.replace(r.name, "ROOM") for a in f] for f, r in zip(flags, (room, front))]
+        check("both arms run under the same flags, the read rule and --plugin-dir naming each room's own plugin",
+              same[0], same[1])
+        check_true("and those name the plugin beside the room", "--plugin-dir" in same[0]
+                   and any(a.startswith("Read(") and "/plugins/ROOM/skills/" in a for a in same[0]))
+        check("the plugin's id prefixes the module, as the front door's prefixes the hub",
+              run_routing.installed_command(names["mock-interview"], run_routing.plugin_prefix(names, "plugin")),
+              "mock-interview-ab12cd34:mock-interview-ab12cd34")
+
+    qualified = "mock-interview-ab12cd34:mock-interview-ab12cd34"
+    init = ev_init([qualified, "dataviz"])
+    # run_routing.skill_id: the CLI takes a name after one leading `/`, and the fire is read as routing reads it.
+    for label, called, want in (("the plugin-qualified id", qualified, "fired"),
+                                ("the name alone", "mock-interview-ab12cd34", "fired"),
+                                ("the name alone after a `/`", "/mock-interview-ab12cd34", "fired"),
+                                ("the qualified id after a `/`", "/" + qualified, "fired"),
+                                ("the shipped name, another skill", "anthropic-skills:mock-interview", "wrong_skill"),
+                                ("the shipped name after a `/`", "/mock-interview", "wrong_skill")):
+        got = run_fixtures.parse_stream(stream(init, ev_tool("s", "Skill", {"skill": called}), ev_text("pack"),
+                                               ev_result()), qualified)
+        check(f"a Skill call by {label} is {want}", got["fire"], want)
+    got = run_fixtures.parse_stream(stream(ev_init([qualified, "anthropic-skills:mock-interview"]), ev_result()),
+                                    qualified)
+    check("the init list finds the qualified skill loaded, and a host's same-named skill competing",
+          (got["init"]["installed_loaded"], got["init"]["competing_skills"]),
+          (True, ["anthropic-skills:mock-interview"]))
+    check("one reader of names: the fixture runner's is the routing reader's",
+          [run_routing.local_name(n) for n in ("/" + qualified, "/mock-interview-ab12cd34", " mock-interview-ab12cd34 ")],
+          ["mock-interview-ab12cd34"] * 3)
+    got = run_fixtures.parse_stream(stream(ev_init(["mock-interview-ab12cd34"]), ev_tool(
+        "s", "Skill", {"skill": "mock-interview-ab12cd34"}), ev_result()), "mock-interview-ab12cd34")
+    check("the project install's bare name still fires, loaded and uncontested",
+          (got["fire"], got["init"]["installed_loaded"], got["init"]["competing_skills"]), ("fired", True, []))
+
+    check("refusals are counted by tool, with a save among them flagged",
+          run_fixtures.refusals({"result": {"incomplete": False, "permission_denials": [
+              {"tool_name": "Write"}, {"tool_name": "Bash"}, {"tool_name": "Bash"}]}}),
+          ({"Bash": 2, "Write": 1}, True))
+    check("none refused is an empty count, not a missing one",
+          run_fixtures.refusals({"result": {"incomplete": False, "permission_denials": []}}), ({}, False))
+    check("a run that ended before its result event has its refusals unread, never none",
+          run_fixtures.refusals({"result": {"incomplete": True, "permission_denials": [{"tool_name": "Write"}]}}),
+          (None, None))
+
+    case = {"id": 3, "prompt": "Prep me.", "expectations": ["a"]}
+    seen = []
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        nudged = prompt.startswith("Use the")
+        seen.append((Path(cwd), list(extra_args), prompt, installed))
+        events = [ev_init([installed])]
+        if nudged:
+            events.append(ev_tool("s", "Skill", {"skill": installed}))
+        events += [ev_text("second" if nudged else "first"), ev_result([{"tool_name": "Write"}] if nudged else [])]
+        parsed = run_fixtures.parse_stream(stream(*events), installed)
+        parsed["stdout"] = ""
+        return parsed
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as printed:
+                meta = run_fixtures.execute("mock-interview", case, out, 0, 1, None, None, "skill", "plugin")
+        finally:
+            run_fixtures.claude = real
+        check("each room is named for the case alone, as the front door's are",
+              [room.name.startswith("case-3-denied-") and "mock-interview" not in room.name for room, *_ in seen],
+              [True, True])
+        check("each run loads its own plugin from beside its room, its skills folder readable",
+              [(a[a.index("--plugin-dir") + 1], run_routing.read_rule(room, "plugin") in a) for room, a, *_ in seen],
+              [(str(run_routing.home(room, "plugin")), True) for room, *_ in seen])
+        check("the nudge names the module by its plugin id",
+              seen[1][2].startswith(f"Use the {seen[1][3]} skill") and seen[1][3].count("mock-interview-") == 2, True)
+        check("the nudged run fired, graded as valid, and the meta records how it was installed",
+              (meta["fire"], meta["harness"]["status"], meta["via"], meta["layout"]), ("fired", "ok", "skill", "plugin"))
+        check("and what was refused, reported: a refused save", (meta["refused"], meta["save_refused"]),
+              ({"Write": 1}, True))
+        check_true("the run's line says where the module sat and what was refused",
+                   "alone, in a plugin" in printed.getvalue() and "refused Write 1 (a save among them)" in printed.getvalue())
+        seen.clear()
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                meta = run_fixtures.execute("mock-interview", case, out, 1, 1, None)
+        finally:
+            run_fixtures.claude = real
+        check("the project install is still the default: a room named for the module, the skill inside it",
+              [(room.name.startswith("mock-interview-3-"), (room / ".claude" / "skills").is_dir(),
+                "--plugin-dir" in a) for room, a, *_ in seen], [(True, True, False), (True, True, False)])
+        check("and recorded as such", meta["layout"], "project")
+    proc = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "run_fixtures.py"), "--via",
+                           "frontdoor", "--layout", "project", "--out", "/nonexistent/never-made"],
+                          capture_output=True, text=True)
+    check("must fail: --via frontdoor with --layout project is refused before anything runs",
+          (proc.returncode, "--layout plugin" in proc.stderr), (2, True))
+
+
+def write_rules(flags: list[str]) -> list[str]:
+    """Every flag that names a save tool, whatever its argument: a save rule in any other form than
+    the room's own still lets a run write."""
+    return [flag for flag in flags if re.match(r"(Edit|Write|MultiEdit|NotebookEdit)\b", flag)]
+
+
+def save_targets(flags: list[str]) -> list[str]:
+    """The folders the flags' write rules name (Edit(...) or Write(...)), and any bare Write or Edit
+    rule as itself."""
+    out = []
+    for flag in flags:
+        m = re.fullmatch(r"(Edit|Write|MultiEdit|NotebookEdit)(?:\(/(/.*?)/\*\*\))?", flag)
+        if m:
+            out.append(m.group(2) or flag)
+    return out
+
+
+def test_save_rule() -> None:
+    print("\nfixtures: a run may save inside its room, in both arms, and nowhere else (decision 4)")
+    import contextlib
+    import io
+    case = {"id": 3, "prompt": "Prep me.", "expectations": ["a"]}
+    canned = {"id": 4, "prompt": "Prep me.", "expectations": ["a"],
+              "research": {"modes": ["canned"], "pages": CORPUS["pages"], "entity_tokens": CORPUS["entity_tokens"]}}
+    seen = []
+
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        seen.append((Path(cwd), list(extra_args)))
+        parsed = run_fixtures.parse_stream(stream(ev_init([installed]), ev_text("no fire"), ev_result()), installed)
+        parsed["stdout"] = ""
+        return parsed
+    metas = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp).resolve()
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                for via, layout in (("skill", "plugin"), ("frontdoor", "plugin"), ("skill", "project")):
+                    for fixture_case in (case, canned):
+                        seen.clear()
+                        meta = run_fixtures.execute("mock-interview", fixture_case, out, len(metas), 1, None,
+                                                    None, via, layout)
+                        metas[(via, layout, fixture_case["id"])] = (meta, list(seen))
+        finally:
+            run_fixtures.claude = real
+        for (via, layout, cid), (meta, calls) in metas.items():
+            rooms = [str(room) for room, _ in calls]
+            rules = [write_rules(flags) for _, flags in calls]
+            lists = [flags.count("--allowedTools") for _, flags in calls]
+            room_name = "denied" if cid == 3 else "canned"
+            if layout == "plugin":
+                check(f"must pass: {via} arm, {room_name} room: the rule once, in the one list, naming the room, no "
+                      f"other save rule in any form, and the nudged run's naming its own fresh room",
+                      (rules, lists, rooms[0] != rooms[1]),
+                      ([[f"Edit(/{rooms[0]}/**)"], [f"Edit(/{rooms[1]}/**)"]], [1, 1], True))
+                check_true(f"and it sits in the room's one --allowedTools list ({via}, {room_name})",
+                           all(flags.index(f"Edit(/{room}/**)") > flags.index("--allowedTools")
+                               and flags.index(f"Edit(/{room}/**)") < flags.index("--plugin-dir")
+                               for (room, flags) in calls))
+            else:
+                check(f"must fail: a save rule in the project layout ({room_name} room)", rules, [[], []])
+            check(f"room_writable is recorded on each invocation and the run ({via}, {layout}, {room_name})",
+                  ([i["room_writable"] for i in meta["invocations"]], meta["room_writable"]),
+                  ([layout == "plugin"] * 2, layout == "plugin"))
+        for (via, layout, cid), (meta, calls) in metas.items():
+            for room, flags in calls:
+                plugin = run_routing.home(room, "plugin")
+                named = save_targets(flags)
+                check_true(f"must fail: no rule on the room's parent, the plugin folder or its skills/ ({via}, {layout})",
+                           not set(named) & {str(room.parent), str(plugin), str(plugin / "skills")})
+                check_true(f"must fail: no unscoped Write or Edit rule, and no permission mode or bypass ({via}, {layout})",
+                           not set(named) & {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+                           and not any(f.startswith(("--permission-mode", "--dangerously")) for f in flags))
+                if cid == 3:
+                    check_true(f"must fail: a refused-tools list added to a denied room ({via}, {layout})",
+                               "--disallowedTools" not in flags)
+        check("must fail: a save rule in the graders' flags", write_rules(run_fixtures.grader_flags("m")), [])
+
+        real_dir = out / "real"
+        (real_dir / "rooms" / "case-3-denied-ab12cd34").mkdir(parents=True)
+        (out / "link").symlink_to(real_dir)
+        room = out / "link" / "rooms" / "case-3-denied-ab12cd34"
+        flags = run_fixtures.plugin_flags(run_fixtures.room_flags("denied"), room)
+        check("must pass: an output folder reached through a symlink gets a rule for its resolved path too",
+              (write_rules(flags), run_fixtures.room_writable(flags, room)),
+              ([f"Edit(/{room}/**)", f"Edit(/{real_dir / 'rooms' / 'case-3-denied-ab12cd34'}/**)"], True))
+
+    import compare_arms as ca
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep.", "expectations": ["a"]}}
+    with tempfile.TemporaryDirectory() as tmp:
+        plugin = [{"via": "frontdoor", "layout": "plugin", "room_writable": True}]
+        alone = [{"via": "skill", "layout": "plugin", "room_writable": True}]
+        out = ca.report(arm_set(Path(tmp) / "tuesday", plugin), arm_set(Path(tmp) / "alone", alone), None, cases)
+        check_true("must pass: matched sets print each set's via, layout and room_writable, and no flag",
+                   "installed via frontdoor (1); layout plugin (1); room_writable true (1)" in out
+                   and "installed via skill (1); layout plugin (1); room_writable true (1)" in out
+                   and "NOT LIKE FOR LIKE" not in out)
+        project = [{"via": "skill", "layout": "project", "room_writable": False}]
+        out = ca.report(arm_set(Path(tmp) / "t2", plugin), arm_set(Path(tmp) / "a2", project), None, cases)
+        check_true("must fail: sets that differ in layout and save policy are flagged, each way",
+                   "NOT LIKE FOR LIKE: installed with layout plugin against project" in out
+                   and "NOT LIKE FOR LIKE: installed with save policy (room_writable) true against false" in out)
+        old = [{"via": "skill", "layout": "project"}]
+        out = ca.report(arm_set(Path(tmp) / "t3", plugin), arm_set(Path(tmp) / "a3", old), None, cases)
+        check_true("old sets read unrecorded, and differ from a recorded policy",
+                   "room_writable unrecorded (1)" in out
+                   and "save policy (room_writable) true against unrecorded" in out)
+        out = ca.report(arm_set(Path(tmp) / "t4", [{"via": "frontdoor"}]), arm_set(Path(tmp) / "a4", [{"via": "skill"}]),
+                        None, cases)
+        check_true("must fail: the quality check's two arms, saved before runs recorded a layout, are flagged: the "
+                   "layout their via always meant then is read, and said to be",
+                   "layout plugin (1) (1 read from via, saved before runs recorded a layout)" in out
+                   and "NOT LIKE FOR LIKE: installed with layout plugin against project" in out
+                   and "room_writable unrecorded (1)" in out and "save policy" not in out)
+        out = ca.report(arm_set(Path(tmp) / "t5", [{}]), arm_set(Path(tmp) / "a5", [{}]), None, cases)
+        check_true("and sets recording neither read unrecorded, unflagged",
+                   "installed via unrecorded (1); layout unrecorded (1); room_writable unrecorded (1)" in out
+                   and "NOT LIKE FOR LIKE" not in out)
+
+
+def test_rerun_stems() -> None:
+    print("\nfixtures --stems: named runs re-run in place under their own numbers, or graded in place")
+    import contextlib
+    import io
+    executed, graded, checked = [], [], []
+
+    def fake_execute(skill, case, out, run, timeout, model, mode=None, *rest):
+        executed.append(run_fixtures.stem_for(skill, case, mode or run_fixtures.modes_of(case)[0], run))
+        (out / f"{executed[-1]}.md").write_text("response")
+        return {}
+
+    def fake_check(skill, case, out, run, mode):
+        checked.append(run_fixtures.stem_for(skill, case, mode, run))
+        return {"run": run, "status": "ok", "checks": []}
+
+    def fake_grade(skill, case, out, run, grader, timeout, model, mode=None, only=None):
+        graded.append((run_fixtures.stem_for(skill, case, mode, run), grader))
+        return {"run": run, "grader": grader, "verdicts": [], "expected": []}
+
+    def main(*argv: str) -> tuple[int | str, str]:
+        executed.clear(), graded.clear(), checked.clear()
+        saved = (sys.argv, run_fixtures.execute, run_fixtures.check_run, run_fixtures.grade)
+        sys.argv = ["run_fixtures.py", *argv]
+        run_fixtures.execute, run_fixtures.check_run, run_fixtures.grade = fake_execute, fake_check, fake_grade
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+                code = run_fixtures.main()
+        except SystemExit as exc:
+            code = exc.code
+        finally:
+            sys.argv, run_fixtures.execute, run_fixtures.check_run, run_fixtures.grade = saved
+        return code, err.getvalue()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "set"
+        out.mkdir()
+        for stem in ("job-underwriter-1.run0", "job-underwriter-1.run1"):
+            (out / f"{stem}.md").write_text("saved")
+            (out / f"{stem}.grade-1.json").write_text("{}")
+        (out / "killed").mkdir()
+        (out / "killed" / "job-underwriter-1.run2.md").write_text("killed run, moved aside")
+        stems = Path(tmp) / "stems.txt"
+        stems.write_text("# killed runs\njob-underwriter-1.run2\n\njob-underwriter-5.canned.run3\n")
+        code, _ = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out), "--graders", "1")
+        check("must pass: listed stems run under their own numbers, an unlisted one does not, and no retry follows",
+              (sorted(executed), sorted(checked), sorted(g for g, _ in graded)),
+              (["job-underwriter-1.run2", "job-underwriter-5.canned.run3"],) * 3)
+        stems.write_text("job-underwriter-1.run1\njob-underwriter-1.run4\n")
+        code, err = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out))
+        check("must fail: a listed stem with files present is refused without --skip-execute, before anything runs",
+              (code, executed, "job-underwriter-1.run1 holds job-underwriter-1.run1.grade-1.json" in err), (2, [], True))
+        for bad in ("job-underwriter-99.run0", "job-underwriter-5.run0", "job-underwriter-1.denied.run0",
+                    "mock-interview-1.run0", "job-underwriter-1"):
+            stems.write_text(bad + "\n")
+            code, err = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out))
+            check(f"must fail: a stem that names no fixture or room of the pass is refused: {bad}",
+                  (code, executed, "names no fixture and room" in err), (2, [], True))
+        (out / "job-underwriter-1.run4.md").write_text("finished, never graded")
+        (out / "job-underwriter-1.run5.md").write_text("finished, never graded, not listed")
+        stems.write_text("job-underwriter-1.run0\njob-underwriter-1.run4\njob-underwriter-1.run6\n")
+        code, _ = main("--skill", "job-underwriter", "--stems", str(stems), "--out", str(out), "--skip-execute",
+                       "--graders", "2")
+        check("must pass: with --skip-execute, only the listed runs that hold a response and no grade file are graded, "
+              "in a folder whose other runs hold grades",
+              (executed, sorted(set(checked)), graded),
+              ([], ["job-underwriter-1.run4"], [("job-underwriter-1.run4", 1), ("job-underwriter-1.run4", 2)]))
+        code, err = main("--skill", "job-underwriter", "--out", str(out), "--skip-execute")
+        check("and without --stems, --skip-execute still refuses a folder that holds grades",
+              (code, "already holds grade files" in err), (2, True))
+
+
+def test_relative_dates() -> None:
+    print("\nfixtures: dates relative to the run, written out for the run's date or the fixture's anchor")
+    import datetime
+    import fixture_clauses as fc
+    day = datetime.date(2026, 10, 12)
+    check("offsets in days, months and years, in the order written",
+          [fc.written(fc.shifted(day, o), f) for o, f in (("", "day month year"), ("+9d", "day month"),
+                                                          ("-4m", "month year"), ("-4m+2y", "year"))],
+          ["12 October 2026", "21 October", "June 2026", "2028"])
+    check("a month step keeps the day where the month has it, else its last day",
+          [fc.shifted(datetime.date(2026, 3, 31), "-1m"), fc.shifted(datetime.date(2028, 2, 29), "+1y"),
+           fc.shifted(datetime.date(2026, 12, 25), "+9d")],
+          [datetime.date(2026, 2, 28), datetime.date(2029, 2, 28), datetime.date(2027, 1, 3)])
+    case = {"id": 9, "date_anchor": "2026-10-12", "prompt": "Copied {{date:day month year}}; rounds on {{date+9d:day month}}.",
+            "candidate_text": ["since {{date-1y:year}}"], "expectations": ["names {{date+9d:day month}}"],
+            "research": {"pages": [{"url": "https://x.test/{{date:year}}", "text": "{{date-4m:month year}} brief"}]}}
+    got = fc.dated(case, datetime.date(2027, 3, 1))
+    check("every string in the case is written out for the run's date: prompt, pages, candidate_text, expectations",
+          (got["prompt"], got["candidate_text"], got["expectations"], got["research"]["pages"][0]),
+          ("Copied 1 March 2027; rounds on 10 March.", ["since 2026"], ["names 10 March"],
+           {"url": "https://x.test/2027", "text": "November 2026 brief"}))
+    check("with no run date, the anchor stands in", fc.dated(case)["prompt"], "Copied 12 October 2026; rounds on 21 October.")
+    plain = {"id": 1, "prompt": "Interview next week."}
+    check("a case with no reference comes back as it was", fc.dated(plain, day) is plain, True)
+    for label, bad, needle in (("a reference with no anchor and no run date", {"id": 2, "prompt": "on {{date:year}}"},
+                                "no run date or date_anchor"),
+                               ("a reference the pattern cannot read", {"id": 3, "date_anchor": "2026-10-12",
+                                                                        "prompt": "on {{date+9w:day month}}"},
+                                "a date reference the loader cannot read")):
+        try:
+            fc.dated(bad)
+            got = "no error"
+        except fc.ClauseError as exc:
+            got = needle if needle in str(exc) else str(exc)
+        check(f"must fail: {label}", got, needle)
+
+    repo = Path(__file__).resolve().parent.parent
+    m8, m7 = fixture("mock-interview", 8), fixture("mock-interview", 7)
+    check_true("fixture 8 at its anchor is the text its saved runs were sent: this morning, the interviews, the brief",
+               "copied this morning (12 October 2026)" in m8["prompt"] and "Three rounds on 21 October:" in m8["prompt"]
+               and "from the 2026 strategy brief Ashgrove published in June 2026," in m8["prompt"]
+               and "by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending "
+                   "product in Q1 2027" in m8["prompt"]
+               and (m8["research"]["pages"][2]["url"], m8["research"]["pages"][2]["title"],
+                    m8["research"]["pages"][2]["text"][:9]) == ("https://ashgrovecu.org/news/strategy-2026",
+                                                                "Ashgrove strategy brief 2026", "June 2026"))
+    check_true("fixture 7's news page at its anchor is its saved text",
+               m7["research"]["pages"][2]["text"].startswith("August 2026: Project Larkspur")
+               and "from January 2027," in m7["research"]["pages"][2]["text"])
+    # sha256 of [prompt, research.pages] as the quality check's runs were sent them (dce0299), so a regrade
+    # of a saved run shows graders the request that run answered, byte for byte.
+    sent = {7: "51581377a8fc870051bfec8545d9ed01962102e0ad6f1473b80a8df8ada5d4c9",
+            8: "451cb97a91b93aa548ec11732e78e9bf7b42429543af320492efb52473fd0ac3"}
+    import hashlib
+    check("each changed fixture at its anchor is, prompt and pages, byte for byte what its saved runs were sent",
+          {fid: hashlib.sha256(json.dumps([c["prompt"], c["research"]["pages"]], ensure_ascii=False,
+                                          sort_keys=True).encode()).hexdigest() for fid, c in ((7, m7), (8, m8))}, sent)
+    later = fc.dated(next(c for c in fc.load_cases(repo / "skills/mock-interview/evals/evals.json") if c["id"] == 8),
+                     datetime.date(2027, 5, 20))
+    check_true("on a later run date the brief is four months old and the interviews nine days ahead",
+               "copied this morning (20 May 2027)" in later["prompt"] and "Three rounds on 29 May:" in later["prompt"]
+               and "published in January 2027," in later["prompt"] and "October" not in later["prompt"]
+               and later["research"]["pages"][2]["text"].startswith("January 2027: move 40%"))
+    later7 = fc.dated(next(c for c in fc.load_cases(repo / "skills/mock-interview/evals/evals.json") if c["id"] == 7),
+                      datetime.date(2027, 5, 20))["research"]["pages"][2]["text"]
+    check_true("and fixture 7's news page, on a later run date, is two months old and announces a change still ahead",
+               later7.startswith("March 2027: Project Larkspur") and "from August 2027," in later7)
+
+    seen = []
+    def fake(prompt, cwd, timeout, extra_args=(), output="stream", installed=""):
+        seen.append(prompt)
+        server = json.loads(Path(extra_args[extra_args.index("--mcp-config") + 1]).read_text())["mcpServers"]["web"]
+        seen.append(json.loads(Path(server["args"][2]).read_text()))
+        Path(server["args"][3]).write_text(json.dumps({"rpc": "initialize"}) + "\n")
+        parsed = run_fixtures.parse_stream(stream(ev_init([installed], ("Skill", "mcp__web__search", "mcp__web__fetch"),
+                                                          ({"name": "web", "status": "connected"},)),
+                                                  ev_tool("s", "Skill", {"skill": installed}), ev_text("pack"),
+                                                  ev_result()), installed)
+        parsed["stdout"] = ""
+        return parsed
+    raw = next(c for c in fc.load_cases(repo / "skills/mock-interview/evals/evals.json") if c["id"] == 8)
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        real, run_fixtures.claude = run_fixtures.claude, fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                meta = run_fixtures.execute("mock-interview", raw, out, 0, 1, None, "canned", on=datetime.date(2027, 1, 15))
+        finally:
+            run_fixtures.claude = real
+        check("the meta records the run's date", meta["run_date"], "2027-01-15")
+        check_true("the room is sent the prompt and served the pages written for that date",
+                   "copied this morning (15 January 2027)" in seen[0]
+                   and seen[1]["pages"][2]["text"].startswith("September 2026: move 40%"))
+        stem = meta["stem"]
+        upcoming = raw["expectations"][0] + " The pack treats the {{date+9d:day month}} rounds as upcoming."
+        asked = {**raw, "expectations": [upcoming, *raw["expectations"][1:]]}
+        for grader in (1,):
+            captured = []
+            def grade_fake(prompt, cwd, timeout, extra_args=(), output="json", installed=""):
+                captured.append(prompt)
+                return {"result": json.dumps({"verdicts": [{"n": 1, "why": "w", "verdict": "PASS"}]}), "modelUsage": {}}
+            real, run_fixtures.claude = run_fixtures.claude, grade_fake
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    run_fixtures.grade("mock-interview", asked, out, 0, grader, 1, None, "canned", [1])
+                    # The strategy line as the room was sent it on 15 January 2027: "by 2029", where the
+                    # fixture's anchor writes "by 2028".
+                    (out / f"{stem}.md").write_text(
+                        "| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                        '| F1 | "move 40% of member service to digital channels by 2029" — strategy brief | none given '
+                        "| none |\n")
+                    rec = run_fixtures.check_run("mock-interview", raw, out, 0, "canned")
+                    old_meta = json.loads((out / f"{stem}.meta.json").read_text())
+                    old_meta.pop("run_date")
+                    (out / f"{stem}.meta.json").write_text(json.dumps(old_meta))
+                    run_fixtures.grade("mock-interview", asked, out, 0, 2, 1, None, "canned", [1])
+            finally:
+                run_fixtures.claude = real
+        hashes = [json.loads((out / f"{stem}.grade-{g}.json").read_text())["expectation_sha256"]["1"] for g in (1, 2)]
+        check_true("an expectation with a relative date is shown to each grader written for its run's date",
+                   "the 24 January rounds" in captured[0]
+                   and "the 21 October rounds" in captured[1])
+        check("and hashed as the fixture writes it, one question on every run date (recurring.py's key)",
+              hashes, [run_fixtures.expectation_sha(upcoming)] * 2)
+        check_true("a grader is shown the request as the run's date wrote it",
+                   "copied this morning (15 January 2027)" in captured[0])
+        check_true("and a run that recorded no date is graded against its fixture's anchor, the text it was sent",
+                   "copied this morning (12 October 2026)" in captured[1])
+        check("the checks read the same dated case: the requirement quoted as the run's date wrote it is in the request",
+              verdict_of(rec, "quotes", "requirements"), "PASS")
+
+
+# Real cells, cut from the quality check's saved runs (kept outside the repository), so the re-cut
+# label and the trace check are tested against what skills wrote.
+MI8_OWN = ("6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log "
+           "and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional "
+           "manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.")
+RECUT_SNAPSHOT = (
+    "| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+    # opus/tuesday/mock-interview-8.canned.run0.md, F2 and F9 (and F8's shortened quote)
+    '| F2 | "across branches and the contact centre" — JD | "Never worked in a contact centre" — your message | none |\n'
+    '| F8 | "experience handling regulated complaints" — JD | "I handled the branch\'s formal complaints log" — your message | low |\n'
+    '| F9 | "confident presenting to senior leaders" — JD | "I\'ve never presented to anyone above regional level." — your message | none |\n')
+
+
+def recut_bank(cell: str) -> str:
+    return (RECUT_SNAPSHOT + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+            f"| C2 | Tell me about it. | Say what you did. | {cell} |\n")
+
+
+def test_recut_quotes() -> None:
+    print("\nchecks: a re-cut quote, the candidate's own words cut otherwise than the evidence column, passes and "
+          "is labelled")
+
+    def quote_findings(cell: str, own: str = MI8_OWN, prompt: str | None = None) -> list[dict]:
+        """Each failing quote finding, and each passing one that carries a re-cut label."""
+        got = output_checks.check_quotes(recut_bank(cell), prompt or "prompt " + own, (), [own])
+        return [c for c in got["checks"] if c["check"] == "quotes" and c["target"] == "banks"
+                and (c["verdict"] == "FAIL" or "recut" in c)]
+
+    def labelled(checks: list[dict]) -> list[tuple[str, str | None]]:
+        return [(c["verdict"], c.get("recut")) for c in checks if c["check"] == "quotes" and c["target"] == "banks"
+                and (c["verdict"] == "FAIL" or "recut" in c)]
+    # opus/tuesday/mock-interview-8.canned.run0.md, C2: two of the column's quotations and the "and" between them
+    joined = quote_findings('[grounded] "Never worked in a contact centre, and I\'ve never presented to anyone above regional level."')
+    check("must pass, labelled joined: two of the column's quotations run together, the candidate's \"and\" between",
+          [(c["verdict"], c.get("recut")) for c in joined], [("PASS", "joined")])
+    check_true("and the reason says it was passed and reported",
+               "a re-cut quote, joined" in joined[0]["why"] and "passed, and reported" in joined[0]["why"])
+    # opus/tuesday/mock-interview-8.canned.run0.md, H2 against F8's shorter quotation
+    unquoted = quote_findings('[grounded] "I handled the branch\'s formal complaints log and trained new tellers on our escalation script."')
+    check("must pass, labelled unquoted: a candidate sentence the column quotes only part of",
+          [(c["verdict"], c.get("recut")) for c in unquoted], [("PASS", "unquoted")])
+    check("must pass, labelled unquoted: a candidate sentence the column does not quote at all",
+          [c.get("recut") for c in quote_findings('[grounded] "I built the monthly complaints spreadsheet our regional manager uses."')],
+          ["unquoted"])
+    shared = quote_findings('[grounded] "6 years in retail banking, the last 3 as a branch supervisor."')
+    check("a word an unrelated column quotation shares covers nothing: unquoted, not joined",
+          [c.get("recut") for c in shared], ["unquoted"])
+    stray = quote_findings('[grounded] "I led the regional complaints team"')
+    check("must fail, unlabelled: words the candidate never gave are no re-cut quote",
+          [(c["verdict"], "recut" in c) for c in stray], [("FAIL", False)])
+    check("must fail, unlabelled: the candidate's words joined to one word the candidate never wrote",
+          [(c["verdict"], "recut" in c) for c in quote_findings(
+              '[grounded] "I built the monthly complaints spreadsheet our regional manager uses weekly"')], [("FAIL", False)])
+    jd = "Own the member complaints process end to end across branches and the contact centre"
+    check("must fail, unlabelled: an ellipsis quote holding a fragment of the job description",
+          [(c["verdict"], "recut" in c) for c in quote_findings(
+              '[grounded] "I handled the branch\'s formal complaints log … across branches and the contact centre"',
+              prompt=f"THE JD: '{jd}.' ME: {MI8_OWN}")], [("FAIL", False)])
+    check("must pass, unlabelled: one of the column's quotations, or part of one",
+          quote_findings('[grounded] "Never worked in a contact centre" and "formal complaints log"'), [])
+    pasted = ("THE JD: 'Own complaints across branches and the contact centre; experience handling regulated "
+              "complaints; confident presenting to senior leaders.' ME: " + MI8_OWN)
+    clean = output_checks.run_checks(
+        {"checks": ["quotes"], "prompt": pasted, "candidate_text": [MI8_OWN]}, "denied",
+        recut_bank('[grounded] "Never worked in a contact centre, and I\'ve never presented to anyone above regional '
+                   'level."; "I built the monthly complaints spreadsheet our regional manager uses."'), None)
+    check("must pass: a run whose only quote findings beside the passes are re-cut quotes is clean",
+          (clean["status"], labelled(clean["checks"])), ("ok", [("PASS", "joined"), ("PASS", "unquoted")]))
+    own2 = ("7 years in warehouse and distribution ops, currently a senior shift manager over 3 supervisors; cut "
+            "mis-pick rate 40% by redesigning the pick path; ran the site's peak-season surge plan two years running; "
+            "green belt certified; solid Excel, never used Power BI.")
+    snapshot2 = ("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                 '| F5 | "build reporting in Excel/Power BI" — JD | "solid Excel" — your message | medium |\n'
+                 '| F6 | "build reporting in Excel/Power BI" — JD | "never used Power BI" — your message | none |\n')
+    # opus/alone/mock-interview-2.run4.md, F5, F6 and A4
+    got = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+                                     '| A4 | Q | G | [grounded] "solid Excel, never used Power BI" |\n', own2, (), [own2])
+    check("must pass, labelled joined: two quotations joined by a comma (quality check, mock-interview 2)",
+          labelled(got["checks"]), [("PASS", "joined")])
+    edge = output_checks.check_quotes(snapshot2 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+                                      '| A4 | Q | G | [grounded] "and never used Power BI" |\n',
+                                      own2.replace("solid Excel, never", "solid Excel and never"), (),
+                                      [own2.replace("solid Excel, never", "solid Excel and never")])
+    check("must pass, labelled unquoted: a joining word at the quotation's edge joins nothing",
+          labelled(edge["checks"]), [("PASS", "unquoted")])
+    mi6 = fixture("mock-interview", 6)["candidate_text"]
+    snapshot6 = ("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                 '| F3 | "own delivery" — role summary | "pushed a reliability quarter through against roadmap pressure" '
+                 '— your message; "My team\'s on-call burden dropped 60%" — your message | medium |\n')
+    # sonnet-recheck/tuesday/mock-interview-6.run4.md, F3 and B4: the sentence whole, its two stretches in F3
+    got = output_checks.check_quotes(snapshot6 + "\n| # | Question | Answer guidance | Provenance |\n|---|---|---|---|\n"
+                                     '| B4 | Q | G | [grounded] "My team\'s on-call burden dropped 60% after I pushed a '
+                                     'reliability quarter through against roadmap pressure" |\n', mi6[0], (), mi6)
+    check("must pass, labelled joined: the column's two stretches joined by a conjunction and its clause's subject "
+          "(quality check, mock-interview 6)",
+          labelled(got["checks"]), [("PASS", "joined")])
+    # Synthetic: the second sentence holds every word of the column's one quotation, and is quoted
+    own3 = ("I ran the weekly sales review for the north region. After I left, the north region ran the weekly "
+            "sales review without me.")
+    got = output_checks.check_quotes("| # | Requirement (source) | Evidence, verbatim | Confidence |\n|---|---|---|---|\n"
+                                     '| F1 | "run the sales cadence" — JD | "I ran the weekly sales review for the north '
+                                     'region" — your message | high |\n\n| # | Question | Answer guidance | Provenance |\n'
+                                     '|---|---|---|---|\n| A1 | Q | G | [grounded] "the north region ran the weekly sales '
+                                     'review" |\n', own3, (), [own3])
+    check("must pass, labelled unquoted: words the column quotes elsewhere in the passage cover nothing here, "
+          "read by place, not by text",
+          labelled(got["checks"]), [("PASS", "unquoted")])
+    part = output_checks.recut_kind(["the branch's formal"], output_checks.normalise_quote(MI8_OWN),
+                                    ["the branch", "formal complaints log"])
+    check("a word a quotation covers only part of is not covered: \"branch\" of \"branch's\" leaves it unquoted",
+          part, "unquoted")
+    check("the kinds are the two the scorer reads", sorted(output_checks.RECUT_KINDS), ["joined", "unquoted"])
+
+
+TRACES_HEAD = "| # | Section | Current line | Proposed line | Operation | Traces to | Provenance | Status |\n|---|---|---|---|---|---|---|---|\n"
+
+
+def test_traces() -> None:
+    print("\nchecks: resume-tailor's Traces to cells quote the candidate's material, verbatim")
+    priya = fixture("resume-tailor", 1)
+
+    def fails(rows: str, case: dict = priya, head: str = TRACES_HEAD) -> list[tuple[str, str]]:
+        got = output_checks.check_traces(head + rows, case.get("candidate_text"), case.get("prompt", ""))
+        return [(c["verdict"], c["kind"]) for c in got["checks"] if c["verdict"] == "FAIL"]
+    # haiku/alone/resume-tailor-1.run1.md, E1
+    e1 = ('| E1 | Experience | "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." '
+          '| *(unchanged, moved to lead the ledger-pipeline entry)* | `reorder` | "I own three services in our ledger '
+          'pipeline — one handles about 40k requests/minute at peak." | `[grounded]` cv | pending your approval |\n')
+    check("must pass: a trace quoting the candidate's sentence whole (quality check, resume-tailor 1)", fails(e1), [])
+    check("must fail: the same sentence cut mid-word, a quotation found only inside a longer word",
+          fails(e1.replace('pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
+                           'pipelin" | `[grounded]`')), [("FAIL", "judgement")])
+    curly = e1.replace('| "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
+                       '| “I own three services in our ledger pipeline – one handles about 40k requests/minute at peak.” | `[grounded]`')
+    check("must pass: the same trace in curly quotes, an en dash for its dash (normalise_quote's reading)",
+          fails(curly), [])
+    rowan = fixture("resume-tailor", 5)
+    # haiku/alone/resume-tailor-5.run0.md, rows 3 and 4, in that run's six-column ledger
+    head5 = "| # | Current line | Proposed line | Operation | Traces to | Status |\n|---|---|---|---|---|---|\n"
+    two = ('| 3 | HubSpot daily for 4 years | Daily HubSpot user for 4 years; pull my own performance reporting in HubSpot. '
+           '| reorder | "HubSpot daily for 4 years" + "I pull my own numbers in HubSpot reporting" | pending your approval |\n')
+    check("must pass: two quotations of the candidate's, each verbatim (quality check, resume-tailor 5)", fails(two, rowan, head5), [])
+    # haiku/alone/resume-tailor-2.run4.md, L4: a trace of the candidate's own sentence in the message
+    dev = ('| L4 | Summary (optional) | *(no current line)* | "Moving from analytics into data engineering." | `reframe` '
+           '| "I\'m trying to move into data engineering from analytics." | `[grounded]` your message | pending your approval |\n')
+    check("must pass: fixture 2's candidate_text holds the candidate's sentence in the message (quality check, resume-tailor 2)",
+          fails(dev, fixture("resume-tailor", 2)), [])
+    check("must pass: a quotation cut at an ellipsis, each piece verbatim",
+          fails(two.replace('"I pull my own numbers in HubSpot reporting"', '"I pull my own numbers … reporting"'), rowan, head5), [])
+    pointer = ('| 4 | built our lifecycle email programme from scratch, 12 automated flows | No change. | none '
+               '| source sentence | — |\n')
+    check("must fail, as format: a cell that refers to its sentence instead of quoting it (quality check, resume-tailor 5)",
+          fails(pointer, rowan, head5), [("FAIL", "format")])
+    sam = fixture("resume-tailor", 4)
+    # haiku/tuesday/resume-tailor-4.run2.md, E1: the resume's dash quoted as a comma
+    altered = ('| E1 | Skills (assumed) | no Kubernetes entry | "Kubernetes (proof-of-concept for two months, never went to '
+               'production)" | surface | "Ran a Kubernetes proof-of-concept for two months last year, never went to '
+               'production." | `[grounded]` cv | pending your approval |\n')
+    check("must fail: a quotation tidied, the candidate's dash turned into a comma (quality check, resume-tailor 4)",
+          fails(altered, sam), [("FAIL", "judgement")])
+    check("must pass: the same row quoting the sentence as the resume has it",
+          fails(altered.replace("last year, never went", "last year — never went"), sam), [])
+    nadia = fixture("resume-tailor", 3)
+    # sonnet/alone/resume-tailor-3.run3.md, E1: the dossier's drafted edit quoted beside the CV's sentence
+    inherited = ('| E1 | Experience | "Wrote the internal integration playbook the whole team uses." (placement not seen) '
+                 '| "Wrote the internal integration playbook the whole team uses." as its own line | `surface` | "Wrote the '
+                 'internal integration playbook the whole team uses."; dossier E1: "surface the integration playbook '
+                 'authorship into its own line" | `[grounded]` your CV, dossier | pending your approval |\n')
+    check("must pass: the CV's sentence quoted, and beside it the dossier's drafted edit, verbatim with its origin "
+          "named — edit-ledger.md asks for the one and forbids neither (quality check, resume-tailor 3)", fails(inherited, nadia), [])
+    # sonnet/alone/resume-tailor-3.run1.md, E1: the same cell, the dossier item named with no colon
+    check("must pass: the same, the dossier item named right before its quotation with no colon (quality check, resume-tailor 3)",
+          fails(inherited.replace("dossier E1: ", "dossier E1 "), nadia), [])
+    only = inherited.replace('"Wrote the internal integration playbook the whole team uses."; dossier E1:', "dossier E1:")
+    got = output_checks.check_traces(TRACES_HEAD + only, nadia["candidate_text"], nadia["prompt"])
+    check("must fail: a cell quoting only the dossier's drafted edit holds no quotation of the candidate's material",
+          [(c["verdict"], "quotes no sentence of the candidate's material" in c["why"]) for c in got["checks"]],
+          [("FAIL", True)])
+    got = output_checks.check_traces(TRACES_HEAD + inherited.replace("authorship into its own line", "authorship up"),
+                                     nadia["candidate_text"], nadia["prompt"])
+    check("must fail: the dossier's drafted edit altered, beside a true trace, is not in the request",
+          [(c["verdict"], "is not in the request (quoted as from 'dossier E1')" in c["why"]) for c in got["checks"]],
+          [("FAIL", True)])
+    check("must fail: a quotation the cell says is the CV's, not in it, is held to the candidate's material, never the request",
+          fails(inherited.replace('dossier E1: "surface the integration playbook authorship into its own line"',
+                                  'your CV: "surface the integration playbook authorship into its own line"'), nadia),
+          [("FAIL", "judgement")])
+    row = ("R1 '3+ yrs PM' fit_status adjacent, gap_type transferability, confidence medium, reasoning 'integration "
+           "leadership is adjacent; roadmap ownership and prioritisation authority not evidenced'")
+    check("must pass: a quotation of the dossier's evidence_map row, which edit-ledger.md names as the candidate's material",
+          fails(inherited.replace('dossier E1: "surface the integration playbook authorship into its own line"',
+                                  'dossier R1: "integration leadership is adjacent"'), nadia), [])
+    check_true("fixture 3's candidate_text holds that evidence_map row", any(row in t for t in nadia["candidate_text"]))
+    jd = e1.replace('| "I own three services in our ledger pipeline — one handles about 40k requests/minute at peak." | `[grounded]`',
+                    '| "design and ship Go services handling high request volume" | `[grounded]`')
+    check("must fail: a line of the JD quoted as a trace", fails(jd), [("FAIL", "judgement")])
+    got = output_checks.check_traces("Here is your ledger in prose.", priya["candidate_text"])
+    check("must fail, as format: no table with a Traces to column",
+          [(c["verdict"], c["kind"]) for c in got["checks"]], [("FAIL", "format")])
+    got = output_checks.check_traces(TRACES_HEAD + e1, None)
+    check("a fixture with no candidate_text has the check unchecked, never passed",
+          (got["checks"], got["unchecked"]), ([], [output_checks.TRACES_CHECK]))
+    got = output_checks.run_checks(priya, "denied", TRACES_HEAD + e1, None)
+    check("run_checks runs it on a fixture that names it", verdict_of(got, "traces", "edit_ledger"), "PASS")
+    got = output_checks.run_checks(nadia, "denied", TRACES_HEAD + inherited, None)
+    check("and reads a named source's quotation against the fixture's own request",
+          verdict_of(got, "traces", "edit_ledger"), "PASS")
+    got = output_checks.run_checks(fixture("mock-interview", 1), "denied", "Here is your pack.", None)
+    check("and never on a fixture that does not name it: no traces finding, nothing unchecked",
+          ([c for c in got["checks"] if c["check"] == "traces"], "traces" in got["unchecked"]), ([], False))
+    from fixture_clauses import load_cases
+    cases = load_cases(Path(__file__).resolve().parent.parent / "skills/resume-tailor/evals/evals.json")
+    check("every resume-tailor fixture runs it, its candidate_text in its prompt",
+          [c["id"] for c in cases if "traces" not in c.get("checks", []) or not all(
+              output_checks.normalise_quote(t) in output_checks.normalise_quote(c["prompt"]) for t in c["candidate_text"])],
+          [])
+
+
+def arm_set(folder: Path, runs: list[dict]) -> Path:
+    """A synthetic saved set: each run's meta, checks, two grade files and a stream with its cost."""
+    folder.mkdir(parents=True)
+    (folder / "streams").mkdir()
+    for i, run in enumerate(runs):
+        stem = run.get("stem") or f"{run.get('skill', 'mock-interview')}-{run.get('id', 1)}.run{i}"
+        room = f"room-{folder.name}-{i}"
+        meta = {"skill": run.get("skill", "mock-interview"), "id": run.get("id", 1), "run": i, "mode": run.get("mode", "denied"),
+                "stem": stem, "graded_invocation": 0, "triggered_unprompted": not run.get("nudged"),
+                "harness": {"status": run.get("status", "ok"), "reasons": run.get("reasons", [])},
+                "research_log": run.get("log"),
+                # How the run was installed, written only where the run gives it, as a set saved before
+                # a field existed lacks it.
+                **{k: run[k] for k in ("via", "layout", "room_writable", "model") if k in run},
+                "invocations": [{"room": f"/x/rooms/{room}", "result": {"incomplete": False,
+                                 "permission_denials": [{"tool_name": t} for t in run.get("refused", [])]}}]}
+        (folder / f"{stem}.meta.json").write_text(json.dumps(meta))
+        if not run.get("no_checks"):
+            (folder / f"{stem}.checks.json").write_text(json.dumps({"checks": run.get("checks", []),
+                                                                     "unchecked": run.get("unchecked", [])}))
+        for g, verdicts in enumerate(run.get("grades", [["PASS"], ["PASS"]]), 1):
+            if verdicts is None:
+                continue
+            (folder / f"{stem}.grade-{g}.json").write_text(json.dumps(
+                {"harness_invalid": True, "verdicts": []} if run.get("status") else {
+                    "verdicts": [{"n": n, "verdict": v} for n, v in enumerate(verdicts, 1)],
+                    "model_usage": {"m": {"costUSD": 0.5}}, "grader_prompt_version": run.get("version", "3"),
+                    "grader_model": "claude-sonnet-5-5",
+                    "expectation_sha256": {str(n): run.get("hashes", {}).get(n, f"sha{n}")
+                                           for n in range(1, len(verdicts) + 1)}}))
+        for name in run.get("truncate", []):
+            path = folder / f"{stem}.{name}"
+            path.write_text(path.read_text()[:20])
+        (folder / "streams" / f"{room}.jsonl").write_text(json.dumps({"type": "result", "total_cost_usd": 1.25}) + "\n")
+    return folder
+
+
+def finding(check_name, target="all", verdict="FAIL", why="x", **extra):
+    return {"check": check_name, "target": str(target), "verdict": verdict, "why": why, "kind": "judgement", **extra}
+
+
+def test_compare_arms() -> None:
+    print("\ncompare_arms: two saved sets, module by module, with nothing decided")
+    import compare_arms as ca
+    check("Fisher's exact two-sided p, against values the summary computed",
+          [round(ca.fisher(15, 27, 5, 20), 3), round(ca.fisher(17, 50, 8, 50), 3), round(ca.fisher(20, 50, 9, 50), 3),
+           round(ca.fisher(3, 5, 3, 5), 9), ca.fisher(1, 0, 0, 3)], [0.044, 0.063, 0.027, 1.0, None])
+    check("and symmetric in its two sides", ca.fisher(6, 10, 2, 10) == ca.fisher(2, 10, 6, 10), True)
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep Kestrel.", "research": {
+        "modes": ["denied"], "zero_calls": True, "targets": [
+            {"n": 1, "name": "values", "terms": ["values"], "accept": ["skipped"]},
+            {"n": 3, "name": "strategy", "terms": ["strategy"], "accept": ["skipped"]}]}}}
+    gates = [finding("gates_line"), finding("gates_form")]
+    call = [finding("zero_calls"), finding("accept", 3), finding("accept", 1)]
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"checks": [*gates, finding("quotes", "banks", why='"a, b" is not in the fit snapshot\'s evidence column')],
+             "grades": [["PASS", "FAIL"], ["PASS", "PASS"]], "refused": ["Write", "Bash"]},
+            {"checks": [*call, finding("evidence_form", "fit_snapshot")], "log": [entry("Kestrel strategy 2026", "refused")],
+             "nudged": True},
+            {"checks": [finding("quotes", "banks", recut="joined"), finding("quotes", "banks", why="not the candidate's")]},
+            {"status": "harness-invalid", "reasons": ["the installed skill never fired"]},
+            {"checks": [finding("gates_line", verdict="PASS"), finding("accept", 1, verdict="PASS"),
+                        finding("quotes", "banks", verdict="PASS"), finding("zero_calls", verdict="PASS")]},
+        ])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"checks": [finding("gates_form")]},
+            {"checks": [finding("quotes", "fit_snapshot", verdict="PASS"), finding("quotes", "banks", verdict="PASS"),
+                        finding("quotes", "banks", verdict="PASS", recut="unquoted")],
+             "unchecked": ["evidence_form"]},
+        ])
+        a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
+        only = ca.failure_only(a + c)
+        check("a check output_checks declares failure-only records only failures",
+              sorted(only), ["evidence_form", "gates_form"])
+        check("it applies in every valid run, less those that listed it unchecked",
+              (ca.check_counts(a, "evidence_form", only), ca.check_counts(c, "evidence_form", only)), ((1, 4), (0, 1)))
+        check("a check that records passes applies only where it wrote a finding",
+              ca.check_counts(a, "gates_line", only), (1, 2))
+        check("the call's targets are read from its record, as the accounting checks aim it", a[1]["aimed"], {1: 0, 3: 1})
+        check("one defect per family: the hard-gates line and the call where none belongs each count once, and an "
+              "accept row its calls were not aimed at stays its own",
+              (ca.defects(a[0]), ca.defects(a[1])),
+              ({"hard-gates line": 2, "quotes": 1}, {"a call where none belongs": 2, "accept": 1, "evidence_form": 1}))
+        check("a family applies where its anchoring check applied, and reports its overlaps",
+              ca.unit_counts(a, "a call where none belongs", ("zero_calls",), only), (1, 2, 1))
+        check("re-cut quotes are read from the field, and from the reason a finding saved before it carries",
+              [[ca.recut_of(f) for f in ca.failing(r) if f["check"] == "quotes"] for r in a if r["valid"]],
+              [["unrecorded"], [], ["joined", None], []])
+        out = ca.report(arm, ctl, None, cases)
+
+        def shows(pattern: str) -> bool:
+            return re.search(pattern, out) is not None
+        check_true("the headline counts runs, harness-invalid, nudged and refused saves, and costs from streams and grades",
+                   "tuesday: 5 runs, 1 harness-invalid, 1 nudged, 1 with a save refused; cost $10.25 (runs $6.25, graders $4.00)"
+                   in out and "alone: 2 runs, 0 harness-invalid, 0 nudged, 0 with a save refused; cost $4.50" in out)
+        check_true("the graded pass rate is over both graders' verdicts, with no p-value on verdicts",
+                   shows(r"mock-interview\s+90\.0% \(9/10\)\s+100\.0% \(4/4\)\s+-10\.0 points")
+                   and "two graders of one run are not independent" in out)
+        check_true("an expectation is passed by a run only when every grader passed it",
+                   shows(r"fixture 1 \[denied\] #1\s+4/4\s+2/2") and shows(r"fixture 1 \[denied\] #2\s+0/1\s+0/0\s+p n/a"))
+        check_true("a family is counted once, with its overlap, and the accept row outside it apart",
+                   shows(r"a call where none belongs \[zero_calls\+accept\+skip_has_no_call\]\s+1/2\s+0/0\s+p n/a\s+\[1 / 0\]")
+                   and shows(r"\n  accept\s+1/2\s+0/0"))
+        check_true("quotes: any failure, a failure that is not re-cut, and re-cut quotes reported by kind, a passing "
+                   "re-cut finding in the reported rows and in no failure row",
+                   shows(r"any quote failure\s+2/3\s+0/1") and shows(r"a quote failure that is not re-cut\s+1/3\s+0/1")
+                   and shows(r"a re-cut quote \(reported\)\s+2/3\s+1/1")
+                   and shows(r"a re-cut quote, joined \(reported\)\s+1/3\s+0/1")
+                   and shows(r"a re-cut quote, unquoted \(reported\)\s+0/3\s+1/1")
+                   and shows(r"a re-cut quote, unrecorded \(reported\)\s+1/3\s+0/1"))
+        check_true("and a re-cut quote that failed, the mark of a set checked under the old rule, prints when not zero",
+                   shows(r"a re-cut quote that failed \(a set checked before re-cut quotes passed\)\s+2/3\s+0/1"))
+        check_true("refused tool calls are reported by tool", "by tool {'Bash': 1, 'Write': 1}" in out)
+        check_true("no threshold, no verdict: nothing in the report decides",
+                   not any(w in out.lower() for w in ("pass:", "miss", "verdict:", "significant")))
+        recheck = Path(tmp) / "recheck"
+        recheck.mkdir()
+        for p in ctl.glob("*.checks.json"):
+            (recheck / p.name).write_text(json.dumps({"checks": [finding("format", "chat")]}))
+        check_true("--checks-from reads a re-check of the same runs, a failure-only check over every valid run",
+                   re.search(r"format \(records only failures\)\s+0/4\s+2/2", ca.report(arm, ctl, (arm, recheck), cases))
+                   is not None)
+
+
+def written_checks(source: str) -> tuple[dict[str, set[bool]], list[str]]:
+    """Each check name output_checks' finding() calls write, with whether each call's verdict is
+    the literal False; a name passed through a function's parameter is read at its call sites.
+    Second: the calls whose name could not be read."""
+    import ast
+    tree = ast.parse(source)
+    consts = {t.id: n.value.value for n in tree.body if isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant)
+              and isinstance(n.value.value, str) for t in n.targets if isinstance(t, ast.Name)}
+    funcs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+    within = {c: f for f in funcs for c in ast.walk(f) if isinstance(c, ast.Call)}
+
+    def names(node, where) -> list[str] | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        if isinstance(node, ast.Name) and node.id in consts:
+            return [consts[node.id]]
+        params = [a.arg for a in where.args.args] if where is not None else []
+        if not isinstance(node, ast.Name) or node.id not in params:
+            return None
+        i, got = params.index(node.id), []
+        for c in (c for c in calls if c.func.id == where.name):
+            arg = c.args[i] if i < len(c.args) else next((k.value for k in c.keywords if k.arg == node.id), None)
+            sub = names(arg, within.get(c)) if arg is not None else None
+            if sub is None:
+                return None
+            got += sub
+        return got
+    out, unread = {}, []
+    for c in (c for c in calls if c.func.id == "finding"):
+        got = names(c.args[0], within.get(c))
+        if got is None:
+            unread.append(f"line {c.lineno}: {ast.unparse(c.args[0])}")
+        for name in got or []:
+            out.setdefault(name, set()).add(isinstance(c.args[2], ast.Constant) and c.args[2].value is False)
+    return out, unread
+
+
+def test_compare_reads() -> None:
+    print("\ncompare_arms: like for like, missing and unreadable files, and checks that record only failures")
+    import compare_arms as ca
+    written, unread = written_checks((Path(__file__).resolve().parent / "output_checks.py").read_text())
+    check("every finding() call's check name is read", unread, [])
+    check("FAILURE_ONLY is exactly the checks written only with a literal False, RECORDS_PASSES every other",
+          (sorted(output_checks.FAILURE_ONLY), sorted(output_checks.RECORDS_PASSES)),
+          (sorted(k for k, v in written.items() if v == {True}), sorted(k for k, v in written.items() if v != {True})))
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep.", "expectations": ["a", "b"]}}
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"checks": [finding("zero_calls"), finding("old_check")], "grades": [["PASS", "PASS"], None]},
+            {"checks": [finding("zero_calls"), finding("old_check2", verdict="PASS")]},
+            {"checks": [], "grades": [None, None]},
+            {"no_checks": True, "truncate": ["grade-2.json"]},
+            {"truncate": ["meta.json"]},
+        ])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"checks": [finding("old_check2")], "grades": [["PASS", "PASS"], ["FAIL", "FAIL"]]},
+            {"checks": [finding("gates_line", verdict="PASS")]},
+        ])
+        a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
+        check("must pass: a truncated meta.json is a run read as unreadable, never a crash",
+              [(r["meta_read"], r["unreadable"]) for r in a if not r["meta_read"]],
+              [(False, ["mock-interview-1.run4.meta.json"])])
+        a = [r for r in a if r["meta_read"]]
+        only = ca.failure_only(a + c)
+        check("a check that records passes stays one when it failed in every run that wrote it, and a name "
+              "output_checks does not write is read from the data", sorted(only), ["old_check"])
+        check("so zero_calls applies only where it wrote a finding", ca.check_counts(a, "zero_calls", only), (2, 2))
+        check("must fail: a missing grader's file is a grader that returned nothing, never a pass",
+              ca.expect_graders(a, c), 2)
+        check("each run's expectations: grade-2 missing reads partial, no grade file at all reads every one partial, "
+              "an unreadable grade-2 reads partial",
+              [ca.expectation_states(r) for r in a],
+              [{1: "partial", 2: "partial"}, {1: "pass"}, {1: "partial", 2: "partial"}, {1: "partial"}])
+        out = ca.report(arm, ctl, None, cases)
+
+        def shows(pattern: str) -> bool:
+            return re.search(pattern, out) is not None
+        check_true("the expectation rows count them partial, beside the control's fully graded runs",
+                   shows(r"fixture 1 \[denied\] #1\s+1/1\s+1/2\s+p=1\.000\s+\(3 / 0 partially graded\)"))
+        check_true("and the report says which runs are short of graders, and which have no checks file",
+                   shows(r"tuesday: of 4 valid runs, 1 with fewer than 2 grade files, 1 with none, 1 with one unreadable")
+                   and shows(r"tuesday: 1 of 4 valid runs have no readable checks file"))
+        check_true("and names the files it could not read, the meta's run left out of everything",
+                   shows(r"tuesday: 4 runs, ") and "2 file(s) could not be read, 1 of them a meta.json" in out
+                   and "mock-interview-1.run3.grade-2.json" in out)
+        check_true("must pass: both sets under one prompt version and the same texts are like for like",
+                   "NOT LIKE FOR LIKE" not in out and "not like for like" not in out
+                   and "graded under prompt version 3 (4); by claude-sonnet-5-5 (4)" in out)
+
+        v2 = arm_set(Path(tmp) / "v2", [{"version": "2", "grades": [["PASS", "FAIL"], ["PASS", "FAIL"]]}])
+        v3 = arm_set(Path(tmp) / "v3", [{"grades": [["PASS", "PASS"], ["PASS", "PASS"]], "hashes": {2: "changed"}}])
+        out = ca.report(v3, v2, None, cases)
+        check_true("must fail: grades under prompt versions 3 and 2 are flagged in the headline and on every row, "
+                   "with no p-value",
+                   "NOT LIKE FOR LIKE: graded under prompt version 3 against 2" in out
+                   and re.search(r"fixture 1 \[denied\] #1\s+1/1\s+1/1\s+p n/a\s+\[not like for like: grader prompt "
+                                 r"version 3 against 2\]", out) is not None
+                   and "NOT LIKE FOR LIKE: 2 expectation(s), flagged below, carry 4 / 4 of those verdicts" in out)
+        same = arm_set(Path(tmp) / "same", [{"grades": [["PASS", "FAIL"], ["PASS", "FAIL"]]}])
+        out = ca.report(v3, same, None, cases)
+        check_true("must fail: one prompt version, an expectation whose text changed is flagged, the other compared",
+                   re.search(r"#2\s+1/1\s+0/1\s+p n/a\s+\[not like for like: expectation text differs\]", out) is not None
+                   and re.search(r"#1\s+1/1\s+1/1\s+p=1\.000\s*\n", out) is not None)
+
+    claim = output_checks.check_fit_ledger(LEDGER_OK.replace(
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", "Every must-have is `direct`."))["checks"]
+    run = {"checks": claim, "aimed": None}
+    check("one set claim the snapshot's prose and the sentence after the ledger both read is one defect",
+          ca.defects(run), {"one set claim, read twice": 2})
+    two = [finding("snapshot_count", why='the snapshot\'s prose: "every row" is a set claim over the map that names no row'),
+           finding("ledger_sentence", why='in the sentence after the ledger, "two adjacent" is a set claim over the map '
+                                          "that names no row: 'The two adjacent rows are R4 and R5.'")]
+    check("two different claims stay two", ca.defects({"checks": two, "aimed": None}),
+          {"snapshot_count": 1, "ledger_sentence": 1})
+    prose = [finding("row", 1, why="the response has no accounting table"),
+             finding("tally", why="a `Research tier:` line that is not the fixed form: chat: Research tier: L0, no searches.")]
+    check("no accounting table and the tally line written off its form beside it are one block",
+          ca.defects({"checks": prose, "aimed": None}), {"no accounting table, nor its tally line": 2})
+    check("an off-form tally line beside a table is its own defect",
+          ca.defects({"checks": [prose[1]], "aimed": None}), {"tally": 1})
+
+
+def test_compare_rows() -> None:
+    print("\ncompare_arms: truthfulness rows, the slot families' denominators, quick checks and the text change's "
+          "measures")
+    import compare_arms as ca
+
+    def sentence(text: str) -> dict:
+        got = output_checks.check_fit_ledger(LEDGER_OK.replace(
+            "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.", text))["checks"]
+        return next(c for c in got if c["check"] == "ledger_sentence")
+    one, two, both = (sentence(t) for t in (
+        "R4 has a credible bridge, and R3 (`medium`) waits on an artifact.",
+        "R4 has a credible bridge. R3 (`medium`) waits on an artifact.",
+        "Every must-have is `direct`. R3 (`medium`) waits on an artifact."))
+    check("ledger_sentence records its sentence count, whatever reason it reports, its verdict unchanged",
+          [(f["verdict"], f["sentences"], f["why"].startswith(ca.SECOND_SENTENCE)) for f in (one, two, both)],
+          [("PASS", 1, False), ("FAIL", 2, True), ("FAIL", 2, False)])
+    check("the clause references are read before expansion",
+          __import__("fixture_clauses").clause_refs(Path(__file__).resolve().parent.parent / "skills" / "job-underwriter"
+                                                    / "evals" / "evals.json")[5][1],
+          ["accounting", "accounting_counts", "quick_check"])
+
+    research = {"modes": ["denied"], "zero_calls": True, "quick_check": {"targets": [1], "names": ["kestrel"]},
+                "targets": [{"n": 1, "terms": ["careers"], "accept": ["skipped"]},
+                            {"n": 3, "terms": ["hiring manager"], "accept": ["n/a"]}]}
+    cases = {("job-underwriter", 5): {"id": 5, "prompt": "Kestrel.", "expectations": ["a", "b", "c"], "research": research,
+                                      "clause_refs": [[], ["proposed_language"], ["hard_gates_line", "ledger_counts"]]},
+             ("job-underwriter", 1): {"id": 1, "prompt": "Kestrel.", "expectations": ["a", "b", "c"],
+                                      "clause_refs": [[], ["proposed_language"], ["hard_gates_line", "ledger_counts"]]},
+             ("mock-interview", 8): {"id": 8, "prompt": "Kestrel.", "expectations": ["a"], "research": research,
+                                     "clause_refs": [["no_overclaim"]]}}
+    ju, mi = "job-underwriter", "mock-interview"
+    claim = finding("ledger_sentence", why='in the sentence after the ledger, "every must-have" is a set claim', sentences=2)
+    second = finding("ledger_sentence", why="more than one sentence after the ledger (rule 2 allows one)", sentences=2)
+    present = finding("ledger_present", verdict="PASS")
+    calls = [entry("Kestrel careers"), entry("Kestrel careers page"), entry("Kestrel hiring manager")]
+    with tempfile.TemporaryDirectory() as tmp:
+        arm = arm_set(Path(tmp) / "tuesday", [
+            {"skill": ju, "id": 5, "log": calls, "grades": [["PASS", "FAIL", "PASS"], ["PASS", "PASS", "PASS"]],
+             "checks": [claim, present, finding("zero_calls", calls=3), finding("tally_searches"),
+                        finding("gates_line", verdict="PASS"), finding("severity", verdict="PASS")]},
+            {"skill": ju, "id": 5, "log": calls[:2], "grades": [["PASS", "PASS", "FAIL"], ["PASS", "PASS", "PASS"]],
+             "checks": [second, present, finding("zero_calls", verdict="PASS", calls=2, quick_check=2),
+                        finding("accept", 1, verdict="PASS", quick_check=2), finding("gates_form"), finding("severity_form")]},
+            {"skill": ju, "id": 5, "log": [], "grades": [["PASS", "PASS", "PASS"], ["PASS", "PASS", "PASS"]],
+             "checks": [finding("ledger_sentence", verdict="PASS", sentences=1), present,
+                        finding("zero_calls", verdict="PASS", calls=0)]},
+            # No fit snapshot: outside the slot families, as it is outside ledger_sentence.
+            {"skill": ju, "id": 1, "grades": [["PASS", "PASS", "PASS"], ["PASS", "PASS", "PASS"]],
+             "checks": [finding("ledger_present")]},
+        ])
+        ctl = arm_set(Path(tmp) / "alone", [
+            {"skill": mi, "id": 8, "log": calls[:1], "grades": [["PASS"], ["PASS"]],
+             "checks": [finding("zero_calls", verdict="PASS", calls=1, quick_check=1), finding("row", 3)]},
+            # Saved before ledger_sentence recorded its count; grader 2's file missing, so graded on nothing.
+            {"skill": ju, "id": 5, "log": [], "grades": [["PASS", "PASS", "PASS"], None],
+             "checks": [finding("ledger_sentence", verdict="PASS"), present, finding("zero_calls", verdict="PASS")]},
+        ])
+        a, c = ca.load(arm, None, cases), ca.load(ctl, None, cases)
+        ca.expect_graders(a, c)
+        only = ca.failure_only(a + c)
+        ja = [r for r in a if r["skill"] == ju]
+        check("must pass: a run with no fit snapshot is outside both slot families; a run whose failure-only member "
+              "failed is inside them",
+              [ca.unit_counts(ja, unit, via, only) for unit, _, via, _ in ca.FAMILIES[:2]], [(1, 2, 0), (1, 2, 0)])
+        check("a family whose anchor records passes is unchanged: the call family applies where zero_calls applied",
+              ca.unit_counts(ja, "a call where none belongs", ("zero_calls",), only), (1, 3, 0))
+        check("the truthfulness family: runs where a grader failed any of its expectations, over the runs graded on one",
+              [(ca.truth_counts(ja, f), ca.truth_counts([r for r in c if r["skill"] == ju], f)) for f in ca.TRUTHFULNESS[ju]],
+              [((2, 4), (0, 0)), ((1, 4), (0, 0))])
+        check("a quick check is read from the run's checks: zero_calls's record, else a checked row's",
+              ({r["stem"]: r["quick_check"] for r in a}, {r["stem"]: r["quick_check"] for r in c}),
+              ({"job-underwriter-5.run0": False, "job-underwriter-5.run1": True, "job-underwriter-5.run2": False,
+                "job-underwriter-1.run3": False}, {"mock-interview-8.run0": True, "job-underwriter-5.run1": False}))
+        out = ca.report(arm, ctl, None, cases)
+
+        def shows(pattern: str) -> bool:
+            return re.search(pattern, out) is not None
+        check_true("the report prints both job-underwriter truthfulness rows and mock-interview's, each with its p "
+                   "(n/a where a side was graded on none)",
+                   shows(r"truthfulness \[proposed_language\+ledger_counts\]\s+2/4\s+0/0\s+p n/a")
+                   and shows(r"truthfulness \[proposed_language\]\s+1/4\s+0/0")
+                   and shows(r"truthfulness \[no_overclaim\]\s+0/0\s+0/1\s+p n/a"))
+        check_true("and the slot families over the runs where their slot was written",
+                   shows(r"hard-gates line \[gates_line\+gates_form\]\s+1/2\s+0/0")
+                   and shows(r"severity slot \[severity\+severity_form\]\s+1/2\s+0/0"))
+        check_true("and runs with a quick check of the user's material, by fixture",
+                   shows(r"a quick check of the user's material, fixture 5 \(reported\)\s+1/3\s+0/1")
+                   and shows(r"a quick check of the user's material, fixture 8 \(reported\)\s+0/0\s+1/1"))
+        block = out[out.index("== text-change measures"):]
+
+        def measure(label: str, pooled: str, arm_cell: str, ctl_cell: str) -> bool:
+            return re.search(re.escape(label) + r"\s+" + r"\s+".join(map(re.escape, (pooled, arm_cell, ctl_cell))),
+                             block) is not None
+        check_true("text change: sentences above one, pooled and per arm; a run with a set claim and a second "
+                   "sentence counts here and in the set-claim row, and an unrecorded count is left out and said",
+                   measure("ledger_sentence: sentences after the ledger above one", "2/3", "2/3", "0/0")
+                   and measure("ledger_sentence: failed for a set claim (any reason but a second sentence)",
+                               "1/4", "1/3", "0/1")
+                   and "1 run(s) checked before ledger_sentence recorded its sentence count" in block)
+        check_true("text change: ledgers written, over job-underwriter's valid runs",
+                   measure("ledger_present: passing, of job-underwriter's valid runs", "4/5", "3/4", "1/1"))
+        check_true("text change: each fixture's runs beyond a quick check, and with one",
+                   measure("zero_calls: failing, job-underwriter eval 5", "1/4", "1/3", "0/1")
+                   and measure("zero_calls: a quick check, job-underwriter eval 5", "1/4", "1/3", "0/1")
+                   and measure("zero_calls: failing, mock-interview eval 8", "0/1", "0/0", "0/1")
+                   and measure("zero_calls: a quick check, mock-interview eval 8", "1/1", "0/0", "1/1"))
+        check_true("text change: of the runs that sent a call, those that reported every call; and calls per run",
+                   re.search(r"of the runs that sent a call\s+1/3\s+1/2\s+0/1", block) is not None
+                   and measure("calls per run", "6/5 (1.20)", "5/3 (1.67)", "1/2 (0.50)"))
+
+
 def main() -> int:
-    for test in (test_routing_declines, test_cli_refusal, test_parse_stream,
+    for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
+                 test_frontdoor_clashes, test_frontdoor_install, test_module_lists, test_sync, test_frontdoor_labels, test_explicit_naming,
+                 test_layouts_install, test_layout_naming, test_layout_transcript, test_reported_measures,
+                 test_layout_runs,
+                 test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
                  test_classification, test_missing_response,
                  test_declined_grade_prints_no_score, test_artifact_collection,
                  test_skill_installation, test_classify_room, test_execute_timeout,
-                 test_execute_nudge, test_parse_accounting, test_check_accounting,
-                 test_fit_ledger, test_quotes, test_review_fixes, test_evidence_cells,
+                 test_execute_nudge, test_via_frontdoor, test_parse_accounting, test_check_accounting,
+                 test_fit_ledger, test_ledger_sentence_form, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
-                 test_user_links,
-                 test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_canary_gate, test_backfill,
+                 test_user_links, test_user_link_fixture, test_quick_check,
+                 test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_yes_names_page,
+                 test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
-                 test_audit_ledger, test_watch_out):
+                 test_audit_ledger, test_watch_out, test_grader_fence, test_plugin_alone, test_save_rule, test_rerun_stems,
+                 test_relative_dates,
+                 test_recut_quotes, test_traces, test_compare_arms, test_compare_reads, test_compare_rows):
         test()
     print()
     if FAILURES:

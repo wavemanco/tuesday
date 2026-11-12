@@ -2,24 +2,24 @@
 
 Three rules protect this repository's structure while it is early; everything else is ordinary.
 
-## Pull requests: collaborators and prior contributors only, for now
+## Pull requests: collaborators only, for now
 
 This is an early repository. The skills' output contracts, the shared
 conventions and the eval harness still change from week to week, and every
 change here is reviewed adversarially and measured on pinned runs before it
 lands. A pull request from outside that loop would be written against a target
 that moves under it, and would cost more to review than it saves. So for now,
-pull requests are open only to the repository's collaborators and to prior
-contributors (anyone with a commit on the default branch). A workflow,
+only the repository's collaborators can open pull requests. The repository's
+pull-request setting on GitHub enforces this, and a workflow,
 `.github/workflows/pr-policy.yml`, closes any other with a comment pointing
-here. Ideas, bug reports and failures you hit using a skill are welcome as
-issues. This is revisited when the contracts settle, and at the latest before
-any public release.
+here, in case the setting is ever off. Ideas, bug reports and failures you hit
+using a skill are welcome as issues, from anyone. This is revisited when the
+contracts settle.
 
 ## Licensing
 
-The repository is MIT-licensed for now (the root `LICENSE`). `conventions/` and
-each skill folder carry their own copy of the same grant, so a packaged skill
+The repository is MIT-licensed (the root `LICENSE`). `conventions/` and each
+skill folder carry their own copy of the same grant, so a packaged skill
 travels with its license. A contribution is made under that grant. The one
 planned exception is the future agent/ directory, below: when it exists it
 will carry its own license, and files are not moved across that boundary in the
@@ -111,34 +111,56 @@ the next one (CI enforces this, because the mistake was made twice in one
 session); and a fix to this class is not verified by the failure count dropping,
 it is verified by the graders naming a surface that no longer exists.
 
+## Fixtures model what users typically send
+
+A standing rule, set by the owner. A fixture is written the way a typical user
+writes the request, and what it expects is what serves that user. A test that
+turns on a detail most users would not give, such as when they copied a page,
+tests a hypothetical, and a skill tuned to pass it is tuned for the wrong case.
+So a quick, reported check that pasted material is still current and genuine is
+not a defect: a typical user does not say how fresh their material is.
+
 ## When an issue survives two iterations
 
 A standing rule, set by the owner. An issue that two fix iterations have not
 closed — each iteration a change made to close it, then reviewed or measured — is
-not iterated a third time. Work on it stops, and one of two things happens:
+not iterated a third time on its own. Work on it stops and it goes to the owner
+as a decision, with its measurement: the rate, what each iteration changed, and
+what each option would cost.
 
-- **If the user can protect themselves by checking something,** the issue is
-  covered by that skill's watch-out: the one sentence every delivered output of the
-  skill ends with (`conventions/output-discipline.md` rule 7). If the sentence
-  does not already cover the issue, extend it — and keep it one sentence, because
-  the slot holds one line and a list of cautions is read as none. The issue is
-  recorded as open in the README's Tracked-work ledger, with its measurement,
-  and added, with its rate and a link to that entry, to the skill's "Why it's
-  there" cell in the README's watch-out table — which CI does not read, so it is
-  also updated by hand when an issue the cell explains is closed.
-- **If the user cannot protect themselves** — the skill does not fire at all, say,
-  so there is no output for them to check — it goes to the owner as an open
-  decision.
+Modules shape up differently, so the owner decides case by case, among three
+options:
+
+- **A watch-out,** if the user can protect themselves by checking something: the
+  issue is covered by that skill's watch-out, the one sentence every delivered
+  output of the skill ends with (`conventions/output-discipline.md` rule 7). If
+  the sentence does not already cover the issue, extend it — and keep it one
+  sentence, because the slot holds one line and a list of cautions is read as
+  none. The issue is added, with its rate and a link to its ledger entry, to the
+  skill's "Why it's there" cell in the README's watch-out table — which CI does
+  not read, so it is also updated by hand when an issue the cell explains is
+  closed.
+- **Another round,** with its own bar fixed before it runs.
+- **Left open,** recorded with its rate.
+
+An issue the user cannot protect themselves from — the skill does not fire at
+all, say, so there is no output to check — can only be another round or left
+open. Whatever the owner decides, the issue's entry in the README's Tracked-work
+ledger records it as "Owner's decision after two iterations: …", with the
+measurement. When most of those decisions are "a watch-out", say so to the owner:
+the rule may then go back to adding the watch-out without asking.
 
 Any two changes made to close an issue count, whatever their kind. For a
 deterministic failure the rule above makes the second one a change of shape; for
 an intermittent one, recording its rate is not an iteration.
 
 A watch-out has one source, the `watch_out:` parameter in the skill's
-`SKILL.md`, and a change to it is made there. Its copies — the root README's
-watch-out table, each fixture's closing expectation, any worked example that shows
-a response's last line — are never edited on their own: `check_skills.py --only
-watch-out` fails until every copy matches the parameter, so the change reaches
+`SKILL.md` — the whole line, label included — and a change to it is made there.
+Its copies — the root README's watch-out table, each fixture's closing
+expectation, any worked example that shows a response's last line — are never
+edited on their own: `check_skills.py --only watch-out` fails until every copy
+matches the parameter in the form `conventions/output-discipline.md` rule 7 gives
+it, so the change reaches
 them in the same commit. The README says all of this to users in plain words, under "Watch-outs:
 what to double-check".
 
@@ -283,14 +305,15 @@ name no call to action, and subjects other than the response: a pack, a cell or
 a drill turn ends with other things. Three eval expectations had contradicted
 their skill's declaration unnoticed.
 
-**A watch-out is one sentence, and every copy of it is exact.** `--only
-watch-out` holds each skill's `watch_out` parameter to one sentence of at most
-forty words, with no bracket, pipe or code span; checks that `closing_order` ends
-with `watch-out` and that `output-discipline.md` defines the slot; and compares
-every copy with the parameter character for character — any line labelled a
-watch-out in the skill's own `SKILL.md`, README and references, every fixture's
-expanded expectations (each must carry the line, since a grader sees the fixture
-and not `SKILL.md`), and the root README's table, one row per skill. It also
+**A watch-out is one line, and every copy of it is exact.** `--only
+watch-out` holds each skill's `watch_out` parameter to the label `**Watch-out:**`
+and then one sentence of at most forty words, with no bracket, pipe or code span;
+checks that `closing_order` ends with `watch-out` and that `output-discipline.md`
+defines the slot; and compares every copy with the parameter character for
+character — any line labelled a watch-out in the skill's own `SKILL.md`, README
+and references, every fixture's expanded expectations (each must carry the line,
+since a grader sees the fixture and not `SKILL.md`), and the root README's table,
+one row per skill, in the form `output-discipline.md` rule 7 gives it. It also
 fails the standing rule's heading going missing from this file, since the README
 links to it, and a line labelled a warning anywhere a rule is stated or graded.
 It does not read whether a sentence is plain, whether it names the defect the
@@ -314,9 +337,12 @@ row below `direct` named only in words its Requirement cell uses. A band beside 
 row ID, backticked or not — R3 (`medium`), R3 (medium) — is that row's Confidence; a
 band beside a register ID is a severity written like a band and fails, and so does
 one attached to nothing. Everything between the ledger and the next slot is rule 2's
-one sentence; a second sentence there fails. That sentence, the rest of the
-snapshot (the status line included) and the envelope's `decision.summary` are read
-for set claims over the map by one reader, `ledger_rules.set_claims` (through
+one sentence; a second sentence there fails. It must also take rule 2's list form,
+each item up to a semicolon opening with its row IDs, a band beside them allowed,
+then a dash (`ledger_rules.ledger_sentence_form`, which the harness records on runs
+and gates nothing on). That sentence, the rest of the snapshot (the status line
+included) and the envelope's `decision.summary` are read for set claims over the map
+by one reader, `ledger_rules.set_claims` (through
 `map_claim` and `after_ledger_claim`), here and in the harness. What it reads of
 evidence-model.md's rule ("The row is the unit") and what it leaves to the grader
 are stated once, in the comment above `Claim` in `ci/ledger_rules.py`; what is a
@@ -377,7 +403,9 @@ fewer than three content words in common passes, so a worked example's domain is
 left to review (job-underwriter's worked dossier, like the other skills' worked
 examples, sits in a grants-programme domain that no fixture uses); the README, `docs/`, the
 frontmatter and `citations.md`; and other skills' fixtures, since a room never
-installs two skills.
+installs two skills. Tuesday is the exception: a fixture run through it
+installs every module's text, so its installed text is read against every
+module's fixtures.
 
 **The fixture fields the harness reads are what it assumes.** `--only fixtures`
 reads every fixture through the harness's own functions in `evals/output_checks.py`
@@ -386,11 +414,13 @@ and `evals/research_server.py`, in every mode the fixture runs. A canary names i
 fixture's pages for the canary's target, and one of its spellings is in that page's
 text — a canary whose page matches nothing is never asked for and passes every run.
 What a canary may be is stated once, in `evals/README.md` ("What a canary may be").
-A fixture that runs the quotes check declares `candidate_text` as a list, and each
-entry is in the prompt; one that runs the fit_ledger check declares
+A fixture that runs the quotes or traces check declares `candidate_text` as a list,
+and each entry is in the prompt; one that runs the fit_ledger check declares
 `candidate_constraints` as exactly "known" or "unknown". `research.declined`, where
 present, is true or false; a fixture that sets it true does not also set
-`zero_calls`, and its `research.declined_phrase` is in the prompt. Each
+`zero_calls`, and its `research.declined_phrase` is in the prompt. A fixture with
+research runs the `yes_names_page` check exactly when its skill's `SKILL.md` states
+that every `yes` row names its pages (`evals/README.md`, "Deterministic checks"). Each
 `research.user_links` entry is a URL that is no research page and no canary's page.
 Every research target has `on_target_samples`, each aimed at the target in every
 room the fixture runs; a target that accepts `n/a` or `skipped` has `hunt_samples`,
@@ -402,22 +432,28 @@ is stated in `evals/README.md`); its names are in the prompt and in no target's
 terms, and some `research.stray_samples` query carries one, while every stray sample
 is aimed at no target in any room the fixture runs. A fixture in which no correct
 run sends a call (`zero_calls`, or `declined`) is not read for that last collision:
-any call there fails `zero_calls` first. What it does not read: whether a canary's
-spellings are figures, names or titles; whether the declined phrase declines; and
-whether the samples are the queries runs actually send.
+any call there fails `zero_calls` first. A `research.quick_check` lists declared
+targets that accept `skipped` alone and names the prompt carries, sits beside no
+`declined` and within the search budget, has no sample of its targets aimed at a
+target outside them and passes no other target's sample as a quick check, and each
+fixture file's `quick_check` clause allows `output_checks.QUICK_CHECK_CALLS` calls,
+as `interaction-grammar.md` §4's quick-check sentence does. What it does not read:
+whether a canary's spellings are figures, names or titles; whether the declined
+phrase declines; and whether the samples are the queries runs actually send.
 
 **Retired wordings stay retired.** `--only wording` reads every skill's `SKILL.md`,
 README and references, conventions/, `evals/README.md`, and every clause,
 expectation and expected output as the runner expands them. It fails "returned
 something" and "every call was refused" without "or errored", the accounting labels
-an errored call broke; the wordings this round's rule changes retired — "only when
-the search budget was fully spent" in a sentence that names neither L0 nor declining
-research, the sole ground for a no-call `unavailable`; `user links read` counted with
-"refused ones included"; failed gate rows named "plainly"; a missing hard-gates slot
-failing only "when the map has gate rows"; and "years" within a sentence after "hard
-gate(s)", unless a negation governs "hard gate" or "years" itself ("not a hard
-gate", "terms, never years") — the rule that retired years from the list; a negation
-of anything else in the sentence ("hard gates, never bridged, are … years") exempts
+an errored call broke; "front door", Tuesday's old working name; the wordings this
+round's rule changes retired — "only when the search budget was fully spent" in a
+sentence that names neither L0 nor declining research, the sole ground for a no-call
+`unavailable`; `user links read` counted with "refused ones included"; failed gate
+rows named "plainly"; a missing hard-gates slot failing only "when the map has gate
+rows"; and "years" within a sentence after "hard gate(s)", unless a negation governs
+"hard gate" or "years" itself ("not a hard gate", "terms, never years") — the rule
+that retired years from the list; a negation of anything else in the sentence ("hard
+gates, never bridged, are … years") exempts
 nothing (`SentenceRule` in `ci/check_skills.py` states the reading). It also
 fails an expectation or clause that defines the yes/unavailable labels without
 "returned a result" and "or errored"; an L0 definition — a paragraph
@@ -442,10 +478,34 @@ could lose its Gap type column and pass on the glossary's. `qualifier_fields` an
 `provenance_sections` are read in the same worked tables, outside the mirrors. What
 it does not read: whether the cells hold only the enum's tokens.
 
+**A skill meets Anthropic's authoring guidance, and keeps meeting it.** `--only
+guidance` holds what the guidance asks of a shipped skill: a `## Contents` list
+directly under the H1 of every reference file over 100 lines as shipped — a
+mirror's synced-from header counted, so a canonical file near the limit carries
+the list for its mirrors; a `SKILL.md` body under 500 lines and under 5,000
+tokens, estimated at four characters a token; a description whose first word is a
+third-person verb, read as a word ending in "s", where a word ending in "ss"
+("Assess") is a bare imperative; and every file in `references/` linked from
+`SKILL.md` as `references/<name>`, the path that resolves in the installed skill.
+The frontmatter group holds the guidance's other frontmatter limits: only the six
+keys the spec allows (claude.ai rejects any other), a description of at most 1,024
+characters, no angle brackets, and no unquoted value a strict YAML parser misreads
+(a `: ` or ` #` inside it, or a leading indicator), since Claude Code's lenient
+reader takes what an upload refuses. Rationale and measurement history a `SKILL.md`
+sheds to stay under the estimate go to that skill's `references/rationale.md`,
+which is never required reading. What it does not read: whether a contents list
+matches the file's headings, whether a description stays in the third person past
+its first word, and whether a reference is linked at the step that needs it
+rather than only in the index; review holds those.
+
 **A clause is defined once and expanded once.** `--only evals` reads every evals.json
 through `evals/fixture_clauses.py`, as the runner does: an expectation naming a
 clause the file does not define, a clause nothing uses, and braces left in the
 expanded text — a clause inside a clause, a name the loader cannot read — fail.
+It reads each fixture's dates relative to the run at its `date_anchor`, as every
+group does, and fails relative dates with no anchor, an anchor with none, and a
+date reference the loader cannot read (`evals/README.md`, "Dates relative to the
+run").
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A
@@ -465,13 +525,61 @@ checks found that each heuristic added to read more English opened as many holes
 as it closed; they now read only forms they can read exactly, and the lists of
 what they do not read above are the price of that.
 
+## Tuesday ships what was measured
+
+Tuesday, `skills/tuesday/`, is a skill like the modules: its SKILL.md is
+written by hand and its `references/` are generated from the modules
+(`skills/tuesday/README.md` says how). It ships its SKILL.md, its `references/`
+and its LICENSE, in every build and in the harness's install. Its README.md is
+for maintainers and ships nowhere (`HUB_SHIPS` in `ci/sync.py`). Round 3
+installed Tuesday as SKILL.md and `references/` alone; the LICENSE, the
+modules' LICENSE byte for byte, is the one shipped file of Tuesday's it did not
+hold. CI reads Tuesday in every per-skill group but a few, and
+`HUB_EXEMPT` in `ci/check_skills.py` states each exemption's reason once; its
+output prints them. Two groups hold what is particular to it.
+
+`--only frontdoor` holds Tuesday to its sources and to its measurement.
+`skills/tuesday/` holds SKILL.md, LICENSE, README.md and `references/`, and
+nothing else; `references/` is one flat folder, exactly what `ci/sync.py`
+generates. Every module has a playbook there and every file a playbook names is
+there; Tuesday links no file that is not there, and the guidance group, which
+reads it like every skill, holds the other direction. The modules Tuesday
+routes to, read from its slash-command list and its routing table, are
+`skills/` without it, and its description names each one. `MEASURED_FRONTDOOR`
+records what round 3 measured as three hashes: Tuesday's SKILL.md, Tuesday with
+its references, and every file the Claude Code builds ship, Tuesday's and each
+module's, frontmatter, README and LICENSE included. So a change to any shipped
+file of Tuesday or a module, or to a convention a module mirrors, fails until it
+is measured, or until the constant is updated on purpose with the reason in the
+ledger. The constant also holds the plugin's version, and an update to its
+hashes moves the version: a user who installed the plugin keeps the copy they
+have until its version changes. What it does not read: whether a routing row
+or a link's read-when clause is right; the routing measurement and review hold
+those.
+
+`--only builds` holds the Claude Code builds, which `ci/package.py` writes beside
+the `.skill` files. In `dist/claude-code/` and in the plugin's `skills/`, each
+module's SKILL.md is its source with one line added inside the frontmatter,
+`disable-model-invocation: true`, and Tuesday's is its source unchanged.
+That line ships nowhere else: no file under `skills/`, and no `.skill` file, since
+a claude.ai upload refuses the key. Tuesday's build, in both trees and in
+`dist/tuesday.skill`, holds only the files it ships. The plugin's `skills/` is
+`dist/claude-code/` file for file; the plugin manifest names the plugin
+`tuesday` with a description and the version `MEASURED_FRONTDOOR` records; and
+the marketplace file lists it, under the manifest's name, from the plugin's
+folder. That every built file is current is the package group's. What it does
+not read: whether Claude Code loads the plugin; `claude plugin validate` and a
+session do.
+
 ## Structural rules
 
 - Skills are dependency-free: nothing outside a skill's folder may be required
   at runtime. Agent tooling never leaks into skills/.
 - conventions/ is canonical. Skills carry mirrors in references/ with a
   synced-from header; a mirror that drifts from canonical is a defect, and the
-  fix flows canonical -> mirror, never the reverse.
+  fix flows canonical -> mirror, never the reverse. `python ci/sync.py` rewrites
+  every mirror from its canonical file and Tuesday's references/ from the
+  modules; `--check` reports what is out of date.
 - Every skill upholds the standalone invariant (interaction-grammar.md §1).
 - Every skill folder carries its own LICENSE copy, so packaged .skill files
   and zips remain self-describing when they travel detached from the repo.

@@ -1,0 +1,88 @@
+{
+  "suite": "tuesday",
+  "purpose": "Routing diagnostic arm B: the six attachment-claiming suite cases with each attached document's text also pasted into the message, the files still attached.",
+  "generated_by": "evals/routing_variants.py from evals/suite-routing.json — regenerate, never edit",
+  "routes": [
+    "job-underwriter",
+    "mock-interview",
+    "resume-tailor",
+    "either",
+    "neither"
+  ],
+  "cases": [
+    {
+      "id": 203,
+      "derived_from": 3,
+      "arm": "B",
+      "expected": "job-underwriter",
+      "prompt": "JD and my CV are attached. I'm a QA lead trying to move into SDET work and this role wants 3+ years writing production automation frameworks. Honestly just tell me whether my testing background actually counts for that or whether I'm reaching.\n\njd.txt:\nSDET II — Aldercroft Software\n\nBuild and own test automation for our claims platform. Write and maintain production automation frameworks in Python or Java, own CI test reliability, partner with feature teams on testability, and drive flake down.\n\nRequirements: 3+ years writing production automation frameworks (must-have); strong Python or Java; CI/CD pipelines; API and UI automation; experience influencing engineers on testability.\n\ncv.txt:\nQA Lead — 6 years\n\nCurrently QA lead at an insurance-tech company, team of four. I own the regression suite: about 900 manual cases, of which I have scripted roughly 300 in Selenium with a colleague. I write Python for test data setup and small tooling. I triage every CI failure on our nightly run and I built the dashboard the team uses to see flake rates. I have never owned a framework end to end — ours was built before I joined and I extend it.",
+      "attachments": {
+        "jd.txt": "SDET II — Aldercroft Software\n\nBuild and own test automation for our claims platform. Write and maintain production automation frameworks in Python or Java, own CI test reliability, partner with feature teams on testability, and drive flake down.\n\nRequirements: 3+ years writing production automation frameworks (must-have); strong Python or Java; CI/CD pipelines; API and UI automation; experience influencing engineers on testability.",
+        "cv.txt": "QA Lead — 6 years\n\nCurrently QA lead at an insurance-tech company, team of four. I own the regression suite: about 900 manual cases, of which I have scripted roughly 300 in Selenium with a colleague. I write Python for test data setup and small tooling. I triage every CI failure on our nightly run and I built the dashboard the team uses to see flake rates. I have never owned a framework end to end — ours was built before I joined and I extend it."
+      }
+    },
+    {
+      "id": 209,
+      "derived_from": 9,
+      "arm": "B",
+      "expected": "either",
+      "siblings": [
+        "job-underwriter",
+        "mock-interview"
+      ],
+      "prompt": "Should I apply to this Principal PM role, and if the answer is yes, prep me for it? JD attached, CV attached, they move fast so I'd likely hear back this week.\n\njd.txt:\nPrincipal Product Manager — Wrenfield Analytics\n\nOwn the data-platform product line: define multi-year strategy, run discovery with enterprise customers, drive delivery across three squads, and set adoption and retention metrics. Partner with sales engineering on complex deals.\n\nRequirements: 8+ years product management; platform or infrastructure products; demonstrated influence without authority at principal level; enterprise customer discovery; technical fluency with APIs and data models.\n\ncv.txt:\nSenior Product Manager — 9 years\n\nSix years in B2B SaaS, three before that as a data analyst. Currently senior PM at a mid-market analytics company, owning the reporting and dashboards area with two squads. I ran the discovery programme that shaped our embedded-analytics push — 40 customer interviews across 18 months. I set the activation and retention metrics for my area. I have not held a principal title and have not owned a multi-year strategy across product lines.",
+      "attachments": {
+        "jd.txt": "Principal Product Manager — Wrenfield Analytics\n\nOwn the data-platform product line: define multi-year strategy, run discovery with enterprise customers, drive delivery across three squads, and set adoption and retention metrics. Partner with sales engineering on complex deals.\n\nRequirements: 8+ years product management; platform or infrastructure products; demonstrated influence without authority at principal level; enterprise customer discovery; technical fluency with APIs and data models.",
+        "cv.txt": "Senior Product Manager — 9 years\n\nSix years in B2B SaaS, three before that as a data analyst. Currently senior PM at a mid-market analytics company, owning the reporting and dashboards area with two squads. I ran the discovery programme that shaped our embedded-analytics push — 40 customer interviews across 18 months. I set the activation and retention metrics for my area. I have not held a principal title and have not owned a multi-year strategy across product lines."
+      }
+    },
+    {
+      "id": 215,
+      "derived_from": 15,
+      "arm": "B",
+      "expected": "resume-tailor",
+      "prompt": "JD and my CV are both attached. Can you rework the CV so it actually speaks to this role? Right now it reads like it was written for the job I had three years ago, which it was.\n\njd.txt:\nSenior Site Reliability Engineer — Halbrook Media\n\nOwn reliability for our streaming edge: SLOs, incident response, capacity planning, and the on-call practice. Drive down toil through automation. Partner with platform teams on rollout safety.\n\nRequirements: 5+ years SRE or production engineering; Kubernetes in production; Terraform; observability tooling; incident command experience; strong Go or Python.\n\ncv.txt:\nSystems Engineer — 8 years\n\nStarted in datacentre operations, moved to cloud infrastructure four years ago. Currently at a logistics company: I run our Kubernetes clusters (three regions), write Terraform for everything we provision, and maintain our Prometheus and Grafana stack. I have been incident commander eleven times in two years, including a six-hour regional outage. Python daily, Go for two internal tools. My CV still leads with the datacentre work because I have not rewritten it since 2023.",
+      "attachments": {
+        "jd.txt": "Senior Site Reliability Engineer — Halbrook Media\n\nOwn reliability for our streaming edge: SLOs, incident response, capacity planning, and the on-call practice. Drive down toil through automation. Partner with platform teams on rollout safety.\n\nRequirements: 5+ years SRE or production engineering; Kubernetes in production; Terraform; observability tooling; incident command experience; strong Go or Python.",
+        "cv.txt": "Systems Engineer — 8 years\n\nStarted in datacentre operations, moved to cloud infrastructure four years ago. Currently at a logistics company: I run our Kubernetes clusters (three regions), write Terraform for everything we provision, and maintain our Prometheus and Grafana stack. I have been incident commander eleven times in two years, including a six-hour regional outage. Python daily, Go for two internal tools. My CV still leads with the datacentre work because I have not rewritten it since 2023."
+      }
+    },
+    {
+      "id": 217,
+      "derived_from": 17,
+      "arm": "B",
+      "expected": "resume-tailor",
+      "prompt": "I've applied to 40 of these and heard nothing. Can you optimise my resume for this one's ATS? I think it's keyword matching that's killing me. Resume and posting attached.\n\njd.txt:\nGrowth Marketing Manager — Pinehaven Software\n\nOwn paid acquisition and lifecycle for our self-serve product. Run paid search and paid social, own the email lifecycle programme, partner with content on organic, and report on CAC and payback.\n\nRequirements: 4+ years B2B growth marketing; hands-on Google Ads and LinkedIn Ads; marketing automation (HubSpot or Marketo); SQL or comfort in a BI tool; budget ownership over $300k.\n\nresume.txt:\nMarketing Manager — 5 years\n\nB2B SaaS throughout. I run paid search and paid social with a budget of about $450k a year that I control. HubSpot daily for three years — I built our lifecycle programme, nine automated flows. I pull my own reporting in HubSpot and Looker; I can read SQL but I do not write it from scratch. I have worked alongside content but never owned organic.",
+      "attachments": {
+        "jd.txt": "Growth Marketing Manager — Pinehaven Software\n\nOwn paid acquisition and lifecycle for our self-serve product. Run paid search and paid social, own the email lifecycle programme, partner with content on organic, and report on CAC and payback.\n\nRequirements: 4+ years B2B growth marketing; hands-on Google Ads and LinkedIn Ads; marketing automation (HubSpot or Marketo); SQL or comfort in a BI tool; budget ownership over $300k.",
+        "resume.txt": "Marketing Manager — 5 years\n\nB2B SaaS throughout. I run paid search and paid social with a budget of about $450k a year that I control. HubSpot daily for three years — I built our lifecycle programme, nine automated flows. I pull my own reporting in HubSpot and Looker; I can read SQL but I do not write it from scratch. I have worked alongside content but never owned organic."
+      }
+    },
+    {
+      "id": 218,
+      "derived_from": 18,
+      "arm": "B",
+      "expected": "resume-tailor",
+      "prompt": "attached: the job ad and my resume. cut whatever isn't relevant to this and move the right things up top. don't invent anything, I have to be able to back it all up in an interview.\n\njob-ad.txt:\nTechnical Program Manager — Cassylane Robotics\n\nDrive cross-functional programmes across hardware, firmware and cloud. Own schedules, risk registers and executive reporting for two product lines. Run the change-control process.\n\nRequirements: 5+ years technical programme management; hardware or embedded programmes; risk management; executive communication; comfort with engineering trade-offs.\n\nresume.txt:\nProject Manager — 7 years\n\nFour years managing software delivery at a fintech, three before that coordinating installations for an industrial automation vendor. At the vendor I ran installation programmes across hardware and controls teams — schedules, site readiness, change requests, weekly exec reporting to the client. At the fintech I run two squads' delivery and I own our risk register. My CV is currently ordered newest-first so the hardware work is at the bottom.",
+      "attachments": {
+        "job-ad.txt": "Technical Program Manager — Cassylane Robotics\n\nDrive cross-functional programmes across hardware, firmware and cloud. Own schedules, risk registers and executive reporting for two product lines. Run the change-control process.\n\nRequirements: 5+ years technical programme management; hardware or embedded programmes; risk management; executive communication; comfort with engineering trade-offs.",
+        "resume.txt": "Project Manager — 7 years\n\nFour years managing software delivery at a fintech, three before that coordinating installations for an industrial automation vendor. At the vendor I ran installation programmes across hardware and controls teams — schedules, site readiness, change requests, weekly exec reporting to the client. At the fintech I run two squads' delivery and I own our risk register. My CV is currently ordered newest-first so the hardware work is at the bottom."
+      }
+    },
+    {
+      "id": 221,
+      "derived_from": 21,
+      "arm": "B",
+      "expected": "either",
+      "siblings": [
+        "job-underwriter",
+        "resume-tailor"
+      ],
+      "prompt": "Should I apply to this one, and if the answer is yes, fix up my CV for it? JD and CV attached. I've got time for maybe two applications this week so I want to spend it well.\n\njd.txt:\nEngineering Manager, Payments — Torrance Bank\n\nLead two squads owning card authorisation and settlement. Own delivery, hiring and growth for 12 engineers. Partner with risk and compliance on regulated change.\n\nRequirements: 3+ years engineering management; payments or regulated fintech; hiring and performance management; comfort with compliance-driven delivery; strong stakeholder communication.\n\ncv.txt:\nEngineering Team Lead — 8 years\n\nSix years backend, two as team lead of five engineers at a payments processor. I own our authorisation service and I ran the migration off our legacy settlement batch. I run hiring for backend roles — about 30 interviews last year — and I do my team's performance reviews. I have not managed managers and I have not worked under a banking regulator, though our processor was PCI-DSS audited annually and I led our remediation.",
+      "attachments": {
+        "jd.txt": "Engineering Manager, Payments — Torrance Bank\n\nLead two squads owning card authorisation and settlement. Own delivery, hiring and growth for 12 engineers. Partner with risk and compliance on regulated change.\n\nRequirements: 3+ years engineering management; payments or regulated fintech; hiring and performance management; comfort with compliance-driven delivery; strong stakeholder communication.",
+        "cv.txt": "Engineering Team Lead — 8 years\n\nSix years backend, two as team lead of five engineers at a payments processor. I own our authorisation service and I ran the migration off our legacy settlement batch. I run hiring for backend roles — about 30 interviews last year — and I do my team's performance reviews. I have not managed managers and I have not worked under a banking regulator, though our processor was PCI-DSS audited annually and I led our remediation."
+      }
+    }
+  ]
+}

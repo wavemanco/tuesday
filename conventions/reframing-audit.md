@@ -2,7 +2,8 @@
 
 Canonical for every Tuesday skill that proposes language a candidate will say,
 write, or send. Skills carry a mirror of this file in their `references/` with a
-synced-from header; this copy wins on conflict.
+synced-from header; on a conflict between a mirror and the canonical file it
+names, the canonical file wins.
 
 It lives here rather than inside one skill because it is not one skill's
 property. job-underwriter proposes resume lines and outreach phrasing;

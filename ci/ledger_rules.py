@@ -576,6 +576,27 @@ def ledger_sentence(snapshot: str) -> str:
     return " ".join(para)
 
 
+# Rule 2's list form for that sentence: an item for each row, or group of rows, it
+# reads, each item its row IDs, a dash and a few words, and the items separated by
+# semicolons. A band may stand beside an ID ("R3 (`medium`)"), and an ID may carry
+# emphasis. A dash between two IDs is a range, which the ledger never writes, not the
+# item's dash. The form is read apart from the sentence count, which
+# after_ledger_claim reads: two sentences in the form are still two.
+_FORM_ID = r"[*_`]*" + ROW_ID + r"[*_`]*(?:\s*\(\s*`?(?:" + "|".join(BANDS) + r")`?\s*\))?"
+FORM_ITEM = re.compile(r"^" + _FORM_ID + r"(?:(?:\s*,\s*|,?\s+and\s+)" + _FORM_ID + r")*"
+                       r"(?:\s*—\s*|\s+[–-]{1,2}\s+)(?![*_`]*" + ROW_ID + r"\b)\S")
+
+
+def ledger_sentence_form(sentence: str) -> str | None:
+    """Why the sentence after the ledger (ledger_sentence) is not in rule 2's list form,
+    naming the first item that does not open with its row IDs and a dash; None when it
+    is in the form, or when there is no sentence."""
+    for item in (i for i in split_top(sentence.strip().rstrip("."), (";",)) if i):
+        if not FORM_ITEM.match(item):
+            return f"the item {item[:80]!r} does not open with its row IDs and a dash"
+    return None
+
+
 def snapshot_prose(snapshot: str) -> str:
     """The snapshot without the ledger's own lines, table rows and the Research tier
     line (bold or plain), whose counts are the tally's, not the map's."""

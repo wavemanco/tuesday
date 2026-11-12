@@ -34,7 +34,7 @@
     {
       "id": 4,
       "expected": "job-underwriter",
-      "prompt": "my recruiter friend forwarded me a Staff Designer opening at a company I've never heard of. before I spend a saturday on the portfolio case study they want, is this actually a real opportunity worth that time? here's the posting: [link]",
+      "prompt": "my recruiter friend forwarded me a Staff Designer opening at a company I've never heard of. before I spend a saturday on the portfolio case study they want, is this actually a real opportunity worth that time? here's the posting:\n\nStaff Product Designer — Larkspur Systems\nRemote (US or EU time zones). Lead design for our scheduling platform: own the end-to-end experience for two product areas, set the bar for craft across a team of six designers, and partner with product and engineering leads on the roadmap.\n\nRequirements: 8+ years of product design, 2+ at staff level or above; a portfolio showing systems-level work; experience building or evolving a design system.\n\nHow to apply: send your CV and complete our portfolio case study — redesign a multi-step onboarding flow and present your process (expect 6 to 8 hours). Compensation: competitive, discussed at offer stage.",
       "why": "Effort-allocation decision about a specific role. 'Worth that time' is evaluation, not preparation."
     },
     {
@@ -64,6 +64,7 @@
     {
       "id": 9,
       "expected": "either",
+      "siblings": ["job-underwriter", "mock-interview"],
       "prompt": "Should I apply to this Principal PM role, and if the answer is yes, prep me for it? JD attached, CV attached, they move fast so I'd likely hear back this week.",
       "why": "The interaction grammar's own spanning example. Either may fire; whichever does must do its own job fully and name the sibling in one sentence rather than attempting both.",
       "spanning_rule": "interaction-grammar.md section 6",
@@ -75,6 +76,7 @@
     {
       "id": 10,
       "expected": "either",
+      "siblings": ["job-underwriter", "mock-interview"],
       "prompt": "I have an interview Thursday for a role I'm genuinely not sure I want. The scope sounds inflated for the title and the comp band is below what I'm on now, but I said yes to the call. Not sure whether to prep properly or cancel.",
       "why": "Evaluation and rehearsal are both live and the user has not chosen between them. Either skill firing is defensible; neither may silently do the sibling's job."
     },
@@ -115,7 +117,7 @@
     {
       "id": 16,
       "expected": "resume-tailor",
-      "prompt": "quick one — for this posting [pasted], which of my bullets should I lead with? my resume's below. i've got about 20 bullets across 3 roles and i think the order is wrong.",
+      "prompt": "quick one — for this posting [pasted], which of my bullets should I lead with? my resume's below. i've got about 20 bullets across 3 roles and i think the order is wrong.\n\nthe posting:\nSenior Product Analyst — Corvel Health\nOwn analytics for our patient-scheduling product. Define and track the product's core metrics, design and read A/B tests, partner with product managers on roadmap calls, and build self-serve dashboards for the product team.\n\nRequirements: 4+ years in product or data analytics; strong SQL; experiment design and analysis; clear communication with non-technical stakeholders. Nice to have: Python or R; healthcare experience.\n\nmy resume:\nData Analyst, Brightline Retail (2022–present)\n- Build and maintain the weekly trading report for the merchandising team\n- Migrated 40 legacy Excel reports to Looker\n- Write SQL against our Snowflake warehouse daily\n- Answer ad hoc data requests from buyers and store operations\n- Ran the analysis for 12 checkout A/B tests with the e-commerce product manager\n- Designed the test plan for a free-delivery threshold experiment that raised basket size 6%\n- Built the self-serve conversion dashboard the product team uses in its weekly review\n- Mentor two junior analysts\n\nBusiness Analyst, Okafor Logistics (2020–2022)\n- Produced monthly KPI packs for the operations director\n- Documented requirements for a route-planning tool rollout\n- Cleaned and reconciled depot data across 14 sites\n- Built a Python script that cut the month-end reconciliation from two days to three hours\n- Presented delivery-time findings to the regional leadership team\n- Defined on-time delivery metrics with the product owner of the driver app\n- Trained depot managers on the new reporting portal\n\nReporting Analyst, Meridian Insurance (2018–2020)\n- Maintained claims dashboards in Tableau\n- Wrote SQL extracts for the actuarial team\n- Automated the quarterly regulatory return\n- Answered data requests from the claims and underwriting teams\n- Joined the data-quality working group",
       "why": "A small, single-question tailoring ask. Tests that the skill fires on the reduced version rather than only on a full rewrite request."
     },
     {
@@ -153,6 +155,7 @@
     {
       "id": 21,
       "expected": "either",
+      "siblings": ["job-underwriter", "resume-tailor"],
       "prompt": "Should I apply to this one, and if the answer is yes, fix up my CV for it? JD and CV attached. I've got time for maybe two applications this week so I want to spend it well.",
       "why": "Spans job-underwriter and resume-tailor. Whichever fires must do its own job fully and name the sibling in one sentence rather than attempting both.",
       "spanning_rule": "interaction-grammar.md section 6",

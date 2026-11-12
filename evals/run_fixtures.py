@@ -57,8 +57,10 @@ re-run with the skill named — in a fresh room, because the first attempt's
 files and searches would otherwise be credited to the response being graded. A
 run that never fires it is harness-invalid: it is not this skill's output.
 
-**What the graders are told.** The prompt states the room's actual research mode
-and carries a "What the harness observed" block: the calls the run actually
+**What the graders are told.** The response sits between two marker lines the
+prompt names, and nothing outside them is the response's text, so the record
+after it is never read as its closing lines. The prompt states the room's actual
+research mode and carries a "What the harness observed" block: the calls the run actually
 sent, or that it sent none, or — for a run saved before this record existed —
 that nothing was recorded and research counts must not be graded. Graders had
 been failing true claims of refused searches because nothing told them the
@@ -92,6 +94,9 @@ Regrading. Grade files are never overwritten: `--skip-execute` refuses an --out
 that already holds them. `--regrade-from SRC --out NEW` copies SRC's responses
 and meta into a fresh directory, reconstructs the research record of runs saved
 before it existed (`backfill_tools.py`), and grades and checks them there.
+`--stems FILE` re-runs the runs a file names, each under its own run number, in an --out
+that holds none of their files; with --skip-execute it grades those of them that hold a
+response and no grade file.
 
 Usage:
     python evals/run_fixtures.py --out /tmp/clean-room --model claude-sonnet-5
@@ -100,11 +105,19 @@ Usage:
     python evals/run_fixtures.py --out /tmp/cr --skip-execute   # grade saved, ungraded runs
     python evals/run_fixtures.py --regrade-from /tmp/cr --out /tmp/cr-regrade --expectation 14
     python evals/run_fixtures.py --skill job-underwriter --cases probe.json --out /tmp/p
+    python evals/run_fixtures.py --stems killed.txt --out /tmp/cr                # re-run named runs in place
+    python evals/run_fixtures.py --via frontdoor --out /tmp/fd   # each fixture through the front door
+    python evals/run_fixtures.py --layout plugin --out /tmp/alone # each module alone, installed as the front door is
+
+`--via frontdoor` runs each module's fixtures with the front door installed as the
+Claude Code plugin ships it; `--layout plugin` installs a module alone the same way, the
+control a comparison through Tuesday uses (evals/README.md, "Through Tuesday").
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import functools
 import hashlib
 import json
@@ -120,17 +133,33 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import output_checks  # noqa: E402
-from fixture_clauses import load_cases  # noqa: E402
+import run_routing  # noqa: E402  (the front door's plugin install and routing reader, for --via frontdoor)
+from child_env import child_env  # noqa: E402
+from fixture_clauses import dated, load_cases  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
 SERVER = Path(__file__).resolve().parent / "research_server.py"
 MODES = ("denied", "canned")
+# How a fixture's module reaches the room: installed alone (`skill`), or through the front door.
+VIAS = ("skill", "frontdoor")
+# Where a run's skills sit (evals/README.md, "Through Tuesday"): the room's own `.claude/skills/`
+# (`project`: the module alone, as every ledger baseline before the arms shared an install), or a
+# plugin of the room's own beside it (`plugin`: the front door as it ships, or the module alone
+# installed the same way, so the two arms differ only in what the plugin holds).
+LAYOUTS = ("project", "plugin")
+# The tools a refused save is a refusal of (`refusals`).
+SAVE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 SEARCH_KIND = output_checks.SEARCH_KIND
 PERMISSION_TEXT = re.compile(r"requested permissions|haven't granted|permission to use|"
                              r"not allowed|was denied|denied by", re.I)
 
-GRADER_PROMPT_VERSION = "2"
+GRADER_PROMPT_VERSION = "3"
+# The two lines the grader prompt fences the response between, and names (version 3). Version 2
+# put the harness's record straight after the response, unmarked, and graders read the record
+# as the response's own closing text (evals/README.md, "What the graders see").
+RESPONSE_BEGINS = "===== RESPONSE BEGINS ====="
+RESPONSE_ENDS = "===== RESPONSE ENDS ====="
 
 GRADER_PROMPT = """You are grading one response against a fixed list of expectations.
 
@@ -164,9 +193,11 @@ Four rules that are not about being lenient, but about grading the right thing:
 
 ## The response to grade
 
-This is everything the response produced. Where it delivered by writing a file, that file's full contents appear below the chat text under a `----- file the response produced -----` marker, and it counts exactly as if it had been written inline.
+This is everything the response produced, between the line `{begins}` and the line `{ends}`. Nothing outside those two lines is text the response wrote. Where it delivered by writing a file, that file's full contents appear below the chat text under a `----- file the response produced -----` marker, and it counts exactly as if it had been written inline.
 
+{begins}
 {response}
+{ends}
 
 ## What the harness observed
 
@@ -225,6 +256,70 @@ def install_one(root: Path, skill: str, run_id: str) -> str:
         raise SystemExit(f"{skill}: frontmatter name not found to rename")
     skill_md.write_text(renamed)
     return name
+
+
+def install_in_plugin(room: Path, run_id: str, module: str | None = None) -> tuple[Path, dict[str, str]]:
+    """Install a fixture run's skills as the routing arm's plugin layout installs them, in a
+    plugin folder beside the room, never in it (`run_routing.install_plugin`): the front door,
+    the hub and the three hidden modules; or, given `module`, that module alone, visible, the
+    module-alone arm's plugin install. Return the plugin folder and name -> installed name."""
+    plugin = run_routing.home(room, "plugin")
+    return plugin, run_routing.install_plugin(plugin, run_id, module)
+
+
+def save_rules(room: Path) -> list[str]:
+    """The permission rules that let a run save inside its own room, as a user who answers the save
+    prompt with "allow edits in this folder" would (the owner's decision 4; evals/README.md,
+    "Through Tuesday"): `Edit` on every file under the room, which covers the edit tools, and,
+    when the room is reached through a symlink, the same rule on its resolved path. Nothing
+    else is writable: the plugin folder beside the room, which holds the skills, stays refused."""
+    rules = [f"Edit(/{room.absolute().as_posix()}/**)"]
+    resolved = f"Edit(/{room.resolve().as_posix()}/**)"
+    return rules + ([resolved] if resolved not in rules else [])
+
+
+def plugin_flags(flags: list[str], room: Path) -> list[str]:
+    """A room's flags with its plugin added, the plugin's skills folder readable and the room
+    writable: `--plugin-dir`, and the routing arm's read rule (`run_routing.read_rule`) and the
+    room's save rules (`save_rules`) joined to the room's one `--allowedTools` list, or given
+    their own when the room has none. Both arms' plugin installs run under exactly these; the
+    project layout and the graders get no save rule."""
+    flags, rules = list(flags), [run_routing.read_rule(room, "plugin"), *save_rules(room)]
+    if "--allowedTools" in flags:
+        at = flags.index("--allowedTools") + 1
+        flags[at:at] = rules
+    else:
+        flags += ["--allowedTools", *rules]
+    return flags + ["--plugin-dir", str(run_routing.home(room, "plugin"))]
+
+
+def room_writable(flags: list[str], room: Path) -> bool:
+    """Whether a run's flags let it save inside its room (`save_rules`), recorded on every
+    invocation and run (`room_writable`)."""
+    return all(rule in flags for rule in save_rules(room))
+
+
+def frontdoor_fire(lines, names: dict[str, str], skill: str, room: Path) -> str:
+    """`fired` when a run through the front door read `skill`'s playbook through the hub and
+    reached no hidden module; otherwise the routing reader's label for what the run did
+    instead (`run_routing.RunReader`, front-door arm: another module, `hidden-<module>`,
+    `tuesday-unrouted`, `neither`, `void`, `error`). The same reader scores the routing arm,
+    so a fire here is a route there."""
+    reader = run_routing.RunReader(names, "frontdoor", None, "plugin", room)
+    outcome = None
+    for line in lines:
+        event = line
+        if not isinstance(line, dict):
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if isinstance(event, dict):
+            outcome = reader.feed(event)
+            if outcome:
+                break
+    outcome = outcome or reader.exited()
+    return "fired" if outcome == skill else outcome
 
 
 CLI_FAILURE_MARKERS = (
@@ -286,8 +381,8 @@ def claude(prompt: str, cwd: Path, timeout: int, extra_args=(), output: str = "s
     fmt = {"stream": ["--output-format", "stream-json", "--verbose"],
            "json": ["--output-format", "json"]}[output]
     cmd = ["claude", "-p", *fmt, *extra_args]
-    # CLAUDECODE guards interactive terminal nesting; a subprocess run is safe.
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    # Only the room's own skills: no synced account skills, no parent session (child_env).
+    env = child_env()
     try:
         proc = subprocess.run(cmd, input=prompt, cwd=str(cwd), env=env,
                               capture_output=True, text=True, timeout=timeout)
@@ -360,7 +455,11 @@ def parse_stream(lines, installed_name: str) -> dict:
                   incomplete=True when no result event arrived (a timeout);
       tool_calls  every tool_use joined to its tool_result by id.
     """
-    base = re.sub(r"-[0-9a-f]{8}$", "", installed_name or "")
+    # A plugin's skill is listed and called by its plugin-qualified id, `<plugin>:<name>`, a call
+    # may give the name alone, and either may follow one `/`: every name is read as the routing
+    # reader reads it, by the part after the colon (run_routing.local_name).
+    local = run_routing.local_name(installed_name or "")
+    base = re.sub(r"-[0-9a-f]{8}$", "", local)
     text, calls, order, fired_skills, denied_events = [], {}, [], [], []
     init, result = {}, None
     for line in lines:
@@ -383,9 +482,9 @@ def parse_stream(lines, installed_name: str) -> dict:
                     "tools": event.get("tools") or [],
                     "mcp_servers": event.get("mcp_servers") or [],
                     "skills": len(skills),
-                    "installed_loaded": installed_name in skills,
-                    "competing_skills": [s for s in skills
-                                         if base and base in s and s != installed_name],
+                    "installed_loaded": bool(local) and any(run_routing.local_name(s) == local for s in skills),
+                    "competing_skills": [s for s in skills if base and base in run_routing.local_name(s)
+                                         and run_routing.local_name(s) != local],
                     "session_id": event.get("session_id"),
                     "cwd": event.get("cwd")}
         elif kind == "system" and event.get("subtype") == "permission_denied":
@@ -424,8 +523,8 @@ def parse_stream(lines, installed_name: str) -> dict:
     if result is None:
         result = {"subtype": None, "is_error": None, "num_turns": None, "modelUsage": None,
                   "permission_denials": denied_events, "incomplete": True}
-    names = [s.split(":")[-1] for s in fired_skills]
-    fire = "fired" if installed_name and installed_name in names else \
+    names = [run_routing.local_name(s) for s in fired_skills]
+    fire = "fired" if local and local in names else \
         ("wrong_skill" if fired_skills else "not_fired")
     return {"text": "\n".join(text), "fire": fire, "skills_fired": fired_skills,
             "init": init, "result": result, "tool_calls": [calls[t] for t in order]}
@@ -509,7 +608,9 @@ def classify_room(mode: str, invocation: dict, calls_log: list[dict] | None) -> 
     """
     reasons = []
     if invocation.get("fire") != "fired":
-        reasons.append(f"the installed skill never fired ({invocation.get('fire')})")
+        reasons.append(f"the installed skill never fired ({invocation.get('fire')})"
+                       if invocation.get("via", "skill") == "skill" else
+                       f"the module's playbook was not read through the front door ({invocation.get('fire')})")
     init = invocation.get("init") or {}
     calls = invocation.get("tool_calls") or []
     denied_ids = {d.get("tool_use_id") for d in
@@ -639,7 +740,8 @@ def write_research_files(case: dict, paths: dict) -> None:
     research = case.get("research") or {}
     paths["corpus"].parent.mkdir(parents=True, exist_ok=True)
     paths["corpus"].write_text(json.dumps({"entity_tokens": research.get("entity_tokens", []),
-                                           "pages": research.get("pages", [])}, indent=1))
+                                           "pages": research.get("pages", []),
+                                           "user_pages": research.get("user_pages", [])}, indent=1))
     paths["mcp"].write_text(json.dumps({"mcpServers": {"web": {
         "type": "stdio", "command": "python3",
         "args": ["-I", str(SERVER), str(paths["corpus"]), str(paths["calls"])]}}}, indent=1))
@@ -702,27 +804,76 @@ def write_meta(out: Path, stem: str, meta: dict) -> None:
     (out / f"{stem}.meta.json").write_text(json.dumps(meta, indent=2) + "\n")
 
 
+def refusals(invocation: dict) -> tuple[dict[str, int] | None, bool | None]:
+    """The tool calls the CLI refused an invocation for want of permission, counted by tool, and
+    whether a save (SAVE_TOOLS) was among them, from its result event's `permission_denials`.
+    (None, None) for a run that ended before its result event: its list was never read, so it is
+    not counted as none. Recorded on every run and reported, never scored."""
+    result = invocation.get("result") or {}
+    if not result or result.get("incomplete"):
+        return None, None
+    counts: dict[str, int] = {}
+    for denial in result.get("permission_denials") or []:
+        if isinstance(denial, dict):
+            tool = str(denial.get("tool_name"))
+            counts[tool] = counts.get(tool, 0) + 1
+    return dict(sorted(counts.items())), any(tool in counts for tool in SAVE_TOOLS)
+
+
+def run_date(meta: dict) -> datetime.date | None:
+    """The date a run recorded as `run_date`, which its fixture's relative dates were written
+    for; None for a run saved before runs recorded one, whose fixture is then written at its
+    `date_anchor` (fixture_clauses.dated), the text such a run was sent."""
+    try:
+        return datetime.date.fromisoformat(meta.get("run_date") or "")
+    except (TypeError, ValueError):
+        return None
+
+
 def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
-            model: str | None, mode: str | None = None) -> dict:
-    """Run one fixture in a clean room and save the response plus the room's record."""
+            model: str | None, mode: str | None = None, via: str = "skill",
+            layout: str | None = None, on: datetime.date | None = None) -> dict:
+    """Run one fixture in a clean room and save the response plus the room's record.
+
+    In a plugin (`layout="plugin"`, which the front door always is) the room is named for the
+    case alone, since the plugin's folder path reaches the model and a module's name in it would
+    point the route. The fixture's relative dates are written for the run's date, `on` (today
+    unless given), which the meta records as `run_date`.
+    """
+    layout = layout or ("plugin" if via == "frontdoor" else "project")
+    if via == "frontdoor" and layout != "plugin":
+        raise ValueError("the front door is installed as the plugin it ships as: layout plugin")
+    on = on or datetime.date.today()
+    case = dated(case, on)
     mode = mode or modes_of(case)[0]
     stem = stem_for(skill, case, mode, run)
     meta = {"skill": skill, "id": case["id"], "run": run, "mode": mode, "stem": stem,
-            "model": model, "invocations": []}
+            "model": model, "via": via, "layout": layout, "run_date": on.isoformat(), "invocations": []}
     parsed = None
     for nudged in (False, True):
         run_id = uuid.uuid4().hex[:8]
-        room = out / "rooms" / f"{skill}-{case['id']}-{mode}-{run_id}"
+        room = out / "rooms" / (f"{skill}-{case['id']}-{mode}-{run_id}" if layout == "project"
+                                else f"case-{case['id']}-{mode}-{run_id}")
         room.mkdir(parents=True, exist_ok=True)
-        name = install_one(room, skill, run_id)
+        if layout == "plugin":
+            skill_dir, names = install_in_plugin(room, run_id, None if via == "frontdoor" else skill)
+            listed = run_routing.HUB if via == "frontdoor" else skill
+            name = run_routing.installed_command(names[listed], run_routing.plugin_prefix(names, "plugin"))
+        else:
+            name = install_one(room, skill, run_id)
+            skill_dir, names = room / ".claude" / "skills" / name, None
         paths = research_paths(out, room, "nudged" if nudged else "first") \
             if mode == "canned" else None
         if paths:
             write_research_files(case, paths)
         flags = room_flags(mode, paths) + (["--model", model] if model else [])
+        if layout == "plugin":
+            flags = plugin_flags(flags, room)
         prompt = case["prompt"] if not nudged else \
             f"Use the {name} skill for this.\n\n{case['prompt']}"
         invocation = {"room": str(room), "nudged": nudged, "installed": name, "flags": flags,
+                      "via": via, "layout": layout, "room_writable": room_writable(flags, room),
+                      "skill_dir": str(skill_dir),
                       "calls_log": str(paths["calls"]) if paths else None}
         meta["invocations"].append(invocation)
         try:
@@ -736,21 +887,28 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 (out / "streams").mkdir(exist_ok=True)
                 (out / "streams" / f"{room.name}.partial.jsonl").write_text(stdout)
             partial = parse_stream(stdout.splitlines(), name)
+            if via == "frontdoor":
+                partial["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
             invocation.update(outcome="timeout" if isinstance(exc, CLITimeout) else "declined",
                               error=str(exc), fire=partial["fire"], init=partial["init"],
                               result=partial["result"], tool_calls=partial["tool_calls"],
                               research_log=build_research_log(
                                   partial["tool_calls"], partial["result"]["permission_denials"],
                                   read_calls(paths["calls"]) if paths else []))
+            refused, save_refused = refusals(invocation)
             meta.update(error=str(exc), outcome=invocation["outcome"],
                         graded_invocation=None, research_log=None,
+                        refused=refused, save_refused=save_refused, room_writable=invocation["room_writable"],
                         harness={"status": "harness-invalid", "reasons": [f"skipped: {exc}"]})
             write_meta(out, stem, meta)
             print(f"  SKIPPED {skill} eval {case['id']} [{mode}] (run {run}): {exc}", flush=True)
             return meta
         streams = out / "streams"
         streams.mkdir(exist_ok=True)
-        (streams / f"{room.name}.jsonl").write_text(parsed.pop("stdout", ""))
+        stdout = parsed.pop("stdout", "")
+        (streams / f"{room.name}.jsonl").write_text(stdout)
+        if via == "frontdoor":
+            parsed["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
         calls = read_calls(paths["calls"]) if paths else []
         invocation.update(outcome="completed", fire=parsed["fire"],
                           skills_fired=parsed["skills_fired"], init=parsed["init"],
@@ -767,7 +925,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     graded = meta["invocations"][-1]
     status, reasons = classify_room(mode, graded, read_calls(graded.get("calls_log")))
     room = Path(graded["room"])
-    artifacts = collect_artifacts(room, room / ".claude" / "skills" / graded["installed"])
+    artifacts = collect_artifacts(room, Path(graded["skill_dir"]))
     text = parsed["text"]
     if artifacts:
         text += "\n\n" + "\n\n".join(
@@ -781,16 +939,23 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 chars=len(text), response_file=body.name, artifacts=[a[0] for a in artifacts],
                 research_log=graded["research_log"],
                 harness={"status": status, "reasons": reasons})
+    meta["refused"], meta["save_refused"] = refusals(graded)
+    meta["room_writable"] = graded["room_writable"]
     write_meta(out, stem, meta)
     init = graded.get("init") or {}
     read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
     links = sum(len(fetches) for fetches in [*read.values(), *unread.values()])
-    print(f"  ran {skill} eval {case['id']} [{mode}] (run {run}): {len(text)} chars"
+    where = " via the front door" if via == "frontdoor" else " alone, in a plugin" if layout == "plugin" else ""
+    refused = ", ".join(f"{tool} {n}" for tool, n in (meta["refused"] or {}).items())
+    print(f"  ran {skill} eval {case['id']} [{mode}]{where} "
+          f"(run {run}): {len(text)} chars"
           f"{f', {len(artifacts)} file(s)' if artifacts else ''}"
           f"{'' if not graded['nudged'] else ' (needed a nudge to fire)'}"
           f", {len(graded['research_log']) - links} research call(s)"
           f"{f', {len(read)} user link(s) read' if read else ''}"
-          f"{f', {len(unread)} user link(s) not opened' if unread else ''}, model {init.get('model')}"
+          f"{f', {len(unread)} user link(s) not opened' if unread else ''}"
+          f"{f', refused {refused}' + (' (a save among them)' if meta['save_refused'] else '') if refused else ''}"
+          f", model {init.get('model')}"
           f"{'' if status == 'ok' else ' — HARNESS-INVALID: ' + '; '.join(reasons)}", flush=True)
     return meta
 
@@ -949,6 +1114,7 @@ def grader_prompt(case: dict, body: str, mode: str, meta: dict, numbers: list[in
         for n in numbers)
     return GRADER_PROMPT.format(
         research_mode=RESEARCH_MODE[mode], prompt=case["prompt"], response=body,
+        begins=RESPONSE_BEGINS, ends=RESPONSE_ENDS,
         observed=observed_block(meta, case.get("research")), expectations=expectations,
         sites=SITES_INSTRUCTION if enumerate_ns & set(numbers) else "")
 
@@ -989,13 +1155,18 @@ def untraced_sites(verdicts: list[dict], enumerate_ns) -> dict[str, int]:
 
 def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int,
           model: str | None, mode: str | None = None, only=None) -> dict:
-    """Score one saved response against its expectations (or the `only` subset)."""
+    """Score one saved response against its expectations (or the `only` subset), the fixture's
+    relative dates written for the date the run recorded (`run_date`)."""
     mode = mode or modes_of(case)[0]
     stem = stem_for(skill, case, mode, run)
     base = {"skill": skill, "id": case["id"], "run": run, "mode": mode, "grader": grader}
     body_path = out / f"{stem}.md"
     meta_path = out / f"{stem}.meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    # An expectation is hashed as the fixture writes it, its relative dates unwritten: the
+    # question asked is the same on every run date (recurring.py keys verdicts by the hash).
+    template = case["expectations"]
+    case = dated(case, run_date(meta))
     if not body_path.exists():
         # Silent here would drop the run out of the log entirely, leaving a reader
         # to infer from a gap in the grader numbering that anything happened.
@@ -1056,8 +1227,7 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
                               for k, v in usage.items()},
               "requested_model": model, "cli_version": cli_version(), "flags": flags,
               "grader_prompt_version": GRADER_PROMPT_VERSION,
-              "expectation_sha256": {str(n): expectation_sha(case["expectations"][n - 1])
-                                     for n in numbers},
+              "expectation_sha256": {str(n): expectation_sha(template[n - 1]) for n in numbers},
               "untraced_sites": untraced_sites(result["verdicts"], case.get("enumerate"))}
     (out / f"{stem}.grade-{grader}.json").write_text(json.dumps(record, indent=2) + "\n")
     verdicts = record["verdicts"]
@@ -1076,10 +1246,12 @@ def grade(skill: str, case: dict, out: Path, run: int, grader: int, timeout: int
 
 
 def check_run(skill: str, case: dict, out: Path, run: int, mode: str) -> dict:
-    """Run the deterministic checks on one saved response; write {stem}.checks.json."""
+    """Run the deterministic checks on one saved response, the fixture's relative dates written
+    for the date the run recorded (`run_date`); write {stem}.checks.json."""
     stem = stem_for(skill, case, mode, run)
     meta_path, body_path = out / f"{stem}.meta.json", out / f"{stem}.md"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    case = dated(case, run_date(meta))
     status, reasons = harness_status(meta)
     if status == "ok" and not body_path.exists():
         status, reasons = "harness-invalid", ["no response saved"]
@@ -1087,9 +1259,9 @@ def check_run(skill: str, case: dict, out: Path, run: int, mode: str) -> dict:
     # Every fixture's turn delivers output, so every run is held to the skill's
     # watch-out line, read from the SKILL.md it declares it in.
     skill_md = REPO / "skills" / skill / "SKILL.md"
-    sentence = output_checks.declared_watch_out(skill_md.read_text()) if skill_md.exists() else None
+    line = output_checks.declared_watch_out(skill_md.read_text()) if skill_md.exists() else None
     record = output_checks.run_checks(case, mode, body, meta.get("research_log"), status, reasons,
-                                      watch_out=sentence or "")
+                                      watch_out=line or "")
     record = {"skill": skill, "id": case["id"], "run": run, "stem": stem, **record}
     (out / f"{stem}.checks.json").write_text(json.dumps(record, indent=2) + "\n")
     return record
@@ -1145,6 +1317,8 @@ def classify(results: list[dict], checks_results: list[dict], runs: list[int],
         if c.get("run") not in valid:
             continue
         for item in c.get("checks", []):
+            if item.get("kind") == "report":   # never a defect (output_checks.REPORTED)
+                continue
             key = f"chk:{item['check']}:{item['target']}"
             check_keys.setdefault(key, item)
     for key, sample in check_keys.items():
@@ -1208,6 +1382,40 @@ def copy_for_regrade(src: Path, out: Path) -> int:
     return copied
 
 
+STEM = re.compile(r"^(.+)\.run(\d+)$")
+
+
+def listed_runs(path: Path, work: list[tuple]) -> list[tuple]:
+    """The runs a `--stems` file lists, one stem a line (blank lines and lines starting with `#`
+    ignored), as (skill, case, mode, run) in the order listed, each under its own run number.
+    Raises ValueError for a stem that names no fixture and room of this pass's `work`, a stem
+    listed twice, and a file that lists none."""
+    prefixes = {stem_for(s, c, m, 0)[:-len(".run0")]: (s, c, m) for s, c, m in work}
+    runs, seen = [], set()
+    for line in path.read_text().splitlines():
+        stem = line.strip()
+        if not stem or stem.startswith("#"):
+            continue
+        match = STEM.match(stem)
+        if not match or match.group(1) not in prefixes:
+            raise ValueError(f"--stems: {stem!r} names no fixture and room this pass runs "
+                             f"(a stem is <skill>-<id>.run<n>, or <skill>-<id>.<mode>.run<n> for a fixture "
+                             f"with more than the denied room)")
+        if stem in seen:
+            raise ValueError(f"--stems: {stem!r} is listed twice")
+        seen.add(stem)
+        skill, case, mode = prefixes[match.group(1)]
+        runs.append((skill, case, mode, int(match.group(2))))
+    if not runs:
+        raise ValueError(f"--stems: {path} lists no run")
+    return runs
+
+
+def stem_files(out: Path, stem: str) -> list[str]:
+    """The files of one run in a set's folder: its response, meta, checks and grade files."""
+    return sorted(p.name for p in out.glob(f"{stem}.*") if p.is_file())
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skill", action="append", choices=SKILLS, default=[])
@@ -1232,7 +1440,24 @@ def main() -> int:
                     help="grade only this expectation number (repeatable)")
     ap.add_argument("--cases", default=None,
                     help="load cases from this JSON instead of skills/<skill>/evals/evals.json")
+    ap.add_argument("--via", choices=VIAS, default="skill",
+                    help="skill: each module installed alone (the default); frontdoor: the front door "
+                         "installed as the plugin ships it, a fire counting only through the hub")
+    ap.add_argument("--layout", choices=LAYOUTS, default=None,
+                    help="where the skills sit: project, the room's .claude/skills/ (the default with --via "
+                         "skill); plugin, a plugin beside the room, as the front door always is — with --via "
+                         "skill, the module alone installed exactly as the front door is, the control a "
+                         "comparison through Tuesday uses")
+    ap.add_argument("--stems", default=None,
+                    help="a file listing runs by stem, one a line: run only those, each under its own run "
+                         "number, in --out, where none of their files may exist yet; with --skip-execute, grade "
+                         "only those that hold a response and no grade file. No retry pass follows")
     args = ap.parse_args()
+    if args.via == "frontdoor" and args.layout == "project":
+        ap.error("--via frontdoor installs the front door as the plugin it ships as: --layout plugin")
+
+    if args.stems and args.regrade_from:
+        ap.error("--stems re-runs or grades named runs in place, in --out; it does not combine with --regrade-from")
 
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -1249,7 +1474,7 @@ def main() -> int:
             import backfill_tools
             backfill_tools.backfill_dir(out)
         skip_execute = True
-    elif skip_execute and any(out.glob("*.grade-*.json")):
+    elif skip_execute and not args.stems and any(out.glob("*.grade-*.json")):
         ap.error(f"{out} already holds grade files; regrade into a fresh directory with "
                  f"--regrade-from {out} --out <new dir>")
     if args.cases and len(args.skill) != 1:
@@ -1258,6 +1483,19 @@ def main() -> int:
     skills = args.skill or SKILLS
     work = [(s, c, m) for s in skills for c in cases_for(s, args.eval, args.cases)
             for m in modes_of(c)]
+    listed = None
+    if args.stems:
+        try:
+            listed = listed_runs(Path(args.stems), work)
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
+        if not skip_execute:
+            # Nothing is overwritten: a run is re-run only where the folder holds none of its files
+            # (a killed run's files move to killed/ first, evals/README.md "Regrading a saved set").
+            held = {stem: files for s, c, m, r in listed if (files := stem_files(out, stem := stem_for(s, c, m, r)))}
+            if held:
+                ap.error("--stems runs a listed run only where --out holds none of its files: "
+                         + "; ".join(f"{stem} holds {', '.join(files)}" for stem, files in held.items()))
     results: dict[tuple, list[dict]] = {(s, c["id"], m): [] for s, c, m in work}
     checks: dict[tuple, list[dict]] = {(s, c["id"], m): [] for s, c, m in work}
     runs_done: dict[tuple, list[int]] = {(s, c["id"], m): [] for s, c, m in work}
@@ -1270,7 +1508,7 @@ def main() -> int:
             print(f"\n{label}: executing {len(jobs)} fixture run(s)")
             with ThreadPoolExecutor(max_workers=args.workers) as pool:
                 list(pool.map(lambda j: execute(j[0], j[1], out, j[3], args.timeout,
-                                               args.model, j[2]), jobs))
+                                               args.model, j[2], args.via, args.layout), jobs))
         for skill, case, mode, run in jobs:
             checks[(skill, case["id"], mode)].append(check_run(skill, case, out, run, mode))
         print(f"\n{label}: grading {len(jobs)} response(s), {args.graders} grader(s) each")
@@ -1284,7 +1522,23 @@ def main() -> int:
         for skill, case, mode, run in jobs:
             runs_done[(skill, case["id"], mode)].append(run)
 
-    if skip_execute:
+    if listed is not None and skip_execute:
+        # Grades are never overwritten: of the listed runs, those that hold a response and no grade
+        # file are graded, whatever the folder's other runs hold.
+        jobs = []
+        for s, c, m, r in listed:
+            stem = stem_for(s, c, m, r)
+            if not (out / f"{stem}.md").exists():
+                print(f"  not graded {stem}: it holds no response")
+            elif any(out.glob(f"{stem}.grade-*.json")):
+                print(f"  not graded {stem}: it already holds a grade file, which is never overwritten")
+            else:
+                jobs.append((s, c, m, r))
+        pass_over(jobs, "listed runs")
+    elif listed is not None:
+        # No retry pass: its run numbers follow the listed runs' and could be ones the folder holds.
+        pass_over(listed, "listed runs")
+    elif skip_execute:
         pass_over([(s, c, m, r) for s, c, m in work for r in runs_on_disk(out, s, c, m)],
                   "saved runs")
     else:
@@ -1338,7 +1592,7 @@ def main() -> int:
                 per_grader.append(f"grader {g} {passed}/{len(vs)} of {total}{gaps}")
             rec = next((c for c in checks[key] if c.get("run") == run), None)
             if rec:
-                failed = [c for c in rec["checks"] if c["verdict"] == "FAIL"]
+                failed = [c for c in rec["checks"] if c["verdict"] == "FAIL" and c.get("kind") != "report"]
                 kinds = [c.get("kind", "judgement") for c in failed]
                 fixture = (f", {kinds.count('fixture')} fixture error"
                            if "fixture" in kinds else "")

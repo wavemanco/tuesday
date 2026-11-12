@@ -5,8 +5,20 @@
      A byte check strips this header and compares the remainder to canonical. -->
 # Output discipline
 
+## Contents
+
+- How to read this file
+- 1. The question budget is counted across the whole message
+- 2. Enum cells hold exactly one token
+- 3. Square brackets are reserved for provenance labels — **absolute**
+- 4. The calls to action close the message, and only the watch-out follows them
+- 5. A sibling skill is named, not lobbied for
+- 6. A claim about the world lives in a row, not in prose
+- 7. A delivered output ends with its skill's watch-out
+
 Canonical for every Tuesday skill. Skills carry a mirror of this file in their
-`references/` with a synced-from header; this copy wins on conflict.
+`references/` with a synced-from header; on a conflict between a mirror and the
+canonical file it names, the canonical file wins.
 
 Seven rules about the *shape* of a delivered response. The first six were each
 learned from a measured defect in a clean-room run, and three of them were fixed
@@ -94,7 +106,7 @@ mapping per declared enum, `field=file.md#Section/Column`, naming a column of th
 first worked table under that `##` section of one of its own references, never a
 mirrored one — and CI fails a declared enum with no mapping, a mapping to no such
 file, section, table or column, a mapping into a mirror, or a mapping for an
-undeclared field (`CONTRIBUTING.md`).
+undeclared field (the suite's contributing guide).
 
 **Parameter: `qualifier_fields`** — the free-text columns a qualifier goes to when
 it will not fit an enum cell. Every field named here must exist as a column in the
@@ -189,19 +201,20 @@ version of it. A suite with this many real checks can afford to name the gap.
 
 **Invariant.** A response that delivers the skill's output — a first pass, a
 regenerated or revised version, drill feedback, the message presenting a file —
-ends with one line, copied exactly:
+ends with one line: the skill's `watch_out` line, label included, copied exactly as
+one string and never assembled from a label and a sentence:
 
 ```text
-**Watch-out:** <the skill's watch_out sentence>
+**Watch-out:** <the rest of the skill's watch_out line>
 ```
 
 It is the response's last line, after the questions, and the one thing rule 4
-lets follow them. It is the skill's fixed sentence, word for word: not a recap,
+lets follow them. It is the skill's fixed line, word for word: not a recap,
 not a call to action, not written for this run or adapted to it. A sentence
 composed for the run would be the second summary rule 4 exists to prevent; a
 fixed one restates nothing. It names what the user should double-check, because
 the suite measured a defect there that its fixes have not closed
-(`CONTRIBUTING.md`, "When an issue survives two iterations"). It is called a
+(the suite's contributing guide, "When an issue survives two iterations"). It is called a
 watch-out in every file and every response, and by no other name; and no other
 line of a response, or of a file it produces, is labelled a watch-out.
 
@@ -216,8 +229,10 @@ Three places it never goes:
 - **On a turn that delivers nothing** — one that only asks for an input the skill
   cannot run without, such as a missing job description.
 
-**Parameter: `watch_out`** — the skill's sentence: one sentence, in plain words a
-user would know, naming what to check and against what. It is stated once, in the
-skill's `SKILL.md`; every copy elsewhere — the root README's watch-out table, the
-fixtures' closing expectations, a worked example — is held equal to it by CI, so
+**Parameter: `watch_out`** — the skill's whole line: `**Watch-out:** ` and then
+one sentence, in plain words a user would know, naming what to check and against
+what. It is stated once, in the skill's `SKILL.md`, label included, so the line
+is copied rather than assembled. Every copy elsewhere — the fixtures' closing expectations, a worked example — is
+that whole line, except the root README's watch-out table, whose column header is
+the label and whose cell is the sentence after it. CI holds each copy equal, so
 changing it means changing the parameter and the copies in one change.

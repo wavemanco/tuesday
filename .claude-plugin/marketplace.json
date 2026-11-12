@@ -1,0 +1,13 @@
+{
+  "name": "wavemanco-tuesday",
+  "description": "Tuesday, an applicant-side evidence system for job seekers, as a Claude Code plugin.",
+  "owner": {
+    "name": "moondocksaint"
+  },
+  "plugins": [
+    {
+      "name": "tuesday",
+      "source": "./dist/plugin/tuesday"
+    }
+  ]
+}

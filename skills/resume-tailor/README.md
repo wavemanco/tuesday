@@ -64,6 +64,7 @@ resume-tailor/
 │   ├── coverage-and-gaps.md            # coverage map, recall prompts, prohibited claims
 │   ├── machine-readers.md              # parse safety, keywords, the hidden-text refusal
 │   ├── dossier-consumption.md          # reading tuesday-dossier.md as a consumer
+│   ├── rationale.md                    # why the rules are shaped as they are; not required reading
 │   ├── evidence-conventions.md         # mirror of conventions/ — source types, bands, labels
 │   ├── reframing-audit.md              # mirror of conventions/ — six drift axes, five disciplines
 │   ├── interaction-grammar.md          # mirror of conventions/ — standalone invariant, research tiers

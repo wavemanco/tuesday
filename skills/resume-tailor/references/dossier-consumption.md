@@ -4,7 +4,7 @@ A dossier is a gift and never a dependency. Everything below sharpens the ledger
 nothing below gates it. A tailoring run with no dossier is a complete tailoring
 run, and the upgrade menu is where the difference gets named rather than felt.
 
-The schema is `conventions/dossier-schema.md`. This skill is a **consumer only**:
+The schema is `references/dossier-schema.md`, the mirrored canonical contract. This skill is a **consumer only**:
 it reads and never writes. Writing back would need a new section and a version
 bump, and v0 has not earned one.
 

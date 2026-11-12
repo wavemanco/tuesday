@@ -1,6 +1,15 @@
 # Evidence conventions
 
-Canonical for every skill in Tuesday, and for any later surface (agent, MCP, UI renderer) that consumes their outputs. Skills carry a mirror of this file in their `references/` with a synced-from header; this copy wins on conflict.
+## Contents
+
+- 1. Evidence source types
+- 2. Evidence confidence bands
+- 3. Fit status and the gap taxonomy
+- 4. Content provenance labels
+- 5. The mapping — how confidence and provenance connect
+- 6. Truthfulness core
+
+Canonical for every skill in Tuesday, and for any later surface (agent, MCP, UI renderer) that consumes their outputs. Skills carry a mirror of this file in their `references/` with a synced-from header; on a conflict between a mirror and the canonical file it names, the canonical file wins.
 
 The system's one promise underneath all of it: **nothing a skill writes may outrun the evidence it stands on, and the reader can always see how far the evidence goes.**
 

@@ -1,5 +1,12 @@
 # The machine readers
 
+## Contents
+
+- What actually screens a resume
+- The parse-safety check
+- The hidden-text refusal
+- One dynamic, disclosed rather than exploited
+
 A resume may be read by machine twice before a person forms an opinion of it:
 by a parser turning a document into text, and sometimes by a language model
 summarizing that text and handing a recruiter a score with a rationale. The two

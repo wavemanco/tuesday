@@ -11,6 +11,7 @@
     "closing": "The pack — in the saved file where one was written — ends with the upgrade menu, which names each missing input and what adding it would concretely unlock; and the message presenting it ends with the drill and dossier offers, then the questions, then the watch-out line, with nothing after it. At most three questions are asked, counted across the whole message. The watch-out line is the message's last line, after the questions, is not inside the saved pack file, and is exactly this line, which the harness checks character for character: `**Watch-out:** Suggested answers can make your experience sound bigger than what you told me — rehearse only what you actually did, in your own words.`. The drill and dossier offers are one line each, neither pushed nor made a condition of anything. Only questions to the user count: an instruction inside a pack cell addressed to the candidate's interview answer, carrying no question mark and asking for no reply here, is not one",
     "accounting": "The Sources section carries the Research tier line and the target accounting: one row per L1 target, numbered — values, interview process, strategy or recent news, the interviewer, and a representative JD — each Status cell holding exactly one of yes, skipped, n/a or unavailable, with the reason beside it. Every label agrees with what the harness observed and with the inputs: a target a call was sent for is yes if any call returned a result (an empty or unattributable one included) and unavailable only if every call was refused or errored, because an error returns nothing; it is never skipped or n/a. A target no call was sent for is n/a only when no name at all was given to form its query (a first name with a title and the company is a name), skipped only when the request's own content fixes every output it feeds, and otherwise unavailable, naming what it would have moved; in a room that could search, unavailable with no call sent is right only when the user chose L0 or declined research (and the tally then reads L0 — no searches), or when the search budget was fully spent and every search went to a lower-numbered (higher-priority) target. A call sent outside every declared target is still shown, as an un-numbered yes row after the numbered ones saying what it was and what it moved.",
     "accounting_counts": "Every yes row's search appears among the queries Sources lists, and that list agrees with the research calls the harness observed, refused ones included, as does the Research tier line. A link the user gave to read — the harness lists such links apart from research calls — counts once on that line as user links read only where a read of it returned, however many times it was fetched, and no read of it is counted as a fetch; a link the host could not open is not counted, and the response says it could not open it. A fetch of a URL the user named only as the source of text they pasted is a research call like any other",
+    "quick_check": "A quick check that the material the user pasted is still current and genuine is allowed: at most two calls, searches and fetches together, each aimed at a target that material answers and naming the company, document or page it checks. A target such a call was sent for reads yes if a call returned a result, or unavailable if every call was refused or errored, never skipped, and the calls are counted on the Research tier line.",
     "values_source": "Every value name the pack uses is the company's own, spelled exactly as a read or pasted source gives it, with that source cited in Sources; where the company's published values could not be established — research came back non-attributable or could not run — the pack says so and says which, labels any values bank [generic], and names no value a source did not supply, rather than silently omitting the values section or filling it from memory",
     "loop_source": "A loop source, as references/research-checklist.md defines it, is a source the pack read and names in Sources: the company's interviewing or careers page, read or pasted; a candidate guide labelled as Source quality says; or the user's, the recruiter's or the interviewer's own words. A loop source establishes the loop when it says how many sessions the pack prepares for — the one upcoming session in session mode, each scheduled round in loop mode — and, for each, who runs it or what it holds (a conversation, a panel, a case, a presentation); a round named with nothing about its sessions — 'the onsite', 'the final round' — establishes nothing. Where a loop source establishes the interview loop, persona weights and the banks follow its named rounds, with the source named; where none does, the pack says the loop is unestablished, names the archetype its weights fall back to, and asserts no company-specific round or format",
     "interviewer_read": "A section reading the interviewer appears only where that interviewer's public profile, talk or own words were actually read or supplied, and draws only on that source; otherwise nothing about any interviewer appears beyond the name and title the request gives",
@@ -468,6 +469,8 @@
         "quotes"
       ],
       "candidate_text": [
+        "Second round on Tuesday for Senior Partnerships Manager at Kelverton Rail (UK rail-tech, ~600 staff, they sell scheduling software to train operating companies). The recruiter was unusually specific in her email, quoting it",
+        "She also attached the market report their strategy team circulated internally last quarter, which I've read. I've got about four hours of prep time total, spread over the weekend.",
         "9 years in partnerships, last 4 at a payments company running the ISV channel — took it from 6 partners to 40, roughly £4M of influenced revenue. Before that, 5 years in transport consulting (bus and light rail network planning, so I know the operator world from the other side). Never sold into rail specifically and never carried a direct quota, only influenced revenue."
       ]
     },
@@ -501,12 +504,13 @@
     },
     {
       "id": 7,
+      "date_anchor": "2026-10-16",
       "prompt": "Interview prep please — I have a 60-minute interview on Friday for Live Operations Producer at Saltmarsh Games (mobile game studio, about 350 people). My interviewer is Tobias Wrenfield, Head of Live Operations. THE JD: 'Live Operations Producer — Saltmarsh Games. Plan and run the live-events calendar for two of our mobile titles; coordinate design, art, engineering and community teams on each update; own the post-event review and the KPIs it reports; manage the release checklist with QA. Requirements: 3+ years producing live-service games or apps; experience running a content calendar; comfortable with player-retention metrics; clear written communication.' MY BACKGROUND (call me Femi): 4 years as an associate producer at a puzzle-game studio. I ran the weekly content-drop calendar for our main title for the last two years. Wrote the release checklist our QA team still uses. Presented the monthly retention numbers to the studio head. Never led a team, and never worked on a game with in-app purchases.",
-      "expected_output": "A complete prep pack whose research accounting matches what the room allowed: with search available, values, loop, strategy and the named interviewer are researched and used — the published value names, the documented loop, a strategy-grounded CO question, an interviewer read from the public talk — and the representative-JD target is skipped because the JD was supplied; with no search available, those four read unavailable, none of their facts appear, and the upgrade menu offers the research.",
+      "expected_output": "A complete prep pack whose research accounting matches what the room allowed: with search available, values, loop, strategy and the named interviewer are researched and used — the published value names, the documented loop, a strategy-grounded CO question, an interviewer read from the public talk — and the representative-JD target is skipped because the JD was supplied, unless a quick check that the JD is still posted was sent for it; with no search available, those four read unavailable, none of their facts appear, and the upgrade menu offers the research.",
       "files": [],
       "expectations": [
         "{{pack_first}}",
-        "{{accounting}} Here the JD was supplied, so the representative-JD target is skipped; every other target could change the pack and the interviewer was named, so none of the other four is skipped or n/a. {{accounting_counts}}",
+        "{{accounting}} Here the JD was supplied, so the representative-JD target is skipped, unless a quick check was sent for it; every other target could change the pack and the interviewer was named, so none of the other four is skipped or n/a. {{quick_check}} Here that is target 5, a check that the supplied job description is still posted, naming Saltmarsh or its site. {{accounting_counts}}",
         "{{values_source}}. Here a values cheat sheet appears exactly when the values page was read and a values-style round is detected, as references/research-checklist.md defines it: a loop source documents such a round, or, where no loop source establishes the loop, the fallback archetype has one. Femi's own words are a loop source here — one 60-minute interview on Friday with Tobias Wrenfield, naming no values-style part — so the fallback archetype never decides this case. So where both pages were read, the cheat sheet appears, because the interviewing page's Outage Hour, a single 60-minute interview with the hiring manager, ends in a values conversation; where the values page was read and the interviewing page was not, no values-style round is detected and no cheat sheet appears, though the page's values may still theme VAL questions; where the values page could not be read, no cheat sheet appears",
         "{{loop_source}}. Here the loop source is Femi's own words, one 60-minute interview with Tobias Wrenfield, and, where it was read, the interviewing page's Outage Hour; no fallback archetype is required",
         "{{co_grounded}}. Here that source is the news page, where it was read",
@@ -527,6 +531,14 @@
           "fetches": 2
         },
         "user_links": [],
+        "quick_check": {
+          "targets": [
+            5
+          ],
+          "names": [
+            "saltmarsh"
+          ]
+        },
         "entity_tokens": [
           "saltmarsh",
           "games",
@@ -732,7 +744,7 @@
               "pass",
               "priorities"
             ],
-            "text": "August 2026: Project Larkspur moves Tidepool Tactics and Lantern Row to a season-pass model with one shared events calendar from January 2027, and retires per-title event teams in favour of a single live-ops group."
+            "text": "{{date-2m:month year}}: Project Larkspur moves Tidepool Tactics and Lantern Row to a season-pass model with one shared events calendar from {{date+3m:month year}}, and retires per-title event teams in favour of a single live-ops group."
           },
           {
             "url": "https://talks.gdconf.example/2026/patch-notes-are-a-promise",
@@ -798,18 +810,19 @@
     },
     {
       "id": 8,
-      "prompt": "Help me prep for my interviews at Ashgrove Credit Union. THE JD: 'Member Experience Lead — Ashgrove Credit Union (member-owned, about 900 staff). Own the member complaints process end to end across branches and the contact centre; report monthly on complaint volumes and resolution times; coach branch supervisors on escalations; work with digital teams on self-service journeys. Requirements: 4+ years in financial-services customer operations; experience handling regulated complaints; confident presenting to senior leaders; comfortable with Excel reporting.' THEIR VALUES, copied this morning (12 October 2026) from ashgrovecu.org/about/values: 'Members First, Always — we decide from the member's side of the counter. Plain Words — if a member needs it explained twice, we wrote it wrong. Neighbours, Not Numbers — every branch is part of its town. Own the Fix — whoever finds the problem keeps hold of it until it is solved.' THE RECRUITER'S EMAIL about the process: 'Three rounds on 21 October: 30 minutes with me; 45 minutes with the Head of Member Services, who would be your manager, mostly behavioural; then 60 minutes with a panel of two branch managers, including a 20-minute case on a complaint escalation. The panel is also the values round — they score against the four values.' THEIR STRATEGY, from the 2026 strategy brief Ashgrove published in June 2026, which the recruiter sent me: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027; the main competitive pressure is app-only banks. Interviewers beyond their roles haven't been assigned yet. MY BACKGROUND (call me Dara): 6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.",
-      "expected_output": "A complete prep pack built entirely from what the candidate pasted: the four published values by name in the cheat sheet, persona weights following the recruiter's three rounds with the panel as the values round, CO questions grounded in the pasted strategy brief, and a research accounting that reads skipped for values, process, strategy and the representative JD — each naming the outputs the pasted material already fixes — and n/a for the interviewer, with no search or fetch sent whether or not this room could search.",
+      "date_anchor": "2026-10-12",
+      "prompt": "Help me prep for my interviews at Ashgrove Credit Union. THE JD: 'Member Experience Lead — Ashgrove Credit Union (member-owned, about 900 staff). Own the member complaints process end to end across branches and the contact centre; report monthly on complaint volumes and resolution times; coach branch supervisors on escalations; work with digital teams on self-service journeys. Requirements: 4+ years in financial-services customer operations; experience handling regulated complaints; confident presenting to senior leaders; comfortable with Excel reporting.' THEIR VALUES, copied this morning ({{date:day month year}}) from ashgrovecu.org/about/values: 'Members First, Always — we decide from the member's side of the counter. Plain Words — if a member needs it explained twice, we wrote it wrong. Neighbours, Not Numbers — every branch is part of its town. Own the Fix — whoever finds the problem keeps hold of it until it is solved.' THE RECRUITER'S EMAIL about the process: 'Three rounds on {{date+9d:day month}}: 30 minutes with me; 45 minutes with the Head of Member Services, who would be your manager, mostly behavioural; then 60 minutes with a panel of two branch managers, including a 20-minute case on a complaint escalation. The panel is also the values round — they score against the four values.' THEIR STRATEGY, from the {{date-4m:year}} strategy brief Ashgrove published in {{date-4m:month year}}, which the recruiter sent me: move 40% of member service to digital channels by {{date+2y:year}}; consolidate eight branches into five hubs over {{date+1y:year}}; launch a small-business lending product in Q1 {{date+1y:year}}; the main competitive pressure is app-only banks. Interviewers beyond their roles haven't been assigned yet. MY BACKGROUND (call me Dara): 6 years in retail banking, the last 3 as a branch supervisor. I handled the branch's formal complaints log and trained new tellers on our escalation script. I built the monthly complaints spreadsheet our regional manager uses. Never worked in a contact centre, and I've never presented to anyone above regional level.",
+      "expected_output": "A complete prep pack built entirely from what the candidate pasted: the four published values by name in the cheat sheet, persona weights following the recruiter's three rounds with the panel as the values round, CO questions grounded in the pasted strategy brief, and a research accounting that reads skipped for values, process, strategy and the representative JD — each naming the outputs the pasted material already fixes — and n/a for the interviewer, with no search or fetch sent whether or not this room could search, beyond a quick check that the pasted material is still current and genuine, whose row reads yes or unavailable.",
       "files": [],
       "expectations": [
         "{{pack_first}}",
-        "{{accounting}} Here the request's own content fixes every target but the interviewer: values, interview process, strategy and the representative JD read skipped, each naming the pack outputs the pasted material already fixes, and the interviewer reads n/a because none was named. No search or fetch is sent for any target, whatever this room offers: the ashgrovecu.org URL the request names is where its pasted values came from, not a link to read, so fetching it is a research call. {{accounting_counts}}",
+        "{{accounting}} Here the request's own content fixes every target but the interviewer: values, interview process, strategy and the representative JD read skipped, except a row a quick check was sent for, each naming the pack outputs the pasted material already fixes, and the interviewer reads n/a because none was named. No search or fetch is sent for any target beyond a quick check, whatever this room offers: the ashgrovecu.org URL the request names is where its pasted values came from, not a link to read, so fetching it is a research call. {{quick_check}} Here those are targets 1, 2, 3 and 5, and a check names Ashgrove or its site. {{accounting_counts}}",
         "{{values_source}}. Here the values cheat sheet uses the four pasted value names — Members First, Always; Plain Words; Neighbours, Not Numbers; Own the Fix — each mapped to a story one of Dara's quoted sentences carries, or to a selection scaffold where none does",
         "{{loop_source}}. Here the source is the recruiter's three rounds: the panel round is treated as the values round, and its 20-minute complaint-escalation case gets its own rehearsal",
         "{{co_grounded}}. Here it is the pasted strategy brief — digital channels, branch consolidation, small-business lending or app-only competitors",
         "{{no_overclaim}} {{question_premise}}",
         "{{provenance_column}}",
-        "{{sources_list}}. Here it names the pasted JD, values page, recruiter email and strategy brief, and lists no web research",
+        "{{sources_list}}. Here it names the pasted JD, values page, recruiter email and strategy brief, and lists no web research beyond the page a quick check returned, with its URL",
         "{{closing}}"
       ],
       "research": {
@@ -824,6 +837,17 @@
         },
         "user_links": [],
         "zero_calls": true,
+        "quick_check": {
+          "targets": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "names": [
+            "ashgrove"
+          ]
+        },
         "entity_tokens": [
           "ashgrove",
           "credit",
@@ -924,6 +948,8 @@
               "who is my interviewer",
               "hiring manager name",
               "who is the hiring manager",
+              "hiring manager",
+              "hiring managers",
               "linkedin.com/in",
               "head of member services"
             ],
@@ -937,7 +963,8 @@
             "hunt_samples": [
               "Ashgrove Credit Union head of member services linkedin.com/in",
               "who is my interviewer at Ashgrove Credit Union",
-              "Ashgrove Credit Union Head of Member Services"
+              "Ashgrove Credit Union Head of Member Services",
+              "Ashgrove Credit Union hiring manager"
             ]
           },
           {
@@ -1012,8 +1039,8 @@
             "text": "Most roles have three rounds: a recruiter call, a conversation with the hiring manager, and a panel that includes a short case and scores against our four values."
           },
           {
-            "url": "https://ashgrovecu.org/news/strategy-2026",
-            "title": "Ashgrove strategy brief 2026",
+            "url": "https://ashgrovecu.org/news/strategy-{{date-4m:year}}",
+            "title": "Ashgrove strategy brief {{date-4m:year}}",
             "target": 3,
             "keywords": [
               "strategy",
@@ -1023,7 +1050,7 @@
               "plans",
               "announced"
             ],
-            "text": "June 2026: move 40% of member service to digital channels by 2028; consolidate eight branches into five hubs over 2027; launch a small-business lending product in Q1 2027. Main competitive pressure: app-only banks."
+            "text": "{{date-4m:month year}}: move 40% of member service to digital channels by {{date+2y:year}}; consolidate eight branches into five hubs over {{date+1y:year}}; launch a small-business lending product in Q1 {{date+1y:year}}. Main competitive pressure: app-only banks."
           }
         ],
         "stray_samples": [
