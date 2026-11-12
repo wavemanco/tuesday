@@ -6,7 +6,7 @@ This branch is a backup, not part of Tuesday. It holds the scoring data for the 
 |---|---|
 | `fix-round-haiku.tar.gz` | The fix round on Haiku: every run's output, its checks and both grades, per module, with Tuesday and with the module alone |
 | `fix-round-sonnet.tar.gz` | The same on Sonnet |
-| `fix-round-opus.tar.gz` | The same on Opus, added when that step finishes |
+| `fix-round-opus.tar.gz` | The same on Opus |
 | `fix-round-scripts-and-logs.tar.gz` | The scripts that ran the round, its run log, meter readings and pre-flight checks |
 | `baseline.tar.gz` | The earlier quality check the fix round is scored against, on all three models, with its scoring scripts |
 
