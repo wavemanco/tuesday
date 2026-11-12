@@ -1010,8 +1010,8 @@ each automatic check's failing runs over the runs where it applied, the checks
 again with each family below counted once per run, quote failures apart from
 re-cut quotes, which are reported by kind, runs with a quick check of the user's
 material by fixture, the module's truthfulness family, nudged and harness-invalid
-runs, refused tool calls by tool and runs with a refused save, and cost from each
-invocation's stream and each grade file. A truthfulness family is the expectations
+runs, refused tool calls by tool and runs with a refused save, and cost (an API-price
+equivalent, `spend.md`) from each invocation's stream and each grade file. A truthfulness family is the expectations
 that include given fixture clauses (`compare_arms.TRUTHFULNESS`), and its row
 counts the runs where a grader failed any of them over the runs graded on one:
 job-underwriter's is printed twice, for `proposed_language` with `ledger_counts`
@@ -1100,8 +1100,8 @@ checks that failed together in 15 or more of those runs is counted apart:
 | `ledger_sentence`, `snapshot_band` | 16 | no | two rules: a set claim or a second sentence, and a band |
 | `gates_form`, `ledger_wording` | 16 | no | two slots |
 
-These evals are not run in CI: they need a model, cost real tokens, and take
-minutes. Run them in a session against any change that could plausibly move
+These evals are not run in CI: they need a model, use the account's weekly
+usage, and take minutes. What past measurements used is in `spend.md`. Run them in a session against any change that could plausibly move
 triggering or output — a description edit, a new skill, a boundary reworded.
 `evals/test_harness.py` does run in CI: every decline path above has a test that
 spends no model calls.
