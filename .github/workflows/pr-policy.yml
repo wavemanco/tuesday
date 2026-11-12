@@ -5,6 +5,12 @@ name: pr-policy
 # setting enforces that; this workflow is the backstop if the setting is ever
 # off, and closes any other with a comment that points there and to issues.
 #
+# CONTRIBUTOR stays on the list: GitHub reports an organization member whose
+# membership is private as CONTRIBUTOR, not MEMBER. Without it this workflow
+# closed the owner's own pull request (#12). With the setting on, only
+# collaborators can open a pull request at all, so admitting prior
+# contributors here costs nothing.
+#
 # pull_request_target runs in the base repository's context, so it can close a
 # pull request opened from a fork. It never checks out or runs the pull
 # request's code, which is what keeps that context safe; keep it that way.
@@ -21,7 +27,7 @@ jobs:
   close-outside-pull-requests:
     if: >-
       github.event.pull_request.user.type != 'Bot' &&
-      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR"]'),
                 github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     steps:

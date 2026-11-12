@@ -11,8 +11,9 @@ lands. A pull request from outside that loop would be written against a target
 that moves under it, and would cost more to review than it saves. So for now,
 only the repository's collaborators can open pull requests. The repository's
 pull-request setting on GitHub enforces this, and a workflow,
-`.github/workflows/pr-policy.yml`, closes any other with a comment pointing
-here, in case the setting is ever off. Ideas, bug reports and failures you hit
+`.github/workflows/pr-policy.yml`, closes one from anyone who is neither a
+collaborator nor a prior contributor, with a comment pointing here, in case the
+setting is ever off. Ideas, bug reports and failures you hit
 using a skill are welcome as issues, from anyone. This is revisited when the
 contracts settle.
 
