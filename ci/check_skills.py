@@ -3102,8 +3102,14 @@ def check_wording() -> None:
         ok(group, f"{read} surfaces carry no retired wording, and the rewritten rules keep their form")
 
 
+LEDGER = REPO / "docs" / "tracked-work.md"
+
+
 def check_ledger() -> None:
     """The Tracked-work ledger is the project's memory; it must not contradict itself.
+
+    It lives in docs/tracked-work.md, which the README links and explains; it moved
+    there from the README itself, which it had grown to four-fifths of.
 
     It did. Five entries had accumulated in it: three exact duplicates, plus a
     closed item sitting beside its replacement and a superseded one contradicting
@@ -3115,14 +3121,15 @@ def check_ledger() -> None:
     The rest is a review question, so the failure message says what to look for.
     """
     group = "ledger"
-    readme = (REPO / "README.md").read_text(encoding="utf-8")
-    section = re.search(r"^## Tracked work\s*$(.*?)(?=^## |\Z)", readme,
-                        re.MULTILINE | re.DOTALL)
-    if not section:
-        fail(group, "README.md has no '## Tracked work' section")
+    if not LEDGER.exists():
+        fail(group, f"{LEDGER.relative_to(REPO)}, the Tracked-work ledger, is missing")
         return
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    if f"]({LEDGER.relative_to(REPO).as_posix()})" not in readme:
+        fail(group, f"README.md does not link the Tracked-work ledger, {LEDGER.relative_to(REPO).as_posix()}")
+    ledger = LEDGER.read_text(encoding="utf-8")
 
-    titles = re.findall(r"^- \*\*(.+?)\*\*", section.group(1), re.MULTILINE)
+    titles = re.findall(r"^- \*\*(.+?)\*\*", ledger, re.MULTILINE)
     if not titles:
         fail(group, "the Tracked-work ledger has no entries — the check would pass vacuously")
         return
