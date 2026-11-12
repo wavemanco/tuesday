@@ -23,11 +23,11 @@ The names are those of the README's Tracked work entries.
 | The fixed harness, smoked on Sonnet and Opus | Sonnet 5.5 and Opus 5.5, graders Sonnet | 52 runs, 104 grades | $70.35 | 3 points (45% to 48%) | $23.5 |
 | Fix round, Haiku | Haiku 5.5, graders Sonnet | 460 runs and 15 re-runs, 920 grades | $72.79 | 10 points (62% to 72%) | $7.3 |
 | Fix round, Sonnet | Sonnet 5.5, graders Sonnet | 380 runs, 760 grades | $283.72 | 15 points (73% to 88%) | $18.9 |
-| Fix round, Opus | Opus 5.5, graders Sonnet | running | — | — | — |
+| Fix round, Opus | Opus 5.5, graders Sonnet | 380 runs, 760 grades | $455.30 | 40 points (3% to 43%) | $11.4 |
 
 - **Re-runs.** When a run does not start its module, the harness runs it again with the module named. Both sessions are counted in the cost; only the final one is graded, twice, as every run is.
 - **Opus costs more per point** at the fix round's own planning rates, which convert the API-price equivalent to weekly usage at $17 to $21 a point for Sonnet and Haiku and $24 to $29 for Opus (`docs/fix-round-plan-detail.md`). Its stop rule uses those rates.
-- **The fix round's Haiku step shared its week with other use of the account.** At the planning rates its runs account for about 4 of its 10 points.
+- **The fix round's Haiku and Opus steps shared the account with other use**, including other projects running at the same time. At the planning rates, Haiku's runs account for about 4 of its 10 points, and Opus's for about 16 to 19 of its 40.
 - **The Sonnet quality step's** meter window also holds a two-run check worth $0.76, which its row leaves out.
 
 The dollar figures in both plan documents, such as "about $1,070 of runs", are API-price equivalents in the same sense.
