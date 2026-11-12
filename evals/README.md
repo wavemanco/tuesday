@@ -1100,8 +1100,9 @@ checks that failed together in 15 or more of those runs is counted apart:
 | `ledger_sentence`, `snapshot_band` | 16 | no | two rules: a set claim or a second sentence, and a band |
 | `gates_form`, `ledger_wording` | 16 | no | two slots |
 
-These evals are not run in CI: they need a model, use the account's weekly
-usage, and take minutes. What past measurements used is in `spend.md`. Run them in a session against any change that could plausibly move
+These evals are not run in CI: they need a model, use the signed-in account's
+weekly usage (or, with `ANTHROPIC_API_KEY` set, are billed per token), and take
+minutes. What past measurements used is in `spend.md`. Run them in a session against any change that could plausibly move
 triggering or output — a description edit, a new skill, a boundary reworded.
 `evals/test_harness.py` does run in CI: every decline path above has a test that
 spends no model calls.
