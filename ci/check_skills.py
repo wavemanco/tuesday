@@ -36,7 +36,7 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
                a third-person description, and every reference linked
   frontdoor    the front door, skills/tuesday/: its references/ are what ci/sync.py
                generates, its module set is skills/ without it, and it and its
-               references are the text round 3 measured
+               references are the text last measured
   builds       the Claude Code builds hide each module with one added line and
                nothing else, that line ships nowhere else, and the plugin's
                manifest and marketplace entry name `tuesday`
@@ -270,20 +270,20 @@ def packaged_files(skill: Path) -> set[str]:
 CLAUDE_CODE = DIST / "claude-code"
 PLUGIN = DIST / "plugin" / sync.HUB_NAME
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
-# What round 3 measured, recorded once, and the plugin version that ships it. hub_sha256 and
-# frontdoor_sha256 are the front door's two hashes (sync.digests) on b2f424b, where every result
-# file of the measurement records them. builds_sha256 (frontdoor_digests) hashes every file of
-# dist/claude-code/, which the plugin's skills/ equals: each module's shipped files with the
-# hiding line, and the hub's. Rebuilt from b2f424b's own sources (its module folders, its measured
-# hub and its generator), the tree hashes to the same value. That tree is what round 3 installed
-# but for the run-id suffix the harness gives each name, and the hub's LICENSE, the modules'
-# LICENSE byte for byte. plugin_version is the manifest's: an installed plugin keeps its version
-# until the version string changes (Claude Code's plugin docs), so an update to the hashes moves it.
+# What was last measured, recorded once, and the plugin version that ships it: the fix round
+# (docs/fix-round-plan-detail.md), on b8702ac. hub_sha256 and frontdoor_sha256 are the front door's
+# two hashes (sync.digests) on that commit, where every Tuesday-arm result file of the round records
+# them. builds_sha256 (frontdoor_digests) hashes every file of dist/claude-code/, which the plugin's
+# skills/ equals: each module's shipped files with the hiding line, and the hub's. That tree is what
+# the round installed but for the run-id suffix the harness gives each name, and the hub's LICENSE,
+# the modules' LICENSE byte for byte. Round 3 measured the text before it, on b2f424b, as plugin
+# 0.1.0. plugin_version is the manifest's: an installed plugin keeps its version until the version
+# string changes (Claude Code's plugin docs), so an update to the hashes moves it.
 MEASURED_FRONTDOOR = {
-    "hub_sha256": "e698b12d47be1436e9c7074491c31b7601fe9682a01c99ca29f0d3fcc83d50dd",
-    "frontdoor_sha256": "a3405730323913aacfc998707701d6305113a3a81338e9dc6c779cb69f35875f",
-    "builds_sha256": "8e9184efd286a437e747a81c139b127fc84e2d5c9212b2865142503d59f43a9c",
-    "plugin_version": "0.1.0",
+    "hub_sha256": "4d10c30930488ed3f63067f9dc47651dad6c2874f3a992817f87951332f1ce80",
+    "frontdoor_sha256": "8d10162a0a58e5f99fb39356b473c79952cd8faa5533c4a909cecdd28261af12",
+    "builds_sha256": "d6670eeaebcc12864e5925bbc8c128e330e47a083bdcaccb61865679ce63c752",
+    "plugin_version": "0.2.0",
 }
 MEASURED_HASHES = [key for key in MEASURED_FRONTDOOR if key.endswith("_sha256")]
 PLUGIN_MANIFEST = {
@@ -3439,7 +3439,7 @@ def hub_modules(hub_text: str) -> dict[str, set[str]]:
 
 def check_frontdoor() -> None:
     """The front door, skills/tuesday/, held to what it is: a hub over the modules, carrying
-    copies of their text, and the text round 3 measured.
+    copies of their text, and the text last measured.
 
     Its references/ are exactly what ci/sync.py generates from the module sources, and a
     generation the sources do not allow (a clash, a playbook naming a file that would not be
@@ -3515,12 +3515,12 @@ def check_frontdoor() -> None:
     measured = frontdoor_digests()
     changed = [k for k in MEASURED_HASHES if measured[k] != MEASURED_FRONTDOOR[k]]
     if changed:
-        fail(group, f"the front door's text is not what round 3 measured ({', '.join(changed)} differ): a change "
+        fail(group, f"the front door's text is not what was last measured ({', '.join(changed)} differ): a change "
                     f"to a shipped file of the hub or a module ships only once measured, or once MEASURED_FRONTDOOR "
                     f"is updated on purpose, its plugin_version moved with it; now "
                     + ", ".join(f"{k} {measured[k]}" for k in changed))
     else:
-        ok(group, f"every shipped file of the hub and the modules is what round 3 measured (frontdoor_sha256 "
+        ok(group, f"every shipped file of the hub and the modules is what was last measured (frontdoor_sha256 "
                   f"{measured['frontdoor_sha256'][:8]}, builds_sha256 {measured['builds_sha256'][:8]})")
 
     explicit = REPO / "evals" / "suite-explicit.json"

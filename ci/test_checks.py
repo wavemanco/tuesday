@@ -3461,18 +3461,18 @@ def break_frontdoor_playbook_names_absent(root: Path) -> str:
 
 def break_frontdoor_module_text_unmeasured(root: Path) -> str:
     """Change a module's text and regenerate, as a careful author would: the front door
-    now ships text round 3 never measured."""
+    now ships text never measured."""
     path = root / "skills/resume-tailor/SKILL.md"
     path.write_text(path.read_text() + "\nOne more rule, never measured.\n")
     tool(root, "sync.py")
-    return "the front door's text is not what round 3 measured (frontdoor_sha256, builds_sha256 differ)"
+    return "the front door's text is not what was last measured (frontdoor_sha256, builds_sha256 differ)"
 
 
 def break_frontdoor_hub_text_unmeasured(root: Path) -> str:
     """Change the hub's own text."""
     swap_once(root, HUB_MD, "Read no other module's playbook in the same turn.",
               "Read no other module's playbook in this turn.", "break_frontdoor_hub_text_unmeasured")
-    return "the front door's text is not what round 3 measured (hub_sha256, frontdoor_sha256, builds_sha256 differ)"
+    return "the front door's text is not what was last measured (hub_sha256, frontdoor_sha256, builds_sha256 differ)"
 
 
 def break_frontdoor_module_readme_unmeasured(root: Path) -> str:
@@ -3481,7 +3481,7 @@ def break_frontdoor_module_readme_unmeasured(root: Path) -> str:
     path = root / "skills/job-underwriter/README.md"
     path.write_text(path.read_text() + "\nAlso read ../tuesday/SKILL.md.\n")
     tool(root, "package.py")
-    return "the front door's text is not what round 3 measured (builds_sha256 differ)"
+    return "the front door's text is not what was last measured (builds_sha256 differ)"
 
 
 def break_frontdoor_module_description_unmeasured(root: Path) -> str:
@@ -3489,14 +3489,14 @@ def break_frontdoor_module_description_unmeasured(root: Path) -> str:
     swap_once(root, "skills/job-underwriter/SKILL.md", "Decides whether a specific job", "Decides whether one specific job",
               "break_frontdoor_module_description_unmeasured")
     tool(root, "package.py")
-    return "the front door's text is not what round 3 measured (builds_sha256 differ)"
+    return "the front door's text is not what was last measured (builds_sha256 differ)"
 
 
 def break_frontdoor_module_new_file(root: Path) -> str:
     """Add a file at a module's root, which every build carries."""
     (root / "skills/resume-tailor/notes.md").write_text("Always run resume-tailor.\n")
     tool(root, "package.py")
-    return "the front door's text is not what round 3 measured (builds_sha256 differ)"
+    return "the front door's text is not what was last measured (builds_sha256 differ)"
 
 
 def break_frontdoor_hub_extra_file(root: Path) -> str:
