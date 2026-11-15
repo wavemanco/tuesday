@@ -182,7 +182,7 @@ added, written down before they could become bugs of their own:
 | A run the CLI failed, usually a rate limit | `neither` | `error` |
 | A grader reply truncated mid-object | twelve expectations failed | the verdicts it did contain, marked truncated |
 | A session usage-limit message | a 48-character response, graded | a skipped execution with a reason |
-| A grader reply covering six of sixteen expectations | ten unflagged gaps, the run summarised as if complete | the gaps listed as incomplete, re-asked once, and an expectation with an ungraded run reported as unresolved, never clean |
+| A grader reply covering six of sixteen expectations | ten unflagged gaps, the run summarised as if complete | the gaps listed as incomplete, re-asked once, and an ungraded expectation never counted as a pass, so it is reported intermittent or unresolved, never clean |
 | A canned research room whose stub server never connected | a run that chose not to search | harness-invalid, replaced, and kept out of the run count |
 | A run that fired another skill with the same base name | the installed skill's output | a nudge in a fresh room, and harness-invalid if it still does not fire |
 | A run cut off by the timeout | a crash that ended the whole pass | a timed-out execution with its partial stream kept, and no nudge |
@@ -547,7 +547,7 @@ there; Tuesday links no file that is not there, and the guidance group, which
 reads it like every skill, holds the other direction. The modules Tuesday
 routes to, read from its slash-command list and its routing table, are
 `skills/` without it, and its description names each one. `MEASURED_FRONTDOOR`
-records what round 3 measured as three hashes: Tuesday's SKILL.md, Tuesday with
+records what was last measured (the fix round, on b8702ac) as three hashes: Tuesday's SKILL.md, Tuesday with
 its references, and every file the Claude Code builds ship, Tuesday's and each
 module's, frontmatter, README and LICENSE included. So a change to any shipped
 file of Tuesday or a module, or to a convention a module mirrors, fails until it
