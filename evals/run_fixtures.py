@@ -80,8 +80,9 @@ deterministic (it failed every valid run) or intermittent (at least one fully
 graded run passed it). That distinction is the whole point. One fixture in this
 suite has scored 12/12, 13/13, 13/13 and 9/13 on the same skill, and a single run
 cannot tell that from a defect. A run where some grader returned nothing for an
-expectation does not pass it: the expectation is reported unresolved until
-every grader has graded it, never clean.
+expectation, and no grader failed it, is partially graded and does not pass it.
+The expectation is then intermittent if another run failed it and a fully graded
+run passed it, and otherwise unresolved, never clean (classify).
 
 Exit codes:
     0   clean: every expectation and check passed in every valid run
