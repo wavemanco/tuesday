@@ -8,6 +8,7 @@ This branch is a backup, not part of Tuesday. It holds the scoring data for the 
 | `fix-round-sonnet.tar.gz` | The same on Sonnet |
 | `fix-round-opus.tar.gz` | The same on Opus |
 | `fix-round-routing.tar.gz` | The fix round's routing step on all three models: each arm's results file and its log (today's skills, Tuesday and the explicit commands), and the 45-run extra cases, Haiku case 3 and Opus case 10 |
+| `fix-round-scoring.tar.gz` | The round's scoring: the scorer, its scorecard and the nine arm comparisons, and the verification (blind re-scorers, the harness-fault hunt and the reported items) |
 | `fix-round-scripts-and-logs.tar.gz` | The scripts that ran the round, its run log, meter readings and pre-flight checks |
 | `baseline.tar.gz` | The earlier quality check the fix round is scored against, on all three models, with its scoring scripts |
 
