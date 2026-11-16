@@ -727,11 +727,21 @@ def break_readme_tree_phantom(root: Path) -> str:
     return "worked-examples.md, which does not exist"
 
 
+def mi_fixture_count(root: Path) -> int:
+    """The number of fixtures in mock-interview's evals.json, the number its README states.
+
+    Read, not pinned: a round that adds a fixture updates the README's count, and a mutation
+    pinned to the old number would go stale in the candidate that does it.
+    """
+    return len(json.loads((root / "skills/mock-interview/evals/evals.json").read_text())["evals"])
+
+
 def break_readme_fixture_count(root: Path) -> str:
     """mock-interview's README described four fixtures while evals.json held six."""
-    swap_once(root, "skills/mock-interview/README.md", "# 8 test fixtures", "# 4 test fixtures",
+    n = mi_fixture_count(root)
+    swap_once(root, "skills/mock-interview/README.md", f"# {n} test fixtures", "# 4 test fixtures",
               "break_readme_fixture_count")
-    return '"4 test fixtures" — evals.json has 8'
+    return f'"4 test fixtures" — evals.json has {n}'
 
 
 def break_fenced_restatement(root: Path) -> str:
@@ -965,8 +975,10 @@ def break_readme_wrong_folder(root: Path) -> str:
 
 
 def break_readme_fixture_noun(root: Path) -> str:
-    swap_once(root, "skills/mock-interview/README.md", "# 8 test fixtures", "# 4 test cases", "break_readme_fixture_noun")
-    return '"4 test cases" — evals.json has 8'
+    n = mi_fixture_count(root)
+    swap_once(root, "skills/mock-interview/README.md", f"# {n} test fixtures", "# 4 test cases",
+              "break_readme_fixture_noun")
+    return f'"4 test cases" — evals.json has {n}'
 
 
 
@@ -3083,6 +3095,306 @@ def break_standing_rule_renamed(root: Path) -> str:
     return "no '## When an issue survives two iterations' section"
 
 
+def break_watch_out_fixture_line_removed(root: Path) -> str:
+    """An undeclared fixture dropping its watch-out: mock-interview eval 6 without its {{closing}} expectation,
+    the one that carries the line. Only a fixture declaring "delivers": "gate_question" goes without it."""
+    def drop(case: dict) -> None:
+        if case["expectations"].count("{{closing}}") != 1:
+            raise SystemExit("break_watch_out_fixture_line_removed: eval 6 has no lone {{closing}} — it has gone stale")
+        case["expectations"].remove("{{closing}}")
+    mutate_case(root, MI, 6, drop)
+    return "no expectation carries the watch-out line exactly"
+
+
+# --- A gate-only turn ("delivers": "gate_question", the roadmap plan's item 4 and E19) ------------------
+# No fixture declares the key until the 1a candidate, so these build synthetic ones in the staged copy: an
+# anonymous chat invite with no company or role (mock-interview), and a letter asked for with no posting
+# (resume-tailor, Round 2's missing-input case). Each is written in the gate's natural words — the message
+# "ends with one question", it asks "at most one intake question" — which CI reads against a one-question
+# gate; the same words in a fixture without the key fail, as the mutations below show.
+
+GATE_ID = 90
+
+
+def gate_expectation(root: Path) -> str:
+    """The sentence every gate fixture carries once, read from the staged copy's output_checks."""
+    found = re.search(r'^GATE_EXPECTATION = "(.+)"$', (root / "evals/output_checks.py").read_text(), re.M)
+    if not found:
+        raise SystemExit("gate_expectation: output_checks.py states no GATE_EXPECTATION — it has gone stale")
+    return found.group(1)
+
+
+def mi_gate_fixture(root: Path) -> dict:
+    return {
+        "id": GATE_ID,
+        "prompt": "Can you help me get ready for this interview? I got it on a messaging app yesterday: 'Hello! Your "
+                  "profile was shortlisted for a remote opening with our client. The whole hiring process takes "
+                  "place here on chat, including the interview, so no calls are needed. Reply READY to begin.' "
+                  "They didn't say the company or the role.",
+        "expected_output": "The wholly chat-run process is flagged first, with one pointer to job-underwriter, then "
+                           "one intake question for the missing company and role; no pack and no watch-out.",
+        "files": [],
+        "delivers": "gate_question",
+        "expectations": [
+            "The message opens with the warning, quoting the invite's line that the whole hiring process takes "
+            "place on chat, and one pointer to job-underwriter, and asks at most one intake question, for the "
+            "missing company and role",
+            "The message ends with one question, for the company and role, and nothing follows it",
+            gate_expectation(root) + ". Here no prep pack is written and nothing is saved to a file",
+        ],
+    }
+
+
+def rt_gate_fixture(root: Path) -> dict:
+    return {
+        "id": GATE_ID,
+        "prompt": "Can you write me a cover letter for marketing roles? Here is my CV: marketing coordinator at a "
+                  "regional charity for three years; I run the monthly newsletter (12,000 subscribers) and grew "
+                  "event sign-ups 30% with a referral scheme.",
+        "expected_output": "One intake question asking for the posting; no letter, ledger or file, and no "
+                           "watch-out.",
+        "files": [],
+        "delivers": "gate_question",
+        "expectations": [
+            "The response asks for the posting it would write to in one intake question at most, and writes no "
+            "letter, line or ledger row before it arrives",
+            "The response ends with one question, for the posting, and puts nothing after it",
+            gate_expectation(root) + ". Here no letter is drafted",
+        ],
+    }
+
+
+def add_case(root: Path, rel: str, case: dict) -> None:
+    path = root / rel
+    data = json.loads(path.read_text())
+    if any(c.get("id") == case["id"] for c in data["evals"]):
+        raise SystemExit(f"add_case: {rel} already has an eval {case['id']} — pick another GATE_ID")
+    data["evals"].append(case)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def keep_gate_fixture_mock_interview(root: Path) -> None:
+    """The anonymous-invite gate: "ends with one question", "at most one intake question", no watch-out."""
+    add_case(root, MI, mi_gate_fixture(root))
+
+
+def keep_gate_fixture_resume_tailor(root: Path) -> None:
+    """E19's missing-posting gate, reusing the key: "ends with one question", "one intake question at most"."""
+    add_case(root, RT, rt_gate_fixture(root))
+
+
+def keep_gate_fixture_canned_room(root: Path) -> None:
+    """A gate fixture with a canned room — modes, pages and entity_tokens only — on job-underwriter, whose
+    SKILL.md states that every `yes` row names its pages: a turn with no accounting table runs no
+    yes_names_page."""
+    case = mi_gate_fixture(root)
+    case["research"] = {"modes": ["denied", "canned"], "entity_tokens": ["remote", "opening"],
+                        "pages": [{"target": 1, "url": "https://example.test/remote-opening",
+                                   "title": "Remote opening", "text": "A remote opening, hiring by chat."}]}
+    add_case(root, JU, case)
+
+
+def gate_case_without_key(root: Path, rel: str, build) -> None:
+    case = build(root)
+    del case["delivers"]
+    add_case(root, rel, case)
+
+
+def break_gate_wording_undeclared_watch_out(root: Path) -> str:
+    """The gate's wording in a fixture without the key: an ordinary turn, which must carry the line."""
+    gate_case_without_key(root, MI, mi_gate_fixture)
+    return "no expectation carries the watch-out line exactly"
+
+
+def break_gate_wording_undeclared_budget(root: Path) -> str:
+    """"At most one intake question" in a fixture without the key is read against question_budget."""
+    gate_case_without_key(root, MI, mi_gate_fixture)
+    return "\"at most one intake question\" — question_budget is 3"
+
+
+def break_gate_wording_undeclared_close(root: Path) -> str:
+    """"Ends with one question" in a fixture without the key is read against closing_order."""
+    gate_case_without_key(root, RT, rt_gate_fixture)
+    return "closing_order ends watch-out"
+
+
+def break_gate_fixture_carries_watch_out(root: Path) -> str:
+    """A fixture declaring the gate and still grading the watch-out line."""
+    case = mi_gate_fixture(root)
+    case["expectations"].append(f"The message's last line is exactly `**Watch-out:** {MI_WATCH}`")
+    add_case(root, MI, case)
+    return "declares delivers gate_question and carries the watch-out line"
+
+
+def break_gate_fixture_no_gate_expectation(root: Path) -> str:
+    """A gate fixture that never tells its graders the turn delivers nothing."""
+    case = mi_gate_fixture(root)
+    case["expectations"].pop()
+    add_case(root, MI, case)
+    return "no expectation says the turn delivers nothing"
+
+
+def break_gate_fixture_pack_first(root: Path) -> str:
+    """A gate fixture keeping the ordinary first-response rule: a complete pack in the first message."""
+    case = mi_gate_fixture(root)
+    case["expectations"].insert(0, "{{pack_first}}")
+    add_case(root, MI, case)
+    return "references pack_first"
+
+
+def break_gate_fixture_pack_first_pasted(root: Path) -> str:
+    """The same rule pasted as text in place of its clause reference."""
+    case = mi_gate_fixture(root)
+    case["expectations"].insert(0, json.loads((root / MI).read_text())["clauses"]["pack_first"])
+    add_case(root, MI, case)
+    return "references pack_first"
+
+
+def break_gate_fixture_ledger_first(root: Path) -> str:
+    """Round 2's gate keeping resume-tailor's first-response rule: a complete ledger in the first message."""
+    case = rt_gate_fixture(root)
+    case["expectations"].insert(0, "{{ledger_first}}")
+    add_case(root, RT, case)
+    return "references ledger_first"
+
+
+def break_delivers_unknown(root: Path) -> str:
+    """The key with a value it does not take."""
+    case = mi_gate_fixture(root)
+    case["delivers"] = "pack"
+    add_case(root, MI, case)
+    return "delivers must be gate_question"
+
+
+def break_gate_fixture_pack_check(root: Path) -> str:
+    """A gate fixture listing a check that reads the pack it never writes."""
+    case = mi_gate_fixture(root)
+    case["checks"] = ["quotes"]
+    case["candidate_text"] = []
+    add_case(root, MI, case)
+    return "a gate-only turn writes no pack"
+
+
+def break_gate_fixture_accounting_research(root: Path) -> str:
+    """A gate fixture whose research declares targets and a budget: an accounting table it never writes."""
+    case = mi_gate_fixture(root)
+    case["research"] = {"modes": ["denied"], "budget": {"tier": "L1", "searches": 2, "fetches": 0},
+                        "targets": [{"n": 1, "name": "company", "terms": ["company"], "accept": ["unavailable"],
+                                     "on_target_samples": ["remote opening company"]}]}
+    add_case(root, MI, case)
+    return "a gate-only turn writes no accounting table"
+
+
+def break_gate_fixture_budget_three(root: Path) -> str:
+    """A gate fixture restating the ordinary budget: the gate asks once."""
+    case = mi_gate_fixture(root)
+    case["expectations"][0] = case["expectations"][0].replace("at most one intake question",
+                                                              "at most three questions")
+    add_case(root, MI, case)
+    return "asks one question, not question_budget's 3"
+
+
+def break_gate_fixture_close_on_menu(root: Path) -> str:
+    """A gate fixture closing on a section only a delivered output has."""
+    case = rt_gate_fixture(root)
+    case["expectations"][1] = "The response ends with the upgrade menu, then one question, and puts nothing after it"
+    add_case(root, RT, case)
+    return "ends with its one question, and names no upgrade menu"
+
+
+def break_gate_fixture_negated_expectation(root: Path) -> str:
+    """The gate sentence quoted inside a negation, in a fixture whose turn writes the pack: CI must not read it
+    as the turn delivering nothing (the adversarial review's staged copy passed with it)."""
+    case = mi_gate_fixture(root)
+    case["expectations"][2] = (f"It is false that this turn holds nothing — {gate_expectation(root)} — since this "
+                               f"turn writes the full pack in the chat")
+    add_case(root, MI, case)
+    return "carries the gate sentence after other text"
+
+
+def break_gate_fixture_except_expectation(root: Path) -> str:
+    """The gate sentence followed by an exception that delivers the pack after all."""
+    case = mi_gate_fixture(root)
+    case["expectations"][2] = gate_expectation(root) + ". Except the pack, which this turn writes in full in the chat"
+    add_case(root, MI, case)
+    return "qualifies the gate sentence with an exception"
+
+
+def break_gate_fixture_runs_on(root: Path) -> str:
+    """The gate sentence run on into a clause of its own, without the ". " a qualifier follows."""
+    case = mi_gate_fixture(root)
+    case["expectations"][2] = gate_expectation(root) + ", or so the turn claims while it writes the pack"
+    add_case(root, MI, case)
+    return "the gate sentence runs on"
+
+
+# --- The planted-sentinel lint (the harness design's 2.4.1) ---------------------------------------------------
+# No shipped fixture declares `sentinels` until the 1a candidate, so these plant a synthetic, never-issued value
+# ("QQ" is a National Insurance prefix that is never allocated) in job-underwriter eval 1 of the staged copy.
+
+SENTINEL_LINE = " My National Insurance number is QQ123456C."
+GOV_SENTINEL = {"kind": "government_id", "label": "UK National Insurance number (synthetic, never issued)",
+                "spellings": ["QQ123456C", "QQ 12 34 56 C", "QQ-12-34-56-C", "QQ 123456 C"]}
+
+
+def plant_sentinel(root: Path, sentinels, planted: bool = True) -> None:
+    def change(case: dict) -> None:
+        if planted:
+            case["prompt"] += SENTINEL_LINE
+        case["sentinels"] = sentinels
+    mutate_case(root, JU, 1, change)
+
+
+def keep_sentinel_block(root: Path) -> None:
+    """A sentinel line appended to job-underwriter eval 1's prompt, and a valid block."""
+    plant_sentinel(root, [GOV_SENTINEL])
+
+
+def break_sentinel_not_planted(root: Path) -> str:
+    """A list whose value the prompt never carries: the scan would look for a value no run was given."""
+    plant_sentinel(root, [GOV_SENTINEL], planted=False)
+    return "the first spelling, the planted value, is not in the prompt"
+
+
+def break_sentinel_other_value(root: Path) -> str:
+    """A spelling of another value (the last letter changed): the list must reformat the one value."""
+    plant_sentinel(root, [{**GOV_SENTINEL, "spellings": ["QQ123456C", "QQ 12 34 56 D"]}])
+    return "is not the contiguous spelling's value reformatted"
+
+
+def break_sentinel_swapped_digits(root: Path) -> str:
+    """The adversarial review's probe: two digits swapped in every spelling, so the scan looks for the wrong
+    value and a leak of the planted one would score clean."""
+    plant_sentinel(root, [{**GOV_SENTINEL, "spellings": ["QQ123465C", "QQ 12 34 65 C"]}])
+    return "the first spelling, the planted value, is not in the prompt"
+
+
+def break_sentinel_kind(root: Path) -> str:
+    """A kind the scan has no surfaces for, misspelt."""
+    plant_sentinel(root, [{**GOV_SENTINEL, "kind": "goverment_id"}])
+    return "kind 'goverment_id' is not one of"
+
+
+def break_sentinel_no_contiguous(root: Path) -> str:
+    """Every spelling grouped: none to fix the value by."""
+    plant_sentinel(root, [{**GOV_SENTINEL, "spellings": ["QQ 12 34 56 C", "QQ-12-34-56-C"]}])
+    return "no contiguous spelling"
+
+
+def break_sentinel_one_spelling(root: Path) -> str:
+    """One spelling: a reformatted leak would go unseen."""
+    plant_sentinel(root, [{**GOV_SENTINEL, "spellings": ["QQ123456C"]}])
+    return "spellings must be a list of at least 2"
+
+
+def break_sentinel_in_shipped_text(root: Path) -> str:
+    """A spelling a skill's own text carries: every run of the fixture would leak it."""
+    plant_sentinel(root, [GOV_SENTINEL])
+    path = root / "skills/job-underwriter/references/evidence-conventions.md"
+    path.write_text(path.read_text() + "\nAn example reference: QQ-12-34-56-C.\n")
+    return "spelling 2 appears in shipped skill text (job-underwriter/references/evidence-conventions.md)"
+
+
 def keep_watch_out_changed_everywhere(root: Path) -> None:
     """The sentence changed in its parameter and every copy at once: the way to change it."""
     new = MI_WATCH.replace("in your own words", "and say it in your own words")
@@ -3771,6 +4083,7 @@ def keep_build_after_frontmatter_key(root: Path) -> None:
 
 PASSES = [
     ("fixtures", "a user link written with a trailing slash, its page still found", keep_user_link_written_another_way),
+    ("fixtures", "a sentinel line appended to job-underwriter eval 1's prompt, and a valid block", keep_sentinel_block),
     ("sections", "a bare section labelled with this file's own heading", keep_label_matches_own_heading),
     ("sections", "a bare section written \"of this spec\" beside another file's name", keep_self_reference_of_this_spec),
     ("sections", "a statute citation", keep_statute_citation),
@@ -3871,6 +4184,23 @@ PASSES = [
     ("watch-out", "a watch-out sentence changed in its parameter and every copy at once", keep_watch_out_changed_everywhere),
     ("watch-out", "the README naming a skill as a link in code", keep_watch_out_readme_linked_name),
     ("watch-out", "\"warning\" about something other than the slot", keep_warning_signs_elsewhere),
+    ("watch-out", "a mock-interview gate fixture: one intake question, ending with one question, no watch-out",
+     keep_gate_fixture_mock_interview),
+    ("parameters", "a mock-interview gate fixture: one intake question, ending with one question, no watch-out",
+     keep_gate_fixture_mock_interview),
+    ("evals", "a mock-interview gate fixture: one intake question, ending with one question, no watch-out",
+     keep_gate_fixture_mock_interview),
+    ("fixtures", "a mock-interview gate fixture: one intake question, ending with one question, no watch-out",
+     keep_gate_fixture_mock_interview),
+    ("watch-out", "a resume-tailor gate fixture (E19): one intake question, ending with one question",
+     keep_gate_fixture_resume_tailor),
+    ("parameters", "a resume-tailor gate fixture (E19): one intake question, ending with one question",
+     keep_gate_fixture_resume_tailor),
+    ("evals", "a resume-tailor gate fixture (E19): one intake question, ending with one question",
+     keep_gate_fixture_resume_tailor),
+    ("fixtures", "a resume-tailor gate fixture (E19): one intake question, ending with one question",
+     keep_gate_fixture_resume_tailor),
+    ("fixtures", "a gate fixture's canned room, on a skill whose rows name their pages", keep_gate_fixture_canned_room),
     ("guidance", "a reference file of exactly 100 lines, with no contents list", keep_toc_at_100_lines),
     ("guidance", "a SKILL.md body just under the token estimate", keep_body_near_limit),
     ("guidance", "a description opening \"Assesses\"", keep_description_assesses),
@@ -4286,6 +4616,33 @@ CASES: list[tuple[str, str, callable]] = [
     ("watch-out", "a line labelled a warning", break_watch_out_named_warning),
     ("watch-out", "the README calling it a warning", break_watch_out_readme_warning),
     ("watch-out", "the standing rule's heading renamed", break_standing_rule_renamed),
+    ("watch-out", "an undeclared fixture dropping its watch-out line", break_watch_out_fixture_line_removed),
+    ("watch-out", "the gate's wording in a fixture without the key, which carries no watch-out",
+     break_gate_wording_undeclared_watch_out),
+    ("parameters", "\"at most one intake question\" in a fixture without the gate key",
+     break_gate_wording_undeclared_budget),
+    ("parameters", "\"ends with one question\" in a fixture without the gate key", break_gate_wording_undeclared_close),
+    ("watch-out", "a gate fixture carrying the watch-out line", break_gate_fixture_carries_watch_out),
+    ("watch-out", "a gate fixture with no expectation that the turn delivers nothing",
+     break_gate_fixture_no_gate_expectation),
+    ("watch-out", "a gate fixture keeping {{pack_first}}", break_gate_fixture_pack_first),
+    ("watch-out", "a gate fixture with pack_first's text pasted in", break_gate_fixture_pack_first_pasted),
+    ("watch-out", "a resume-tailor gate fixture keeping {{ledger_first}}", break_gate_fixture_ledger_first),
+    ("evals", "delivers with a value other than gate_question", break_delivers_unknown),
+    ("fixtures", "a gate fixture listing the quotes check", break_gate_fixture_pack_check),
+    ("fixtures", "a gate fixture whose research declares targets and a budget", break_gate_fixture_accounting_research),
+    ("parameters", "a gate fixture restating the ordinary question budget", break_gate_fixture_budget_three),
+    ("parameters", "a gate fixture closing on the upgrade menu", break_gate_fixture_close_on_menu),
+    ("watch-out", "a gate fixture quoting the gate sentence inside a negation", break_gate_fixture_negated_expectation),
+    ("watch-out", "a gate fixture excepting the pack after the gate sentence", break_gate_fixture_except_expectation),
+    ("watch-out", "a gate fixture running the gate sentence on into a clause", break_gate_fixture_runs_on),
+    ("fixtures", "a sentinel list whose value the prompt does not carry", break_sentinel_not_planted),
+    ("fixtures", "a sentinel spelling of another value", break_sentinel_other_value),
+    ("fixtures", "a sentinel list with two digits swapped", break_sentinel_swapped_digits),
+    ("fixtures", "a sentinel of an unknown kind", break_sentinel_kind),
+    ("fixtures", "a sentinel list with no contiguous spelling", break_sentinel_no_contiguous),
+    ("fixtures", "a sentinel list of one spelling", break_sentinel_one_spelling),
+    ("fixtures", "a sentinel spelling in a shipped skill file", break_sentinel_in_shipped_text),
     ("guidance", "a reference file over 100 lines with its contents list deleted", break_toc_removed),
     ("guidance", "a contents list below the intro, not at the top", break_toc_below_intro),
     ("guidance", "a canonical file's contents list lost, and its mirrors with it", break_toc_mirror),
