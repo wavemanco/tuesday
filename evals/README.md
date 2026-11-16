@@ -399,10 +399,12 @@ graded run passed it) or `unresolved`. An expectation fails a run if *either*
 grader fails it — the dissenting grader has found every defect worth fixing in
 this suite so far, and requiring both would discard exactly that. It passes a
 run only when *every* grader returned a valid PASS. A run where one grader
-returned nothing for it is partially graded, and an expectation resting on a
-partial run is unresolved, never clean: the old summary used every run as its
-denominator and counted only explicit failures, so a grader that skipped an
-expectation turned a deterministic failure into an intermittent one.
+returned nothing for it, and no grader failed it, is partially graded and does
+not pass it: the expectation is then intermittent if another run failed it and a
+fully graded run passed it, and unresolved otherwise, never clean. The old
+summary used every run as its denominator and counted only explicit failures, so
+a grader that skipped an expectation turned a deterministic failure into an
+intermittent one.
 
 The distinction is the point. One fixture here has scored 12/12, 13/13, 13/13
 and 9/13 on the same skill; a single run cannot tell that from a defect, and
