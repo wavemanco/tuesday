@@ -727,11 +727,21 @@ def break_readme_tree_phantom(root: Path) -> str:
     return "worked-examples.md, which does not exist"
 
 
+def mi_fixture_count(root: Path) -> int:
+    """The number of fixtures in mock-interview's evals.json, the number its README states.
+
+    Read, not pinned: a round that adds a fixture updates the README's count, and a mutation
+    pinned to the old number would go stale in the candidate that does it.
+    """
+    return len(json.loads((root / "skills/mock-interview/evals/evals.json").read_text())["evals"])
+
+
 def break_readme_fixture_count(root: Path) -> str:
     """mock-interview's README described four fixtures while evals.json held six."""
-    swap_once(root, "skills/mock-interview/README.md", "# 8 test fixtures", "# 4 test fixtures",
+    n = mi_fixture_count(root)
+    swap_once(root, "skills/mock-interview/README.md", f"# {n} test fixtures", "# 4 test fixtures",
               "break_readme_fixture_count")
-    return '"4 test fixtures" — evals.json has 8'
+    return f'"4 test fixtures" — evals.json has {n}'
 
 
 def break_fenced_restatement(root: Path) -> str:
@@ -965,8 +975,10 @@ def break_readme_wrong_folder(root: Path) -> str:
 
 
 def break_readme_fixture_noun(root: Path) -> str:
-    swap_once(root, "skills/mock-interview/README.md", "# 8 test fixtures", "# 4 test cases", "break_readme_fixture_noun")
-    return '"4 test cases" — evals.json has 8'
+    n = mi_fixture_count(root)
+    swap_once(root, "skills/mock-interview/README.md", f"# {n} test fixtures", "# 4 test cases",
+              "break_readme_fixture_noun")
+    return f'"4 test cases" — evals.json has {n}'
 
 
 

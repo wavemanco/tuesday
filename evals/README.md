@@ -1329,7 +1329,7 @@ transcript driver refuses a script that breaks one when it loads it.
 `ci/check_skills.py` (group `fixtures`) holds every fixture's list to the same
 rules with the same reader, and fails a spelling found, by the scan's matcher, in
 any file a skill ships (`packaged_files`): a planted value is one no skill
-writes. No shipped fixture declares one yet. At run time a list that breaks a
+writes. At run time a list that breaks a
 rule never scores clean: the scan is unscored (its `missing` names each problem,
 `sentinel declaration: …`), and the fixture runner makes the run harness-invalid
 with those reasons, at execution and again when its checks are read, so a

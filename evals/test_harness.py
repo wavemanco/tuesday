@@ -5658,6 +5658,8 @@ def test_gate_only() -> None:
     for skill in run_fixtures.SKILLS:
         from fixture_clauses import load_cases
         for raw in load_cases(repo / "skills" / skill / "evals" / "evals.json"):
+            if raw.get("delivers") == output_checks.GATE_QUESTION:
+                continue                    # a declared gate fixture reads the inventory by design
             c = fixture(skill, raw["id"])
             for mode in run_fixtures.modes_of(c):
                 before = output_checks.run_checks(c, mode, body, [], watch_out=line)
