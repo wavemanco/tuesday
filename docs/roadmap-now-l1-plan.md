@@ -71,7 +71,7 @@ The owner settled E1–E20 and E22–E26 on 2026-11-13. E21 awaits approval of t
 **2026-11-14 · CV approval rules and resumed CV regression.** Keep the existing CV approval and rejection rules. Add the resumed CV regression and its smoke to Round 2. Run the control fresh on both revisions and both installs. E21 still governs the priced manifest.
 
 **2026-11-16 · Fix-round outcomes carried into this plan.** The fix round met its bar, and 0.2.0 is accepted and on `main` (PR #16). The owner took four recommendations:
-- **Quote lists.** In mock-interview's question banks, a list of quotations joined by separators alone shares the origin written after its last quotation, when that origin names another source and that quotation is not the candidate's own words. This replaces October's audit reading. It lands as its own harness-only commit before the code-name rename. All three 0.2.0 hashes stay unchanged ([write boundary](#write-boundary-by-phase)).
+- **Quote lists.** In mock-interview's question banks, a list of quotations joined by separators alone shares the origin written after its last quotation. The origin must name a document or a person, so a row ID or a comment lends nothing. This replaces October's audit reading. It lands before the code-name rename as non-payload commits: harness and documentation, with no skill, convention or build file. All three 0.2.0 hashes stay unchanged ([write boundary](#write-boundary-by-phase)).
 - **Opus, the sentence after the fit ledger.** Iteration 2 rides the 1a candidate, with its own measure and marks ([below](#carried-into-1a--the-sentence-after-the-fit-ledger-iteration-2)).
 - **Haiku.** The sentence after the fit ledger and research calls beyond a quick check stay open at iteration 1, with their fix-round rates. No change is aimed at Haiku.
 - **resume-tailor's watch-out.** The line stays as it is. Its quote problem counts as closed by measurement. Any sharper wording waits for Round 2: E10 already rewrites the line there, for CVs, letters and answers. That is the only one of this plan's three rounds that changes resume-tailor's text, since Round 1 requires an empty diff under `skills/resume-tailor/`. The per-application folders change, which E6 places after Round 2, changes it too.
@@ -163,7 +163,7 @@ Work in a Linux checkout. Planning uses main at `7ebb06d`. Recheck this plan's f
 
 | Order | Work and check |
 |---|---|
-| 1 | Accept and record the current fix round at 0.2.0. Then land the owner's quote-list rule (2026-11-16) in its own harness-only commit. |
+| 1 | Accept and record the current fix round at 0.2.0. Then land the owner's quote-list rule (2026-11-16), a non-payload change with no skill, convention or build file. |
 | 2 | Apply the [live code-name mapping](#code-name-rename) in its own commit. Preserve historical values in the reader and test compatibility with saved records (E25). Check imports, runners, CI callers and documentation. Use current flag names in manifests. |
 | 3 | Land 1a’s tested harness commit with the companion driver, sentinel scan and gate-only fixture contract. Verify the three accepted release digests after the quote-list, code-name and harness commits. |
 | 4 | Pin 1a and measure its candidate. Smoke the 1b driver in the 19 November window. Accept the 0.3.0 record, finish any tested 1b harness fix and pin 1b against that lineage. |
@@ -195,7 +195,7 @@ Offline, test old and new `via` and `arm` spellings without layout, explicit-lay
 | Phase | Source writes | Generated writes |
 |---|---|---|
 | 0.2.0 record (incoming prerequisite) | Use the existing [fix-round record inventory](fix-round-plan-detail.md#23-ci-and-the-measured-text). Verify its accepted pin before the rename. | Use the fix round’s approved build inventory. |
-| Quote-list rule (2026-11-16) | Modify `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`. | None. All three accepted digest values stay byte-identical. |
+| Quote-list rule (2026-11-16) | Modify `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`, with the record of the owner's decisions in `docs/roadmap-now-l1-plan.md`, `docs/tracked-work.md` and `README.md`. | None. All three accepted digest values stay byte-identical. |
 | Code-name rename | Modify the eleven paths in the [live rename list](#code-name-rename). | None. All three accepted digest values stay byte-identical. |
 | 1a harness | Create `evals/run_transcripts.py`. Modify `evals/run_fixtures.py`, `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`, `ci/check_skills.py`, `ci/test_checks.py`. | None. |
 | 1a candidate | Modify `skills/job-underwriter/SKILL.md`, `skills/job-underwriter/references/risk-and-decision.md`, `skills/job-underwriter/evals/evals.json`, `skills/job-underwriter/README.md`, `skills/mock-interview/SKILL.md`, `skills/mock-interview/references/output-template.md`, `skills/mock-interview/references/question-rubric.md`, `skills/mock-interview/references/personas.md`, `skills/mock-interview/evals/evals.json`, `skills/mock-interview/README.md`, `docs/roadmap.html`, and `ci/test_checks.py` only for an amendment caused by rule 2's exact text ([iteration 2](#carried-into-1a--the-sentence-after-the-fit-ledger-iteration-2)). | Sync affected Tuesday references and package the changed payload. |
