@@ -1518,7 +1518,7 @@ _LIST_SEP = re.compile(r"\s*(?:[;,/&]\s*(?:(?:and|or)\b)?|(?:and|or)\b)?\s*", re
 _SOURCE_LABEL = re.compile(
     r"(?<![a-z])(?:jd|job\s+(?:description|ad|advert|posting|listing)|posting|advert|listing|role[\s_-]?profile|"
     r"values?|principles?|recruiter|interviewer|hiring\s+manager|research|note|brief|e-?mail|page|site|website|"
-    r"careers|announcement|article|news|press|report|blog|strategy)(?![a-z])", re.I)
+    r"careers|announcement|article|news|press|report|blog)(?![a-z])", re.I)
 
 
 def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None,
