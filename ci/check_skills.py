@@ -55,7 +55,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "evals"))
-from fixture_clauses import DATE_ANCHOR, ClauseError, anchor_of, date_refs, dated, expand_spec, unused_clauses  # noqa: E402
+from fixture_clauses import (CLAUSE_REF, DATE_ANCHOR, ClauseError, anchor_of, date_refs, dated, expand_spec,  # noqa: E402
+                             unused_clauses)
 import output_checks  # noqa: E402  (the harness's readers, for the checks that lint what it reads)
 import research_server  # noqa: E402  (the canned room's own search, for the fixtures lint)
 import run_fixtures  # noqa: E402  (the modes a fixture runs in)
@@ -544,6 +545,12 @@ def check_evals() -> None:
             for field in ("id", "prompt", "expected_output", "expectations"):
                 if field not in case:
                     fail(group, f"{label}: missing '{field}'")
+            # A turn that only asks for a missing input declares so (output_checks.GATE_QUESTION); the
+            # key has no other value, and a turn that delivers output leaves it out.
+            if "delivers" in case and case.get("delivers") != output_checks.GATE_QUESTION:
+                fail(group, f"{label}: delivers is {case.get('delivers')!r} — delivers must be "
+                            f"{output_checks.GATE_QUESTION} (a turn that only asks for a missing input), and a "
+                            f"turn that delivers output leaves the key out")
             expectations = case.get("expectations")
             if isinstance(expectations, list):
                 if not expectations:
@@ -803,6 +810,11 @@ def close_subject(text: str, at: int) -> str | None:
     return None
 
 
+# A gate-only turn (output_checks.GATE_QUESTION) asks for the missing input once: the budget its
+# fixture's expectations restate in place of question_budget.
+GATE_QUESTION_BUDGET = 1
+
+
 def closing_items(value: str) -> list[set[str]]:
     """Each closing_order item as the words that identify it among its siblings."""
     items = [re.findall(r"[a-z]+", part.lower()) for part in value.split(",")]
@@ -824,23 +836,34 @@ def check_parameter_agreement(group: str, skill: Path, values: dict[str, str]) -
     naming the right sections backwards. Negated sentences ("does not end with")
     are not read, and subjects other than the response are not either: a pack, a
     cell or a story ends with other things.
+
+    An expectation of a fixture declaring `"delivers": "gate_question"` is read
+    against the turn it grades, a one-question gate that ends with the question
+    (output_checks.GATE_QUESTION): its budget is GATE_QUESTION_BUDGET, so "asks at
+    most one intake question" passes and "at most three questions" fails; and its
+    close names the questions and nothing else closing_order names, so "ends with
+    one question" passes and "ends with the upgrade menu" or the watch-out fails.
     """
-    surfaces: list[tuple[str, str]] = [("SKILL.md", (skill / "SKILL.md").read_text(encoding="utf-8"))]
+    surfaces: list[tuple[str, str, bool]] = [("SKILL.md", (skill / "SKILL.md").read_text(encoding="utf-8"), False)]
     if (skill / "README.md").exists():
-        surfaces.append(("README.md", (skill / "README.md").read_text(encoding="utf-8")))
+        surfaces.append(("README.md", (skill / "README.md").read_text(encoding="utf-8"), False))
     for ref in sorted((skill / "references").glob("*.md")):
         text = ref.read_text(encoding="utf-8")
         if not SYNCED_HEADER.match(text):
-            surfaces.append((f"references/{ref.name}", text))
+            surfaces.append((f"references/{ref.name}", text, False))
     for case in load_evals(skill / "evals" / "evals.json") or []:
+        gate = case.get("delivers") == output_checks.GATE_QUESTION
         for n, expectation in enumerate(case.get("expectations", []), 1):
-            surfaces.append((f"evals.json eval {case.get('id')} #{n}", expectation))
+            surfaces.append((f"evals.json eval {case.get('id')} #{n}", expectation, gate))
 
     budget = values.get("question_budget", "")
     order = closing_items(values.get("closing_order", ""))
     declared = [part.strip() for part in values.get("closing_order", "").split(",")]
+    # The item a gate-only turn ends on: closing_order's questions.
+    asked = next((i for i, item in enumerate(order) if "question" in item), None)
+    gate_turn = f"a gate-only turn (delivers {output_checks.GATE_QUESTION})"
     checked = 0
-    for where, raw in surfaces:
+    for where, raw, gate in surfaces:
         text = re.sub(r"(?<!\n)\n(?![ \t]*(?:\n|[-*+] |\d+\. |[|#>]))", " ", raw)     # a hard wrap is not a break
         for match in BUDGET_PHRASE.finditer(text):
             sentence = re.split(r"(?<=[.!?])\s+", text[max(0, match.start() - 200):match.end() + 120])
@@ -850,7 +873,11 @@ def check_parameter_agreement(group: str, skill: Path, values: dict[str, str]) -
             word = (match.group(1) or match.group(2)).lower()
             stated = int(word) if word.isdigit() else COUNT_WORDS[word]
             checked += 1
-            if budget.isdigit() and stated != int(budget):
+            if gate:
+                if stated != GATE_QUESTION_BUDGET:
+                    fail(group, f"{skill.name} {where}: \"{match.group(0)}\" — {gate_turn} asks one question, "
+                                f"not question_budget's {budget}")
+            elif budget.isdigit() and stated != int(budget):
                 fail(group, f"{skill.name} {where}: \"{match.group(0)}\" — question_budget is {budget}")
         for match in CLOSE_VERB.finditer(text):
             if close_subject(text, match.start()) not in RESPONSE_SUBJECTS:
@@ -870,6 +897,12 @@ def check_parameter_agreement(group: str, skill: Path, values: dict[str, str]) -
                 continue                    # names no call to action: not a statement of the close
             checked += 1
             named = [i for _, i in sorted(positions)]
+            if gate:
+                if set(named) != {asked}:
+                    others = ", ".join(declared[i] for i in sorted(set(named)) if i != asked and i < len(declared))
+                    fail(group, f"{skill.name} {where}: \"{' '.join(match.group(0).split())[:90]}\" — {gate_turn} "
+                                f"ends with its one question, and names no {others or 'other section'}")
+                continue
             tail = list(range(len(order) - len(named), len(order)))
             if re.search(r"\b(?:after|before|following|preceded by)\b", obj):
                 named = sorted(named)       # the words carry the order; the set must still be the tail
@@ -2545,6 +2578,13 @@ def grammar_section(text: str, number: str) -> str:
     return text[start.end():start.end() + end.start()] if end else text[start.end():]
 
 
+# What a gate-only fixture's research may hold (output_checks.GATE_QUESTION): the rooms it runs in, and for
+# a canned room the pages the server answers with and the tokens that mark the company in a query. Every
+# other key (targets, canaries, zero_calls, declined, quick_check, budget, …) grades an accounting table.
+GATE_RESEARCH_KEYS = ("modes",)
+GATE_CANNED_KEYS = ("pages", "entity_tokens")
+
+
 def check_fixtures() -> None:
     """The fixture fields the harness reads are what the harness assumes (D5).
 
@@ -2571,10 +2611,20 @@ def check_fixtures() -> None:
     interaction-grammar.md §4's quick-check sentence with another number sets the text
     and the checks apart. Each is read here with the harness's own functions
     (evals/output_checks.py, evals/research_server.py), in every mode the fixture runs
-    (run_fixtures.modes_of), so the lint and the checks cannot disagree.
+    (run_fixtures.modes_of), so the lint and the checks cannot disagree. A fixture
+    declaring `"delivers": "gate_question"` grades a turn that writes nothing, so it
+    lists no check that reads a pack (output_checks.GATE_OFF_CHECKS), its research
+    holds no key that grades an accounting table, and the page-naming rule does not
+    ask it to run yes_names_page. A fixture declaring `sentinels` (the planted ID and
+    registration scan) holds its frozen list to output_checks.sentinel_declaration_problems,
+    the reader the scan applies to the same list, and no spelling of it may appear in a
+    shipped skill file (packaged_files), read with the scan's own matcher
+    (output_checks.sentinel_in): a skill that writes the value would make every run of the
+    fixture a leak.
     """
     group = "fixtures"
     linted = 0
+    shipped: list[tuple[str, str]] | None = None
     # The text a run reads allows a quick check of pasted material by a number of calls, in
     # interaction-grammar.md §4; the checks allow output_checks.QUICK_CHECK_CALLS, and the two must agree.
     allowed = [stated_calls(m.group(1)) for m in GRAMMAR_QUICK_CHECK.finditer(
@@ -2613,8 +2663,49 @@ def check_fixtures() -> None:
             label = f"{skill.name} eval {case.get('id')}"
             prompt = output_checks.normalise_quote(case.get("prompt", ""))
             checks = case.get("checks") or []
+            if "sentinels" in case:
+                # The frozen spelling list, by the rules the scan reads it with, so a mistyped or one-spelling
+                # list cannot look for the wrong value; and no spelling in what a skill ships.
+                linted += 1
+                for problem in output_checks.sentinel_declaration_problems(case["sentinels"], case.get("prompt", "")):
+                    fail(group, f"{label}: {problem}")
+                if shipped is None:
+                    shipped = [(rel, output_checks.sentinel_form((SKILLS_DIR / rel).read_text(encoding="utf-8",
+                                                                                             errors="replace")))
+                               for s in skills() for rel in sorted(packaged_files(s))]
+                for n, entry in enumerate(case["sentinels"] if isinstance(case["sentinels"], list) else [], 1):
+                    if not isinstance(entry, dict) or not isinstance(entry.get("spellings"), list):
+                        continue
+                    for i, spelling in enumerate(entry["spellings"]):
+                        if not isinstance(spelling, str) or not spelling.strip():
+                            continue
+                        form = output_checks.sentinel_form(spelling)
+                        where = next((rel for rel, text in shipped
+                                      if output_checks.sentinel_in(form, text, str(entry.get("kind")))), None)
+                        if where:
+                            fail(group, f"{label}: sentinel {n} spelling {i} appears in shipped skill text ({where}) — "
+                                        f"a planted value is one no skill writes, or every run of the fixture leaks it")
             runs_pages = output_checks.YES_PAGES_CHECK in checks
-            if case.get("research"):
+            gate = case.get("delivers") == output_checks.GATE_QUESTION
+            if gate:
+                # A gate-only turn writes no pack, ledger or accounting table (output_checks.GATE_OFF_CHECKS
+                # and check_accounting are switched off for it): listing a check that reads one, or a research
+                # key that grades its table, would set the fixture and the checks apart.
+                linted += 1
+                off = [c for c in checks if c in output_checks.GATE_OFF_CHECKS]
+                if off:
+                    fail(group, f"{label}: declares delivers {output_checks.GATE_QUESTION} and runs "
+                                f"{', '.join(off)} — a gate-only turn writes no pack, ledger or assessment for a "
+                                f"check to read")
+                research = case.get("research") or {}
+                served = set(GATE_RESEARCH_KEYS) | (set(GATE_CANNED_KEYS) if "canned" in run_fixtures.modes_of(case)
+                                                    else set())
+                extra = sorted(k for k in research if k not in served) if isinstance(research, dict) else []
+                if extra:
+                    fail(group, f"{label}: declares delivers {output_checks.GATE_QUESTION} and its research holds "
+                                f"{', '.join(extra)} — a gate-only turn writes no accounting table, so its research "
+                                f"holds only modes, and pages and entity_tokens for a canned room")
+            if case.get("research") and not gate:
                 linted += 1
                 if states_pages and not runs_pages:
                     fail(group, f"{label}: SKILL.md states that every `yes` row names its pages and this fixture "
@@ -2624,7 +2715,7 @@ def check_fixtures() -> None:
                     fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check, and SKILL.md does not "
                                 f"state that every `yes` row names its pages — a rule the skill never gave would "
                                 f"be judged")
-            elif runs_pages:
+            elif runs_pages and not gate:
                 fail(group, f"{label}: runs the {output_checks.YES_PAGES_CHECK} check with no research block — "
                             f"it never runs")
             text = case.get("candidate_text")
@@ -3170,6 +3261,77 @@ WARNING_NAME = re.compile(r"\*\*warnings?:?\*\*|^[\s>*_-]*warnings?\s*:|\bwarnin
                           re.I | re.M)
 
 
+def gate_clause_refs(skill: Path) -> dict:
+    """{case id: the clauses of GATE_EXCLUDED_CLAUSES its expectations or expected_output use}, for each
+    fixture declaring delivers gate_question: by reference, read before expansion, or by the clause's own
+    text pasted in place of one."""
+    try:
+        spec = json.loads((skill / "evals" / "evals.json").read_text(encoding="utf-8"))
+        cases = expand_spec(spec)
+    except (OSError, ValueError):
+        return {}
+    clauses = spec.get("clauses") or {} if isinstance(spec, dict) else {}
+    raw = spec.get("evals") if isinstance(spec, dict) else spec
+    out: dict = {}
+    for before, after in zip(raw if isinstance(raw, list) else [], cases if isinstance(cases, list) else []):
+        if not isinstance(before, dict) or before.get("delivers") != output_checks.GATE_QUESTION:
+            continue
+        texts = [t for field in ("expectations", "expected_output")
+                 for t in ([before.get(field)] if isinstance(before.get(field), str) else before.get(field) or [])
+                 if isinstance(t, str)]
+        expanded = " ".join(" ".join(t.split()) for field in ("expectations", "expected_output")
+                            for t in ([after.get(field)] if isinstance(after.get(field), str) else after.get(field) or [])
+                            if isinstance(t, str))
+        out[before.get("id")] = {name for name in output_checks.GATE_EXCLUDED_CLAUSES
+                                 if any(name in CLAUSE_REF.findall(t) for t in texts)
+                                 or (isinstance(clauses.get(name), str) and " ".join(clauses[name].split())
+                                     and " ".join(clauses[name].split()) in expanded)}
+    return out
+
+
+# What may not follow the gate sentence in its expectation: an exception or a negation would let a
+# fixture that delivers a pack declare the gate and switch the pack checks off.
+GATE_EXCEPTION = re.compile(r"\b(?:except(?:ing)?|unless|other\s+than|apart\s+from|aside\s+from|save\s+for|"
+                            r"but\s+for|however|instead|it\s+is\s+false|is\s+not\s+true|not\s+the\s+case|"
+                            r"is\s+false)\b", re.I)
+
+
+def gate_fixture_problems(group: str, skill: str, case: dict, line: str, used: set) -> None:
+    """A fixture declaring delivers gate_question grades a turn that delivers nothing of its own: no
+    expectation carries the watch-out line or its label, exactly one carries output_checks.GATE_EXPECTATION,
+    and none uses a clause that grades a delivered output (output_checks.GATE_EXCLUDED_CLAUSES). The one
+    that carries the sentence opens with it, and is the sentence alone or the sentence, ". " and a
+    qualifier that holds no exception or negation (GATE_EXCEPTION): a copy after other text ("It is false
+    that … — <the sentence> —") or one followed by "Except the pack" says the turn delivers something."""
+    label = f"{skill} eval {case.get('id')}"
+    expectations = [e for e in case.get("expectations", []) if isinstance(e, str)]
+    for n, e in enumerate(expectations, 1):
+        if line in e or output_checks.WATCH_OUT_LABEL in e:
+            fail(group, f"{label} #{n}: declares delivers {output_checks.GATE_QUESTION} and carries the watch-out "
+                        f"line — a gate-only turn ends with its one question, and no watch-out closes it")
+    gate = output_checks.GATE_EXPECTATION
+    said = [e for e in expectations if gate in e]
+    for e in said:
+        if not e.startswith(gate):
+            fail(group, f"{label}: carries the gate sentence after other text — the expectation opens with "
+                        f"{gate!r}, so nothing before it can negate or qualify it")
+        elif e not in (gate, gate + ".") and not e.startswith(gate + ". "):
+            fail(group, f"{label}: the gate sentence runs on — it is the whole expectation, or it ends with '. ' "
+                        f"and a qualifier")
+        elif GATE_EXCEPTION.search(e[len(gate):]):
+            fail(group, f"{label}: qualifies the gate sentence with an exception ("
+                        f"{GATE_EXCEPTION.search(e[len(gate):]).group(0)!r}) — a turn that delivers nothing has "
+                        f"nothing to except")
+    if not said:
+        fail(group, f"{label}: declares delivers {output_checks.GATE_QUESTION} and no expectation says the turn "
+                    f"delivers nothing — one carries {output_checks.GATE_EXPECTATION!r}")
+    elif len(said) > 1:
+        fail(group, f"{label}: {len(said)} expectations say the turn delivers nothing — one does")
+    for name in sorted(used):
+        fail(group, f"{label}: declares delivers {output_checks.GATE_QUESTION} and references {name} — a gate-only "
+                    f"turn delivers no pack, ledger or assessment and no close, so it grades none of them")
+
+
 def check_watch_outs() -> None:
     """Each skill declares one watch-out line, and every copy of it is exact.
 
@@ -3185,7 +3347,11 @@ def check_watch_outs() -> None:
     pipe or code span, and never named a warning; each closing_order ends with
     `watch-out`; every labelled line in a skill's own SKILL.md, README and
     references is the declared line; every fixture carries the declared line in an
-    expectation, and any expectation that labels one carries it exactly; the
+    expectation, and any expectation that labels one carries it exactly, except a
+    fixture declaring `"delivers": "gate_question"`, whose turn only asks for a
+    missing input: it carries neither the line nor the label, says once that the
+    turn delivers nothing (output_checks.GATE_EXPECTATION), and uses none of the
+    clauses that grade a delivered output (GATE_EXCLUDED_CLAUSES); the
     README's table has one row per skill quoting its sentence exactly;
     CONTRIBUTING.md keeps the standing rule the README links to; and nothing that
     states or grades a rule labels the slot a warning. What it does not read: whether a sentence is plain, or names what
@@ -3248,12 +3414,17 @@ def check_watch_outs() -> None:
                     if " ".join(raw.split()) != line:
                         fail(group, f"{skill.name} {where}:{n}: a watch-out line that is not the declared one: "
                                     f"{raw.strip()[:90]!r}")
+        refs = gate_clause_refs(skill)
         for case in load_evals(skill / "evals" / "evals.json") or []:
             expectations = [e for e in case.get("expectations", []) if isinstance(e, str)]
             checked += 1
+            if case.get("delivers") == output_checks.GATE_QUESTION:
+                gate_fixture_problems(group, skill.name, case, line, refs.get(case.get("id"), set()))
+                continue
             if not any(line in e for e in expectations):
                 fail(group, f"{skill.name} eval {case.get('id')}: no expectation carries the watch-out line exactly — "
-                            f"every fixture's turn delivers output, so every fixture grades the line")
+                            f"every fixture's turn delivers output unless it declares \"delivers\": "
+                            f"\"{output_checks.GATE_QUESTION}\", so every other fixture grades the line")
             for n, e in enumerate(expectations, 1):
                 if output_checks.WATCH_OUT_LABEL in e and line not in e:
                     fail(group, f"{skill.name} eval {case.get('id')} #{n}: labels a watch-out line that is not the "

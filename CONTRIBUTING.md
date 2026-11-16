@@ -173,8 +173,9 @@ needs an explicit third outcome beside success and failure**, and it needs a tes
 
 The rule is written from four bugs, all in this repository's own harnesses, all
 the same mistake wearing different clothes — a non-result recorded as a result.
-The rows after those are the decline paths a research room and a pinned grader
-added, written down before they could become bugs of their own:
+The rows after those are the decline paths a research room, a pinned grader, the
+transcript driver and the sentinel scan added, written down before they could
+become bugs of their own:
 
 | What declined | What it was recorded as | What it should have been |
 |---|---|---|
@@ -186,6 +187,22 @@ added, written down before they could become bugs of their own:
 | A canned research room whose stub server never connected | a run that chose not to search | harness-invalid, replaced, and kept out of the run count |
 | A run that fired another skill with the same base name | the installed skill's output | a nudge in a fresh room, and harness-invalid if it still does not fire |
 | A run cut off by the timeout | a crash that ended the whole pass | a timed-out execution with its partial stream kept, and no nudge |
+| A short reply, such as a drill question, that mentions a quota, a rate limit or a usage limit | a decline, set aside, or a usage-limit kill rerun from turn 1 | a completed turn, scored: decline words are read only where no clean result event arrived, and the usage-limit message only as the whole reply |
+| A timeout or an error result after a long reply that names a usage limit | a usage-limit kill, rerun and out of the 10% limit | a timeout or a decline, set aside: the limit message is read only where the CLI writes it (stderr, a non-JSON line, an error result's text, a short last reply), never in a reply's prose |
+| Turn 1 of a transcript whose init carries no session id | a scenario with nothing to resume, its later turns failed | `no_session_id`: set aside, turn 1 kept, no later turn sent |
+| A resume the CLI refused | a later turn that answered nothing, failed | `resume_refused`: set aside, the turns before it kept |
+| A resumed turn in another session, or in another folder | a turn of the same conversation, graded | `wrong_session`: set aside |
+| A usage limit as a resumed turn starts, exiting non-zero with no init event | a refused resume, set aside and never rerun | `usage_limit`: the scenario killed, and rerun from turn 1 in a fresh room under its own stem |
+| A transcript the driver was sending when a restart or the owner's guard stopped it | a scenario record left half-written | killed by `--recover`, the cut turn's stream and files kept as partial evidence, and rerun from turn 1 |
+| A transcript stream with no init event, or no result event after exit 0 | a completed turn | `malformed_stream`: set aside |
+| A resumed turn that does not call the skill again | a scenario whose skill never fired, harness-invalid | the fire inherited from turn 1, the turn's own reading recorded and never scored |
+| A reply with no question ID left for the next turn to select | a driver failure, set aside | behaviour: the next turn `selection_failed`, the rest `not_reached`, and every expectation and check of theirs a failure |
+| A transcript turn's grade file missing, or missing a verdict | the turn summarised as graded | its expectations unresolved, the gap listed in `grade-gaps.json`, and the grader filled by the missing-grader path |
+| A sentinel scan, of a fixture or script that declares sentinels, with a stream, a call log or a copied file missing, a file too large to copy, or a file the scan cannot read | a clean scan | `unscored`: the run harness-invalid, out of every denominator, and `sentinel` never passed; a scan for the runtime account email alone, with evidence missing, leaves `sentinel` unchecked and the run's status as it was |
+| A fixture's sentinel list that breaks a freezing rule (a mistyped value, one spelling) | a scan for the wrong value, scored clean | `unscored` and the run harness-invalid, `sentinel declaration: …`; and CI fails the list |
+| A planted value leaked in an attempt later set aside or killed | nothing, the session excluded | the event kept with its stem and attempt, and reported apart |
+| A killed run or scenario whose case or script this pass does not name | its in-flight records deleted, its scan never written | left in place, in flight, until a pass that names it recovers it |
+| The account email found in an attempt, or in a decline's stderr | its value written into the record, a reason or a printed line | counts, surfaces and attempts only; masked in every record, reason and line the drivers write |
 
 Each was found by a person reading output that looked wrong, which is the slowest
 detector available and the one that fails silently when the output looks
@@ -197,7 +214,11 @@ from being started, and nothing would have caught a regression.
 standard-library only and spends no model calls, because every function it tests
 is pure by design: where a decline path is buried inside a subprocess loop, extract
 the classification so it can be tested rather than leaving it untestable and
-therefore untested.
+therefore untested. A transcript turn's outcome is one such extraction
+(`run_transcripts.run_outcome`, which holds the precedence the usage-limit row
+needs), and the driver's rows are also run end to end against a stub CLI on
+`PATH` that plays each outcome turn by turn and answers as the graders.
+`evals/README.md` ("Transcripts", "Sentinels") states every outcome in full.
 
 A test that cannot fail is worse than no test, so each of the four bugs above was
 reintroduced against the finished suite and confirmed caught before this was
@@ -303,8 +324,13 @@ response or message — or an instruction, "Always close with" — and which say
 closes or ends with some calls to action must name the tail of `closing_order`,
 in its order. It skips negated sentences, budgets for one topic, objects that
 name no call to action, and subjects other than the response: a pack, a cell or
-a drill turn ends with other things. Three eval expectations had contradicted
-their skill's declaration unnoticed.
+a drill turn ends with other things. An expectation of a fixture that declares
+`"delivers": "gate_question"` is read against the turn it grades, a gate that asks
+one question and ends with it: its budget must be one, and its close must name
+`closing_order`'s questions and nothing else, so "asks at most one intake
+question" and "ends with one question" pass, and "at most three questions" and
+"ends with the upgrade menu, then one question" fail. Three eval expectations had
+contradicted their skill's declaration unnoticed.
 
 **A watch-out is one line, and every copy of it is exact.** `--only
 watch-out` holds each skill's `watch_out` parameter to the label `**Watch-out:**`
@@ -314,9 +340,18 @@ defines the slot; and compares every copy with the parameter character for
 character — any line labelled a watch-out in the skill's own `SKILL.md`, README
 and references, every fixture's expanded expectations (each must carry the line,
 since a grader sees the fixture and not `SKILL.md`), and the root README's table,
-one row per skill, in the form `output-discipline.md` rule 7 gives it. It also
-fails the standing rule's heading going missing from this file, since the README
-links to it, and a line labelled a warning anywhere a rule is stated or graded.
+one row per skill, in the form `output-discipline.md` rule 7 gives it. A fixture
+that declares `"delivers": "gate_question"`, whose turn only asks for a missing
+input, carries no line: none of its expectations carries the line or the label,
+exactly one says the turn delivers nothing (`output_checks.GATE_EXPECTATION`),
+opening with that sentence, which stands alone or is followed by ". " and a
+qualifier with no exception or negation in it (so neither "It is false that … —
+<the sentence>" nor "<the sentence>. Except the pack" exempts a turn that delivers
+one), and it uses none of the clauses that grade a delivered output (`pack_first`,
+`ledger_first`, `first_pass`, `closing`), by reference or with a clause's text
+pasted in. It also fails the standing rule's heading going missing from this file,
+since the README links to it, and a line labelled a warning anywhere a rule is
+stated or graded.
 It does not read whether a sentence is plain, whether it names the defect the
 ledger measured, or the README table's "Why it's there" column; that is review's.
 A known limit: it does not read the prose that states the closing order either —
@@ -421,7 +456,12 @@ and each entry is in the prompt; one that runs the fit_ledger check declares
 present, is true or false; a fixture that sets it true does not also set
 `zero_calls`, and its `research.declined_phrase` is in the prompt. A fixture with
 research runs the `yes_names_page` check exactly when its skill's `SKILL.md` states
-that every `yes` row names its pages (`evals/README.md`, "Deterministic checks"). Each
+that every `yes` row names its pages (`evals/README.md`, "Deterministic checks"). A
+fixture that declares `"delivers": "gate_question"` grades a turn that writes
+nothing: it lists none of the checks that read a pack (`quotes`, `fit_ledger`,
+`traces`, `yes_names_page`), and its research holds only `modes`, with `pages` and
+`entity_tokens` for a canned room, since every other key grades an accounting
+table; the page-naming rule does not ask it to run `yes_names_page`. Each
 `research.user_links` entry is a URL that is no research page and no canary's page.
 Every research target has `on_target_samples`, each aimed at the target in every
 room the fixture runs; a target that accepts `n/a` or `skipped` has `hunt_samples`,
@@ -440,7 +480,11 @@ target outside them and passes no other target's sample as a quick check, and ea
 fixture file's `quick_check` clause allows `output_checks.QUICK_CHECK_CALLS` calls,
 as `interaction-grammar.md` §4's quick-check sentence does. What it does not read:
 whether a canary's spellings are figures, names or titles; whether the declined
-phrase declines; and whether the samples are the queries runs actually send.
+phrase declines; and whether the samples are the queries runs actually send. A
+fixture's `sentinels` list is held to the freezing rules (`evals/README.md`,
+"Sentinels") by `output_checks.sentinel_declaration_problems`, the reader the scan
+and the transcript driver apply to the same list, and no spelling of it may appear
+in a file a skill ships, matched as the scan matches it.
 
 **Retired wordings stay retired.** `--only wording` reads every skill's `SKILL.md`,
 README and references, conventions/, `evals/README.md`, and every clause,
@@ -503,10 +547,11 @@ rather than only in the index; review holds those.
 through `evals/fixture_clauses.py`, as the runner does: an expectation naming a
 clause the file does not define, a clause nothing uses, and braces left in the
 expanded text — a clause inside a clause, a name the loader cannot read — fail.
-It reads each fixture's dates relative to the run at its `date_anchor`, as every
-group does, and fails relative dates with no anchor, an anchor with none, and a
-date reference the loader cannot read (`evals/README.md`, "Dates relative to the
-run").
+A fixture's `delivers`, where present, must be `gate_question`, the key's one
+value (`evals/README.md`, "Deterministic checks"). It reads each fixture's dates
+relative to the run at its `date_anchor`, as every group does, and fails relative
+dates with no anchor, an anchor with none, and a date reference the loader cannot
+read (`evals/README.md`, "Dates relative to the run").
 
 **The ledger points; it does not restate.** Name the file and section that
 changed (`evidence-conventions.md` §5), and cite rather than quote a source. A

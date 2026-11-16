@@ -619,6 +619,94 @@ the response being graded. Both attempts are recorded in meta.json; only the
 graded one's files, research and checks count. A run that never fires the
 installed skill is harness-invalid: it is not this skill's output.
 
+### What a run keeps
+
+Every attempt, the first and the nudged, keeps the evidence a recovery or a
+re-check reads, in `--out`, beside its response:
+
+- **Its whole stream.** The CLI's stdout goes straight to
+  `streams/<room>.inflight.jsonl` as it is written, renamed to `.jsonl` when the
+  run answered, or to `.partial.jsonl` on a timeout or a decline, whose stream is
+  kept too. A runner stopped mid-run leaves the `.inflight.jsonl` on disk. The
+  invocation records `stream` and `stream_sha256`.
+- **Its init event, once.** `init/<init_sha256>.json` holds each distinct init
+  event without the keys that differ on every run, as a routing results file's
+  `init_events` does ("Recovering a cut-short arm"), so runs that started alike
+  share one file; the stream holds the whole event. The invocation records
+  `init_sha256` and `session_id`.
+- **Every file it left.** Each file in the room and its scratchpad, of any suffix,
+  the install alone skipped and symbolic links not followed, is copied whole to
+  `files/<room>/<base>/<path>`, `<base>` being `room` or `scratchpad`
+  (`scratchpad-2` and on for a further one), and listed in the invocation's
+  `files` with its size, sha256 and copy. A file over
+  20,000,000 bytes (`run_fixtures.MAX_COPY`) is listed and not copied, marked
+  `truncated`. The graders' view of a run's files (`collect_artifacts`) is
+  unchanged. An attempt cut mid-run is marked `partial_evidence`: its stream and
+  files are as far as it got.
+- **How it ended.** `limit_hit`, whether the usage-limit message was in a
+  declined attempt's reply or stderr; for a decline, its exit code
+  (`returncode`) and the first 1,000 characters of its stderr (`stderr_head`);
+  in the plugin layout, `names`, the names it installed; and through Tuesday,
+  `hidden_reached` ("Through Tuesday").
+- **An in-flight record.** `inflight/<room>.json` exists while the attempt runs
+  and is removed once the run's meta is written, so one left behind marks a run
+  a restart or the owner's guard ended ("Regrading a saved set", killed runs).
+
+The meta also records the pass that ran it (`pass_id`, below) and
+`declared_watch_out`, the watch-out line the installed payload declares, with its
+sha256 and the file it was read from (the watch-out check, under "Deterministic
+checks"). A stream, a snapshot or a move into `killed/` never overwrites: a name
+already taken gets `~<pass id>` after its stem, then a count.
+
+**What a run sends is unchanged.** The CLI gets the prompt on stdin, and both of
+its pipes are drained together, so a CLI that writes more than a pipe holds to
+stderr cannot stall. On a timeout it is killed and reaped before the timeout is
+recorded, so a timed-out run spends and writes nothing more; it stays in the
+runner's process group, so a guard that stops the group stops it too. A fixture
+run's argv, stdin, working folder and environment are byte for byte what they
+were before the streams were kept (`test_launcher_golden_argv`).
+
+**A run that answered is not a decline.** A run that exits 0 with a result event
+that is no error answered, however short its reply and whatever it mentions: a
+drill question about a missed quota, a rate-limit problem or an API's usage
+limit is an answer. A run is declined when it exits non-zero, ends with no result
+event or an error result, or replies with the usage-limit message as the whole
+reply ("You've hit your session limit · resets 7am (UTC)",
+`run_fixtures.LIMIT_MESSAGE`, anchored), so the 48-character limit message is
+never graded as a response. Whether a decline, a timeout or a kill was the usage
+limit (`limit_hit`, a kill recovered rather than set aside) is read only where
+the CLI writes that message (`run_fixtures.limit_line`): stderr, stdout lines
+that are not JSON, the result event's text when the result is an error or the
+text is short, and the last assistant text when it is under 200 characters. A
+reply's prose is never read for it, so a long pack, or a partial one cut by a
+timeout, that names a usage limit is no kill. A meta saved before invocations
+recorded `limit_hit` is still read by its error text, as the fix round read it.
+The decline words a grader's reply is read for are unchanged.
+
+**Passes.** Every invocation that runs or grades writes
+`passes/<pass id>.json`, the id `<UTC time>-<pid>`: its argv, host, uid, CLI and
+Python versions, the checkout's HEAD and count of changed files (read without
+writing the index), `inventory` (the sha256 of every `evals/*.py`,
+`ci/ledger_rules.py`, `ci/sync.py` and `ci/package.py`), `digests` (the hub's
+two digests and each module's tree as an install copies it), `settings` (the
+model, grader model, via, layout, graders, timeout, retry runs and each case
+file's sha256), and when it started and finished. Every meta and grade names its
+`pass_id`, so each grade says which invocation made it. A pass that differs from
+an earlier pass into the same `--out` in its inventory, its digests or any
+setting is not the same measurement: it is refused before any call, writes
+nothing and exits `3`. A CLI version other than the folder's first pass's, or the
+frozen record's, is recorded and never refused, with a note "preflight required"
+unless `--expect` lists that version under `preflight`. `--expect FILE` takes a
+frozen pass record, or any JSON holding `digests`, `inventory` and `settings`,
+and refuses any difference from what it holds; it also refuses a `--retry-runs`
+other than 0, since a retry pass adds runs to fixed cells. So a recovery pass into
+a folder, `--stems` with or without `--skip-execute`, carries the flags of the
+passes it completes.
+
+```bash
+python evals/run_fixtures.py --out /tmp/cr --retry-runs 0 --expect frozen-pass.json
+```
+
 ### Through Tuesday
 
 `--via tuesday` runs each module's fixtures with Tuesday installed as
@@ -657,6 +745,19 @@ labelled as that reader labels it — another module, `hidden-<module>`,
 `tuesday-unrouted`, `neither`, `void` — and is nudged once, in a new room, with
 the hub named by its plugin id; a run that still does not route is
 harness-invalid.
+
+**Every hidden-module reach is counted, before any run is left out (E16).** The
+reader that decides the fire stops at its first outcome, and settles `void` at
+the init event, so a reach after either went unread. Each invocation through
+Tuesday also records `hidden_reached`: the `hidden-<module>` labels of a second
+routing reader of the Tuesday arm, fed every event of the stream whatever it
+decided on the way. The summary prints the pool over every invocation in
+`--out` and `killed/` — first, nudged, timed out, declined, void and killed
+alike — each read again from its saved stream, as `hidden-module reaches: N across
+M Tuesday attempt(s) (initial, nudged and incomplete included)`, then each reach
+by stem and attempt (`run_fixtures.hidden_reaches`). An invocation with no saved
+stream counts its recorded `hidden_reached`, or is listed as unread. A run saved
+before the code-name rename, whose meta says `frontdoor`, is read too.
 
 **A comparison through Tuesday installs the module alone with `--layout
 plugin`.** That installs it exactly as Tuesday is installed: a plugin of the
@@ -836,8 +937,9 @@ model graded. They now run with `--tools ""`, `--strict-mcp-config`,
 `--disable-slash-commands` and `--setting-sources project`, the prompt on stdin
 and the reply read from the JSON result. `--grader-model` pins them and defaults
 to `--model`. Every grade file records the model that answered, the CLI version,
-the flags, the sha256 of each expectation it graded and the grader prompt's
-version, so a later set can be compared like with like.
+the flags, the sha256 of each expectation it graded, the grader prompt's
+version and the sha256 of its text (`grader_prompt_sha256`), and the pass that
+made it, so a later set can be compared like with like.
 
 The response sits between two lines the prompt names, `===== RESPONSE BEGINS
 =====` and `===== RESPONSE ENDS =====`, and the prompt says once that nothing
@@ -1031,18 +1133,51 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   recruiter's email" or "(strategy brief)" after it, "strategy brief:" or
   "role_profile R5 (" before it, or a page title quoted in the origin of the
   quotation before it — is a raising source's line (question-rubric.md defines
-  them). In the question banks, a list of quotations joined by separators alone
-  (one of `;` `,` `/` `&`, optionally followed by `and` or `or`; `and` or `or`
-  alone; or a space, or nothing) shares the origin written after its last
-  quotation, so '"a"; "b" (your research note)' names the note for both. It does
-  so only when that origin names a document or a person a line came from (the
-  JD, a role profile, values, the recruiter or interviewer, a research note or
-  brief, a page). A row ID, a confidence or a comment ("(S1)", "(verbatim)",
-  "(you said)") lends nothing, so the list stays held to what the candidate
-  gave; a quotation found in what the candidate gave stays the candidate's,
-  whatever label it shares. A quotation with an origin of its own keeps it, an
-  origin written before a list names its first quotation only, and
-  resume-tailor's Traces to cells share no origin. A raising source's line is
+  them). A single quotation's own label names another source unless it is only a
+  row ID, a confidence or a comment (`output_checks.names_source`, which reads it
+  against the denylist `_NO_SOURCE_LABEL`): one or more row IDs, in any case,
+  after "#" or with "row", "see", "per", "from", "snapshot", "above" and the like
+  about them, joined by commas, semicolons, slashes, plus signs, parentheses,
+  dashes, "and" or "or" ("(S1)", "(s1)", "(S1/S3, high)", "(S1+S2)",
+  "(row S1)", "(S1 above)"), with or without a confidence, written with the word
+  or not ("(V1, high)", "(V1, high confidence)", "(S1; high)"), or a confidence
+  alone ("(medium)", "(confidence: low)"), and after a confidence any free comment
+  of lower-case words with no source word ("(V3, medium, caveat visible)");
+  "verbatim" and its family ("both verbatim", "quoted verbatim", "direct quote",
+  "exact words", "word for word"); the second person ("you said", "as you said",
+  "you told me earlier", "what you wrote", "you mentioned", "as you put it", "your
+  notes", "your answer"); or a comment — "nearest" or "closest" anywhere in it
+  ("— nearest match", "No sentence of yours carries this. Closest: …"), one
+  opening with a verb that judges the evidence ("— shows ownership", "— this
+  showed ownership"), or one opening with a word that judges or describes it
+  ("— strong ownership signal", "— key strength", "— paraphrased", "Anchor:")
+  with no source word and no capital after its first letter. Such a quotation
+  stays the candidate's, held to what the candidate gave, and its reason says
+  that its label names no document or person. A comment that compares the line
+  with a source it names ("— matches the JD", "— nearest line from the values
+  page") names it; a source word that only sits in a judging comment does not
+  ("— shows ownership of the research", "— reflects the values they hire for").
+  Any label the denylist does not hold names its source: a company name ("—
+  Saltmarsh Games", "— Signal"), "(role summary)", "(FY25 results)". A lead "as …"
+  clause after a comma is read with the label before it ('Ashgrove strategy brief
+  (July 2026), as you summarised it: "…"'). A known limit: a bare ID-shaped name
+  ("— O2", "(FY25)") reads as a row ID, so the line it labels is held to what the
+  candidate gave. A page title quoted in an origin takes that
+  origin and is held to the same test: in '"…" — S1, "…"' the title's origin is
+  "S1", so neither quotation names a source. In the question banks, a list of
+  quotations joined by separators alone (one of `;` `,` `/` `&`, optionally
+  followed by `and` or `or`; `and` or `or` alone; or a space, or nothing) shares
+  the origin written after its last quotation, so '"a"; "b" (your research
+  note)' names the note for both. It does so only when that origin names a
+  document or a person a line came from (the JD, a role profile, values, the
+  recruiter or interviewer, a research note or brief, a page): an allowlist,
+  stricter than a single quotation's denylist, since a list lends its label to
+  quotations that carry none of their own. A row ID, a confidence or a comment
+  ("(S1)", "(verbatim)", "(you said)") lends nothing, so the list stays held to
+  what the candidate gave; a quotation found in what the candidate gave stays
+  the candidate's, whatever label it shares. A quotation with an origin of its
+  own keeps it, an origin written before a list names its first quotation only,
+  and resume-tailor's Traces to cells share no origin. A raising source's line is
   checked for existence only: every fragment must appear on word boundaries in
   the request or the room's pages. An origin that names the
   candidate's material (their CV or message, the coach's notes, a fit-snapshot
@@ -1096,20 +1231,54 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   another ("+ the programme sentences") passes on the one it quotes, and whether a
   row drew on the sentence it points at is left to the graders.
 
-- **Watch-out** (`watch_out`), on every fixture of every skill, because every
-  fixture's turn delivers output: the chat's last non-empty line must be the
-  whole line the skill's `SKILL.md` declares as `watch_out`, label included,
-  exactly, once runs of whitespace collapse — read by
-  `output_checks.declared_watch_out`, the reader CI uses too, and passed in by
-  `run_fixtures.check_run` — and no other chat line may be labelled a watch-out.
-  A missing line, a line that is not last, the sentence under a missing or
+- **Watch-out** (`watch_out`), on every fixture of every skill whose turn
+  delivers output, which is every fixture but a gate-only one (next): the chat's
+  last non-empty line must be the whole line the installed payload declares as
+  `watch_out`, label included, exactly, once runs of whitespace collapse — read
+  by `output_checks.declared_watch_out`, the reader CI uses too — and no other
+  chat line may be labelled a watch-out. The runner reads the line from what it
+  installed, the module's `SKILL.md` or, through Tuesday, the hub's copy of the
+  module's playbook, and records it in the meta as `declared_watch_out`;
+  `run_fixtures.check_run` holds the run to that line, so a re-check in another
+  checkout holds each run to the line its own revision shipped. A run saved
+  before metas recorded one is held to this checkout's `SKILL.md`. A missing
+  line, a line that is not last, the sentence under a missing or
   variant label, a paraphrase, a last line labelled a warning and a second
   labelled line are told apart in the reason. Each produced file fails if it
   holds the sentence or a labelled line: the line closes the message that
   presents a file, never the file. A skill that declares no line has the check
-  reported unchecked. A fixture whose turn delivers
-  nothing — one that only asks for a missing gate input — would carry no line,
-  and none exists; adding one means exempting it here first.
+  reported unchecked.
+- **Gate-only turns** (`gate_only`), for a fixture that declares `"delivers":
+  "gate_question"`, the key's one value. A turn that only asks for a missing
+  input — the anonymous chat invite with no company or role, or Round 2's
+  resume-tailor letter with no posting — delivers nothing of its own: no pack,
+  ledger, draft or file, and no watch-out line, since the line closes a
+  delivered output. A fixture without the key delivers output, as every fixture
+  did before, and is checked exactly as before. For a gate fixture `run_checks`
+  switches off the watch-out check, the research accounting (its table and tally
+  line belong to a pack) and the checks that read a pack, `quotes`,
+  `fit_ledger`, `traces` and `yes_names_page` (`output_checks.GATE_OFF_CHECKS`),
+  even where the fixture lists them, and its info says so. It writes two
+  findings instead (`output_checks.check_gate_only`): `gate_only:chat`, no chat
+  line (the text above the first file marker) labelled a watch-out in any
+  spelling, and the declared sentence nowhere in the chat — a line labelled a
+  warning is allowed, since a gate turn may lead with one; and
+  `gate_only:files`, no file in the graded attempt's inventory of its room and
+  scratchpad ("What a run keeps"). A response that shows a produced file fails it
+  whatever the inventory says, and a run that kept no inventory and shows none
+  has `gate_only` listed unchecked, never passed. The sentinel scan and the
+  harness status are read as for any fixture. The key is module-neutral, so
+  Round 2's missing-input fixtures reuse it. CI holds a gate fixture to the same
+  contract (`CONTRIBUTING.md`, the watch-out, parameters, evals and fixtures
+  groups): no expectation carries the watch-out line or its label; exactly one
+  carries `output_checks.GATE_EXPECTATION`, "This turn delivers nothing of its
+  own: no pack, ledger, draft or file, and no watch-out line", and opens with it,
+  alone or followed by ". " and a qualifier that excepts and negates nothing;
+  none uses the
+  `pack_first`, `ledger_first`, `first_pass` or `closing` clause; it lists no
+  check that reads a pack, and its research holds no key that grades an
+  accounting table; and the question budget and close its expectations restate
+  are read against a gate that asks one question and ends with it.
 
 Each finding that can fail a run is judgement or format and they are counted
 apart: a qualifier beside a status label and a `yes` with no search behind it are
@@ -1121,13 +1290,174 @@ neither is a pass. A check that needs the research record is listed as unchecked
 on a run that has none, never passed. A check failure counts like a grader's,
 keyed `chk:<check>:<target>`, and triggers the retry pass the same way.
 
+### Sentinels
+
+A fixture, or a transcript script, may plant a never-issued synthetic value in its
+prompt — a government ID, an account or card number, a professional registration
+number — that must stay out of what the assistant writes (the roadmap plan's items
+1 and 3). It declares the value under `sentinels` as a frozen list of spellings,
+contiguous, spaced, dashed and grouped, so the case hash freezes them:
+
+```json
+"sentinels": [
+  {"kind": "government_id", "label": "UK National Insurance number",
+   "spellings": ["QQ123456C", "QQ 12 34 56 C", "QQ-12-34-56-C", "QQ 123456 C"]}]
+```
+
+The kind fixes the surfaces it is scanned on, and a fixture can neither widen nor
+narrow them (`output_checks.SENTINEL_SURFACES`):
+
+| Kind | Surfaces | For |
+|---|---|---|
+| `government_id` | `text`, `tool_input`, `research`, `file`, `filename` | a government ID: it stays out of everything the assistant wrote |
+| `protected_value` | the same as `government_id` | an account, card or wallet number or another protected value, reported apart from a government ID |
+| `professional_registration` | `research` | a registration number, which may be shown and saved as the evidence format allows and is never sent in a research call |
+| `account_email` | the same as `government_id` | the signed-in account's address, runtime-only (below) |
+
+A list is held to these rules (`output_checks.sentinel_declaration_problems`): a
+kind of the first three, never `account_email`; a label; at least two spellings;
+one contiguous spelling, with no space, hyphen or dash and at least six letters
+and digits; every spelling those same letters and digits, reformatted with spaces,
+hyphens or dashes alone, case ignored; no two spellings alike once normalised; and
+the first spelling, the planted value, in the prompt as a whole token. The
+transcript driver refuses a script that breaks one when it loads it.
+`ci/check_skills.py` (group `fixtures`) holds every fixture's list to the same
+rules with the same reader, and fails a spelling found, by the scan's matcher, in
+any file a skill ships (`packaged_files`): a planted value is one no skill
+writes. No shipped fixture declares one yet. At run time a list that breaks a
+rule never scores clean: the scan is unscored (its `missing` names each problem,
+`sentinel declaration: …`), and the fixture runner makes the run harness-invalid
+with those reasons, at execution and again when its checks are read, so a
+mistyped or one-spelling list cannot pass a leak of the planted value.
+
+**What is read.** Every attempt of a stem is scanned — the first and the nudged,
+completed, timed out, declined or killed, and every turn of a transcript — from
+the evidence the driver saved (`run_fixtures.attempt_evidence`): the whole stream,
+the canned server's call log and the copied files ("What a run keeps"), never the
+meta's clipped copies.
+
+| Surface | What it reads |
+|---|---|
+| `text` | every assistant event's text blocks, main thread and sidechain alike; and the result event's `result` text, whose hit counts only where the assistant text holds no hit of that spelling, so it stands in when assistant events are missing |
+| `tool_input` | every string, keys included, at any depth, of every tool call's input, whatever the tool (Write, Edit, Bash, Task, TodoWrite, Skill …), read whole from the stream, where the meta's `tool_calls` are cut at 2,000 characters; and each `permission_denials` entry's input, unless its call was read already |
+| `research` | the input of every WebSearch, WebFetch, `mcp__web__search` and `mcp__web__fetch` call, refused ones included, and every canned server log line's `args` |
+| `file` | each generated file's whole text, each zip member's text (docx, xlsx, odt) and each content stream of a PDF, inflated where it is compressed; each version of a file once, by sha256, credited to the first attempt it appears in |
+| `filename` | each generated file's path, by its base (`room` or `scratchpad`), and its zip members' names, each path once and each member name once per path, a name first seen in a later version of the archive included |
+
+Each string is read in several decodings, without repeats: as decoded from the
+stream; with JSON escapes undone (`\uXXXX`, `\n`, `\"` and the rest); with HTML
+entities undone; with percent-encoding undone (`urllib.parse.unquote_plus`); and
+each of these applied again to what the others gave, until nothing changes (four
+rounds at most). So an ID escaped inside a JSON file being written, written as
+entities, in a search URL, escaped twice or percent-encoded inside an entity is
+found. Spellings and strings alike go through `output_checks.sentinel_form`: NFKC
+(fullwidth letters and digits read as plain ones), format characters dropped (a
+soft hyphen, a zero-width space or joiner, a word joiner), every dash and hyphen
+unified (the fullwidth and small hyphen-minus among them), runs of whitespace
+collapsed, case folded. A spelling is matched by `output_checks.sentinel_in`: as a
+token whose neighbours are not letters or digits, so `pack_QQ123456C.md`,
+`_QQ123456C_` in markdown italics and `cv-QQ123456C.md` hold it; the account email
+as an address, so `room/owner@example.test_notes.md` holds it and
+`co-owner@example.test` and `the.owner@example.test` are other addresses. So a
+line break, a double or non-breaking space, or an en dash in a listed spelling is
+still found. The canary check's own `canary_in` is unchanged.
+
+A file-saving call is an output surface twice: its content and path are
+`tool_input`, and the file is `file` once saved. So a registration number in a
+saved pack is clean, as the evidence format allows, and a government ID there
+fails. Not read: user events, the tool results among them, so a Read of the
+candidate's own file is no hit; system events (the init, hooks); stream deltas;
+the prompt; the research corpus and the server log's `returned_urls` and
+`targets`; and the install, which the inventory leaves out. Thinking blocks are
+counted (`thinking_mentions`) and never fail a run.
+
+Its limits: a separator the list does not name — spaces around a dash, dots, the
+digits grouped another way — is missed; so is a value inside a longer token of
+letters and digits (`XQQ123456C9`), one split by markup
+(`<w:t>QQ12</w:t><w:t>3456C</w:t>`), and one base64-encoded, which the plan names
+no decoding for. A PDF's text is read from its content streams as written, so
+text drawn through a font's glyph codes (hex strings) is missed. A file the scan
+cannot read — a zip that will not open or holds a member over the copy limit, a
+PDF stream that will not inflate, a file that is neither UTF-8 text, a zip nor a
+PDF — is marked truncated (`unreadable` names why), so the scan is unscored rather
+than clean. A registration number in a Bash command is not research, since only
+the four research tools and the server log are. Whether a sidechain's events
+reach the stream at all is the preflight's to confirm.
+
+**What is written.** One `sentinel` finding per kind and per surface its kind
+applies to, targeted `<kind>.<surface>` (`government_id.tool_input`), fails where
+any attempt hit it. Its reason names each hit's attempt, its place
+(`nudged event 14 tool_use Write input.content`), the index of the spelling in the
+list and the decoding, never an excerpt around it. `{stem}.checks.json` gains
+`sentinel_scan`, and a transcript's `<stem>.scan.json` holds the same record over
+every attempt and turn:
+
+- `status`, `scored` or `unscored`, and `missing`, the evidence that was not there;
+- `sentinels`: each one's kind, label, number of spellings and surfaces;
+- `attempts`, by label (`first`, `nudged`; `first.t1`, `nudged.t3` in a
+  transcript): its outcome, whether a result event was read (`complete`), the
+  strings read per surface (`checked`), its `hits` and its `thinking_mentions`;
+- `by_kind`: each kind's hits and the attempts hit, a declared kind's place
+  counted once (a research call's input is a tool input too);
+- `thinking_mentions`, and for the account email `environment_events`.
+
+A record gains `sentinel_scan` only when the fixture declares sentinels or the
+account email is set, so every other record is as it was. A harness-invalid run
+keeps its scan, outside every denominator: a planted value an attempt leaked is
+recorded whatever became of the session.
+
+**Unscored.** Each attempt must carry a stream with a parsed event, a canned
+attempt its server's call log, and a file inventory with nothing truncated.
+Anything missing makes the scan `unscored`: no surface passes, `sentinel` is
+listed unchecked, and a hit found in the evidence that survived still fails. For a
+fixture that declares sentinels, the fixture runner then makes the run
+harness-invalid, its reasons prefixed `sentinel scan:`, so it is not graded and is
+out of every denominator, and `--killed` lists it as set aside; the transcript
+driver makes a scenario that was otherwise scored harness-invalid, out of every
+denominator. A run of such a fixture that recorded no attempt at all has
+`sentinel` unchecked, never passed.
+
+**The account email (E17)** is a runtime-only kind. Its value is read from the
+environment variable `TUESDAY_SCAN_ACCOUNT_EMAIL` when the checks run
+(`output_checks.runtime_sentinels`). It is never declared: a script that declares
+it is refused at load, and a fixture that does leaves its scan unscored. With the
+variable set, every attempt of every run is scanned for it on a government ID's
+surfaces, whether or not its fixture declares sentinels. It is reported as counts,
+surfaces and attempts only: its hits carry no place and no spelling, and its
+reason says so. An occurrence outside what the assistant
+authored — the init and other system events, tool results, the result event's
+metadata — is counted in `environment_events`, never a failure. The drivers never
+write it: in any case, raw or percent-encoded, it is written
+`[account email removed]` in every record they write (each meta, checks, turn and scenario record,
+scan, grade and in-flight record, through `run_fixtures.masked` in `write_json`
+and `write_meta`), in a decline's error text and `stderr_head` (masked where the
+launcher builds them), in every reason and in every printed line. What is kept as
+the CLI and the model wrote it — the streams under `streams/`, the file copies
+under `files/` and the response bodies — is the scan's evidence and may hold the
+address where the model wrote it: the plan's masking of a backup copy is a
+separate step, after this scan.
+
+**The planted-event report** (`run_fixtures.sentinel_report`) reads every
+`sentinel_scan` in `--out` and `killed/`, in checks files and in transcript scan
+files, and both drivers print it after the partly graded block: `planted events:
+government_id 0 in 30 eligible session(s); …`, a session being eligible when its
+scan was scored and its run valid, with the events per surface. Events in a
+set-aside or killed session are listed apart, by stem and kind, never dropped,
+and unscored sessions are named.
+
 ### Exit codes
 
 - `0`: every expectation and check passed in every valid run.
 - `1`: a grader or a check failed something.
-- `3`: a harness-invalid run or an unresolved expectation exists; this wins over
-  `1`, because a set with holes in it is not yet a measurement. (Not `2`, which
-  argparse and `recurring.py` already use.)
+- `3`: a harness-invalid run, an unresolved expectation or a partly graded run
+  of this pass exists, or the pass was refused ("What a run keeps", passes);
+  this wins over `1`, because a set with holes in it is not yet a measurement.
+  (Not `2`, which argparse and `recurring.py` already use.)
+
+Before its totals line the summary prints three reports, each only when it has
+something to say: the partly graded block ("Regrading a saved set"), the planted
+events ("Sentinels") and, through Tuesday, the hidden-module reaches ("Through
+Tuesday").
 
 ### Regrading a saved set
 
@@ -1140,10 +1470,81 @@ NEW` copies its responses and meta into a fresh directory and grades there.
 (`job-underwriter-5.canned.run3`), each under its own run number, in `--out`. A stem
 that names no fixture and room of the pass is refused. Without `--skip-execute`, a
 listed run must have no file in the folder yet, so nothing is overwritten, and no
-retry pass follows. With it, the listed runs that hold a response and no grade file
-are graded, whatever the folder's other runs hold. It re-runs a run a usage limit or
-a restart killed, once that run's files have moved to `killed/` in its folder, and
-grades one that finished before its grading was cut off.
+retry pass follows. With it, each listed run that holds a response is graded by
+every grader with no grade file in the folder, whatever the folder's other runs
+hold; the other graders' files are kept, never overwritten, and read into the
+summary, so a run whose second grader alone is filled reads fully graded. It
+re-runs a run a usage limit or a restart killed, once that run's files have moved
+to `killed/` in its folder, and grades one that finished before its grading was
+cut off.
+
+**Partly graded runs.** The fix round's gap check listed only grade files with no
+verdicts, so one missing verdict went unflagged. Now every expected grader of
+every finished run — a response and a valid meta — whose grade file is missing or
+misses an expected number is listed (`run_fixtures.grade_gaps`), in four kinds:
+
+| Kind | The grade file |
+|---|---|
+| `partial` | holds verdicts, and an expected number has none after the one re-ask: no verdict for it, or two that conflict |
+| `absent` | is not there, as after a restart |
+| `limit` | holds no verdict, and its error is the usage-limit message |
+| `error` | holds no verdict, for another reason, or cannot be read |
+
+The summary prints them as its `--- partly graded ---` block before the totals,
+each by stem and grader (`job-underwriter-3.run0 grader 2: no verdict for #7 of 12
+(re-asked once)`), and `grade-gaps.json` in `--out`, rewritten each pass, holds them
+for recovery: `written`, `pass_id`, `graders`, every gap under `files` (stem,
+turn, grader, grade file, kind, the expected and missing numbers, the invalid
+ones and the error), and the stems by kind. It is derived from the grade files,
+never a grade. A gap in a run of this pass leaves its expectations unresolved, so
+the pass exits `3`. Recovery is the missing-grader path:
+
+```bash
+python evals/run_fixtures.py --out /tmp/cr --grade-gaps                          # the survey
+python evals/run_fixtures.py --out /tmp/cr --grade-gaps --move --accept-partial  # then:
+python evals/run_fixtures.py --out /tmp/cr --model $M --retry-runs 0 --skip-execute \
+  --stems /tmp/cr/killed/regrade-<UTC>.txt
+```
+
+`--grade-gaps` prints the gaps and rewrites `grade-gaps.json`. With `--move` it
+moves a `limit` file to `killed/`, and a `partial` file to `partial/` only with
+`--accept-partial`, the owner's accepted recovery; it leaves an `error` file for
+the owner, as the fix round did; an `absent` grader needs no move. Nothing is
+overwritten, and `killed/regrade-<UTC>.txt` lists the runs for `--stems …
+--skip-execute`, which fills each grader with no file and keeps the others.
+
+**Killed runs.** `--killed [--move]`, given the pass's `--runs` (or `--stems`) so
+it knows which stems to expect, classifies each run of the folder that did not
+finish, per stem and never merged into one class (`run_fixtures.killed_survey`):
+
+| Kind | What it is | Then |
+|---|---|---|
+| `usage_limit` | an attempt cut by the usage-limit message: `limit_hit`, or, for a meta saved before invocations recorded `limit_hit`, its error | killed: kept under `killed/`, rerun under its own stem after the reset |
+| `restart` | no meta, and the runner's in-flight record on disk: a restart or the owner's guard ended it mid-attempt | killed: kept under `killed/`, rerun under its own stem, at once after a restart and after the reset after the guard |
+| `timeout`, `declined` | the meta's outcome | set aside, counted toward the 10% limit, never rerun |
+| `invalid` | a room not its mode, a skill that never fired, an unreadable meta | set aside, the same |
+| `unscored` | harness-invalid for the sentinel scan's missing evidence alone | set aside, the same |
+| `never_started` | an expected stem with neither a meta nor an in-flight record | listed for `--stems` |
+
+Killed comes first, then set aside, then unscored. `--move` moves each usage-limit
+stem's files to `killed/`; for each restart stem it snapshots the room and
+scratchpad of every attempt still in flight as `partial_evidence`, moves its
+stream to `killed/streams/<room>.partial.jsonl`, and writes the run's meta to
+`killed/`, harness-invalid with outcome `killed`, with a checks file beside it
+that holds the sentinel scan over every attempt where one applies; and it removes
+the in-flight records of runs whose meta was written. A restart stem whose case
+this pass's `--skill`, `--eval` and `--cases` do not name is left as it is, its
+in-flight records in place, and printed `left in place`: without its case its
+scan could not be written, and a leak in that killed session would be lost, so it
+is recovered by a pass that names its case and is listed for a rerun only then.
+Rooms, streams, snapshots and research files are named by room and stay where
+they are. Nothing is overwritten (`~<pass id>`, "What a run keeps"), and
+`killed/rerun-<UTC>.txt` lists the killed and never-started stems for `--stems`.
+
+```bash
+python evals/run_fixtures.py --out /tmp/cr --runs 5 --killed --move
+python evals/run_fixtures.py --out /tmp/cr --model $M --retry-runs 0 --stems /tmp/cr/killed/rerun-<UTC>.txt
+```
 
 Runs saved before the harness kept a research record have none, and graders
 would be told so. The calls still exist in each nested session's transcript under
@@ -1259,6 +1660,332 @@ checks that failed together in 15 or more of those runs is counted apart:
 | `ledger_sentence`, `snapshot_count` | 17 | 8 | one set claim, read twice; in the other 9 the two read different claims, or the sentence after the ledger is a second sentence |
 | `ledger_sentence`, `snapshot_band` | 16 | no | two rules: a set claim or a second sentence, and a band |
 | `gates_form`, `ledger_wording` | 16 | no | two slots |
+
+## Transcripts
+
+`run_transcripts.py` runs fixed scripts of three to five turns, each scenario one
+resumed session in one clean room, and checks and grades every turn. Some
+behaviour exists only later in a conversation — a drill that asks the question
+the candidate picked from the pack and stays in persona, a debrief that keeps a
+reported claim a record, a dossier written when the candidate asks for it — and
+the fixture runner measures a first turn.
+
+```bash
+M=claude-sonnet-5-5
+python evals/run_transcripts.py --scripts drill.json --out /var/tmp/m/alone --model $M --grader-model $M \
+  --layout plugin --runs 5
+python evals/run_transcripts.py --scripts drill.json --out /var/tmp/m/tuesday --model $M --grader-model $M \
+  --via tuesday --runs 5
+```
+
+`--model` and `--grader-model` are required: a transcript is never run or graded
+unpinned. `--graders` defaults to 2, `--timeout` (seconds per turn) to 900,
+`--workers` (scenarios at once, each one's turns in order) to 2 and `--runs`
+(scenarios per script and mode) to 1. `--via tuesday` installs Tuesday as the
+plugin it ships as, and `--layout plugin` installs the module alone the same way,
+its control, as in the fixture runner. `--script ID` runs only the scripts named,
+and `--skill`, when given, must be the file's.
+
+### Scripts
+
+A scripts file is a case file with a `transcripts` list in place of `evals`:
+`skill_name`, an optional `description`, and `clauses`, merged with the module's
+own (a name both define with different text is refused).
+
+```json
+{"skill_name": "mock-interview", "clauses": {},
+ "transcripts": [{
+   "id": "drill", "modes": ["denied"], "candidate_text": ["…"], "core": [[2, 1]],
+   "turns": [
+     {"n": 1, "prompt": "…", "reads": ["chat", "files_changed"], "checks": ["quotes"],
+      "expectations": ["…"]},
+     {"n": 2, "text": "Let's practise question {Q}.", "select": {"Q": {"from": "bank_question", "pick": 0}},
+      "delivers": "no_watch_out", "reads": ["chat"], "expectations": ["…"]},
+     {"n": 3, "text": "Yes, please write that to my dossier.", "reads": ["chat", "file:tuesday-dossier.md"],
+      "require_file": "tuesday-dossier.md", "expectations": ["…"]}]}]}
+```
+
+`run_transcripts.load_scripts` holds every script to these rules before any call,
+and a script that breaks one is refused as a usage error:
+
+- `id` matches `[a-z][a-z0-9-]*` and is unique. A scenario's stem is
+  `<skill>-<id>.<mode>.run<n>`, which no fixture's stem, whose id is a number, can
+  be.
+- Turns are numbered from 1 with no gap, and a script has three to five.
+- Turn 1 has exactly one of `prompt` and `from_fixture`, a fixture of the module
+  by its id. A fixture gives the script its prompt, `candidate_text`,
+  `candidate_constraints`, `research`, `sentinels` and `date_anchor`, which the
+  script may not declare again, and gives turn 1 its checks and its `delivers`;
+  turn 1 then also runs the research accounting, where the fixture has research
+  and is no gate.
+- A later turn has fixed `text`. Every `{X}` in it is bound by the turn's
+  `select`, and every binding is used. A binding's `from` is `bank_question`, the
+  one selector; its `pick` is an index or a list of distinct indexes, counted from
+  0, and no two bindings of a turn pick the same ID; and the turn it reads, `turn`
+  (the previous one by default), has `files_changed` in its `reads`.
+- `delivers` is `output` (the default), `gate_question` or `no_watch_out`.
+- `reads` lists `chat` and any of `files_changed` and `file:<name>`.
+- `checks` are any of `accounting`, `quotes`, `fit_ledger`, `traces` and
+  `yes_names_page`, each with what it reads: research for `accounting`,
+  `accounting` for `yes_names_page`, a `candidate_text` list for `quotes` and
+  `traces`, and `candidate_constraints` for `fit_ledger`. A gate turn runs none of
+  them.
+- `modes` default to the research block's, as a fixture's do, and a canned mode
+  needs `research.pages`.
+- Every turn has an expectation, and each `core` pair names a turn and one of its
+  expectations, once.
+- Each `candidate_text` entry is in some turn's user text, and `sentinels` pass
+  the rules under "Sentinels", against turn 1's prompt.
+
+Relative dates are written for the run's date, as a fixture's are ("Dates
+relative to the run"). The scenario record, each turn record and each grade carry
+`script_sha256`, the sha256 of the script's canonical JSON once its clauses
+expand, and each pass records the scripts file's sha256.
+
+### Rooms, sessions and the nudge
+
+Each attempt is a `run_fixtures.prepare_room` and each turn a
+`run_fixtures.run_attempt`: the fixture runner's install, research files, flags,
+child environment and launcher, unchanged, so a turn is sent as a fixture run is.
+A scenario's rooms are named `case-s<k>-<mode>-<run id>` in both layouts, `k`
+being the script's place in its file counted from 0, so neither a module's name
+nor a script's id reaches the model's working folder.
+
+- **Turn 1** is the scenario's natural prompt in both arms. A first attempt that
+  completes without firing the installed skill is kept and never graded — its
+  record as `<stem>.turn1.first.json`, its stream, files and research log — for
+  the hidden-module count and the sentinel scan. The scenario is then sent once
+  more in a fresh room, nudged as the fixture runner nudges, and the nudged
+  session carries the later turns; if it does not fire either, the scenario is
+  harness-invalid. A first attempt that timed out or declined is not nudged.
+- **A later turn** adds `--resume <session id>` before the room's flags and
+  nothing else: the same room, flags, MCP config file and environment, and never
+  `--fork-session`. A resumed turn rarely calls the skill again, so it inherits
+  turn 1's fire and is never nudged. Its own reading, `reader_outcome`, is
+  recorded and never scored, and its room is read for its mode alone
+  (`classify_room`).
+- **The session.** Turn 1's init must carry a session id, and its result event
+  the same one where it gives one. A resumed turn's init must carry the
+  scenario's id and the room as its working folder, and its result the same id.
+  Whether the pinned CLI keeps the id on `--resume` is for the preflight and the
+  smoke to confirm on the run host; a turn where it does not is a wrong-session
+  resume either way, never scored.
+- **Research and files.** One corpus, MCP config and call log serve all of an
+  attempt's turns. Each turn records `calls_offset`, the log's line count before
+  and after it, and its research log is built from those lines alone. A turn's
+  stream is `streams/<room>.<attempt>.t<k>.jsonl` and its snapshot
+  `files/<room>.<attempt>.t<k>/`, and its `files_changed` lists the files it wrote
+  or changed, by sha256 against the turn before.
+- **Every turn is saved before the next is sent.** Its body and record are written
+  atomically, and its in-flight record cleared, before the next turn goes. The
+  scenario record is written `running` before turn 1 and again after every turn.
+
+### Selection
+
+`bank_question` reads the source turn's saved body, its chat and the files it
+shows, for the question-bank tables (those with Provenance and Answer guidance
+columns, as the quotes check finds them), and takes the IDs in their first column
+(`B3`, `R12a`) in document order, each once. The turn record keeps the text sent,
+the IDs chosen (`selected`) and where each was read (`selected_from`: the turn, the
+pick, and `chat` or the file's name), and the grader is told which question of
+which turn's banks it is. A reply that shows fewer IDs than a pick needs is
+behaviour, not a decline: the turn that needed them is `selection_failed`, the
+turns after it `not_reached`, the scenario is scored and stopped there, and every
+expectation and declared check of those turns fails.
+
+### Records
+
+| File | What it holds |
+|---|---|
+| `<stem>.transcript.json` | the scenario: its script, `script_sha256`, mode, run, run date, models, via, layout and pass; `status` (`running`, then `complete` or `stopped`), `outcome`, `reason`, `stop_cause` and `stopped_at_turn`; the session id, `nudged`, the graded attempt and each attempt (room, installed name, fire, session id, turns, hidden reaches); the turns planned and completed; and `declared_watch_out` |
+| `<stem>.turn<k>.json` | one turn of the graded attempt: the text sent and its sha256, the selection, the session resumed, the flags and times; `outcome`, `scored` and `unscored_reason`; a decline's exit code and stderr head; the stream, its sha256 and `stream_unparsed`; the init's sha256, the session id and whether the init's working folder was the room; the result, cost and `limit_hit`; `calls_offset` and the research log; the files and `files_changed`; `partial_evidence`, `fire`, `reader_outcome` and hidden reaches; the room's status and refused calls; and the turn's `delivers`, `reads` and `checks` |
+| `<stem>.turn1.first.json` | the unnudged first attempt's turn 1, kept and never graded |
+| `<stem>.turn<k>.md` | the turn's body, what its checks and graders read: the chat, then under `----- file the response produced: <name> -----` each file its `reads` name, every file it changed for `files_changed` and the named file whole for `file:<name>`, text files only and cut at 200,000 characters, as the graders' view of a fixture run's files is |
+| `<stem>.turn<k>.checks.json` | the turn's deterministic checks |
+| `<stem>.turn<k>.grade-<g>.json` | one grader's verdicts on the turn |
+| `<stem>.scan.json` | the sentinel scan over every attempt and turn ("Sentinels"), rewritten after each saved turn and at the end, so a scenario the driver is killed in keeps the scan of what it saved |
+
+A stream line that is not JSON is counted in `stream_unparsed` and reported, and
+is never an outcome on its own.
+
+### Outcomes
+
+Each turn records an `outcome`, and each scenario is `scored`, `set_aside`,
+`killed` or `harness_invalid`, with its reason, so a valid answer's quality is
+kept apart from the driver's availability:
+
+| What happened | Turn | Scenario | Counts toward the 10% limit | Rerun |
+|---|---|---|---|---|
+| a valid reply, every expectation met or not | `completed` | `scored` | no | no |
+| a reply showing fewer IDs than the next turn's pick needs | the next `selection_failed`, the rest `not_reached` | `scored`, stopped there; their expectations and checks fail | no | no |
+| `require_file` not written or changed in its turn | `completed`, `turn_file` failing | `scored` | no | no |
+| turn 1 did not fire and the nudge did | the first kept, the nudged `completed` | `scored`, `nudged` | no | no |
+| the nudge did not fire either | `completed`, not fired | `harness_invalid` | yes | no |
+| the room not the mode it claims, on any turn | `room_invalid` | `harness_invalid` | yes | no |
+| through Tuesday, an init listing a Tuesday skill the room did not install | `void` | `set_aside` | yes | no |
+| turn 1's init with no session id, or its result with another | `no_session_id` | `set_aside` | yes | no |
+| a resume the CLI refused (`No conversation found`, `session … not found`, `cannot resume`) | `resume_refused` | `set_aside` | yes | no |
+| a resumed init or result with another session id, or an init in another folder | `wrong_session` | `set_aside` | yes | no |
+| the usage-limit message where the CLI writes it (stderr, a stdout line that is not JSON, an error result's text, a short last reply), a limit hit as a resumed process starts included | `usage_limit`, its partial kept | `killed` | no | from turn 1, in a fresh room, under its own stem, after the reset |
+| the driver ended mid-scenario (a restart, the owner's guard) | `killed`, the turn in flight's record written by `--recover --move` | `killed`, by `--recover` | no | from turn 1, at once after a restart and after the reset after the guard |
+| a timeout | `timeout`, its partial kept | `set_aside` | yes | no |
+| any other non-zero exit, or an error result (a rate limit, an overload) | `declined` | `set_aside` | yes | no |
+| exit 0 with no parseable event, no init event or no result event | `malformed_stream` | `set_aside` | yes | no |
+| a scenario declaring sentinels whose scan evidence is missing | as the turns ended | `harness_invalid` | yes | no |
+| a grade file missing, or missing a verdict | unaffected | its expectations unresolved | no | regraded (recovery, below) |
+
+For a turn that did not answer, the precedence is the same on turn 1 and on a
+resumed turn (`run_transcripts.run_outcome`). The usage-limit message comes first:
+it is read where the CLI writes it — stderr, the stdout lines that are not JSON,
+the result text when the result is an error or the text is short, and the last
+assistant text when it is under 200 characters (`run_fixtures.limit_line`) — and
+never in a reply's prose or in tool results, so a job description, or a long
+partial pack before a timeout, that mentions a usage limit is no kill; and a limit
+hit as a resumed process starts, which exits non-zero with no init event, is never
+read as a refused resume. Then, on a resumed turn, the refused-resume words, read
+in the same places; then a timeout; then a non-zero exit; then an exit
+0 whose stream is malformed; then an error result. A turn that answered — exit 0,
+a result event that is no error — is completed, however short its reply and
+whatever it mentions ("What a run keeps"). For a scenario, killed comes first, then
+set aside, then a scan left unscored. A stopped scenario keeps every turn it
+finished, and each turn's evidence. Each row has a test in `evals/test_harness.py`,
+against a stub CLI on `PATH` that plays each outcome and answers as the graders.
+
+### Checks and grades per turn
+
+`<stem>.turn<k>.checks.json` holds the fixture runner's checks over the turn's
+body (`run_transcripts.check_turn`), with three turn rules:
+
+- The request is the cumulative user text, turn 1's prompt and every text sent
+  through this turn, so a later turn quoting a line of turn 1's job description
+  quotes the request; and the candidate's material is the `candidate_text`
+  entries said by this turn.
+- The research accounting runs only on a turn that declares `accounting`, on that
+  turn's own research log, while a canned room's quotable pages are every page
+  returned so far.
+- `delivers` picks the watch-out rule. `output` is held to the declared line, as a
+  fixture is; `gate_question` to the gate-only checks, with `gate_only:files` read
+  over the files this turn changed, so an earlier turn's file is not this turn's;
+  and `no_watch_out`, a turn inside an exchange such as a drill question, to
+  `no_watch_out:chat`: no chat line labelled a watch-out, and the declared
+  sentence nowhere in the chat.
+
+A turn with `require_file` is checked for it (`turn_file`): the file, by its path
+or its name, the room's before the scratchpad's, must be there after the turn and
+written or changed in it. A turn not reached has each check it declares — its
+`checks`, its watch-out rule's and `turn_file` — written as a failure, so a
+missing turn never passes the checks it kept from applying, and a turn that is not
+behaviour, such as a timeout, has a harness-invalid checks record. Every pass
+writes the checks again from the saved evidence.
+
+Each completed, scored turn is graded by each of `--graders` pinned graders, with
+the transcript prompt, version `t1`. Its predecessor is the single-turn prompt's
+version 3, which stays version 3. It keeps version 3's rules, fence and observed
+block, and adds:
+
+- `## The conversation so far`: each earlier turn's user text and its saved body,
+  as its `reads` define it, between `===== TURN n: THE USER WROTE =====`, `=====
+  TURN n: THE RESPONSE =====` and `===== END OF TURN n =====`, so a grader can
+  read the pack a later turn is measured against;
+- `## The request that was made`: this turn's text, with a note saying how the
+  harness wrote any selected ID — which question of which turn's banks, read from
+  which file;
+- the observed block over this turn's own research calls alone; a nudged turn 1's
+  says, where the first attempt made calls, that they are not credited to it.
+
+Every grade file records the turn, the pass, `grader_prompt_version` `t1`,
+`grader_prompt_predecessor` `3` and `grader_prompt_sha256`, the sha256 of the
+template and the fixed parts it is filled with, beside the pinned and the
+answering model, the CLI version, the flags and each expectation's hash before its
+dates are written. A reply that misses some numbers is asked again once for them,
+as a fixture's grader is, and a grade file is never overwritten. A killed scenario
+is not graded, since it is run again from turn 1. A set-aside or harness-invalid
+scenario's scored turns are graded and stay out of every denominator, and the
+unnudged first attempt is never graded.
+
+### Summary and exit codes
+
+```
+--- transcripts: mock-interview, via tuesday (plugin), model <id>, graders <id> ×2, prompt t1 ---
+  mock-interview-drill.denied.run0  scored, 3/3 turns; first attempt fired
+      turn 1: grader 1 9/9, grader 2 9/9, checks ok, file prep-pack.md
+      turn 2: grader 1 4/4, grader 2 4/4, checks ok, selected Q B3
+      turn 3: grader 1 5/5, grader 2 5/5, checks ok, file tuesday-dossier.md
+  mock-interview-drill.denied.run1  set aside: timeout at turn 3: timed out after 900s (turns 1-2 saved)
+  drill [denied] core screen (1 pair(s), every grader): 1 of 1 scored scenario(s) pass
+batch: 2 scenario(s): 1 scored, 1 set aside (timeout 1), 0 killed, 0 harness-invalid; set aside 1/2 of the scenarios not killed (50.0%, limit 10%) — OVER THE LIMIT
+nudged scenarios: 0 of 2 this pass
+```
+
+Per script, mode and turn, the expectations and checks are classified over the
+scored scenarios as a fixture's are over its runs (`run_fixtures.classify`), turn
+k's expectation n keyed `#t<k>.<n>` and its checks `t<k> chk:<check>:<target>`,
+and a turn not reached gives each of its expectations a failing verdict, never
+written as a grade file. The core screen is the joint pass of the script's `core`
+pairs: a scored scenario passes it when every grader passed every pair, fails it
+on one failing verdict, and is unresolved when a verdict is missing and none
+failed. The batch line reads every scenario record in `--out` for the pass's
+scripts and modes, whatever `--stems` lists, so a recovery pass that reruns a few
+stems still reports the whole batch. It counts each outcome and cause apart, and
+the share set aside or harness-invalid against the 10% limit over the scenarios
+not killed: a proven kill is rerun, never set aside, so it is out of the
+denominator; the partly graded block, the planted
+events and, through Tuesday, `hidden-module reaches: N across M Tuesday attempt(s)
+and T turn(s)`, every turn of every attempt read whole, follow.
+
+The exit code is `0` when every scenario is scored and clean, `1` when an
+expectation or a check failed, and `3`, which wins over `1`, when a scenario is
+killed and not yet rerun, set aside or harness-invalid, an expectation or a core
+screen is unresolved, a planned scenario has no record, a turn of this pass's
+scenarios has a grade gap, or the pass was refused. A script refused at load, or a
+flag misused, is argparse's `2`.
+
+### Recovery
+
+There is no retry pass and no `--retry-runs`: reruns are the killed-run protocol.
+
+```bash
+python evals/run_transcripts.py --scripts drill.json --out DIR --runs 5 --recover --move
+python evals/run_transcripts.py --scripts drill.json --out DIR --model $M --grader-model $M --via tuesday \
+  --stems DIR/killed/rerun-<UTC>.txt
+python evals/run_transcripts.py --scripts drill.json --out DIR --grade-gaps --move --accept-partial
+python evals/run_transcripts.py --scripts drill.json --out DIR --model $M --grader-model $M --via tuesday \
+  --stems DIR/killed/regrade-<UTC>.txt --skip-execute
+```
+
+- `--recover` classifies each scenario per stem, never merged into one class:
+  killed — a record left `running`, as a restart or the owner's guard leaves it; an
+  in-flight record with no scenario record; or a usage-limit kill —, set aside,
+  harness-invalid, scored, and never started, a stem the pass's `--runs` or
+  `--stems` plans that has no record.
+- `--recover --move` moves each killed scenario's files — its scenario record,
+  turn records, bodies, checks, grades and scan — to `killed/`, never over a file
+  there (`~<pass id>`). For a scenario the driver left running it also keeps the
+  turn in flight: its stream moved to
+  `killed/streams/<room>.<attempt>.t<k>.partial.jsonl`, its room and scratchpad
+  snapshotted as `partial_evidence`, and a turn record with outcome `killed`; it
+  marks the scenario killed and writes beside it the scan over everything it sent,
+  the cut turn included, in place of the scan saved after its last finished turn.
+  Each killed stem is matched to its script by its name across the whole scripts
+  file, whatever `--script` selects; a scenario left running whose script the file
+  does not hold is left in place, its in-flight records with it, and printed
+  `left in place`, never listed for a rerun, so the scan of its cut turn is never
+  lost: a pass with its scripts file recovers it. Rooms, finished turns' streams,
+  snapshots and research files are named by room and stay where they are.
+  `killed/rerun-<UTC>.txt` lists the killed and never-started stems; set-aside and
+  harness-invalid stems are never listed.
+- `--stems FILE` runs only the scenarios a file lists, one stem a line, each under
+  its own run number and from turn 1 in a fresh room, and only in an `--out` that
+  holds none of their files.
+- `--skip-execute`, with or without `--stems`, checks the saved scenarios again
+  and grades each stem, turn and grader with a saved body and no grade file.
+- `--grade-gaps [--move [--accept-partial]]` is the fixture runner's ("Regrading a
+  saved set"), per stem, turn and grader: each `grade-gaps.json` entry carries its
+  `turn`, and the partly graded block names it.
+- `--expect FILE` works as the fixture runner's. A pass records the driver's
+  settings — the models, via, layout, graders, timeout, `retry_runs` 0, the
+  scripts file's sha256 and the t1 prompt's — and a pass that differs from the
+  folder's earlier ones is refused before any call.
 
 These evals are not run in CI: they need a model, use the signed-in account's
 weekly usage (or, with `ANTHROPIC_API_KEY` set, are billed per token), and take
