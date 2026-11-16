@@ -5258,6 +5258,23 @@ def test_quote_one_quotation() -> None:
         check(f"must pass: a single quotation whose label names a source: {cell[:70]!r}", banks(cell), ["PASS"])
     check("must pass: a company name alone labels a line from the room's pages (— Saltmarsh Games)",
           banks('[grounded] "Larkspur retires per-title event teams" — Saltmarsh Games', pages), ["PASS"])
+
+    # The owner's decision of 2026-11-16: the dossier field uncertain_or_weak_areas labels another source. Its
+    # entries are the role's requirement names as job-underwriter recorded them (question-rubric.md reads a
+    # dossier requirement as the supplied JD's line), not the candidate's words, so a quotation from it is held to
+    # the request, and CANDIDATE_ORIGIN, which lists the dossier fields holding the candidate's material, leaves it
+    # out (fix-round saved runs haiku/alone mock-interview-4.run5 A2 and opus/tuesday mock-interview-4.run1 A3,
+    # the two forms below).
+    gap = "Owning a roadmap and prioritization authority"
+    dossier = prompt + f"\nDOSSIER uncertain_or_weak_areas: {gap} (R1 sub-claim)"
+    for cell in (f'[grounded] dossier acknowledge_gap area, field uncertain_or_weak_areas: "{gap}"',
+                 f'[grounded] `uncertain_or_weak_areas: "{gap} (R1 sub-claim)"`'):
+        got = output_checks.check_quotes(pack(cell), dossier, (), own)["checks"]
+        check(f"must pass: an uncertain_or_weak_areas requirement quoted under that field is another source's "
+              f"line: {cell[11:60]!r}",
+              [c["verdict"] for c in got if c["check"] == "quotes" and c["target"] == "banks"], ["PASS"])
+    check("the dossier field uncertain_or_weak_areas names another source (names_source)",
+          output_checks.names_source("uncertain_or_weak_areas"), True)
     check("must pass: the Larkspur title case, a page's title quoted inside the previous quote's origin",
           banks('[grounded] "Larkspur retires per-title event teams" — Saltmarsh Games, "Announcing Project '
                 'Larkspur"', pages), ["PASS"])

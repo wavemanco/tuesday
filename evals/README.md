@@ -1158,7 +1158,12 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   page") names it; a source word that only sits in a judging comment does not
   ("— shows ownership of the research", "— reflects the values they hire for").
   Any label the denylist does not hold names its source: a company name ("—
-  Saltmarsh Games", "— Signal"), "(role summary)", "(FY25 results)". A lead "as …"
+  Saltmarsh Games", "— Signal"), "(role summary)", "(FY25 results)". So does the
+  dossier field `uncertain_or_weak_areas` (the owner's decision of 16 November):
+  its entries are the role's requirement names as job-underwriter recorded them,
+  not the candidate's words, so a quotation labelled with it is held to the
+  request, and `CANDIDATE_ORIGIN`, which lists the dossier fields that hold the
+  candidate's material, leaves it out. A lead "as …"
   clause after a comma is read with the label before it ('Ashgrove strategy brief
   (July 2026), as you summarised it: "…"'). A known limit: a bare ID-shaped name
   ("— O2", "(FY25)") reads as a row ID, so the line it labels is held to what the
