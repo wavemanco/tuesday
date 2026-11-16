@@ -21,7 +21,7 @@ These ranges include the full controls, 1a and 1b positive replays, the debrief 
 
 If Round 2 routing fails its bar, a description-only retry adds about 12–15 planning points, 22–23 points in the observed-rate estimate and $271 in API-price equivalent for a fresh same-day routing pair of 1,620 sessions. Reserve one more week, from 10 December at the earliest.
 
-Before 1a, land the accepted 0.2.0 record, the separate code-name rename and the tested harness commit. Run the 1b driver smoke in the 19 November week. Keep existing fixture domains through 1b. Land the fixture-domain rename just before both Round 2 pins to preserve eligibility for all 18 saved 1a baseline rooms.
+Before 1a, land the accepted 0.2.0 record, the quote-list rule commit, the separate code-name rename and the tested harness commit. Run the 1b driver smoke in the 19 November week. Keep existing fixture domains through 1b. Land the fixture-domain rename just before both Round 2 pins to preserve eligibility for all 18 saved 1a baseline rooms.
 
 Skill or convention merges wait for the fix-round record after its 16 November report. Dates also depend on the meter, archived evidence eligibility and the preceding accepted record.
 
@@ -71,10 +71,10 @@ The owner settled E1–E20 and E22–E26 on 2026-11-13. E21 awaits approval of t
 **2026-11-14 · CV approval rules and resumed CV regression.** Keep the existing CV approval and rejection rules. Add the resumed CV regression and its smoke to Round 2. Run the control fresh on both revisions and both installs. E21 still governs the priced manifest.
 
 **2026-11-16 · Fix-round outcomes carried into this plan.** The fix round met its bar, and 0.2.0 is accepted and on `main` (PR #16). The owner took four recommendations:
-- **Quote lists.** A list of quotations joined by separators alone shares the origin written after its last quotation. This replaces October's audit reading. It lands as its own harness-only commit before the code-name rename. All three 0.2.0 hashes stay unchanged ([write boundary](#write-boundary-by-phase)).
+- **Quote lists.** In mock-interview's question banks, a list of quotations joined by separators alone shares the origin written after its last quotation, when that origin names another source and that quotation is not the candidate's own words. This replaces October's audit reading. It lands as its own harness-only commit before the code-name rename. All three 0.2.0 hashes stay unchanged ([write boundary](#write-boundary-by-phase)).
 - **Opus, the sentence after the fit ledger.** Iteration 2 rides the 1a candidate, with its own measure and marks ([below](#carried-into-1a--the-sentence-after-the-fit-ledger-iteration-2)).
 - **Haiku.** The sentence after the fit ledger and research calls beyond a quick check stay open at iteration 1, with their fix-round rates. No change is aimed at Haiku.
-- **resume-tailor's watch-out.** The line stays as it is. Its quote problem counts as closed by measurement. Any sharper wording waits for Round 2: E10 already rewrites the line there, for CVs, letters and answers. That is the only round that changes resume-tailor's text, since Round 1 requires an empty diff under `skills/resume-tailor/`.
+- **resume-tailor's watch-out.** The line stays as it is. Its quote problem counts as closed by measurement. Any sharper wording waits for Round 2: E10 already rewrites the line there, for CVs, letters and answers. That is the only one of this plan's three rounds that changes resume-tailor's text, since Round 1 requires an empty diff under `skills/resume-tailor/`. The per-application folders change, which E6 places after Round 2, changes it too.
 
 ## Technical Plan
 
@@ -131,7 +131,7 @@ The priced transcripts are fixed scripts of three to five turns by scenario (rec
 
 ### Rollout and rollback
 
-Land the accepted 0.2.0 record, the separate code-name rename and the tested 1a harness before both 1a pins. Keep existing fixture-domain inputs through 1b. Land the fixture-domain rename in its own commit just before both Round 2 pins. Recheck release digests after each non-payload commit. Use identical harness and scorer versions in each pair and rehearse each release record in a separate copy.
+Land the accepted 0.2.0 record, the quote-list rule commit, the separate code-name rename and the tested 1a harness before both 1a pins. Keep existing fixture-domain inputs through 1b. Land the fixture-domain rename in its own commit just before both Round 2 pins. Recheck release digests after each non-payload commit. Use identical harness and scorer versions in each pair and rehearse each release record in a separate copy.
 
 Once implementation is authorized, push each rename, harness, fixture-domain and candidate commit to its branch when it is made, so a container loss cannot take a pin with it. [Fix-round pin preservation, line 623](fix-round-plan-detail.md#23-ci-and-the-measured-text)
 
@@ -165,7 +165,7 @@ Work in a Linux checkout. Planning uses main at `7ebb06d`. Recheck this plan's f
 |---|---|
 | 1 | Accept and record the current fix round at 0.2.0. Then land the owner's quote-list rule (2026-11-16) in its own harness-only commit. |
 | 2 | Apply the [live code-name mapping](#code-name-rename) in its own commit. Preserve historical values in the reader and test compatibility with saved records (E25). Check imports, runners, CI callers and documentation. Use current flag names in manifests. |
-| 3 | Land 1a’s tested harness commit with the companion driver, sentinel scan and gate-only fixture contract. Verify the three accepted release digests after the code-name and harness commits. |
+| 3 | Land 1a’s tested harness commit with the companion driver, sentinel scan and gate-only fixture contract. Verify the three accepted release digests after the quote-list, code-name and harness commits. |
 | 4 | Pin 1a and measure its candidate. Smoke the 1b driver in the 19 November window. Accept the 0.3.0 record, finish any tested 1b harness fix and pin 1b against that lineage. |
 | 5 | Accept 1b at 0.4.0. Add Round 2’s tested scoring changes, then land the fixture-domain rename as the final non-payload commit before both Round 2 pins. Carry the same renamed fixture inputs and harness into the Round 2 candidate. |
 | 6 | For each round, freeze inputs outside both checkouts. Sync and package on Linux. Rehearse the record marker and intended version in a separate copy and require all four CI steps, including mutation tests. Keep the measured guard active until evidence is accepted. |
@@ -198,7 +198,7 @@ Offline, test old and new `via` and `arm` spellings without layout, explicit-lay
 | Quote-list rule (2026-11-16) | Modify `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`. | None. All three accepted digest values stay byte-identical. |
 | Code-name rename | Modify the eleven paths in the [live rename list](#code-name-rename). | None. All three accepted digest values stay byte-identical. |
 | 1a harness | Create `evals/run_transcripts.py`. Modify `evals/run_fixtures.py`, `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`, `ci/check_skills.py`, `ci/test_checks.py`. | None. |
-| 1a candidate | Modify `skills/job-underwriter/SKILL.md`, `skills/job-underwriter/references/risk-and-decision.md`, `skills/job-underwriter/evals/evals.json`, `skills/job-underwriter/README.md`, `skills/mock-interview/SKILL.md`, `skills/mock-interview/references/output-template.md`, `skills/mock-interview/references/question-rubric.md`, `skills/mock-interview/references/personas.md`, `skills/mock-interview/evals/evals.json`, `skills/mock-interview/README.md`, `docs/roadmap.html`. | Sync affected Tuesday references and package the changed payload. |
+| 1a candidate | Modify `skills/job-underwriter/SKILL.md`, `skills/job-underwriter/references/risk-and-decision.md`, `skills/job-underwriter/evals/evals.json`, `skills/job-underwriter/README.md`, `skills/mock-interview/SKILL.md`, `skills/mock-interview/references/output-template.md`, `skills/mock-interview/references/question-rubric.md`, `skills/mock-interview/references/personas.md`, `skills/mock-interview/evals/evals.json`, `skills/mock-interview/README.md`, `docs/roadmap.html`, and `ci/test_checks.py` only for an amendment caused by rule 2's exact text ([iteration 2](#carried-into-1a--the-sentence-after-the-fit-ledger-iteration-2)). | Sync affected Tuesday references and package the changed payload. |
 | 0.3.0 record | Modify `ci/check_skills.py`, `docs/tracked-work.md`, `docs/roadmap.html`, `evals/spend.md`. Modify `README.md` where release usage or watch-out copy is owed. | Package the accepted measured bytes and version. |
 | 1b harness, if smoke requires a fix | Modify `evals/run_transcripts.py`, `evals/test_harness.py` for the identified driver fix. Freeze the applicable list. | None. |
 | 1b candidate | Modify `skills/mock-interview/SKILL.md`, `skills/mock-interview/references/question-rubric.md`, `skills/mock-interview/references/personas.md`, `skills/mock-interview/references/output-template.md`, `skills/mock-interview/references/dossier-handoff.md`, `skills/mock-interview/evals/evals.json`, `skills/mock-interview/README.md`, `skills/mock-interview/docs/workflow.html`, `evals/README.md`. | Sync mock-interview’s affected Tuesday references and package the changed payload. |
@@ -450,19 +450,19 @@ A messaging-app invitation can be ordinary scheduling. A warning can also displa
 
 ### Carried into 1a · The sentence after the fit ledger, iteration 2
 
-Round 1a. This is the owner's decision of 2026-11-16, made under the two-iteration rule. In the fix round, Sonnet wrote the new list form in 56 of 79 runs and closed the item. Opus wrote it in 11 of 79 runs and stayed at 11 of 79 above one sentence, against a target of 10%.
+Round 1a. This is the owner's decision of 2026-11-16, made under the two-iteration rule. In the fix round, Sonnet wrote the new list form in 56 of 79 runs and closed the item. Opus wrote it in 11 of 79 runs. Its runs with more than one sentence fell from 65 of 80 to 11 of 79 (14%): improved, but above the 10% target.
 
 #### Files and lines
 
 | Action | Location and change |
 |---|---|
-| Modify | `skills/job-underwriter/references/risk-and-decision.md`, rule 2. Make the list form the one worked example of the sentence after the fit ledger, so the model has that form to copy. Leave the rule's limit of one sentence as it is. The file is already in the 1a candidate's write boundary. Sync its Tuesday reference copy. List any `ci/test_checks.py` amendment caused by the rule's exact text. |
+| Modify | `skills/job-underwriter/references/risk-and-decision.md`, rule 2. The rule describes the list form, but the only sentence it quotes is the false set claim ("R5b and R8 are the only rows below `direct`"); the worked list-form line sits in `references/dossier-worked-report.md`. Quote that line in rule 2 as the sentence to write ("R4 — a credible bridge, its limit named; R3 (`medium`) — confirmed, waiting on an artifact."), beside the false claim, which stays as the warning it is. Leave the rule's limit of one sentence and `dossier-worked-report.md` as they are. The file is already in the 1a candidate's write boundary. Sync its Tuesday reference copy. If CI's mutation suite pins rule 2's literals, amend `ci/test_checks.py` to match and list it in the manifest. |
 
 #### Bar
 
-The measure is the fix round's: the share of job-underwriter runs where `ledger_sentence` applied whose `sentences` count is above one, with installs pooled. The baseline is the fix round on 0.2.0: Sonnet 0 of 79, Opus 11 of 79, Haiku 60 of 82. Each comparison is an exact two-sided Fisher test at p below 0.01, as in the fix round. Each threshold is recomputed on the actual denominators; the examples below are at 79 applicable runs.
+The measure is the fix round's: the share of job-underwriter runs where `ledger_sentence` applied whose `sentences` count is above one, with installs pooled. It reads the candidate's runs in the fix round's eight job-underwriter rooms only, the existing rooms E9 reruns with matched inputs; 1a's new job-underwriter rooms are not counted. The baseline is the fix round on 0.2.0, all of its runs as scored: Sonnet 0 of 79, Opus 11 of 79, Haiku 60 of 82. That is unlike the 1a control comparison, which reuses five saved runs per cell; on Haiku the item's baseline is the fix round's ten per cell. Each comparison is an exact two-sided Fisher test at p below 0.01, as in the fix round. Each threshold is recomputed on the actual denominators; the examples below are at 79 applicable runs.
 
-- **Closed on Opus** at 10% or less, which is 7 of 79.
+- **Closed on Opus** at 10% or less, which is 7 of 79. Closed counts only if both guards hold.
 - **Worse, a miss of 1a**, if any of these holds:
   - Opus rises from 11 of 79 (26 or more of 79);
   - Sonnet rises from 0 of 79 (8 or more);
@@ -478,7 +478,7 @@ The measure is the fix round's: the share of job-underwriter runs where `ledger_
 
 #### Cost
 
-No added runs. 1a already runs job-underwriter's existing rooms on every model in both installs (E9), and the measure is an automatic check.
+No added runs. 1a already runs job-underwriter's eight existing rooms on every model in both installs (E9), and the measure is an automatic check.
 
 #### Risks
 
