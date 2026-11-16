@@ -1508,8 +1508,17 @@ CONTRACTIONS = {"it", "that", "what", "there", "here", "he", "she", "who", "let"
 ROLE_ORIGIN = re.compile(r"role[\s_-]?profile", re.I)
 _IN_ORIGIN = re.compile(r'^\s*(?:-{1,2}|[–—])\s*([^;"\n]*[^;"\n\s])\s*$')
 # What may stand between two quotations of one list, and nothing else: one of `;` `,` `/` `&`,
-# optionally followed by `and` or `or`; `and` or `or` alone; or only a space.
+# optionally followed by `and` or `or`; `and` or `or` alone; or a space, or nothing.
 _LIST_SEP = re.compile(r"\s*(?:[;,/&]\s*(?:(?:and|or)\b)?|(?:and|or)\b)?\s*", re.I)
+# A label that names a document or a person a line came from, as the raising sources of
+# mock-interview's question-rubric.md do (the JD, a role profile, published values, the
+# recruiter's or interviewer's words) and as a research note or brief does. Only such a label
+# is lent to a list: a row ID ("S1"), a confidence or a comment ("verbatim", "you said") names
+# no source, whatever other_source reads into it.
+_SOURCE_LABEL = re.compile(
+    r"(?<![a-z])(?:jd|job\s+(?:description|ad|advert|posting|listing)|posting|advert|listing|role[\s_-]?profile|"
+    r"values?|principles?|recruiter|interviewer|hiring\s+manager|research|note|brief|e-?mail|page|site|website|"
+    r"careers|announcement|article|news|press|report|blog|strategy)(?![a-z])", re.I)
 
 
 def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None,
@@ -1710,10 +1719,10 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
 
     def lends_origin(span: str, origin: str) -> bool:
         """Whether the origin written after a list's last quotation is shared with the list: it
-        names another source, and that quotation is not the candidate's own words, for a label
-        beside the candidate's words names no other source, whatever it says ("(S1)",
-        "(verbatim)"), and the list before it stays held to what the candidate gave."""
-        return own is not None and other_source(origin) and not all(contains_words(f, own) for f in fragments(span))
+        names another source by a document or a person (_SOURCE_LABEL). A row ID, a confidence or
+        a comment ("(S1)", "(verbatim)", "(you said)") names no source, so the list before it stays
+        held to what the candidate gave. A fixture with no candidate_text shares nothing."""
+        return own is not None and other_source(origin) and bool(_SOURCE_LABEL.search(origin))
 
     dossier = dossier_items(prompt)
     checks, info, unchecked = [], [], []

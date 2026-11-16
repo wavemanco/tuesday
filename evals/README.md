@@ -889,15 +889,18 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   quotation before it — is a raising source's line (question-rubric.md defines
   them). In the question banks, a list of quotations joined by separators alone
   (one of `;` `,` `/` `&`, optionally followed by `and` or `or`; `and` or `or`
-  alone; or a space) shares the origin written after its last quotation, so
-  '"a"; "b" (your research note)' names the note for both. It does so only when
-  that origin names another source and that last quotation is not the
-  candidate's own words: a label beside the candidate's words, such as "(S1)" or
-  "(verbatim)", lends nothing, and the list stays held to what the candidate
-  gave. A quotation with an origin of its own keeps it, an origin written before
-  a list names its first quotation only, and resume-tailor's Traces to cells
-  share no origin. A raising source's line is checked for existence only: every fragment must appear on word
-  boundaries in the request or the room's pages. An origin that names the
+  alone; or a space, or nothing) shares the origin written after its last
+  quotation, so '"a"; "b" (your research note)' names the note for both. It does
+  so only when that origin names a document or a person a line came from (the
+  JD, a role profile, values, the recruiter or interviewer, a research note or
+  brief, a page). A row ID, a confidence or a comment ("(S1)", "(verbatim)",
+  "(you said)") lends nothing, so the list stays held to what the candidate
+  gave; a quotation found in what the candidate gave stays the candidate's,
+  whatever label it shares. A quotation with an origin of its own keeps it, an
+  origin written before a list names its first quotation only, and
+  resume-tailor's Traces to cells share no origin. A raising source's line is
+  checked for existence only: every fragment must appear on word boundaries in
+  the request or the room's pages. An origin that names the
   candidate's material (their CV or message, the coach's notes, a fit-snapshot
   row, the dossier or a dossier field) is no other source, and a quotation found
   in `candidate_text` stays the candidate's whatever origin it claims

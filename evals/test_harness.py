@@ -4306,7 +4306,17 @@ def test_audit_quotes() -> None:
     for cell in ('[grounded] "we\'d like you to present a short POV"; "I ran the weekly content-drop calendar" (S1)',
                  '[grounded] "consolidate eight branches"; "I ran the weekly content-drop calendar" (both verbatim)',
                  '[grounded] "consolidate eight branches" / "Never led a team" (you said)'):
-        check(f"must fail: a label beside the candidate's own words lends nothing to the list: {cell[:70]!r}",
+        check(f"must fail: a tag that names no source, beside the candidate's own words, lends nothing: {cell[:70]!r}",
+              banks(cell), ["FAIL"])
+    check("must pass: a source's label after a list that ends in the candidate's words still names the source "
+          "for the line before it, and the candidate's line stays the candidate's",
+          banks('[grounded] "we\'d like you to present a short POV"; "I ran the weekly content-drop calendar" '
+                '(recruiter\'s email)'), ["PASS"])
+    check("must pass: quotations side by side, a space between them, share the origin too",
+          banks('[grounded] "consolidate eight branches" "five hubs over 2027" (strategy brief)'), ["PASS"])
+    for cell in ('[grounded] "consolidate eight branches"; "five hubs over 2027" (S1)',
+                 '[grounded] "consolidate eight branches", "five hubs over 2027" (verbatim)'):
+        check(f"must fail: a row ID or a comment names no source, so it lends nothing to the list: {cell[:70]!r}",
               banks(cell), ["FAIL"])
     check("must fail: a quotation with an origin of its own keeps it inside a list",
           banks('[grounded] your message: "consolidate eight branches"; "five hubs over 2027" (strategy brief)'),
@@ -5277,6 +5287,12 @@ def test_traces() -> None:
           "held to the candidate's words",
           fails('| 3 | HubSpot daily for 4 years | Owned demand generation in HubSpot. | reframe '
                 '| "Own demand generation"; "HubSpot daily for 4 years" — the JD | pending your approval |\n', rowan, head5),
+          [("FAIL", "judgement")])
+    check("must fail: nor does a Traces to list share the JD's label between two JD lines, beside a quotation "
+          "of the candidate's",
+          fails('| 3 | HubSpot daily for 4 years | HubSpot daily, demand generation. | reframe '
+                '| "Own demand generation"; "HubSpot or Marketo" — the JD; "HubSpot daily for 4 years" — your resume '
+                '| pending your approval |\n', rowan, head5),
           [("FAIL", "judgement")])
     check("must pass: a quotation cut at an ellipsis, each piece verbatim",
           fails(two.replace('"I pull my own numbers in HubSpot reporting"', '"I pull my own numbers … reporting"'), rowan, head5), [])
