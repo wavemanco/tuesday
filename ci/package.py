@@ -11,7 +11,7 @@ imported from the checker rather than restated, so the builder and its check
 cannot drift.
 
 What it writes (README.md, "Install", says who installs which):
-  dist/<skill>.skill           one per skill, the front door's `tuesday.skill` included,
+  dist/<skill>.skill           one per skill, Tuesday's own `tuesday.skill` included,
                                for a claude.ai upload: the source as it ships (packaged_files)
   dist/claude-code/<skill>/    the personal install: each module hidden (sync.hide)
   dist/plugin/tuesday/         the plugin: its manifest, and the same folders under skills/

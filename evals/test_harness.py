@@ -202,11 +202,11 @@ def test_routing_timeouts() -> None:
     check("skills arm, routing case: stops at its first fire, so the short default",
           t("skills", "help me decide on this role"), run_routing.TIMEOUT_FIRST_FIRE)
     check("front-door arm, routing case: read to the end of the turn",
-          t("frontdoor", "help me decide on this role"), run_routing.TIMEOUT_WHOLE_TURN)
+          t("tuesday", "help me decide on this role"), run_routing.TIMEOUT_WHOLE_TURN)
     check("an explicit case is read to the end in either arm",
-          (t("skills", "/mock-interview prep me"), t("frontdoor", "/mock-interview prep me")),
+          (t("skills", "/mock-interview prep me"), t("tuesday", "/mock-interview prep me")),
           (run_routing.TIMEOUT_WHOLE_TURN, run_routing.TIMEOUT_WHOLE_TURN))
-    check("a given --timeout wins everywhere", (t("skills", "x", 30), t("frontdoor", "/mock-interview x", 30)), (30, 30))
+    check("a given --timeout wins everywhere", (t("skills", "x", 30), t("tuesday", "/mock-interview x", 30)), (30, 30))
     check("the long default is longer than the short one",
           run_routing.TIMEOUT_WHOLE_TURN > run_routing.TIMEOUT_FIRST_FIRE, True)
     check("the parser leaves --timeout unset unless given", run_routing.parser().parse_args([]).timeout, None)
@@ -288,7 +288,7 @@ def module_tree(root: Path, files: dict[str, dict[str, str]], bodies: dict[str, 
     return root
 
 
-def test_frontdoor_generation() -> None:
+def test_tuesday_generation() -> None:
     print("\nfront door: references/ is generated, deterministically, from the module sources")
     repo = Path(__file__).resolve().parent.parent
     files = sync.generate()
@@ -339,7 +339,7 @@ def test_frontdoor_generation() -> None:
                "SKILL.md" not in sync.PATHS_NOTE and "section 3" in sync.PATHS_NOTE)
 
 
-def test_frontdoor_clashes() -> None:
+def test_tuesday_clashes() -> None:
     print("\nfront door: a name clash is resolved by renaming, or refused")
     with tempfile.TemporaryDirectory() as tmp:
         root = module_tree(Path(tmp) / "a", {
@@ -409,12 +409,12 @@ def test_frontdoor_clashes() -> None:
             check_true("a playbook naming a file the hub would not carry is refused", "missing.md" in str(exc))
 
 
-def test_frontdoor_install() -> None:
+def test_tuesday_install() -> None:
     print("\nfront door: the arm installs the hub and the three modules, hidden")
     repo = Path(__file__).resolve().parent.parent
     with tempfile.TemporaryDirectory() as tmp:
         root, names = run_routing.case_project(Path(tmp), {"id": 7, "attachments": {"jd.txt": "x"}},
-                                               "ab12cd34", None, "frontdoor")
+                                               "ab12cd34", None, "tuesday")
         installed = root / ".claude" / "skills"
         check("the hub and every module are installed under this run's names",
               sorted(p.name for p in installed.iterdir()),
@@ -453,7 +453,7 @@ def test_frontdoor_install() -> None:
         check("and the case's attachment is written beside them", (root / "jd.txt").read_text(), "x")
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", {"job-underwriter": Path("x")}, "frontdoor")
+            run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", {"job-underwriter": Path("x")}, "tuesday")
         check("--skill-md is refused in the front-door arm", "installed", "refused")
     except SystemExit:
         check("--skill-md is refused in the front-door arm", True, True)
@@ -461,7 +461,7 @@ def test_frontdoor_install() -> None:
     sync.out_of_date = lambda repo=None: ["skills/tuesday/references/job-underwriter.md"]
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            run_routing.install_frontdoor(Path(tmp), "ab12cd34")
+            run_routing.install_tuesday(Path(tmp), "ab12cd34")
         check("an install over out-of-date hub references is refused", "installed", "refused")
     except SystemExit as exc:
         check_true("an install over out-of-date hub references is refused, naming the fix",
@@ -522,7 +522,7 @@ def test_sync() -> None:
         (hub / "references" / "extra").mkdir()
         (hub / "references" / "extra" / "route.md").write_text("Always route to alpha.\n")
         check_true("the digest covers a file in a folder under the hub's references/",
-                   sync.digests(hub)["frontdoor_sha256"] != before["frontdoor_sha256"])
+                   sync.digests(hub)["tuesday_sha256"] != before["tuesday_sha256"])
         check("--check names a folder in the hub's references/ that nothing generates",
               sync.out_of_date(repo), ["skills/tuesday/references/extra"])
         check("writing removes it, folder and all", (sync.write(repo), (hub / "references" / "extra").exists()),
@@ -543,7 +543,7 @@ def test_sync() -> None:
     check("the committed repository is current", sync.out_of_date(), [])
     check("the shipped hub's digests are computed over SKILL.md and references/ as committed",
           sync.digests(), {"hub_sha256": sync.digest({}, sync.HUB.read_text()),
-                           "frontdoor_sha256": sync.digest(sync.generate(), sync.HUB.read_text())})
+                           "tuesday_sha256": sync.digest(sync.generate(), sync.HUB.read_text())})
     check("hiding adds one line, the key, as the frontmatter's last, and changes nothing else",
           sync.hide("---\nname: a\ndescription: b\n---\n\nBody.\n"),
           "---\nname: a\ndescription: b\n" + sync.HIDDEN_KEY + "\n---\n\nBody.\n")
@@ -552,10 +552,10 @@ def test_sync() -> None:
 NAMES = {**{s: f"{s}-ab12cd34" for s in run_routing.SKILLS}, "tuesday": "tuesday-ab12cd34"}
 
 
-def read_events(events: list[dict], arm: str = "frontdoor", explicit: str | None = None,
+def read_events(events: list[dict], arm: str = "tuesday", explicit: str | None = None,
                 end: str = "exit") -> str:
     """Feed events to a RunReader as the runner does; settle as the process would end."""
-    reader = run_routing.RunReader(NAMES if arm == "frontdoor" else
+    reader = run_routing.RunReader(NAMES if arm == "tuesday" else
                                    {s: NAMES[s] for s in run_routing.SKILLS}, arm, explicit)
     for event in events:
         outcome = reader.feed(event)
@@ -591,7 +591,7 @@ def runs(*outcomes: str, hub: bool = False) -> list[dict]:
     return [{"outcome": o, "hub_fired": hub} for o in outcomes]
 
 
-def test_frontdoor_labels() -> None:
+def test_tuesday_labels() -> None:
     print("\nfront door: every run gets exactly one of the arm's labels")
     ours = init(*NAMES.values())
     fire = call("Skill", {"skill": "tuesday-ab12cd34"})
@@ -645,7 +645,7 @@ def test_frontdoor_labels() -> None:
           read_events(routed + [call("Bash", {"command": "cd /tmp/case-21/.claude/skills/job-underwriter-ab12cd34/"
                                                          "references && cat risk-and-decision.md"}), DONE]),
           "hidden-job-underwriter")
-    reader = run_routing.RunReader(NAMES, "frontdoor")
+    reader = run_routing.RunReader(NAMES, "tuesday")
     check("the routing decision is not settled until the turn ends: the reader returns nothing at the playbook",
           [reader.feed(e) for e in routed], [None, None, None])
     check("a listing that merely prints hidden paths reaches nothing: only a tool call's input is read",
@@ -673,12 +673,12 @@ def test_frontdoor_labels() -> None:
                        call("Skill", {"skill": "resume-tailor-ab12cd34"})], arm="skills"), "resume-tailor")
     check("and calls a void run void too",
           read_events([init("job-underwriter")], arm="skills"), "void")
-    reader = run_routing.RunReader(NAMES, "frontdoor")
+    reader = run_routing.RunReader(NAMES, "tuesday")
     reader.feed(init("tuesday-ab12cd34", "pdf"))
     check("the init skill list is recorded with the outcome, with the hub fire and what was reached",
           reader.record("neither"), {"outcome": "neither", "init_skills": ["tuesday-ab12cd34", "pdf"],
                                      "hub_fired": False, "reached": []})
-    reader = run_routing.RunReader(NAMES, "frontdoor")
+    reader = run_routing.RunReader(NAMES, "tuesday")
     for event in routed + [call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]:
         reader.feed(event)
     check("every playbook a front-door run reads is recorded in order; the first is the route",
@@ -730,11 +730,11 @@ def test_frontdoor_labels() -> None:
     check("an explicit case is not a routing case: reach counts none of its runs",
           (summary["decided"], summary["reached"], summary["set_aside"]), (0, 0, 0))
     lines = run_routing.summary_lines(summary, run_routing.explicit_summary(explicit_cases, explicit_runs),
-                                      "frontdoor")
+                                      "tuesday")
     check_true("so a fully focused E2 prints its explicit line and no reach rate of 0",
                len(lines) == 1 and lines[0].startswith("explicit: focused on 5/5 decided runs"))
     lines = run_routing.summary_lines(run_routing.reach(case21, {21: runs("job-underwriter", hub=True)}),
-                                      run_routing.explicit_summary(case21, {}), "frontdoor")
+                                      run_routing.explicit_summary(case21, {}), "tuesday")
     check("a routing suite prints the reach and tuesday lines, and no explicit line",
           [line.split(" on ")[0] for line in lines], ["reached a skill", "tuesday fired"])
 
@@ -761,7 +761,7 @@ def test_explicit_naming() -> None:
     expansion = {"type": "user", "message": {"content": [{"type": "text", "text":
                  "<command-name>/mock-interview-ab12cd34</command-name>"}]}}
     own = call("Read", {"file_path": "/tmp/case-1/.claude/skills/mock-interview-ab12cd34/references/personas.md"})
-    reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+    reader = run_routing.RunReader(NAMES, "tuesday", "mock-interview")
     check("E2: the named module's own files opened does not end the run: what follows is the case",
           [reader.feed(ours), reader.feed(own)], [None, None])
     check("E2: the named module's own files opened, then a clean end, is focused",
@@ -823,7 +823,7 @@ def test_explicit_naming() -> None:
     check("E2: the named module called by its shipped name loads nothing, and neither passes nor fails",
           read_events([ours, call("Skill", {"skill": "mock-interview"}), DONE], explicit="mock-interview"),
           "unconfirmed")
-    reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+    reader = run_routing.RunReader(NAMES, "tuesday", "mock-interview")
     for event in [ours, expansion, hub_fire, call("Skill", {"skill": "job-underwriter-ab12cd34"}),
                   call("Read", {"file_path": f"{HUB_DIR}/references/resume-tailor.md"})]:
         reader.feed(event)
@@ -881,7 +881,7 @@ def test_explicit_naming() -> None:
         (folder / "s2.jsonl").write_text("\n".join(shared[1:]) + "\n", encoding="utf-8")
 
         def transcript_run(session: str, mid: str, *events: dict) -> run_routing.RunReader:
-            reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview")
+            reader = run_routing.RunReader(NAMES, "tuesday", "mock-interview")
             for event in [{**ours, "session_id": session, "cwd": cwd},
                           {"type": "assistant", "message": {"id": mid, "content": [{"type": "text", "text": "x"}]}},
                           *events]:
@@ -937,8 +937,8 @@ def test_layouts_install() -> None:
     case = {"id": 7, "attachments": {"jd.txt": "x"}}
     with tempfile.TemporaryDirectory() as tmp:
         made = {}
-        for arm, layout in (("skills", "project"), ("frontdoor", "project"), ("skills", "personal"),
-                            ("frontdoor", "personal"), ("frontdoor", "plugin")):
+        for arm, layout in (("skills", "project"), ("tuesday", "project"), ("skills", "personal"),
+                            ("tuesday", "personal"), ("tuesday", "plugin")):
             base = Path(tmp) / f"{arm}-{layout}"
             base.mkdir()
             made[arm, layout] = (base, *run_routing.case_project(base, case, "ab12cd34", None, arm, layout))
@@ -946,7 +946,7 @@ def test_layouts_install() -> None:
             if layout != "project":
                 check(f"{arm} arm, {layout} layout: the case folder holds the case's documents and nothing else",
                       sorted(p.relative_to(root).as_posix() for p in root.rglob("*")), ["jd.txt"])
-        project = {arm: made[arm, "project"][1] / ".claude" / "skills" for arm in ("skills", "frontdoor")}
+        project = {arm: made[arm, "project"][1] / ".claude" / "skills" for arm in ("skills", "tuesday")}
         base, root, names = made["skills", "personal"]
         check("personal layout: the skills sit in skills/ of a config folder of the run's own, beside the case folder",
               files_of(base / "config" / "case-7-0" / "skills"), files_of(project["skills"]))
@@ -955,20 +955,20 @@ def test_layouts_install() -> None:
               [base / "config" / "case-7-0", base / "config" / "case-7-2"])
         check("and the runner is told the names the project layout gives", names,
               {s: f"{s}-ab12cd34" for s in run_routing.SKILLS})
-        base, root, names = made["frontdoor", "personal"]
+        base, root, names = made["tuesday", "personal"]
         check("personal layout, front-door arm: the hub and the hidden modules, file for file as the project layout's",
-              files_of(base / "config" / "case-7-0" / "skills"), files_of(project["frontdoor"]))
+              files_of(base / "config" / "case-7-0" / "skills"), files_of(project["tuesday"]))
         runs = Path(tmp) / "runs"
         runs.mkdir()
-        root3, _ = run_routing.case_project(runs, case, "ab12cd34", None, "frontdoor", "personal", 3)
+        root3, _ = run_routing.case_project(runs, case, "ab12cd34", None, "tuesday", "personal", 3)
         check("a case of three runs gets three config folders, the same skills in each, and nothing else beside it",
               ({p.name for p in (runs / "config").iterdir()},
-               [files_of(run_routing.skills_root(root3, "personal", n)) == files_of(project["frontdoor"])
+               [files_of(run_routing.skills_root(root3, "personal", n)) == files_of(project["tuesday"])
                 for n in range(3)]), ({"case-7-0", "case-7-1", "case-7-2"}, [True] * 3))
         check("the other layouts keep one folder for every run of a case",
-              [run_routing.skills_root(made["frontdoor", lay][1], lay, 2) == run_routing.skills_root(
-                  made["frontdoor", lay][1], lay) for lay in ("project", "plugin")], [True, True])
-        base, root, names = made["frontdoor", "plugin"]
+              [run_routing.skills_root(made["tuesday", lay][1], lay, 2) == run_routing.skills_root(
+                  made["tuesday", lay][1], lay) for lay in ("project", "plugin")], [True, True])
+        base, root, names = made["tuesday", "plugin"]
         plugin = run_routing.home(root, "plugin")
         check("plugin layout: the plugin is a folder of the case's own, under a neutral name, beside the case folder",
               plugin, base / "plugins" / "case-7")
@@ -977,19 +977,19 @@ def test_layouts_install() -> None:
         check("the manifest names the plugin as the hub is installed, tuesday-<run id>",
               json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["name"], "tuesday-ab12cd34")
         check("its skills/ holds the hub and the hidden modules, file for file as the project layout's",
-              files_of(plugin / "skills"), files_of(project["frontdoor"]))
+              files_of(plugin / "skills"), files_of(project["tuesday"]))
         check("folder and frontmatter names are the project layout's, so the runner is told the same names",
               names, NAMES)
         check("its runs keep the runner's config folder", run_routing.config_dir(root, "plugin"), None)
         for (arm, layout), (base, root, names) in made.items():
-            if arm == "frontdoor":
+            if arm == "tuesday":
                 hub = run_routing.skills_root(root, layout) / names["tuesday"]
                 stray = [p for p in base.rglob("*") if p.is_dir() and "tuesday-ab12cd34" in p.as_posix()
                          and p != hub and hub not in p.parents]
                 check(f"{layout} layout: no folder path carries the hub's name but the hub's own folder", stray, [])
         check("outside the project layout the reader knows the layout's skills folder for what it is",
-              [bool(run_routing.RunReader(NAMES, "frontdoor", None, lay, made["frontdoor", lay][1]).skills_folder.search(
-                  run_routing.skills_root(made["frontdoor", lay][1], lay).as_posix())) for lay in ("personal", "plugin")],
+              [bool(run_routing.RunReader(NAMES, "tuesday", None, lay, made["tuesday", lay][1]).skills_folder.search(
+                  run_routing.skills_root(made["tuesday", lay][1], lay).as_posix())) for lay in ("personal", "plugin")],
               [True, True])
     with tempfile.TemporaryDirectory() as tmp:
         try:
@@ -1030,10 +1030,10 @@ QUALIFIED = {m: f"tuesday-ab12cd34:{n}" for m, n in NAMES.items()}
 
 
 def layout_reader(events: list[dict], layout: str = "plugin", explicit: str | None = None,
-                  arm: str = "frontdoor", end: str = "exit") -> tuple[str, "run_routing.RunReader"]:
+                  arm: str = "tuesday", end: str = "exit") -> tuple[str, "run_routing.RunReader"]:
     """Feed events to a RunReader of case 1's run 0 in a layout; return the outcome as the runner
     settles it, and the reader."""
-    names = NAMES if arm == "frontdoor" else {s: NAMES[s] for s in run_routing.SKILLS}
+    names = NAMES if arm == "tuesday" else {s: NAMES[s] for s in run_routing.SKILLS}
     reader = run_routing.RunReader(names, arm, explicit, layout, Path("/tmp/tmpab/case-1"))
     for event in events:
         outcome = reader.feed(event)
@@ -1125,7 +1125,7 @@ def test_layout_naming() -> None:
     check("a prompt with no module command is sent as written under a plugin too",
           run_routing.explicit_prompt("use /resume-tailor", names, "tuesday-ab12cd34"), "use /resume-tailor")
     check("E2's reader looks for the command as typed: namespaced in the plugin layout, bare in the others",
-          [run_routing.RunReader(NAMES, "frontdoor", "mock-interview", lay).command for lay in run_routing.LAYOUTS],
+          [run_routing.RunReader(NAMES, "tuesday", "mock-interview", lay).command for lay in run_routing.LAYOUTS],
           ["mock-interview-ab12cd34", "mock-interview-ab12cd34", "tuesday-ab12cd34:mock-interview-ab12cd34"])
 
     check("void rule: this run's own plugin-qualified ids are its own",
@@ -1170,7 +1170,7 @@ def test_layout_transcript() -> None:
                                                                      encoding="utf-8")
 
         def recorded(session: str, layout: str, run: int = 1) -> tuple:
-            reader = run_routing.RunReader(NAMES, "frontdoor", "mock-interview", layout, Path(cwd), run)
+            reader = run_routing.RunReader(NAMES, "tuesday", "mock-interview", layout, Path(cwd), run)
             for event in [{**init(*NAMES.values()), "session_id": session, "cwd": cwd},
                           {"type": "assistant", "message": {"id": "msg_A", "content": [{"type": "text", "text": "x"}]}}]:
                 reader.feed(event)
@@ -1327,7 +1327,7 @@ def test_reported_measures() -> None:
                      "output_tokens_median": 8000.0, "tokens_read": 2})
     check("an arm with no decided run has no median", run_routing.reported(cases, {})["seconds_median"], None)
     lines = run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
-                                      run_routing.explicit_summary(cases, runs_by_case), "frontdoor", measures)
+                                      run_routing.explicit_summary(cases, runs_by_case), "tuesday", measures)
     check("the run prints them as reported, not scored",
           lines[-1], "reported, not scored: the hub's files reached by path before any Skill call to it on 1/3; "
                      "the skills folder named on 2/3; 2 tool calls refused, on 1 runs (1 ended before their result "
@@ -1339,7 +1339,7 @@ def test_reported_measures() -> None:
                                          measures)[-1].startswith("reported, not scored: the skills folder"))
     check("and a project-layout run prints no such line",
           [line for line in run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
-                                                      run_routing.explicit_summary(cases, runs_by_case), "frontdoor")
+                                                      run_routing.explicit_summary(cases, runs_by_case), "tuesday")
            if line.startswith("reported")], [])
     source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
     check_true("every results file records its layout, and outside the project layout the reported measures",
@@ -1401,7 +1401,7 @@ def test_layout_runs() -> None:
                 return run_routing.run_once(case["prompt"], root, names, 30, None, arm, layout, index)
 
             e2 = {"id": 1, "prompt": "/mock-interview prep me"}
-            rec = run("personal", e2, "frontdoor", "personal", 1, 2)
+            rec = run("personal", e2, "tuesday", "personal", 1, 2)
             got = started()
             check("personal layout, run 1: the CLI starts with that run's config folder, and Read is let into "
                   "its skills folder",
@@ -1418,7 +1418,7 @@ def test_layout_runs() -> None:
             slug = re.sub(r"[^A-Za-z0-9]", "-", str(tmp / "personal" / "case-1"))
             check_true("and its transcript is kept in the runner's config folder",
                        (runner / "projects" / slug / "s1.jsonl").is_file())
-            rec = run("plugin", e2, "frontdoor", "plugin")
+            rec = run("plugin", e2, "tuesday", "plugin")
             got = started()
             check("plugin layout: the runner's config folder, the case's plugin, and Read let into its skills folder",
                   (got["config"], got["argv"][-4:]),
@@ -1979,11 +1979,11 @@ def test_execute_nudge() -> None:
         check("the room is valid", meta["harness"]["status"], "ok")
 
 
-def test_via_frontdoor() -> None:
-    print("\nfixtures --via frontdoor: the front door installed as the plugin ships it, a fire only through the hub")
+def test_via_tuesday() -> None:
+    print("\nfixtures --via tuesday: the front door installed as the plugin ships it, a fire only through the hub")
     source = (Path(__file__).resolve().parent / "run_fixtures.py").read_text()
-    check_true("--via defaults to the module alone, accepts frontdoor, and reaches every run",
-               run_fixtures.VIAS == ("skill", "frontdoor")
+    check_true("--via defaults to the module alone, accepts tuesday, and reaches every run",
+               run_fixtures.VIAS == ("skill", "tuesday")
                and 'ap.add_argument("--via", choices=VIAS, default="skill",' in source
                and "args.model, j[2], args.via, args.layout)" in source)
     with tempfile.TemporaryDirectory() as tmp:
@@ -2014,7 +2014,7 @@ def test_via_frontdoor() -> None:
     hub = f"{Path('/r/rooms/plugins/case-3-denied-ab12cd34/skills')}/tuesday-ab12cd34"
     own = [ev_init(list(QUALIFIED.values())), ev_tool("s", "Skill", {"skill": QUALIFIED["tuesday"]})]
     def fire(*events, skill="resume-tailor"):
-        return run_fixtures.frontdoor_fire(stream(*events), NAMES, skill, Path("/r/rooms/case-3-denied-ab12cd34"))
+        return run_fixtures.tuesday_fire(stream(*events), NAMES, skill, Path("/r/rooms/case-3-denied-ab12cd34"))
     read = lambda module: ev_tool("r", "Read", {"file_path": f"{hub}/references/{module}.md"})
     check("the module's playbook read through the hub is a fire",
           fire(*own, read("resume-tailor"), ev_result()), "fired")
@@ -2052,7 +2052,7 @@ def test_via_frontdoor() -> None:
             import contextlib
             import io
             with contextlib.redirect_stdout(io.StringIO()):
-                meta = run_fixtures.execute("resume-tailor", case, out, 0, 1, None, None, "frontdoor")
+                meta = run_fixtures.execute("resume-tailor", case, out, 0, 1, None, None, "tuesday")
         finally:
             run_fixtures.claude = real
         check("a run that routed to another module is not a fire, and says so, and is nudged",
@@ -2067,10 +2067,10 @@ def test_via_frontdoor() -> None:
               [args[args.index("--plugin-dir") + 1] for _, args, *_ in seen],
               [str(run_routing.home(room, "plugin")) for room, *_ in seen])
         check("the nudged run read resume-tailor's playbook through the hub, graded as valid",
-              (second["fire"], meta["harness"]["status"], meta["via"]), ("fired", "ok", "frontdoor"))
+              (second["fire"], meta["harness"]["status"], meta["via"]), ("fired", "ok", "tuesday"))
         check("the graded response is the nudged one", (out / "resume-tailor-3.run0.md").read_text(), "second answer")
         status, why = run_fixtures.classify_room("denied", dict(invocation(fire="job-underwriter", servers=()),
-                                                                via="frontdoor"), [])
+                                                                via="tuesday"), [])
         check("a run that did not reach the module through the hub is harness-invalid, and the reason says so",
               (status, why), ("harness-invalid",
                               ["the module's playbook was not read through the front door (job-underwriter)"]))
@@ -4688,8 +4688,8 @@ def test_plugin_alone() -> None:
     print("\nfixtures --layout plugin: the module alone, installed exactly as the front door is")
     repo = Path(__file__).resolve().parent.parent
     source = (Path(__file__).resolve().parent / "run_fixtures.py").read_text()
-    check("the layouts are the project install and the plugin, and --via frontdoor is the plugin only",
-          (run_fixtures.LAYOUTS, 'ap.error("--via frontdoor installs the front door as the plugin it ships as' in source),
+    check("the layouts are the project install and the plugin, and --via tuesday is the plugin only",
+          (run_fixtures.LAYOUTS, 'ap.error("--via tuesday installs the front door as the plugin it ships as' in source),
           (("project", "plugin"), True))
     with tempfile.TemporaryDirectory() as tmp:
         room = Path(tmp) / "rooms" / "case-3-denied-ab12cd34"
@@ -4804,9 +4804,9 @@ def test_plugin_alone() -> None:
                 "--plugin-dir" in a) for room, a, *_ in seen], [(True, True, False), (True, True, False)])
         check("and recorded as such", meta["layout"], "project")
     proc = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "run_fixtures.py"), "--via",
-                           "frontdoor", "--layout", "project", "--out", "/nonexistent/never-made"],
+                           "tuesday", "--layout", "project", "--out", "/nonexistent/never-made"],
                           capture_output=True, text=True)
-    check("must fail: --via frontdoor with --layout project is refused before anything runs",
+    check("must fail: --via tuesday with --layout project is refused before anything runs",
           (proc.returncode, "--layout plugin" in proc.stderr), (2, True))
 
 
@@ -4847,7 +4847,7 @@ def test_save_rule() -> None:
         real, run_fixtures.claude = run_fixtures.claude, fake
         try:
             with contextlib.redirect_stdout(io.StringIO()):
-                for via, layout in (("skill", "plugin"), ("frontdoor", "plugin"), ("skill", "project")):
+                for via, layout in (("skill", "plugin"), ("tuesday", "plugin"), ("skill", "project")):
                     for fixture_case in (case, canned):
                         seen.clear()
                         meta = run_fixtures.execute("mock-interview", fixture_case, out, len(metas), 1, None,
@@ -4900,11 +4900,11 @@ def test_save_rule() -> None:
     import compare_arms as ca
     cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep.", "expectations": ["a"]}}
     with tempfile.TemporaryDirectory() as tmp:
-        plugin = [{"via": "frontdoor", "layout": "plugin", "room_writable": True}]
+        plugin = [{"via": "tuesday", "layout": "plugin", "room_writable": True}]
         alone = [{"via": "skill", "layout": "plugin", "room_writable": True}]
         out = ca.report(arm_set(Path(tmp) / "tuesday", plugin), arm_set(Path(tmp) / "alone", alone), None, cases)
         check_true("must pass: matched sets print each set's via, layout and room_writable, and no flag",
-                   "installed via frontdoor (1); layout plugin (1); room_writable true (1)" in out
+                   "installed via tuesday (1); layout plugin (1); room_writable true (1)" in out
                    and "installed via skill (1); layout plugin (1); room_writable true (1)" in out
                    and "NOT LIKE FOR LIKE" not in out)
         project = [{"via": "skill", "layout": "project", "room_writable": False}]
@@ -4928,6 +4928,88 @@ def test_save_rule() -> None:
         check_true("and sets recording neither read unrecorded, unflagged",
                    "installed via unrecorded (1); layout unrecorded (1); room_writable unrecorded (1)" in out
                    and "NOT LIKE FOR LIKE" not in out)
+
+
+def test_saved_spellings() -> None:
+    print("\nthe code-name rename: new runs write tuesday, and a saved record reads under either spelling")
+    import compare_arms as ca
+    import contextlib
+    import io
+    for key in ("via", "arm"):
+        for name in ("frontdoor", "tuesday"):
+            meta = {key: name}
+            check(f"must pass: {key} {name!r} with no layout reads as the plugin, the record left as saved",
+                  (ca.layout_of(meta), meta), ("plugin", {key: name}))
+    check("must pass: the module alone, via 'skill' with no layout, reads as the project install",
+          ca.layout_of({"via": "skill"}), "project")
+    check("must pass: an explicit layout wins over via and arm, in either spelling",
+          [ca.layout_of({"via": v, "layout": "project"}) for v in ("frontdoor", "tuesday")]
+          + [ca.layout_of({"arm": a, "layout": "personal"}) for a in ("frontdoor", "tuesday")]
+          + [ca.layout_of({"via": "skill", "layout": "plugin"})],
+          ["project", "project", "personal", "personal", "plugin"])
+    check("must pass: via wins over arm, and arm is read only where via is absent",
+          (ca.layout_of({"via": "skill", "arm": "tuesday"}), ca.layout_of({"via": None, "arm": "frontdoor"})),
+          ("project", "plugin"))
+    check("must fail: the skills arm, another spelling or nothing recorded reads unrecorded (None)",
+          [ca.layout_of(m) for m in ({"arm": "skills"}, {"via": "front-door"}, {"via": "Tuesday"}, {})],
+          [None, None, None, None])
+    with contextlib.redirect_stderr(io.StringIO()):
+        try:
+            run_routing.parser().parse_args(["--arm", "frontdoor"])
+            refused = False
+        except SystemExit:
+            refused = True
+    check("the new spellings are the flags: --arm tuesday and --via tuesday, and --arm frontdoor is refused",
+          (run_routing.ARMS, run_routing.parser().parse_args(["--arm", "tuesday"]).arm, run_fixtures.VIAS, refused),
+          (("skills", "tuesday"), "tuesday", ("skill", "tuesday"), True))
+    cases = {("mock-interview", 1): {"id": 1, "prompt": "Prep.", "expectations": ["a"]}}
+    with tempfile.TemporaryDirectory() as tmp:
+        out = ca.report(arm_set(Path(tmp) / "t", [{"via": "frontdoor"}, {"arm": "tuesday"}]),
+                        arm_set(Path(tmp) / "a", [{"arm": "frontdoor"}]), None, cases)
+    check_true("must pass: a layout read from arm is said to be, not credited to via, and each field is counted",
+               "layout plugin (2) (1 read from via, 1 read from arm, saved before runs recorded a layout)" in out
+               and "layout plugin (1) (1 read from arm, saved before runs recorded a layout)" in out)
+
+    def refused_arm(call) -> bool:
+        try:
+            call()
+        except ValueError as exc:
+            return "'frontdoor'" in str(exc)
+        except SystemExit:
+            return False
+        return False
+
+    with tempfile.TemporaryDirectory() as tmp:
+        refusals = [refused_arm(lambda: run_routing.timeout_for("frontdoor", "should I apply?")),
+                    refused_arm(lambda: run_routing.RunReader(NAMES, "frontdoor")),
+                    refused_arm(lambda: run_routing.case_project(Path(tmp), {"id": 1}, "ab12cd34", None, "frontdoor")),
+                    refused_arm(lambda: run_routing.case_project(Path(tmp), {"id": 2}, "ab12cd34", None, "frontdoor",
+                                                                 "plugin"))]
+        made = sorted(p.name for p in Path(tmp).iterdir())
+    check("must fail: a saved file's old arm spelling is refused by the reader, the timeout and the installer, "
+          "never read as the skills arm, and nothing is installed",
+          (refusals, made), ([True] * 4, []))
+    with tempfile.TemporaryDirectory() as tmp:
+        suite = Path(tmp) / "cases.json"
+        suite.write_text(json.dumps({"cases": [{"id": 1, "prompt": "should I apply?", "expected": "job-underwriter"}]}))
+        saved = (sys.argv, run_routing.run_once)
+        run_routing.run_once = lambda *args, **kwargs: {"outcome": "job-underwriter", "init_skills": []}
+        written = {}
+        try:
+            for arm in run_routing.ARMS:
+                sys.argv = ["run_routing.py", "--arm", arm, "--runs", "1", "--workers", "1", "--cases", str(suite),
+                            "--json-out", str(Path(tmp) / f"{arm}.json")]
+                with contextlib.redirect_stdout(io.StringIO()):
+                    run_routing.main()
+                written[arm] = json.loads((Path(tmp) / f"{arm}.json").read_text())
+        finally:
+            sys.argv, run_routing.run_once = saved
+    check("must pass: a new Tuesday-arm results file records arm tuesday and the hub's two digests under "
+          "hub_sha256 and tuesday_sha256, as sync.digests() gives them, and no frontdoor_sha256; a skills-arm "
+          "file records no digest",
+          ({k: written["tuesday"].get(k) for k in ("arm", "hub_sha256", "tuesday_sha256", "frontdoor_sha256")},
+           written["skills"]["arm"], [k for k in written["skills"] if k.endswith("_sha256")]),
+          ({"arm": "tuesday", **sync.digests(), "frontdoor_sha256": None}, "skills", []))
 
 
 def test_rerun_stems() -> None:
@@ -5378,7 +5460,7 @@ def arm_set(folder: Path, runs: list[dict]) -> Path:
                 "research_log": run.get("log"),
                 # How the run was installed, written only where the run gives it, as a set saved before
                 # a field existed lacks it.
-                **{k: run[k] for k in ("via", "layout", "room_writable", "model") if k in run},
+                **{k: run[k] for k in ("via", "arm", "layout", "room_writable", "model") if k in run},
                 "invocations": [{"room": f"/x/rooms/{room}", "result": {"incomplete": False,
                                  "permission_denials": [{"tool_name": t} for t in run.get("refused", [])]}}]}
         (folder / f"{stem}.meta.json").write_text(json.dumps(meta))
@@ -5725,8 +5807,8 @@ def test_compare_rows() -> None:
 
 
 def main() -> int:
-    for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_frontdoor_generation,
-                 test_frontdoor_clashes, test_frontdoor_install, test_module_lists, test_sync, test_frontdoor_labels, test_explicit_naming,
+    for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_tuesday_generation,
+                 test_tuesday_clashes, test_tuesday_install, test_module_lists, test_sync, test_tuesday_labels, test_explicit_naming,
                  test_layouts_install, test_layout_naming, test_layout_transcript, test_reported_measures,
                  test_layout_runs,
                  test_cli_refusal, test_parse_stream,
@@ -5734,14 +5816,15 @@ def main() -> int:
                  test_classification, test_missing_response,
                  test_declined_grade_prints_no_score, test_artifact_collection,
                  test_skill_installation, test_classify_room, test_execute_timeout,
-                 test_execute_nudge, test_via_frontdoor, test_parse_accounting, test_check_accounting,
+                 test_execute_nudge, test_via_tuesday, test_parse_accounting, test_check_accounting,
                  test_fit_ledger, test_ledger_sentence_form, test_quotes, test_review_fixes, test_evidence_cells,
                  test_provenance_pool, test_gates_line, test_severity, test_shared_ledger_rules, test_named_set_claims,
                  test_user_links, test_user_link_fixture, test_quick_check,
                  test_budget_spent_unavailable, test_declined_unavailable, test_off_target_rows, test_yes_names_page,
                  test_canary_gate, test_backfill,
                  test_recurring, test_audit_quotes, test_audit_evidence_form, test_audit_research,
-                 test_audit_ledger, test_watch_out, test_grader_fence, test_plugin_alone, test_save_rule, test_rerun_stems,
+                 test_audit_ledger, test_watch_out, test_grader_fence, test_plugin_alone, test_save_rule, test_saved_spellings,
+                 test_rerun_stems,
                  test_relative_dates,
                  test_recut_quotes, test_traces, test_compare_arms, test_compare_reads, test_compare_rows):
         test()

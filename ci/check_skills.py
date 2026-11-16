@@ -34,7 +34,7 @@ Groups (each is described, with what it does not read, in CONTRIBUTING.md):
   watch-out    each skill's one watch-out line, and every copy of it, exact
   guidance     Anthropic's skill-authoring limits: contents lists, SKILL.md size,
                a third-person description, and every reference linked
-  frontdoor    the front door, skills/tuesday/: its references/ are what ci/sync.py
+  tuesday      the front door, skills/tuesday/: its references/ are what ci/sync.py
                generates, its module set is skills/ without it, and it and its
                references are the text last measured
   builds       the Claude Code builds hide each module with one added line and
@@ -118,7 +118,7 @@ NO_OUTPUT_OF_ITS_OWN = ("it delivers no output of its own: a turn's output is on
 HUB_EXEMPT = {
     "evals": "what it does is choose a module, which no one skill's fixtures can test; its evals are the "
              "suite's routing cases (evals/suite-routing.json, evals/suite-explicit.json), run with "
-             "run_routing.py --arm frontdoor, and a fixture file of its own would be run by nothing",
+             "run_routing.py --arm tuesday, and a fixture file of its own would be run by nothing",
     "parameters": NO_OUTPUT_OF_ITS_OWN,
     "columns": NO_OUTPUT_OF_ITS_OWN,
     "watch-out": NO_OUTPUT_OF_ITS_OWN,
@@ -271,25 +271,26 @@ CLAUDE_CODE = DIST / "claude-code"
 PLUGIN = DIST / "plugin" / sync.HUB_NAME
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 # What was last measured, recorded once, and the plugin version that ships it: the fix round
-# (docs/fix-round-plan-detail.md), on b8702ac. hub_sha256 and frontdoor_sha256 are the front door's
+# (docs/fix-round-plan-detail.md), on b8702ac. hub_sha256 and tuesday_sha256 are the front door's
 # two hashes (sync.digests) on that commit, which every Tuesday-arm routing results file of the round
-# records; its quality runs are tied to the commit through the run log and the pinned worktree.
-# builds_sha256 (frontdoor_digests) hashes every file of dist/claude-code/, which the plugin's
+# records, the second under its key before the code-name rename, frontdoor_sha256; its quality runs
+# are tied to the commit through the run log and the pinned worktree.
+# builds_sha256 (tuesday_digests) hashes every file of dist/claude-code/, which the plugin's
 # skills/ equals: each module's shipped files with the hiding line, and the hub's. That tree is what
 # the round installed but for the run-id suffix the harness gives each name, and the hub's LICENSE,
 # the modules' LICENSE byte for byte. Round 3 measured the text before it, on b2f424b, which then
 # shipped as plugin 0.1.0. plugin_version is the manifest's: an installed plugin keeps its version
 # until the version string changes (Claude Code's plugin docs), so an update to the hashes moves it.
-MEASURED_FRONTDOOR = {
+MEASURED_TUESDAY = {
     "hub_sha256": "4d10c30930488ed3f63067f9dc47651dad6c2874f3a992817f87951332f1ce80",
-    "frontdoor_sha256": "8d10162a0a58e5f99fb39356b473c79952cd8faa5533c4a909cecdd28261af12",
+    "tuesday_sha256": "8d10162a0a58e5f99fb39356b473c79952cd8faa5533c4a909cecdd28261af12",
     "builds_sha256": "d6670eeaebcc12864e5925bbc8c128e330e47a083bdcaccb61865679ce63c752",
     "plugin_version": "0.2.0",
 }
-MEASURED_HASHES = [key for key in MEASURED_FRONTDOOR if key.endswith("_sha256")]
+MEASURED_HASHES = [key for key in MEASURED_TUESDAY if key.endswith("_sha256")]
 PLUGIN_MANIFEST = {
     "name": sync.HUB_NAME,
-    "version": MEASURED_FRONTDOOR["plugin_version"],
+    "version": MEASURED_TUESDAY["plugin_version"],
     "description": "Applicant-side job search on evidence: Tuesday runs the module a request needs, "
                    "job-underwriter (whether to apply), resume-tailor (a resume tailored to a role) "
                    "or mock-interview (interview prep and drills), each also its own command.",
@@ -329,8 +330,8 @@ def builds() -> dict[str, bytes]:
     return out
 
 
-def frontdoor_digests() -> dict[str, str]:
-    """The hashes MEASURED_FRONTDOOR records, of the sources as they are now: the hub's two
+def tuesday_digests() -> dict[str, str]:
+    """The hashes MEASURED_TUESDAY records, of the sources as they are now: the hub's two
     (sync.digests), and builds_sha256 over dist/claude-code/ as builds() makes it."""
     prefix = f"{CLAUDE_CODE.relative_to(REPO).as_posix()}/"
     tree = {name[len(prefix):]: data for name, data in builds().items() if name.startswith(prefix)}
@@ -3008,7 +3009,7 @@ RETIRED = [
      "question or once after the last for all of them (job-underwriter SKILL.md, the closing order)"),
     # The fix round's rename: Tuesday's old working name, in two words, left every file
     # Claude reads at once. The one-word identifiers (MEASURED_FRONTDOOR, --via frontdoor)
-    # are commands and constants, renamed apart.
+    # were commands and constants, renamed apart (now MEASURED_TUESDAY, --via tuesday).
     (re.compile(r"\bfront[ -]doors?\b", re.I),
      "\"front door\" is Tuesday's retired working name — write Tuesday, or the `tuesday` skill where the skill "
      "itself is meant (interaction-grammar.md §6)"),
@@ -3438,7 +3439,7 @@ def hub_modules(hub_text: str) -> dict[str, set[str]]:
             "modules its description names": named}
 
 
-def check_frontdoor() -> None:
+def check_tuesday() -> None:
     """The front door, skills/tuesday/, held to what it is: a hub over the modules, carrying
     copies of their text, and the text last measured.
 
@@ -3451,13 +3452,13 @@ def check_frontdoor() -> None:
     folder there fails. The hub's module set, read from its
     slash-command list and its routing table, is skills/ without it, and its description
     names every module (hub_modules). Every shipped file of the hub and the modules hashes to
-    MEASURED_FRONTDOOR (frontdoor_digests).
+    MEASURED_TUESDAY (tuesday_digests).
     Each case in evals/suite-explicit.json opens with a module's slash command and expects
     that module. What it does not read: whether a link's read-when clause or a routing row
     is right, or whether the routing table agrees with the module descriptions; review and
     the routing measurement hold those.
     """
-    group = "frontdoor"
+    group = "tuesday"
     hub = SKILLS_DIR / sync.HUB_NAME
     if not (hub / "SKILL.md").is_file():
         fail(group, f"skills/{sync.HUB_NAME}/SKILL.md is missing")
@@ -3513,16 +3514,16 @@ def check_frontdoor() -> None:
         else:
             ok(group, f"the hub's {where} are the {len(wanted)} modules")
 
-    measured = frontdoor_digests()
-    changed = [k for k in MEASURED_HASHES if measured[k] != MEASURED_FRONTDOOR[k]]
+    measured = tuesday_digests()
+    changed = [k for k in MEASURED_HASHES if measured[k] != MEASURED_TUESDAY[k]]
     if changed:
         fail(group, f"the front door's text is not what was last measured ({', '.join(changed)} differ): a change "
-                    f"to a shipped file of the hub or a module ships only once measured, or once MEASURED_FRONTDOOR "
+                    f"to a shipped file of the hub or a module ships only once measured, or once MEASURED_TUESDAY "
                     f"is updated on purpose, its plugin_version moved with it; now "
                     + ", ".join(f"{k} {measured[k]}" for k in changed))
     else:
-        ok(group, f"every shipped file of the hub and the modules is what was last measured (frontdoor_sha256 "
-                  f"{measured['frontdoor_sha256'][:8]}, builds_sha256 {measured['builds_sha256'][:8]})")
+        ok(group, f"every shipped file of the hub and the modules is what was last measured (tuesday_sha256 "
+                  f"{measured['tuesday_sha256'][:8]}, builds_sha256 {measured['builds_sha256'][:8]})")
 
     explicit = REPO / "evals" / "suite-explicit.json"
     try:
@@ -3555,7 +3556,7 @@ def check_builds() -> None:
     holds the files it ships (sync.HUB_SHIPS) and no other: no README.md. The plugin's skills/ is
     dist/claude-code/ file for file, each skill folder named as its frontmatter `name`. The plugin
     manifest is JSON naming the plugin
-    `tuesday` with a description and MEASURED_FRONTDOOR's plugin_version, and the marketplace file is JSON with a name,
+    `tuesday` with a description and MEASURED_TUESDAY's plugin_version, and the marketplace file is JSON with a name,
     an owner's name, and one entry, `tuesday`, whose source is the plugin's folder and whose
     name is the manifest's. What it does not read: whether Claude Code loads the plugin;
     `claude plugin validate` and a session do (evals/README.md, "Through Tuesday").
@@ -3642,12 +3643,12 @@ def check_builds() -> None:
                                                          for k in ("version", "description")):
         fail(group, f"the plugin manifest must name the plugin {sync.HUB_NAME!r} and carry a version and a "
                     f"description: {manifest}")
-    elif manifest["version"] != MEASURED_FRONTDOOR["plugin_version"]:
-        fail(group, f"the plugin manifest's version {manifest['version']!r} is not MEASURED_FRONTDOOR's "
-                    f"plugin_version {MEASURED_FRONTDOOR['plugin_version']!r}: the version moves with the measured text")
+    elif manifest["version"] != MEASURED_TUESDAY["plugin_version"]:
+        fail(group, f"the plugin manifest's version {manifest['version']!r} is not MEASURED_TUESDAY's "
+                    f"plugin_version {MEASURED_TUESDAY['plugin_version']!r}: the version moves with the measured text")
     else:
         ok(group, f"the plugin manifest is JSON naming {sync.HUB_NAME!r}, version {manifest['version']}, "
-                  f"MEASURED_FRONTDOOR's")
+                  f"MEASURED_TUESDAY's")
     entries = market.get("plugins") if isinstance(market.get("plugins"), list) else []
     source = f"./{PLUGIN.relative_to(REPO).as_posix()}"
     if not market.get("name") or not (market.get("owner") or {}).get("name") or [
@@ -3677,7 +3678,7 @@ GROUPS = {
     "triggers": check_triggers,
     "watch-out": check_watch_outs,
     "guidance": check_guidance,
-    "frontdoor": check_frontdoor,
+    "tuesday": check_tuesday,
     "builds": check_builds,
 }
 

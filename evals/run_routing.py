@@ -23,12 +23,12 @@ Usage:
     python evals/run_routing.py --runs 1        # quick pass
     python evals/run_routing.py --case 9 --case 10
     python evals/run_routing.py --cases evals/routing-arm-b.json   # another case file
-    python evals/run_routing.py --arm frontdoor                    # the front door, skills/tuesday
-    python evals/run_routing.py --arm frontdoor --cases evals/suite-explicit.json
-    python evals/run_routing.py --arm frontdoor --layout plugin     # the skills outside the case folder
+    python evals/run_routing.py --arm tuesday                      # the front door, skills/tuesday
+    python evals/run_routing.py --arm tuesday --cases evals/suite-explicit.json
+    python evals/run_routing.py --arm tuesday --layout plugin       # the skills outside the case folder
 
 Two arms (evals/README.md, "The Tuesday arm"). `skills`, the default, installs
-the three module skills as they ship. `frontdoor` installs the front door,
+the three module skills as they ship. `tuesday` installs the front door,
 `skills/tuesday/`, as it ships, beside the three modules with
 `disable-model-invocation: true` added, as the Claude Code builds add it.
 
@@ -61,7 +61,7 @@ from child_env import child_env  # noqa: E402
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
 SUITE = REPO / "evals" / "suite-routing.json"
-ARMS = ("skills", "frontdoor")
+ARMS = ("skills", "tuesday")
 LAYOUTS = ("project", "personal", "plugin")
 # The folder, beside the case folders, that holds each case's skills outside its own
 # folder. Its name is neutral, as is each folder under it (`case-<id>`, or `case-<id>-<run>`
@@ -141,7 +141,7 @@ def install_skills(dest_root: Path, run_id: str,
     return names
 
 
-def install_frontdoor(dest_root: Path, run_id: str) -> dict[str, str]:
+def install_tuesday(dest_root: Path, run_id: str) -> dict[str, str]:
     """The front-door arm: the three modules, hidden, and the hub, `skills/tuesday/` as it
     ships, in `dest_root`, the layout's skills folder; return name -> installed name.
 
@@ -171,7 +171,7 @@ def install_plugin(plugin: Path, run_id: str, module: str | None = None) -> dict
         names = {module: f"{module}-{run_id}"}
         install_one(module, plugin / "skills" / names[module], names[module])
     else:
-        names = install_frontdoor(plugin / "skills", run_id)
+        names = install_tuesday(plugin / "skills", run_id)
     manifest = plugin / ".claude-plugin" / "plugin.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin_prefix(names, "plugin"), "version": "0.0.0",
@@ -252,11 +252,23 @@ def foreign_tuesday(listed: list, names: dict[str, str]) -> list[str]:
     return [s for s in listed if isinstance(s, str) and tuesday_base(s) in bases and local_name(s) not in ours]
 
 
+def known_arm(arm: str) -> str:
+    """`arm`, when it is one of ARMS. Every branch on the arm tests for `tuesday` and gives any
+    other value the skills arm's install and reading, so a results file's `arm` from before the
+    code-name rename, `frontdoor` on every Tuesday-arm file then, is refused, never read as the
+    skills arm."""
+    if arm not in ARMS:
+        raise ValueError(f"arm {arm!r} is not one of {', '.join(ARMS)}: a results file saved before the "
+                         f"code-name rename spells the Tuesday arm 'frontdoor'")
+    return arm
+
+
 def timeout_for(arm: str, prompt: str, given: int | None = None) -> int:
     """The seconds one run gets: `--timeout` when given, else what its reader waits for."""
+    known_arm(arm)
     if given:
         return given
-    whole_turn = arm == "frontdoor" or bool(explicit_command(prompt))
+    whole_turn = arm == "tuesday" or bool(explicit_command(prompt))
     return TIMEOUT_WHOLE_TURN if whole_turn else TIMEOUT_FIRST_FIRE
 
 
@@ -347,15 +359,16 @@ def case_project(tmp: Path, case: dict, run_id: str, overrides: dict[str, Path] 
     case's posting, and a self-contained case ran beside documents no prompt of
     its own mentioned. A project per case shows each prompt exactly its own files.
     """
-    if layout == "plugin" and arm != "frontdoor":
+    known_arm(arm)
+    if layout == "plugin" and arm != "tuesday":
         raise SystemExit("--layout plugin is for the front-door arm: today's three skills do not ship as a plugin")
     root = tmp / f"case-{case['id']}"
     root.mkdir()
     skills = skills_root(root, layout)
-    if arm == "frontdoor":
+    if arm == "tuesday":
         if overrides:
             raise SystemExit("--skill-md substitutes a module description; the front-door arm hides them")
-        names = install_plugin(home(root, layout), run_id) if layout == "plugin" else install_frontdoor(skills, run_id)
+        names = install_plugin(home(root, layout), run_id) if layout == "plugin" else install_tuesday(skills, run_id)
     else:
         names = install_skills(skills, run_id, overrides)
     if layout == "personal":
@@ -394,7 +407,7 @@ class RunReader:
 
     - `skills`: the module whose installed name a Skill or Read call carries. The
       run is read up to that call and no further.
-    - `frontdoor`: the module whose playbook, `tuesday-<id>/references/<m>.md`, is
+    - `tuesday`: the module whose playbook, `tuesday-<id>/references/<m>.md`, is
       read first after the hub fires; `tuesday-unrouted` when the hub fired and the
       run ended with no playbook read; `hidden-<m>` when a hidden module is called,
       or any tool call names its folder, at any point in the turn, which the arm
@@ -435,7 +448,7 @@ class RunReader:
                  layout: str = "project", root: Path | None = None, run: int = 0):
         self.names = {m: n for m, n in names.items() if m != HUB}
         self.hub = names.get(HUB)
-        self.arm, self.explicit = arm, explicit
+        self.arm, self.explicit = known_arm(arm), explicit
         self.all_names = names
         self.layout = layout
         # The command E2 types, as the transcript records its expansion.
@@ -471,7 +484,7 @@ class RunReader:
     @property
     def whole_turn(self) -> bool:
         """Whether the run is read to its end rather than to its first fire."""
-        return bool(self.explicit) or self.arm == "frontdoor"
+        return bool(self.explicit) or self.arm == "tuesday"
 
     def reach(self, label: str) -> None:
         if label not in self.reached:
@@ -1023,7 +1036,7 @@ def summary_lines(summary: dict, explicit: dict, arm: str, measures: dict | None
         lines.append(f"reached a skill on {summary['reached']}/{summary['decided']} decided runs ({rate}); "
                      f"wrong skill on {summary['wrong_skill']}; "
                      f"{summary['set_aside']} timed out, errored or void, set aside")
-        if arm == "frontdoor":
+        if arm == "tuesday":
             lines.append(f"tuesday fired on {summary['reached_tuesday']}/{summary['decided']} "
                          f"({summary['tuesday_unrouted']} unrouted); hidden modules reached {summary['hidden']}")
     if explicit["decided"] or explicit["set_aside"]:
@@ -1036,7 +1049,7 @@ def summary_lines(summary: dict, explicit: dict, arm: str, measures: dict | None
     if measures is not None:
         n = measures["decided"]
         hub = (f"the hub's files reached by path before any Skill call to it on {measures['hub_path_contact']}/{n}; "
-               if arm == "frontdoor" else "")
+               if arm == "tuesday" else "")
         lines.append(f"reported, not scored: {hub}the skills folder named on {measures['skills_root_named']}/{n}; "
                      f"{measures['refused']} tool calls refused, on {measures['runs_refused']} runs "
                      f"({measures['refused_unread']} ended before their result event, uncounted); "
@@ -1064,7 +1077,7 @@ def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=3, help="runs per case (routing is probabilistic)")
     ap.add_argument("--arm", choices=ARMS, default="skills",
-                    help="skills: the three modules as they ship; frontdoor: skills/tuesday, modules hidden")
+                    help="skills: the three modules as they ship; tuesday: skills/tuesday, modules hidden")
     ap.add_argument("--layout", choices=LAYOUTS, default="project",
                     help="where the skills are installed: project, the case folder's .claude/skills/; personal, "
                          "a config folder of the case's own; plugin, a plugin (front-door arm only)")
@@ -1096,7 +1109,7 @@ def main() -> int:
         run_id = uuid.uuid4().hex[:8]
         projects = {c["id"]: case_project(Path(tmp), c, run_id, overrides, args.arm, args.layout, args.runs)
                     for c in cases}
-        frozen = sync.digests() if args.arm == "frontdoor" else {}
+        frozen = sync.digests() if args.arm == "tuesday" else {}
 
         jobs = [(c, i) for c in cases for i in range(args.runs)]
         with ThreadPoolExecutor(max_workers=args.workers) as pool:

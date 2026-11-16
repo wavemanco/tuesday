@@ -1854,7 +1854,7 @@ def break_retired_old_name_hyphenated(root: Path) -> str:
 
 
 def keep_old_name_identifier(root: Path) -> None:
-    """The one-word identifiers are commands and constants, renamed apart, and pass."""
+    """The old one-word identifiers, commands and constants renamed apart, pass."""
     path = root / "skills/tuesday/README.md"
     path.write_text(path.read_text() + "\nIts routing runs with `run_routing.py --arm frontdoor`.\n")
 
@@ -3362,7 +3362,7 @@ def measured_now(root: Path) -> None:
     """Record the staged front door's digests as measured: the conscious update a change makes
     once its measurement is done."""
     proc = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'ci'); import json, check_skills; "
-                           "print(json.dumps(check_skills.frontdoor_digests()))"],
+                           "print(json.dumps(check_skills.tuesday_digests()))"],
                           cwd=root, capture_output=True, text=True)
     now = json.loads(proc.stdout)
     path = root / "ci/check_skills.py"
@@ -3372,7 +3372,7 @@ def measured_now(root: Path) -> None:
     path.write_text(text)
 
 
-def break_frontdoor_unlinked(root: Path) -> str:
+def break_tuesday_unlinked(root: Path) -> str:
     """Drop one generated file's line from the hub's index: it would be reachable
     only through a playbook, the nested pattern the guidance warns against. The
     guidance group holds every skill's links, the front door's included."""
@@ -3383,14 +3383,14 @@ def break_frontdoor_unlinked(root: Path) -> str:
     return "tuesday: SKILL.md never links references/personas.md by that path"
 
 
-def break_frontdoor_new_clash(root: Path) -> str:
+def break_tuesday_new_clash(root: Path) -> str:
     """Give a second module a file named like one of job-underwriter's, with other
     text, and do not regenerate: the committed references no longer follow the sources."""
     (root / "skills/mock-interview/references/evidence-model.md").write_text("# Mock-interview's own model\n")
     return "skills/tuesday/references/job-underwriter-evidence-model.md is missing — run python ci/sync.py"
 
 
-def break_frontdoor_new_clash_synced(root: Path) -> str:
+def break_tuesday_new_clash_synced(root: Path) -> str:
     """The same clash, regenerated: the generator renames both copies, and a hub still
     linking the old name links a file that is no longer there."""
     (root / "skills/mock-interview/references/evidence-model.md").write_text("# Mock-interview's own model\n")
@@ -3398,14 +3398,14 @@ def break_frontdoor_new_clash_synced(root: Path) -> str:
     return "the hub links references/evidence-model.md, which its references/ folder does not hold"
 
 
-def break_frontdoor_dangling(root: Path) -> str:
+def break_tuesday_dangling(root: Path) -> str:
     """Link a file the generator does not write."""
     path = root / HUB_MD
     path.write_text(path.read_text() + "\n- `references/scoring-guide.md`: read before scoring\n")
     return "the hub links references/scoring-guide.md, which its references/ folder does not hold"
 
 
-def break_frontdoor_unresolvable(root: Path) -> str:
+def break_tuesday_unresolvable(root: Path) -> str:
     """Make a shared mirror name a file whose name clashes between modules: which
     module's copy it means cannot be decided, so generation stops."""
     for skill in ("job-underwriter", "mock-interview", "resume-tailor"):
@@ -3414,7 +3414,7 @@ def break_frontdoor_unresolvable(root: Path) -> str:
     return "names rationale.md, which differs between modules"
 
 
-def break_frontdoor_claude_code_key(root: Path) -> str:
+def break_tuesday_claude_code_key(root: Path) -> str:
     """Hide the hub with a Claude Code-only key: a claude.ai upload would refuse it.
     The front door is a skill, so the frontmatter group reads it."""
     path = root / HUB_MD
@@ -3422,7 +3422,7 @@ def break_frontdoor_claude_code_key(root: Path) -> str:
     return "tuesday: unexpected frontmatter key(s): disable-model-invocation"
 
 
-def break_frontdoor_explicit_expects_other(root: Path) -> str:
+def break_tuesday_explicit_expects_other(root: Path) -> str:
     """An E2 case expecting a module other than the one its command names."""
     path = root / "evals/suite-explicit.json"
     data = json.loads(path.read_text())
@@ -3431,7 +3431,7 @@ def break_frontdoor_explicit_expects_other(root: Path) -> str:
     return "invokes /mock-interview but expects 'job-underwriter'"
 
 
-def break_frontdoor_yaml_colon(root: Path) -> str:
+def break_tuesday_yaml_colon(root: Path) -> str:
     """Put a ': ' back in the hub's unquoted description, as the design draft had it:
     Claude Code's lenient reader takes it, a strict YAML parser does not."""
     path = root / HUB_MD
@@ -3440,42 +3440,42 @@ def break_frontdoor_yaml_colon(root: Path) -> str:
     return "tuesday: frontmatter description is an unquoted YAML value that holds a ':' before a space"
 
 
-def break_frontdoor_hand_edit(root: Path) -> str:
+def break_tuesday_hand_edit(root: Path) -> str:
     """Edit a generated reference by hand, the fix that flows the wrong way."""
     path = root / HUB_REFS / "personas.md"
     path.write_text(path.read_text() + "\nOne more persona note, added here.\n")
     return "skills/tuesday/references/personas.md differs from what ci/sync.py generates"
 
 
-def break_frontdoor_stray_reference(root: Path) -> str:
+def break_tuesday_stray_reference(root: Path) -> str:
     """A file in the hub's references/ that no source generates."""
     (root / HUB_REFS / "old-notes.md").write_text("# Old notes\n")
     return "skills/tuesday/references/old-notes.md is generated by nothing"
 
 
-def break_frontdoor_playbook_names_absent(root: Path) -> str:
+def break_tuesday_playbook_names_absent(root: Path) -> str:
     """Delete a file a playbook names from the hub's references/."""
     (root / HUB_REFS / "edit-ledger.md").unlink()
     return "references/resume-tailor.md names references/edit-ledger.md, which the front door does not carry"
 
 
-def break_frontdoor_module_text_unmeasured(root: Path) -> str:
+def break_tuesday_module_text_unmeasured(root: Path) -> str:
     """Change a module's text and regenerate, as a careful author would: the front door
     now ships text never measured."""
     path = root / "skills/resume-tailor/SKILL.md"
     path.write_text(path.read_text() + "\nOne more rule, never measured.\n")
     tool(root, "sync.py")
-    return "the front door's text is not what was last measured (frontdoor_sha256, builds_sha256 differ)"
+    return "the front door's text is not what was last measured (tuesday_sha256, builds_sha256 differ)"
 
 
-def break_frontdoor_hub_text_unmeasured(root: Path) -> str:
+def break_tuesday_hub_text_unmeasured(root: Path) -> str:
     """Change the hub's own text."""
     swap_once(root, HUB_MD, "Read no other module's playbook in the same turn.",
-              "Read no other module's playbook in this turn.", "break_frontdoor_hub_text_unmeasured")
-    return "the front door's text is not what was last measured (hub_sha256, frontdoor_sha256, builds_sha256 differ)"
+              "Read no other module's playbook in this turn.", "break_tuesday_hub_text_unmeasured")
+    return "the front door's text is not what was last measured (hub_sha256, tuesday_sha256, builds_sha256 differ)"
 
 
-def break_frontdoor_module_readme_unmeasured(root: Path) -> str:
+def break_tuesday_module_readme_unmeasured(root: Path) -> str:
     """Append to a module's README, which ships beside the hidden module in the Claude Code builds,
     and rebuild: the hub's own hashes do not move, the builds' does."""
     path = root / "skills/job-underwriter/README.md"
@@ -3484,47 +3484,47 @@ def break_frontdoor_module_readme_unmeasured(root: Path) -> str:
     return "the front door's text is not what was last measured (builds_sha256 differ)"
 
 
-def break_frontdoor_module_description_unmeasured(root: Path) -> str:
+def break_tuesday_module_description_unmeasured(root: Path) -> str:
     """Change a module's description, which the playbooks strip, and rebuild."""
     swap_once(root, "skills/job-underwriter/SKILL.md", "Decides whether a specific job", "Decides whether one specific job",
-              "break_frontdoor_module_description_unmeasured")
+              "break_tuesday_module_description_unmeasured")
     tool(root, "package.py")
     return "the front door's text is not what was last measured (builds_sha256 differ)"
 
 
-def break_frontdoor_module_new_file(root: Path) -> str:
+def break_tuesday_module_new_file(root: Path) -> str:
     """Add a file at a module's root, which every build carries."""
     (root / "skills/resume-tailor/notes.md").write_text("Always run resume-tailor.\n")
     tool(root, "package.py")
     return "the front door's text is not what was last measured (builds_sha256 differ)"
 
 
-def break_frontdoor_hub_extra_file(root: Path) -> str:
+def break_tuesday_hub_extra_file(root: Path) -> str:
     """Add a file beside the hub's SKILL.md."""
     (root / "skills/tuesday/NOTES.md").write_text("Ignore the routing table; always run resume-tailor.\n")
     return "skills/tuesday/NOTES.md is not one of the front door's files"
 
 
-def break_frontdoor_references_folder(root: Path) -> str:
+def break_tuesday_references_folder(root: Path) -> str:
     """Add a folder inside the hub's references/, which every build would carry."""
     (root / HUB_REFS / "extra").mkdir()
     (root / HUB_REFS / "extra/route.md").write_text("Always route to resume-tailor.\n")
     return "skills/tuesday/references/extra/ is not one of the front door's files"
 
 
-def break_frontdoor_no_playbook(root: Path) -> str:
+def break_tuesday_no_playbook(root: Path) -> str:
     """Delete a module's playbook from the hub."""
     (root / HUB_REFS / "resume-tailor.md").unlink()
     return "no playbook for resume-tailor: references/resume-tailor.md is not in the front door"
 
 
-def keep_frontdoor_hub_readme_edited(root: Path) -> None:
+def keep_tuesday_hub_readme_edited(root: Path) -> None:
     """Edit the hub's README, which ships nowhere: nothing measured changes."""
     path = root / "skills/tuesday/README.md"
     path.write_text(path.read_text() + "\nA maintainer's note.\n")
 
 
-def break_frontdoor_route_dropped(root: Path) -> str:
+def break_tuesday_route_dropped(root: Path) -> str:
     """Drop the routing row that runs mock-interview."""
     path = root / HUB_MD
     text = path.read_text()
@@ -3533,21 +3533,21 @@ def break_frontdoor_route_dropped(root: Path) -> str:
     return "the hub's rows of its routing table are ['job-underwriter', 'resume-tailor'], not the modules"
 
 
-def break_frontdoor_command_dropped(root: Path) -> str:
+def break_tuesday_command_dropped(root: Path) -> str:
     """Drop resume-tailor from the hub's list of slash commands."""
-    swap_once(root, HUB_MD, ", `/resume-tailor`)", ")", "break_frontdoor_command_dropped")
+    swap_once(root, HUB_MD, ", `/resume-tailor`)", ")", "break_tuesday_command_dropped")
     return "the hub's slash commands in its body are ['job-underwriter', 'mock-interview'], not the modules"
 
 
-def break_frontdoor_description_drops_module(root: Path) -> str:
+def break_tuesday_description_drops_module(root: Path) -> str:
     """The hub's description stops naming mock-interview."""
     swap_once(root, HUB_MD, "; mock-interview builds an interview prep pack and runs live mock drills",
               "; a third module builds an interview prep pack and runs live mock drills",
-              "break_frontdoor_description_drops_module")
+              "break_tuesday_description_drops_module")
     return "the hub's modules its description names are ['job-underwriter', 'resume-tailor'], not the modules"
 
 
-def break_frontdoor_new_module_unrouted(root: Path) -> str:
+def break_tuesday_new_module_unrouted(root: Path) -> str:
     """Add a module and regenerate, with no hub edit: the hub does not route to it."""
     module = root / "skills/cover-letter"
     (module / "references").mkdir(parents=True)
@@ -3576,7 +3576,7 @@ def keep_frontmatter_colon_without_space(root: Path) -> None:
     path.write_text(text.replace(line, line.replace(" a ", " a 9:00 ", 1), 1))
 
 
-def break_frontdoor_playbook_contents(root: Path) -> str:
+def break_tuesday_playbook_contents(root: Path) -> str:
     """The generator stops listing a playbook's contents, and the author regenerates: the
     playbooks run past 100 lines and are read in full, so each must open with its list,
     which the guidance group reads in every skill's references."""
@@ -3587,7 +3587,7 @@ def break_frontdoor_playbook_contents(root: Path) -> str:
     return "tuesday: references/job-underwriter.md is"
 
 
-def keep_frontdoor_new_reference_linked(root: Path) -> None:
+def keep_tuesday_new_reference_linked(root: Path) -> None:
     """A module gains a reference file, the author regenerates, links it from the hub,
     and, once the change is measured, records the new digests."""
     (root / "skills/resume-tailor/references/summary-lines.md").write_text("# Summary lines\n")
@@ -3701,7 +3701,7 @@ def break_build_manifest_version_unrecorded(root: Path) -> str:
     data = json.loads(path.read_text())
     data["version"] = "0.1.1"
     path.write_text(json.dumps(data, indent=2) + "\n")
-    return "the plugin manifest's version '0.1.1' is not MEASURED_FRONTDOOR's plugin_version"
+    return "the plugin manifest's version '0.1.1' is not MEASURED_TUESDAY's plugin_version"
 
 
 def break_build_marketplace_no_owner(root: Path) -> str:
@@ -3752,7 +3752,7 @@ def break_package_marketplace_missing(root: Path) -> str:
     return ".claude-plugin/marketplace.json is missing — run python ci/package.py"
 
 
-def break_answer_key_through_frontdoor(root: Path) -> str:
+def break_answer_key_through_tuesday(root: Path) -> str:
     """A mock-interview fixture sentence in a job-underwriter reference, regenerated: no answer key
     for job-underwriter's own fixtures, but the front door installs both modules' text."""
     keep_answer_key_other_skill(root)
@@ -3881,11 +3881,11 @@ PASSES = [
     ("frontmatter", "the allowed-tools key, one of the six", keep_frontmatter_allowed_tools_key),
     ("guidance", "a SKILL.md body of 19,999 chars, one token under the estimate", keep_body_one_token_under),
     ("guidance", "a SKILL.md body of 499 lines", keep_body_499_lines),
-    ("frontdoor", "a module reference added, regenerated, linked from the hub, and measured",
-     keep_frontdoor_new_reference_linked),
+    ("tuesday", "a module reference added, regenerated, linked from the hub, and measured",
+     keep_tuesday_new_reference_linked),
     ("builds", "a module given an allowed frontmatter key and rebuilt", keep_build_after_frontmatter_key),
-    ("frontdoor", "the hub's README edited, which ships nowhere", keep_frontdoor_hub_readme_edited),
-    ("package", "the hub's README edited, which no build carries", keep_frontdoor_hub_readme_edited),
+    ("tuesday", "the hub's README edited, which ships nowhere", keep_tuesday_hub_readme_edited),
+    ("package", "the hub's README edited, which no build carries", keep_tuesday_hub_readme_edited),
     ("package", "a module given an allowed frontmatter key and rebuilt", keep_build_after_frontmatter_key),
     ("frontmatter", "a colon with no space after it in an unquoted description",
      keep_frontmatter_colon_without_space),
@@ -4302,30 +4302,30 @@ CASES: list[tuple[str, str, callable]] = [
     ("guidance", "a mirror SKILL.md never names", break_reference_unlinked_mirror),
     ("guidance", "a reference named only in the frontmatter, not the body", break_reference_named_only_in_frontmatter),
     ("frontmatter", "a Claude Code-only frontmatter key in source", break_frontmatter_extra_key),
-    ("guidance", "a generated file the hub does not link", break_frontdoor_unlinked),
-    ("frontdoor", "a new name clash, not regenerated", break_frontdoor_new_clash),
-    ("frontdoor", "a new name clash, regenerated, that the hub's links do not follow", break_frontdoor_new_clash_synced),
-    ("frontdoor", "a hub link to a file the generator does not write", break_frontdoor_dangling),
-    ("frontdoor", "a shared mirror naming a clashing file", break_frontdoor_unresolvable),
-    ("frontmatter", "a Claude Code-only key in the hub's frontmatter", break_frontdoor_claude_code_key),
-    ("frontdoor", "an explicit case expecting another module", break_frontdoor_explicit_expects_other),
-    ("frontmatter", "a ': ' in the hub's unquoted description", break_frontdoor_yaml_colon),
-    ("frontdoor", "a generated reference edited by hand", break_frontdoor_hand_edit),
-    ("frontdoor", "a file in the hub's references/ that nothing generates", break_frontdoor_stray_reference),
-    ("frontdoor", "a file a playbook names missing from the hub", break_frontdoor_playbook_names_absent),
-    ("frontdoor", "a module's text changed and regenerated, not measured", break_frontdoor_module_text_unmeasured),
-    ("frontdoor", "the hub's own text changed, not measured", break_frontdoor_hub_text_unmeasured),
-    ("frontdoor", "a module's README changed and rebuilt, not measured", break_frontdoor_module_readme_unmeasured),
-    ("frontdoor", "a module's description changed and rebuilt, not measured",
-     break_frontdoor_module_description_unmeasured),
-    ("frontdoor", "a new file at a module's root, not measured", break_frontdoor_module_new_file),
-    ("frontdoor", "a file beside the hub's SKILL.md that it does not hold", break_frontdoor_hub_extra_file),
-    ("frontdoor", "a folder inside the hub's references/", break_frontdoor_references_folder),
-    ("frontdoor", "a module's playbook missing from the hub", break_frontdoor_no_playbook),
-    ("frontdoor", "a routing row dropped", break_frontdoor_route_dropped),
-    ("frontdoor", "a module's slash command dropped from the hub", break_frontdoor_command_dropped),
-    ("frontdoor", "a module dropped from the hub's description", break_frontdoor_description_drops_module),
-    ("frontdoor", "a new module, regenerated, that the hub does not route to", break_frontdoor_new_module_unrouted),
+    ("guidance", "a generated file the hub does not link", break_tuesday_unlinked),
+    ("tuesday", "a new name clash, not regenerated", break_tuesday_new_clash),
+    ("tuesday", "a new name clash, regenerated, that the hub's links do not follow", break_tuesday_new_clash_synced),
+    ("tuesday", "a hub link to a file the generator does not write", break_tuesday_dangling),
+    ("tuesday", "a shared mirror naming a clashing file", break_tuesday_unresolvable),
+    ("frontmatter", "a Claude Code-only key in the hub's frontmatter", break_tuesday_claude_code_key),
+    ("tuesday", "an explicit case expecting another module", break_tuesday_explicit_expects_other),
+    ("frontmatter", "a ': ' in the hub's unquoted description", break_tuesday_yaml_colon),
+    ("tuesday", "a generated reference edited by hand", break_tuesday_hand_edit),
+    ("tuesday", "a file in the hub's references/ that nothing generates", break_tuesday_stray_reference),
+    ("tuesday", "a file a playbook names missing from the hub", break_tuesday_playbook_names_absent),
+    ("tuesday", "a module's text changed and regenerated, not measured", break_tuesday_module_text_unmeasured),
+    ("tuesday", "the hub's own text changed, not measured", break_tuesday_hub_text_unmeasured),
+    ("tuesday", "a module's README changed and rebuilt, not measured", break_tuesday_module_readme_unmeasured),
+    ("tuesday", "a module's description changed and rebuilt, not measured",
+     break_tuesday_module_description_unmeasured),
+    ("tuesday", "a new file at a module's root, not measured", break_tuesday_module_new_file),
+    ("tuesday", "a file beside the hub's SKILL.md that it does not hold", break_tuesday_hub_extra_file),
+    ("tuesday", "a folder inside the hub's references/", break_tuesday_references_folder),
+    ("tuesday", "a module's playbook missing from the hub", break_tuesday_no_playbook),
+    ("tuesday", "a routing row dropped", break_tuesday_route_dropped),
+    ("tuesday", "a module's slash command dropped from the hub", break_tuesday_command_dropped),
+    ("tuesday", "a module dropped from the hub's description", break_tuesday_description_drops_module),
+    ("tuesday", "a new module, regenerated, that the hub does not route to", break_tuesday_new_module_unrouted),
     ("builds", "a build that changes more than the hiding line", break_build_extra_change),
     ("builds", "the hiding line below the frontmatter", break_build_key_in_body),
     ("builds", "the front door hidden in a build", break_build_hub_hidden),
@@ -4344,12 +4344,12 @@ CASES: list[tuple[str, str, callable]] = [
     ("builds", "the hub's README in its .skill file", break_build_hub_readme_skill_file),
     ("package", "the hub's README in its .skill file", break_package_hub_readme_skill_file),
     ("answer-keys", "a module's fixture quoted in another module's reference, read through the front door",
-     break_answer_key_through_frontdoor),
+     break_answer_key_through_tuesday),
     ("package", "a Claude Code build not rebuilt after a source edit", break_package_build_stale),
     ("package", "a file in the plugin built from nothing", break_package_build_stray),
     ("package", "the marketplace file missing", break_package_marketplace_missing),
     ("frontmatter", "a ' #' in a module's unquoted description", break_frontmatter_yaml_comment),
-    ("guidance", "a generated playbook with no contents list, regenerated", break_frontdoor_playbook_contents),
+    ("guidance", "a generated playbook with no contents list, regenerated", break_tuesday_playbook_contents),
 ]
 
 
