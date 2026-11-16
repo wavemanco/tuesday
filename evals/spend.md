@@ -36,6 +36,7 @@ The dollar figures in both plan documents, such as "about $1,070 of runs", are A
 
 - **The routing rounds** saved no cost per run: the entries "Tuesday, measured on three models", "Tuesday, round 2" and "Tuesday, round 3". Round 3 ran into the weekly limit 38 minutes in, at 17:46 UTC on 31 October, and the runs it stopped were re-run on 5 November.
 - **The fix round's routing step** (15 November) saved no cost per run either. It moved the meter 7 points, from 0% after a reset the owner made to 7%, against the plan's high estimate of 7.7.
+- **The fix round's scoring and verification** (15 and 16 November) saved no dollar cost. The meter moved from 7% after the routing step to 29% on 16 November at 03:32 UTC, about 22 points against the plan's 3–5. Most of it was the review and verification agents. These are conservative estimates. Other projects ran together with scoring so actual cost is likely to be lower.
 - **The fixture rounds before them** (rounds 7 to 9 and the watch-out round) saved each run's cost but took no meter readings, so they are left out here.
 
 ## Where the figures come from
