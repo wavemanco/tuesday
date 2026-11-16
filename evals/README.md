@@ -249,7 +249,33 @@ python evals/run_routing.py --arm tuesday --model $M --runs 5 --json-out e2-$M.j
 ```
 
 A Tuesday results file also records the hub's hash and one hash over the hub
-and every generated file, so a result names the exact text it measured.
+and every generated file, so a result names the exact text it measured. Every
+results file records:
+
+- `cases_sha256`, the sha256 of the case file's bytes as the arm loaded them,
+  before its first run;
+- `case_ids`, the `--case` ids it ran, or `null` for the whole case file;
+- `modules_sha256`, one sha256 over the three module skills as an install copies
+  them, the skills arm's only digest of its payload;
+- `harness_sha256`, one sha256 over the runner's own code: `evals/run_routing.py`,
+  `evals/child_env.py` and `ci/sync.py`;
+- `skill_md`, the sha256 of each SKILL.md that `--skill-md` put in place of a
+  module's, by module (`{}` when none).
+
+A run never writes over a results file: it refuses an existing `--json-out`
+before it starts, and if something else writes that file during the arm, the
+run keeps it and writes its results beside it, `<stem>.<run id>.json`, with a
+warning.
+
+Each of these commands is one step of the measurement, and the runner never
+reads the account's usage meter. Recording the meter delta is the step's run-log
+job: read the weekly meter before and after the step, and write both readings and
+their difference in the step's run log beside the results file the step wrote.
+The runner's own cost figure is each run's `cost_usd`, an API-price-equivalent
+estimate from the CLI's result events, not meter points; `spend.md` says how the
+two differ. A run records it only outside the project layout ("Layouts" below),
+so these project-layout commands record no cost, and their step's meter delta is
+its only cost record.
 
 An arm with more than 10% of its runs set aside is re-run, and void runs count
 toward that share with timeouts and errors. The runner prints a warning, records
@@ -327,9 +353,15 @@ settled from what its stream showed, as before round 3. An `error` run is set
 aside, so an environment where authentication fails leaves the arm unscored.
 Run the one-case check above in each layout before measuring it.
 
-Outside the project layout each run records five measures, reported and never
-scored. The run prints the first three as counts over the arm's decided runs,
-and the last two summed, with a median a run (`reported` in the results file):
+Outside the project layout each run records seven measures, reported and never
+scored (`reported` in the results file). The run prints the first two as counts
+over the arm's decided runs. It counts the decided runs read to their result
+event (`result_read`) and those stopped before it (`stopped_before_result`). It
+prints the refused tool calls over the runs read to their result event, and
+output tokens, seconds and cost summed over those runs only, each with a median
+a run, so a run stopped early never lowers a count, a total or a median. In
+`reported` a total over no run is 0 and its median `null`, so read each total
+with its count: `result_read`, `seconds_read`, `tokens_read` or `cost_read`.
 
 - `hub_path_contact`, in the Tuesday arm: before any Skill call to the hub,
   a tool call named the hub's `SKILL.md` or a playbook,
@@ -343,6 +375,13 @@ and the last two summed, with a median a run (`reported` in the results file):
 - `refused`: the tool calls the CLI refused for want of permission, by tool
   name, from the result event's `permission_denials`.
 - `output_tokens`: from the result event's `usage`.
+- `cost_usd`: the result event's `total_cost_usd`, an API-price-equivalent
+  estimate (`spend.md`), not money spent and not meter points. It is read from
+  the result event alone. A result event that gives no number there records
+  `null`, and the run is left out of `cost_read`.
+- `result_read`: whether the run was read to its result event. A record saved
+  before this field existed is read from `refused`: a run with a refusal list,
+  which only the result event gives, was read to it, and one without was not.
 - `seconds`: the run's wall time, from its start to its outcome.
 
 The two path measures read every word of a call's input as a path, with `.`
@@ -351,8 +390,15 @@ and `..` resolved: a relative path from the case folder, or from the folder a
 its first fire, where a Tuesday run is read to the end of its turn. So a
 skills-arm run's measures cover the calls before the fire, and its `seconds`
 end there. A run that ended before its result event, a skills-arm run that
-fired or a timed-out one, has no `refused` list and no `output_tokens`
-(`null`), never an empty or zero one.
+fired or a timed-out one, has no `refused` list, no `output_tokens` and no
+`cost_usd` (`null`), never an empty or zero one. A skills-arm run stops at its
+first fire, so that arm's tokens, seconds and cost cover none or few of its
+runs, those that fired nothing, and do not compare with a Tuesday arm read to
+the end of each turn. Whenever a decided run was stopped before its result
+event, the run prints a second line saying how many, and that its figures do
+not compare. With none read to the end, the refusals and measures read `none
+read to their result event`, never zeros, and a measure that no run read to
+the end recorded reads `none recorded`.
 
 Every results file records its layout. The round 3 measurement, per model (its files
 record the arm as `frontdoor` and its second digest as `frontdoor_sha256`, the names
@@ -367,6 +413,101 @@ for L in plugin personal; do
     --cases evals/suite-explicit.json
 done
 ```
+
+### Recovering a cut-short arm
+
+Outside the project layout each run's record also carries the evidence a
+recovery needs:
+
+- `session_id`, from the run's init event. It finds the session's transcript in
+  the CLI's `projects/` folder, where a personal-layout run's is copied (above).
+- `init_sha256`, which names the run's init event in the results file's
+  `init_events`. The file keeps each distinct init event once, without the keys
+  that differ on every run: `session_id` and `uuid`, and the process's
+  `startup_timing`, `scratchpad_path` and `messaging_socket_path`. Its tool,
+  skill, plugin, agent, MCP-server and slash-command lists, its output style and
+  the CLI's version are kept, and runs that started alike share one entry.
+  `init_sha256` is the sha256 of that kept event as canonical JSON (keys sorted,
+  `,` and `:` as separators with no spaces, UTF-8 with non-ASCII characters
+  kept), so hashing the init line of a stream copy gives another value.
+
+With `--json-out`, every byte of each run's stream that the runner read is
+copied, as read, to `streams/<results file's stem>/case-<id>-<run>.jsonl` beside
+the results file, which records that folder as `streams`. A skills-arm run's
+copy holds the bytes read through the read that carried its first fire. A read
+can carry events the runner never parsed, the result event and its cost among
+them, while the run's record says `result_read` false and `cost_usd` null. A
+Tuesday or explicit run's copy holds the whole turn. Each copy holds the whole
+init event, and is flushed after every read: a runner stopped by a signal, as
+the fix round's guard stops a step with SIGTERM, runs no clean-up, and its
+copies still hold every byte it read.
+
+A copy never writes over another, and is opened before the run's CLI starts. A
+run whose streams folder already holds files is refused before it starts, as is
+a run into an existing results file, so give each arm a results file of its own
+name. A results file names its streams folder by the stem it was written under,
+and keeps naming it when the file is renamed, as `<arm>.limit.json` is. So never
+move a streams folder: name another `--json-out` instead. The project layout
+keeps its run records as they were, with no measure and no evidence key, and
+its streams are copied too.
+
+An arm cut short by the account's usage limit is filled, not run again whole:
+
+```bash
+python evals/run_routing.py --merge e1.json --rerun e1.gap-1.json --json-out e1.merged.json
+```
+
+`--merge` runs nothing. It reads the arm's results file and each `--rerun` file,
+which re-ran only the arm's killed and never-started runs on the same commit,
+and writes the merged arm to `--json-out`, which must not exist. A merge never
+writes over a file. It:
+
+- replaces an `error` run, in its place, only when the run is proven killed:
+  its `session_id`, shared with no other run of the arm, finds a transcript
+  that holds the usage-limit message, in the CLI's transcript folder
+  (`--projects`, by default the runner's config folder's `projects/`);
+- fills a never-started slot, a case holding fewer runs than `runs_per_case`;
+- needs, per case, exactly as many re-runs as kills and slots;
+- refuses re-runs for a case with neither, for a case the arm does not hold,
+  and for a case that also holds an `error` run not proven killed, its
+  never-started slots included. A re-run carries no mark of the run it stands
+  for, so beside such an error it may stand for that error. Beside a proven
+  kill too, that is the mixed kill/error batch, where a killed run cannot be
+  told from a real error. The refusal names why each error is unproven: it
+  recorded no session id, another run shares its session id, no transcript was
+  found, or its transcript holds no usage-limit message. An unproven error in a
+  case offered no re-run is kept, and counts toward the set-aside share as any
+  error does;
+- refuses a re-run file whose arm, layout, model, `hub_sha256` or
+  `tuesday_sha256` differs from the arm's;
+- refuses one whose case file, `modules_sha256`, `harness_sha256` or `skill_md`
+  differs from the arm's where both files record it (the case file by
+  `cases_sha256`, else by name);
+- refuses one that re-ran a case at another `timeout` than the arm's, or
+  recorded another route for it, and one with a run whose session id another run
+  of the merge has;
+- refuses any digest that is not the measured commit's: this checkout's
+  `hub_sha256`, `tuesday_sha256` and `modules_sha256`, or the two given with
+  `--expect HUB TUESDAY`, the module digest then held across the files only;
+  and the case file's sha256 as the file is now;
+- confirms each file's cases against what it ran: the case file's ids for a
+  whole-file run (`case_ids` `null`), else its `--case` ids, with no case
+  listed twice. A file saved before `case_ids` is held only to cases its case
+  file has, and `merged.cases_not_held` lists the case file's ids the merged
+  arm does not hold, which the merge prints;
+- recomputes `passed`, `reach`, `explicit`, `reported` and `unscored` with the
+  runner's own functions, never edits them, and records under `merged` what it
+  filled and whose sessions it replaced.
+
+An arm that wrote no results file is refused with "no results: run the arm again
+whole". A refusal exits `2` and writes nothing; otherwise a merge exits as a run
+does. A file saved before the code-name rename merges under its old spellings:
+`frontdoor` and `frontdoor_sha256` are read as `tuesday` and `tuesday_sha256` and
+matched by value, and its own fields are kept as saved. A file saved before
+runs recorded a session id cannot prove any of its `error` runs killed, and
+neither can a project-layout run or a run whose init event was never read. So
+`--merge` cannot redo round 3's merges, which matched a case's transcripts by
+its run suffix; a saved file's never-started slots can still be filled.
 
 ## Clean-room fixtures
 
