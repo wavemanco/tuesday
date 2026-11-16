@@ -887,7 +887,11 @@ fixed form can be read exactly. `output_checks.py` does so and writes
   recruiter's email" or "(strategy brief)" after it, "strategy brief:" or
   "role_profile R5 (" before it, or a page title quoted in the origin of the
   quotation before it — is a raising source's line (question-rubric.md defines
-  them), checked for existence only: every fragment must appear on word
+  them). A list of quotations joined by separators alone (`;`, `,`, `/`, `&`,
+  `and`, `or`) shares the origin written after its last quotation, so
+  '"a"; "b" (your research note)' names the note for both; an origin written
+  before a list still names its first quotation only. A raising source's line is
+  checked for existence only: every fragment must appear on word
   boundaries in the request or the room's pages. An origin that names the
   candidate's material (their CV or message, the coach's notes, a fit-snapshot
   row, the dossier or a dossier field) is no other source, and a quotation found

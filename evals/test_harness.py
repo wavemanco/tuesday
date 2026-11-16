@@ -4285,8 +4285,23 @@ def test_audit_quotes() -> None:
     check("must pass: the template token \"none given\" quoted as a reference is no sentence (C)",
           banks('[grounded] "I ran the weekly content-drop calendar"; [inferred] derived from F2\'s "none given" '
                 'row'), ["PASS"])
-    check("must fail: a company line with no origin of its own (mi1.run2 D2), beside one that has one",
-          banks('[grounded] "five hubs over 2027"; "we\'d like you to present a short POV" (recruiter\'s email)'),
+    # A list of quotations joined by separators alone shares the origin written after its last
+    # quotation (the owner's decision of 16 November 2026). The audit had read mi1.run2 D2's label
+    # as naming the last quotation only, which failed lines quoted verbatim from the research note.
+    for cell in ('[grounded] "consolidate eight branches"; "five hubs over 2027" — strategy brief',
+                 '[grounded] "consolidate eight branches", "five hubs over 2027" (strategy brief)',
+                 '[grounded] "consolidate eight branches" and "five hubs over 2027" (strategy brief)',
+                 '[grounded] "five hubs over 2027"; "we\'d like you to present a short POV" (recruiter\'s email)'):
+        check(f"must pass: a list of quotes shares the origin written after it: {cell[:70]!r}", banks(cell), ["PASS"])
+    check("must fail: an invented line inside a list that shares one origin",
+          banks('[grounded] "consolidate nine branches into two hubs"; "five hubs over 2027" — strategy brief'),
+          ["FAIL"])
+    check("must fail: a company line joined to the next by more than a separator keeps no origin",
+          banks('[grounded] "five hubs over 2027" because "we\'d like you to present a short POV" '
+                '(recruiter\'s email)'), ["FAIL"])
+    check("must fail: a label before a list names its first quotation only, as before",
+          banks('[grounded] strategy brief: "consolidate eight branches"; "we\'d like you to present a short POV on '
+                'operator partnerships"'),
           ["FAIL"])
     check("must fail: a source that does not hold the quote (mi7.canned.run2 A2)",
           banks('[generic]; the "don\'t overpromise" framing is [inferred] from Tobias\'s own GDC talk (researched)'),

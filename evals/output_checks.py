@@ -1506,22 +1506,34 @@ _POSSESSIVE_ORIGIN = re.compile(r"(?<![\w'’])((?:[A-Za-z][\w.-]*\s+){0,3}([A-Z
 CONTRACTIONS = {"it", "that", "what", "there", "here", "he", "she", "who", "let", "where", "how", "one"}
 ROLE_ORIGIN = re.compile(r"role[\s_-]?profile", re.I)
 _IN_ORIGIN = re.compile(r'^\s*(?:-{1,2}|[–—])\s*([^;"\n]*[^;"\n\s])\s*$')
+# What may stand between two quotations of one list: a separator and nothing else.
+_LIST_SEP = re.compile(r"\s*(?:[;,/&]|,?\s*(?:and|or)\b)?\s*", re.I)
 
 
 def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None) -> list[tuple[str, str | None]]:
     """Each quotation in a cell with the origin written beside it, or None. `bare_lead`, when
     given, also reads an origin written right before the quotation with no colon, by that
-    pattern's first group (check_traces gives its dossier label)."""
+    pattern's first group (check_traces gives its dossier label).
+
+    A list of quotations joined by separators alone (`;`, `,`, `/`, `&`, `and`, `or`) shares
+    the origin written after its last quotation: '"a"; "b" (your research note)' names the
+    note for both, as a reader takes it (the owner's decision of 16 November 2026, which
+    replaces October's audit reading that the label named "b" alone). A quotation with an
+    origin of its own keeps it. Sharing an origin checks nothing less: a quotation that names
+    another source must still be found in the request or the pages."""
     plain = cell.translate(DQUOTES).replace("`", "")
     hits = list(re.finditer(r'"([^"\n]+)"', plain))
     out = []
+    trailing = []                   # whether each origin was written after its quotation
     for i, hit in enumerate(hits):
         after = plain[hit.end():hits[i + 1].start() if i + 1 < len(hits) else len(plain)]
         before = plain[hits[i - 1].end() if i else 0:hit.start()]
         before = before.rsplit(";", 1)[-1]
         origin = None
+        trailing.append(False)
         if m := (_DASH_ORIGIN.match(after) or _PAREN_ORIGIN.match(after)):
             origin = m.group(1)
+            trailing[i] = True
         elif m := _LEAD_ORIGIN.search(before):
             origin = m.group(1)
         elif (m := _POSSESSIVE_ORIGIN.search(before)) and m.group(2).lower() not in CONTRACTIONS:
@@ -1531,6 +1543,11 @@ def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None) -> 
         elif bare_lead is not None and (m := bare_lead.search(before)):
             origin = m.group(1)
         out.append((hit.group(1), origin.strip() if origin and origin.strip() else None))
+    for i in range(len(hits) - 2, -1, -1):
+        if out[i][1] is None and out[i + 1][1] is not None and trailing[i + 1] \
+                and _LIST_SEP.fullmatch(plain[hits[i].end():hits[i + 1].start()]):
+            out[i] = (out[i][0], out[i + 1][1])
+            trailing[i] = True
     return out
 
 
@@ -1669,8 +1686,8 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     and one cut otherwise is passed and labelled (below). Three Provenance
     quotations are not the candidate's: one whole item of a dossier field its cell
     names (fields_named); a raising source's line — not in what the candidate gave,
-    with its own origin naming a source other than the candidate's material
-    (quoted_spans_with_origin, other_source) — checked only for existence in the
+    with an origin of its own, or one its list shares, naming a source other than the
+    candidate's material (quoted_spans_with_origin, other_source) — checked only for existence in the
     request or the room's pages; and the template's token "none given". The
     requirement column quotes the JD, so it is checked against the request and the
     pages, from three words up; a canned room's pages are their title, URL and text
