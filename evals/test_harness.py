@@ -582,7 +582,7 @@ def init(*skills: str) -> dict:
     return {"type": "system", "subtype": "init", "skills": list(skills), "slash_commands": list(skills)}
 
 
-DONE = {"type": "result", "subtype": "success"}
+DONE = {"type": "result", "subtype": "success", "total_cost_usd": 0.0412}
 HUB_DIR = "/tmp/case-1/.claude/skills/tuesday-ab12cd34"
 
 
@@ -1021,7 +1021,7 @@ def test_layouts_install() -> None:
     check_true("main installs every case in the layout asked for, a config folder for each run, and runs each "
                "job by its index (test_layout_runs follows one run through)",
                "case_project(Path(tmp), c, run_id, overrides, args.arm, args.layout, args.runs)" in source
-               and "args.arm, args.layout, job[1])," in source)
+               and "args.arm, args.layout, job[1]," in source)
 
 
 PLUGIN_SKILLS = "/tmp/tmpab/plugins/case-1/skills"
@@ -1292,55 +1292,171 @@ def test_reported_measures() -> None:
                                                            "references/mock-interview.md"})], layout="project")
     check("in the project layout a non-zero exit is settled from the stream, as before the layouts",
           run_routing.exit_outcome(project, 1), "mock-interview")
-    outcome, reader = layout_reader([init(*(NAMES[s] for s in run_routing.SKILLS)),
-                                     call("Skill", {"skill": "job-underwriter-ab12cd34"})],
+    skills_init = init(*(NAMES[s] for s in run_routing.SKILLS))
+    outcome, reader = layout_reader([skills_init, call("Skill", {"skill": "job-underwriter-ab12cd34"})],
                                     layout="personal", arm="skills")
-    check("a skills-arm run stops at its first fire, so its refusals and tokens go unread, and it has no hub to contact",
+    check("a skills-arm run stops at its first fire, so its refusals, tokens and cost go unread and it was not read to "
+          "its result event; it has no hub to contact, and its init event is named by its sha256",
           (outcome, reader.record(outcome, 12.0)),
           ("job-underwriter", {"outcome": "job-underwriter", "init_skills": [NAMES[s] for s in run_routing.SKILLS],
-                               "skills_root_named": False, "refused": None, "output_tokens": None, "seconds": 12.0}))
+                               "skills_root_named": False, "refused": None, "output_tokens": None, "seconds": 12.0,
+                               "cost_usd": None, "result_read": False, "session_id": None,
+                               "init_sha256": run_routing.init_evidence(skills_init)[0]}))
     _, reader = layout_reader([ours, hub_q, DONE])
-    check("a front-door run outside the project layout records all five",
+    check("must pass: a Tuesday run read to its result event records that event's total_cost_usd as cost_usd, and "
+          "result_read",
+          {k: reader.record("tuesday-unrouted", 30.0)[k] for k in ("cost_usd", "result_read")},
+          {"cost_usd": 0.0412, "result_read": True})
+    check("a Tuesday run outside the project layout records all seven measures",
           sorted(k for k in reader.record("tuesday-unrouted") if k in ("hub_path_contact", "skills_root_named", "refused",
-                                                                      "output_tokens", "seconds")),
-          ["hub_path_contact", "output_tokens", "refused", "seconds", "skills_root_named"])
+                                                                      "output_tokens", "seconds", "cost_usd",
+                                                                      "result_read")),
+          ["cost_usd", "hub_path_contact", "output_tokens", "refused", "result_read", "seconds", "skills_root_named"])
+    _, reader = layout_reader([ours, hub_q], end="timeout")
+    check("must fail: a timed-out run has no cost and was not read to its result event",
+          {k: reader.record("timeout")[k] for k in ("cost_usd", "result_read")}, {"cost_usd": None, "result_read": False})
+    unread = []
+    for cost in ("absent", True, "0.05", None):
+        result = {k: v for k, v in DONE.items() if k != "total_cost_usd"}
+        if cost != "absent":
+            result["total_cost_usd"] = cost
+        unread.append({k: layout_reader([ours, hub_q, result])[1].record("tuesday-unrouted")[k]
+                       for k in ("cost_usd", "result_read")})
+    check("must fail: a result event with no total_cost_usd, or a boolean, string or null one, is read to its end "
+          "with no cost (None), never a zero or a guess",
+          unread, [{"cost_usd": None, "result_read": True}] * 4)
+    check("an integer cost is read as a number",
+          layout_reader([ours, hub_q, {**DONE, "total_cost_usd": 2}])[1].cost_usd, 2.0)
+    costed = {"total_cost_usd": 1.5}
+    message_start = {"type": "stream_event", "event": {"type": "message_start"}}
+    outcome, reader = layout_reader([{**skills_init, **costed}, {**call("Bash", {"command": "ls"}), **costed},
+                                     {**message_start, **costed}, call("Skill", {"skill": "job-underwriter-ab12cd34"})],
+                                    layout="personal", arm="skills")
+    check("must fail: a skills-arm run whose init, assistant and stream events carry a total_cost_usd, stopped at its "
+          "first fire, records no cost and was not read to its result event: cost is read from that event alone",
+          (outcome, {k: reader.record(outcome)[k] for k in ("cost_usd", "result_read")}),
+          ("job-underwriter", {"cost_usd": None, "result_read": False}))
+    no_total = {k: v for k, v in DONE.items() if k != "total_cost_usd"}
+    _, reader = layout_reader([{**ours, **costed}, {**hub_q, **costed}, {**message_start, **costed},
+                               {**no_total, "usage": {"output_tokens": 5, "cost_usd": 1.5}}])
+    check("must fail: a Tuesday run whose earlier events carry a cost, and whose result event gives no total_cost_usd "
+          "(a cost under its usage is not one), records no cost",
+          {k: reader.record("tuesday-unrouted")[k] for k in ("cost_usd", "result_read", "output_tokens")},
+          {"cost_usd": None, "result_read": True, "output_tokens": 5})
     _, reader = layout_reader([init(*NAMES.values()), call("Skill", {"skill": "tuesday-ab12cd34"}), DONE],
                               layout="project")
-    check("a project-layout run records none of them: its record is as before",
+    check("a project-layout run records none of them, and no evidence key: its record is as before",
           sorted(reader.record("tuesday-unrouted", 3.0)), ["hub_fired", "init_skills", "outcome", "reached"])
 
     cases = [{"id": 1, "expected": "job-underwriter", "prompt": "p"}, {"id": 2, "expected": "mock-interview",
                                                                        "prompt": "/mock-interview x"}]
     runs_by_case = {1: [{"outcome": "job-underwriter", "hub_path_contact": True, "skills_root_named": True,
-                         "refused": ["Bash", "Bash"], "seconds": 100.0, "output_tokens": 9000},
+                         "refused": ["Bash", "Bash"], "seconds": 100.0, "output_tokens": 9000, "cost_usd": 0.5,
+                         "result_read": True},
                         {"outcome": "hidden-job-underwriter", "hub_path_contact": False, "skills_root_named": True,
-                         "refused": [], "seconds": 60.5, "output_tokens": 7000},
+                         "refused": [], "seconds": 60.5, "output_tokens": 7000, "cost_usd": 0.25, "result_read": True},
+                        {"outcome": "job-underwriter", "hub_path_contact": False, "skills_root_named": False,
+                         "refused": [], "seconds": 10.0, "output_tokens": 1000, "cost_usd": 0.05, "result_read": True},
                         {"outcome": "timeout", "hub_path_contact": True, "skills_root_named": True, "refused": None,
-                         "seconds": 900.0, "output_tokens": None}],
+                         "seconds": 900.0, "output_tokens": None, "cost_usd": None, "result_read": False},
+                        # An error read to its result event, costed (a killed run is one): set aside, not counted.
+                        {"outcome": "error", "hub_path_contact": False, "skills_root_named": True, "refused": ["Bash"],
+                         "seconds": 5.0, "output_tokens": 50, "cost_usd": 0.7, "result_read": True}],
+                    # Stopped before its result event, with tokens and a cost on its record all the same.
                     2: [{"outcome": "focused", "hub_path_contact": False, "skills_root_named": False, "refused": None,
-                         "seconds": 20.0, "output_tokens": None}]}
+                         "seconds": 20.0, "output_tokens": 444, "cost_usd": 0.9, "result_read": False}]}
     measures = run_routing.reported(cases, runs_by_case)
-    check("the arm's summary counts decided runs, routing and explicit cases alike; a set-aside run is not read; "
-          "wall time and tokens are summed, with a median a run, tokens over the runs that read them",
-          measures, {"decided": 3, "hub_path_contact": 1, "skills_root_named": 2, "refused": 2, "runs_refused": 1,
-                     "refused_unread": 1, "seconds": 180.5, "seconds_median": 60.5, "output_tokens": 16000,
-                     "output_tokens_median": 8000.0, "tokens_read": 2})
+    check("the arm's summary counts decided runs, routing and explicit cases alike; a set-aside run is not counted, "
+          "an error read to its result event and costed included; wall time, tokens and cost are summed, with a "
+          "median a run (each unlike the mean), over the runs read to their result event only; the run stopped before "
+          "it is counted, and its seconds, tokens and cost are not summed, though its record holds them",
+          measures, {"decided": 4, "hub_path_contact": 1, "skills_root_named": 2, "refused": 2, "runs_refused": 1,
+                     "refused_unread": 1, "result_read": 3, "stopped_before_result": 1, "seconds": 170.5,
+                     "seconds_median": 60.5, "seconds_read": 3, "output_tokens": 17000, "output_tokens_median": 7000,
+                     "tokens_read": 3, "cost_usd": 0.8, "cost_usd_median": 0.25, "cost_read": 3})
     check("an arm with no decided run has no median", run_routing.reported(cases, {})["seconds_median"], None)
-    lines = run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
-                                      run_routing.explicit_summary(cases, runs_by_case), "tuesday", measures)
-    check("the run prints them as reported, not scored",
-          lines[-1], "reported, not scored: the hub's files reached by path before any Skill call to it on 1/3; "
-                     "the skills folder named on 2/3; 2 tool calls refused, on 1 runs (1 ended before their result "
-                     "event, uncounted); wall time 180.5s, median 60.5s a run; output tokens 16000, median 8000.0 a "
-                     "run, on the 2 runs that reached their result event")
-    check_true("the skills arm's line leaves out the hub, which it does not install",
-               run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
-                                         run_routing.explicit_summary(cases, runs_by_case), "skills",
-                                         measures)[-1].startswith("reported, not scored: the skills folder"))
+    saved = {1: [{"outcome": "job-underwriter", "refused": [], "seconds": 40.0, "output_tokens": 100},
+                 {"outcome": "job-underwriter", "refused": None, "seconds": 9.0, "output_tokens": None}]}
+    check("a record saved before result_read existed is read from refused: a refusal list, which only the result "
+          "event gives, means it was read to it; none means it was stopped before it; it records no cost",
+          {k: run_routing.reported(cases, saved)[k] for k in ("result_read", "stopped_before_result", "seconds",
+                                                               "tokens_read", "cost_usd", "cost_read")},
+          {"result_read": 1, "stopped_before_result": 1, "seconds": 40.0, "tokens_read": 1, "cost_usd": 0, "cost_read": 0})
+    check("a record's own result_read wins over its refusal list",
+          run_routing.result_was_read({"refused": None, "result_read": True}), True)
+
+    def summary(arm: str, by_case: dict, these=cases) -> list[str]:
+        return run_routing.summary_lines(run_routing.reach(these, by_case), run_routing.explicit_summary(these, by_case),
+                                         arm, run_routing.reported(these, by_case))
+    check("must pass, exact: a Tuesday arm prints its refusals and measures over the runs read to their result event, "
+          "its cost labelled an API-price-equivalent estimate, and says what the run stopped before it leaves out",
+          summary("tuesday", runs_by_case)[-2:],
+          ["reported, not scored: the hub's files reached by path before any Skill call to it on 1/4; the skills folder "
+           "named on 2/4; of 4 decided runs, 3 were read to the result event and 1 was stopped before it; over those 3: "
+           "2 tool calls refused, on 1 runs; wall time 170.5s, median 60.5s a run; output tokens 17000, median 7000 a "
+           "run; cost $0.8000 (API-price-equivalent estimate, from result events), median $0.2500 a run",
+           "tokens, seconds and cost above cover only runs read to their result event: 1 run stopped before it (the CLI "
+           "exited before writing one), so these figures do not compare with an arm read to the end of each turn"])
+    fired = {"outcome": "job-underwriter", "skills_root_named": False, "refused": None, "seconds": 12.0,
+             "output_tokens": None, "cost_usd": None, "result_read": False}
+    nothing = {"outcome": "neither", "skills_root_named": True, "refused": ["Bash"], "seconds": 30.0,
+               "output_tokens": 500, "cost_usd": 0.02, "result_read": True}
+    one = [{"id": 1, "expected": "job-underwriter", "prompt": "p"}]
+    check("must pass, exact: the skills arm's fired runs stop at their first fire, so its refusals and figures cover "
+          "the one run read to the end, and the line says they do not compare with an arm read to the end of each turn",
+          summary("skills", {1: [fired, fired, nothing]}, one),
+          ["reached a skill on 2/3 decided runs (67%); wrong skill on 0; 0 timed out, errored or void, set aside",
+           "reported, not scored: the skills folder named on 1/3; of 3 decided runs, 1 was read to the result event and "
+           "2 were stopped before it; over it: 1 tool calls refused, on 1 runs; wall time 30.0s, median 30.0s a run; "
+           "output tokens 500, median 500 a run; cost $0.0200 (API-price-equivalent estimate, from result events), "
+           "median $0.0200 a run",
+           "tokens, seconds and cost above cover only runs read to their result event: 2 runs stopped before it (a "
+           "skills-arm run stops at its first fire), so these figures do not compare with an arm read to the end of "
+           "each turn"])
+    check("must fail: with no run read to its result event the refusals and measures say none was read, never zeros",
+          summary("skills", {1: [fired, fired]}, one)[1],
+          "reported, not scored: the skills folder named on 0/2; of 2 decided runs, 0 were read to the result event and "
+          "2 were stopped before it; refused tool calls, wall time, output tokens and cost: none read to their result "
+          "event")
+    both = {"outcome": "neither", "skills_root_named": False, "refused": [], "seconds": 50.0, "output_tokens": 700,
+            "cost_usd": 0.04, "result_read": True}
+    check("must pass, exact: an arm whose every decided run was read to its result event prints no comparability line",
+          summary("skills", {1: [nothing, both]}, one),
+          ["reached a skill on 0/2 decided runs (0%); wrong skill on 0; 0 timed out, errored or void, set aside",
+           "reported, not scored: the skills folder named on 1/2; of 2 decided runs, 2 were read to the result event and "
+           "0 were stopped before it; over those 2: 1 tool calls refused, on 1 runs; wall time 80.0s, median 40.0s a "
+           "run; output tokens 1200, median 600.0 a run; cost $0.0600 (API-price-equivalent estimate, from result "
+           "events), median $0.0300 a run"])
+    no_cost = {**nothing, "cost_usd": None}
+    check("a cost recorded on some runs read to the end is said to cover those, and on none says none was recorded",
+          [summary("skills", {1: [nothing, no_cost]}, one)[1].split("; ")[-1],
+           summary("skills", {1: [no_cost]}, one)[1].split("; ")[-1]],
+          ["cost $0.0200 (API-price-equivalent estimate, from result events), median $0.0200 a run, over the 1 that "
+           "recorded one", "cost: none recorded"])
+    timeless = {k: v for k, v in nothing.items() if k != "seconds"}
+    check("must fail: runs read to their result event with no seconds recorded say so, never crash or print a zero; "
+          "on some, the wall time says it covers those",
+          [summary("skills", {1: [timeless]}, one)[1].split("; ")[3],
+           summary("skills", {1: [nothing, timeless]}, one)[1].split("; ")[3]],
+          ["wall time: none recorded", "wall time 30.0s, median 30.0s a run, over the 1 that recorded it"])
+    check("a run read to its result event with no refusal list on its record (hand-made) is not counted as refusing "
+          "none",
+          summary("skills", {1: [{**nothing, "refused": None}]}, one)[1].split("; ")[2],
+          "over it: refused tool calls: none recorded")
+    old_shape = {k: v for k, v in measures.items() if k not in ("result_read", "stopped_before_result", "cost_usd",
+                                                                "cost_usd_median", "cost_read")}
+    try:
+        run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
+                                  run_routing.explicit_summary(cases, runs_by_case), "tuesday", old_shape)
+        old_refused = False
+    except KeyError:
+        old_refused = True
+    check("must fail: a reported dict saved before result_read, whose seconds covered every decided run, is not "
+          "printed as if it covered only those read; a saved file is summarised from its runs", old_refused, True)
     check("and a project-layout run prints no such line",
           [line for line in run_routing.summary_lines(run_routing.reach(cases, runs_by_case),
                                                       run_routing.explicit_summary(cases, runs_by_case), "tuesday")
-           if line.startswith("reported")], [])
+           if line.startswith(("reported", "tokens, seconds"))], [])
     source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
     check_true("every results file records its layout, and outside the project layout the reported measures",
                '"layout": args.layout' in source and '{"reported": measures} if measures is not None' in source
@@ -1349,8 +1465,10 @@ def test_reported_measures() -> None:
 
 STUB_CLI = r'''#!{python}
 """A stand-in for the claude CLI: it writes what one run would, from the command and environment it got."""
-import json, os, re, sys, time
+import json, os, re, sys, time, uuid
 prompt, config, cwd = sys.argv[2], os.environ.get("CLAUDE_CONFIG_DIR", ""), os.getcwd()
+# Each run its own session id when asked, as the CLI gives one; else "s1", which the transcript tests name.
+session = str(uuid.uuid4()) if os.environ.get("STUB_FRESH_SESSION") else "s1"
 with open(os.environ["STUB_LOG"], "a") as log:
     log.write(json.dumps({"argv": sys.argv[1:], "config": config}) + "\n")
 
@@ -1360,14 +1478,16 @@ def emit(event):
     sys.stdout.flush()
 
 
-emit({"type": "system", "subtype": "init", "skills": [], "session_id": "s1", "cwd": cwd})
+# The init event carries what differs on every run (its uuid, the process's timing), as the CLI's does.
+emit({"type": "system", "subtype": "init", "skills": [], "session_id": session, "cwd": cwd,
+      "uuid": str(uuid.uuid4()), "startup_timing": {"wall_ms": time.time()}})
 if prompt == "crash":
     os.close(1)
     time.sleep(0.5)
     os._exit(1)
 folder = os.path.join(config, "projects", re.sub(r"[^A-Za-z0-9]", "-", cwd))
 os.makedirs(folder, exist_ok=True)
-with open(os.path.join(folder, "s1.jsonl"), "w") as f:
+with open(os.path.join(folder, session + ".jsonl"), "w") as f:
     f.write(json.dumps({"uuid": "a1", "parentUuid": None, "type": "user",
                         "message": {"content": "<command-name>" + prompt.split()[0] + "</command-name>"}}) + "\n")
     f.write(json.dumps({"uuid": "a2", "parentUuid": "a1", "type": "assistant",
@@ -1375,7 +1495,7 @@ with open(os.path.join(folder, "s1.jsonl"), "w") as f:
 folders = [os.path.relpath(a[len("Read(/"):-len("/**)")], cwd) for a in sys.argv if a.startswith("Read(/")]
 emit({"type": "assistant", "message": {"id": "msg_A", "content": [
     {"type": "tool_use", "name": "Bash", "input": {"command": "ls " + " ".join(folders)}}]}})
-emit({"type": "result", "subtype": "success", "usage": {"output_tokens": 321},
+emit({"type": "result", "subtype": "success", "usage": {"output_tokens": 321}, "total_cost_usd": 0.0123,
       "permission_denials": [{"tool_name": "Bash"}]})
 '''
 
@@ -1395,13 +1515,14 @@ def test_layout_runs() -> None:
             def started() -> dict:
                 return json.loads(log.read_text().splitlines()[-1])
 
-            def run(base: str, case: dict, arm: str, layout: str, index: int = 0, runs: int = 1) -> dict:
+            def run(base: str, case: dict, arm: str, layout: str, index: int = 0, runs: int = 1, **kw) -> dict:
                 (tmp / base).mkdir()
                 root, names = run_routing.case_project(tmp / base, case, "ab12cd34", None, arm, layout, runs)
-                return run_routing.run_once(case["prompt"], root, names, 30, None, arm, layout, index)
+                return run_routing.run_once(case["prompt"], root, names, 30, None, arm, layout, index, **kw)
 
             e2 = {"id": 1, "prompt": "/mock-interview prep me"}
-            rec = run("personal", e2, "tuesday", "personal", 1, 2)
+            copy, events = tmp / "e2-personal.jsonl", {}
+            rec = run("personal", e2, "tuesday", "personal", 1, 2, stream_to=copy, init_events=events)
             got = started()
             check("personal layout, run 1: the CLI starts with that run's config folder, and Read is let into "
                   "its skills folder",
@@ -1418,6 +1539,30 @@ def test_layout_runs() -> None:
             slug = re.sub(r"[^A-Za-z0-9]", "-", str(tmp / "personal" / "case-1"))
             check_true("and its transcript is kept in the runner's config folder",
                        (runner / "projects" / slug / "s1.jsonl").is_file())
+            check("the stub's result event gives the run its cost, and the run was read to it; its session id and "
+                  "init digest are recorded",
+                  {k: rec.get(k) for k in ("cost_usd", "result_read", "session_id")},
+                  {"cost_usd": 0.0123, "result_read": True, "session_id": "s1"})
+            streamed = [json.loads(line) for line in copy.read_text().splitlines()]
+            check("every byte the runner read is copied: the stream as the CLI wrote it, init to result, the init "
+                  "event whole",
+                  ([e["type"] for e in streamed], sorted(streamed[0])),
+                  (["system", "assistant", "result"],
+                   ["cwd", "session_id", "skills", "startup_timing", "subtype", "type", "uuid"]))
+            check("the run's init event is kept once under its init_sha256, without the keys that differ on every run",
+                  (list(events), sorted(events[rec["init_sha256"]])),
+                  ([rec["init_sha256"]], ["cwd", "skills", "subtype", "type"]))
+            started_cli, popen = [], run_routing.subprocess.Popen
+            run_routing.subprocess.Popen = lambda cmd, **kw: started_cli.append(cmd) or popen(cmd, **kw)
+            try:
+                run("personal-again", e2, "tuesday", "personal", 0, 1, stream_to=copy)
+                overwrote = True
+            except FileExistsError:
+                overwrote = False
+            finally:
+                run_routing.subprocess.Popen = popen
+            check("a stream copy never writes over another's, and a copy refused starts no CLI",
+                  (overwrote, copy.read_text().count("\n"), started_cli), (False, 3, []))
             rec = run("plugin", e2, "tuesday", "plugin")
             got = started()
             check("plugin layout: the runner's config folder, the case's plugin, and Read let into its skills folder",
@@ -1433,12 +1578,617 @@ def test_layout_runs() -> None:
                   run("crash-personal", crash, "skills", "personal")["outcome"], "error")
             check("and in the project layout settled from the stream, as before the layouts",
                   run("crash-project", crash, "skills", "project"), {"outcome": "neither", "init_skills": []})
+            fired_copy = tmp / "fired.jsonl"
+            (tmp / "skills-first-fire").mkdir()
+            root, names = run_routing.case_project(tmp / "skills-first-fire", {"id": 3}, "ab12cd34", None, "skills",
+                                                   "personal", 1)
+            # The stub calls no Skill; its Bash call names the run's config folder, so a reader told that
+            # job-underwriter is installed as "config" fires on it, before the result event, as a fire would.
+            rec = run_routing.run_once("should I apply?", root, {**names, "job-underwriter": "config"}, 30, None,
+                                       "skills", "personal", 0, stream_to=fired_copy)
+            check("a skills-arm run stopped at its first fire has its stream copied as far as it was read, and no "
+                  "cost: it was stopped before its result event",
+                  (rec["outcome"], rec["cost_usd"], rec["result_read"],
+                   json.loads(fired_copy.read_text().splitlines()[0])["subtype"]),
+                  ("job-underwriter", None, False, "init"))
+
+            # main, whole: two runs of one case through the stub, each its own session (STUB_FRESH_SESSION).
+            os.environ["STUB_FRESH_SESSION"] = "1"
+            suite = tmp / "cases.json"
+            suite.write_text(json.dumps({"cases": [{"id": 1, "prompt": "should I apply?", "expected": "neither"}]}))
+            out = tmp / "round" / "e0-personal.json"
+            out.parent.mkdir()
+            argv = ["run_routing.py", "--arm", "skills", "--layout", "personal", "--runs", "2", "--workers", "1",
+                    "--cases", str(suite), "--json-out", str(out)]
+            saved_argv = sys.argv
+            import contextlib
+            import io
+            try:
+                sys.argv = argv
+                with contextlib.redirect_stdout(io.StringIO()) as printed:
+                    code = run_routing.main()
+                written = json.loads(out.read_text())
+                starts = len(log.read_text().splitlines())
+
+                def again(target: Path) -> str:
+                    sys.argv = [*argv[:-1], str(target)]
+                    try:
+                        with contextlib.redirect_stdout(io.StringIO()):
+                            run_routing.main()
+                        return "ran"
+                    except SystemExit as exc:
+                        return str(exc)
+                second = again(out)
+                # A results file saved before stream copies, or written by a run with no job: no streams folder.
+                bare = out.parent / "e0-saved.json"
+                bare.write_text('{"saved": true}\n')
+                over_bare = again(bare)
+                # A stem whose streams folder already holds copies, with no results file (a runner killed first).
+                (out.parent / "streams" / "e0-killed").mkdir()
+                (out.parent / "streams" / "e0-killed" / "case-1-0.jsonl").write_text("{}\n")
+                over_killed = again(out.parent / "e0-killed.json")
+            finally:
+                sys.argv = saved_argv
+                os.environ.pop("STUB_FRESH_SESSION", None)
+            runs_written = written["results"][0]["runs"]
+            folder = out.parent / "streams" / "e0-personal"
+            check("main: the results file records the case file's sha256 and where the run's stream copies are, "
+                  "each run read to its result event with the stub's cost, and the reported cost",
+                  (code, written["cases_sha256"], written["streams"], [r["cost_usd"] for r in runs_written],
+                   [r["result_read"] for r in runs_written],
+                   {k: written["reported"][k] for k in ("result_read", "stopped_before_result", "cost_usd", "cost_read")}),
+                  (0, run_routing.file_sha256(suite), "streams/e0-personal", [0.0123, 0.0123], [True, True],
+                   {"result_read": 2, "stopped_before_result": 0, "cost_usd": 0.0246, "cost_read": 2}))
+            sessions = [r["session_id"] for r in runs_written]
+            check("main: two runs, two session ids, one init event: the event is kept once, under the sha256 both "
+                  "runs name, without their session ids",
+                  (len(set(sessions)), list(written["init_events"]), {r["init_sha256"] for r in runs_written},
+                   "session_id" in next(iter(written["init_events"].values()))),
+                  (2, [runs_written[0]["init_sha256"]], {runs_written[0]["init_sha256"]}, False))
+            copies = sorted(p.name for p in folder.iterdir())
+            check("main: each run's stream is copied to streams/<results stem>/case-<id>-<run>.jsonl beside the "
+                  "results file, and each copy's init event is that run's session",
+                  (copies, [json.loads((folder / name).read_text().splitlines()[0])["session_id"] for name in copies]),
+                  (["case-1-0.jsonl", "case-1-1.jsonl"], sessions))
+            check_true("main: the cost is printed as an API-price-equivalent estimate",
+                       "cost $0.0246 (API-price-equivalent estimate, from result events)" in printed.getvalue())
+            check("main: an arm whose every run was read to its result event prints no comparability line",
+                  [line for line in printed.getvalue().splitlines() if line.startswith("tokens, seconds")], [])
+            check("main: a whole-file arm records no --case selection, and the modules, harness and --skill-md it ran",
+                  {k: written.get(k) for k in ("case_ids", "modules_sha256", "harness_sha256", "skill_md")},
+                  {"case_ids": None, "modules_sha256": run_routing.modules_sha256(),
+                   "harness_sha256": run_routing.harness_sha256(), "skill_md": {}})
+            check("must fail: a second run into the same results file is refused before it starts, and the first "
+                  "run's file and streams are kept",
+                  (second.endswith("exists: a run never writes over a results file; name another --json-out"),
+                   json.loads(out.read_text()), sorted(p.name for p in folder.iterdir())), (True, written, copies))
+            check("must fail: so is a run into a results file with no streams folder beside it, which is left as it was",
+                  (over_bare.endswith("exists: a run never writes over a results file; name another --json-out"),
+                   bare.read_text()), (True, '{"saved": true}\n'))
+            check("must fail: and a run whose stem's streams folder holds copies, with no results file; it says to leave "
+                  "the folder where it is; no refused run started a CLI",
+                  ("already holds streams" in over_killed and "leave the folder where it is" in over_killed,
+                   (out.parent / "e0-killed.json").exists(), len(log.read_text().splitlines())), (True, False, starts))
         finally:
             for key, value in saved.items():
                 if value is None:
                     os.environ.pop(key, None)
                 else:
                     os.environ[key] = value
+
+
+TERM_STUB = r'''#!{python}
+"""A stand-in CLI that writes an init event and 40 more lines, keeps a copy of every byte it wrote, then waits."""
+import json, os, sys, time
+with open(os.environ["STUB_SENT"], "ab") as sent:
+    for n in range(41):
+        event = ({"type": "system", "subtype": "init", "skills": [], "session_id": "s", "cwd": os.getcwd()} if n == 0
+                 else {"type": "assistant", "message": {"id": "m%d" % n, "content": [{"type": "text", "text": "x" * 50}]}})
+        line = (json.dumps(event) + "\n").encode()
+        sys.stdout.buffer.write(line)
+        sys.stdout.buffer.flush()
+        sent.write(line)
+        sent.flush()
+time.sleep(60)
+'''
+TERM_RUNNER = r'''
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import run_routing
+tmp = Path(sys.argv[2])
+root, names = run_routing.case_project(tmp / "c", {"id": 1}, "ab12cd34", None, "skills", "project", 1)
+run_routing.run_once("should I apply?", root, names, 120, None, "skills", "project", 0, stream_to=tmp / "copy.jsonl")
+'''
+
+
+def test_stream_copy_signal() -> None:
+    print("\nrouting streams: a runner stopped by SIGTERM, as the fix round's guard stops a step, leaves its copy whole")
+    import signal
+    import time
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "c").mkdir()
+        (tmp / "bin").mkdir()
+        (tmp / "bin" / "claude").write_text(TERM_STUB.replace("{python}", sys.executable))
+        (tmp / "bin" / "claude").chmod(0o755)
+        sent, copy = tmp / "sent", tmp / "copy.jsonl"
+        env = {**os.environ, "PATH": f"{tmp / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+               "CLAUDE_CONFIG_DIR": str(tmp / "runner"), "STUB_SENT": str(sent), "PYTHONDONTWRITEBYTECODE": "1"}
+        # Its own process group, the stub CLI in it: the guard's `kill -TERM -- -$PG`.
+        proc = subprocess.Popen([sys.executable, "-c", TERM_RUNNER, str(Path(__file__).resolve().parent), str(tmp)],
+                                env=env, start_new_session=True)
+
+        def size(path: Path) -> int:
+            return path.stat().st_size if path.exists() else -1
+        try:
+            deadline = time.time() + 30
+            while time.time() < deadline and (size(sent) <= 0 or sent.read_bytes().count(b"\n") < 41):
+                time.sleep(0.05)
+            # The stub has written everything; the runner has read it once the copy is as long, or never.
+            settle = time.time() + 5
+            while time.time() < settle and size(copy) != size(sent):
+                time.sleep(0.05)
+            os.killpg(proc.pid, signal.SIGTERM)
+            proc.wait(timeout=30)
+        finally:
+            if proc.poll() is None:
+                os.killpg(proc.pid, signal.SIGKILL)
+                proc.wait()
+        written = sent.read_bytes()
+        check("must fail: a runner stopped by SIGTERM runs no `finally`, and its copy still holds every byte the CLI "
+              "wrote and the runner read before the signal, init event first",
+              (proc.returncode, written.count(b"\n"), copy.read_bytes() == written,
+               json.loads(copy.read_bytes().splitlines()[0])["subtype"] if size(copy) > 0 else None),
+              (-signal.SIGTERM, 41, True, "init"))
+
+
+def test_routing_evidence() -> None:
+    print("\nrouting evidence: each run's session id and init event, the event kept once per distinct event")
+    base = {**init(*NAMES.values()), "cwd": "/tmp/tmpab/case-1", "tools": ["Skill", "Read"], "output_style": "default",
+            "model": "m", "plugins": [{"name": "tuesday-ab12cd34", "path": "/tmp/tmpab/plugins/case-1"}],
+            "agents": ["general-purpose"], "mcp_servers": [{"name": "web", "status": "connected"}],
+            "claude_code_version": "2.1.322"}
+    noise = [{"session_id": f"s{n}", "uuid": f"u{n}", "startup_timing": {"wall_ms": n},
+              "scratchpad_path": f"/tmp/s{n}/scratchpad", "messaging_socket_path": f"/tmp/{n}.sock"} for n in (1, 2)]
+    shas = [run_routing.init_evidence({**base, **extra})[0] for extra in noise]
+    check("must pass: two runs whose init events differ only in what differs on every run (session, uuid, timing, "
+          "scratchpad, socket) share one init_sha256", shas[0] == shas[1], True)
+    kept = run_routing.init_evidence({**base, **noise[0]})[1]
+    check("the event kept is the whole event but those keys: its lists, slash commands, output style, plugins, agents, "
+          "MCP servers and CLI version survive",
+          (sorted(kept), kept["slash_commands"], kept["output_style"],
+           {k: kept.get(k) for k in ("plugins", "agents", "mcp_servers", "claude_code_version")}),
+          (sorted(base), list(NAMES.values()), "default",
+           {k: base[k] for k in ("plugins", "agents", "mcp_servers", "claude_code_version")}))
+    changed = [run_routing.init_evidence({**base, **noise[0], **diff})[0]
+               for diff in ({"skills": ["pdf"]}, {"tools": ["Skill"]}, {"output_style": "explanatory"},
+                            {"cwd": "/tmp/tmpab/case-2"}, {"plugins": []}, {"agents": []}, {"mcp_servers": []},
+                            {"claude_code_version": "2.1.323"})]
+    check("must fail: a different skill list, tool list, output style, case folder, plugin list, agent list, MCP "
+          "server list or CLI version is a different event",
+          [sha != shas[0] for sha in changed], [True] * 8)
+    check("the digest does not depend on the order of the event's keys",
+          run_routing.init_evidence(dict(reversed(list({**base, **noise[0]}.items()))))[0], shas[0])
+
+    def recorded(layout: str, events: list[dict], outcome: str = "tuesday-unrouted") -> dict:
+        reader = run_routing.RunReader(NAMES, "tuesday", None, layout, Path("/tmp/tmpab/case-1"))
+        for event in events:
+            reader.feed(event)
+        return reader.record(outcome, 1.0)
+    rec = recorded("plugin", [{**base, **noise[0]}, call("Skill", {"skill": QUALIFIED["tuesday"]}), DONE])
+    check("outside the project layout a run records its session id and its init event's sha256",
+          (rec["session_id"], rec["init_sha256"]), ("s1", shas[0]))
+    check("a run with no init event read has neither, never an empty one",
+          {k: recorded("personal", [], "error")[k] for k in ("session_id", "init_sha256")},
+          {"session_id": None, "init_sha256": None})
+    void = run_routing.RunReader(NAMES, "tuesday", None, "plugin", Path("/tmp/tmpab/case-1"))
+    check("a void run's init event, which lists a Tuesday skill it did not install, is kept as evidence",
+          (void.feed({**base, **noise[0], "skills": ["tuesday"]}), void.record("void")["init_sha256"] is not None),
+          ("void", True))
+    check("in the project layout the record keeps exactly its keys",
+          sorted(recorded("project", [{**base, **noise[0]}, DONE])), ["hub_fired", "init_skills", "outcome", "reached"])
+    source = (Path(__file__).resolve().parent / "run_routing.py").read_text()
+    check_true("main keeps init events outside the project layout only, as the records that name them",
+               'init_events: dict | None = {} if args.layout != "project" else None' in source
+               and '**({"init_events": init_events} if init_events is not None else {})' in source)
+
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        suite = Path(tmp) / "cases.json"
+        suite.write_text(json.dumps({"cases": [{"id": 1, "prompt": "should I apply?", "expected": "job-underwriter"},
+                                               {"id": 2, "prompt": "prep me", "expected": "mock-interview"}]}))
+        ran_sha = run_routing.file_sha256(suite)
+        prompts, target = [], Path(tmp) / "e0.json"
+
+        def edits_the_file(prompt, *args, **kwargs):
+            # The case file is checked out anew while the arm runs, and something else writes the results file.
+            prompts.append(prompt)
+            suite.write_text(json.dumps({"cases": [{"id": 1, "prompt": "edited", "expected": "neither"}]}))
+            target.write_text('{"someone else": true}\n')
+            return {"outcome": "job-underwriter", "init_skills": []}
+        saved = (sys.argv, run_routing.run_once)
+        run_routing.run_once = edits_the_file
+        try:
+            sys.argv = ["run_routing.py", "--runs", "1", "--workers", "1", "--cases", str(suite), "--case", "1",
+                        "--json-out", str(target)]
+            with contextlib.redirect_stdout(io.StringIO()) as printed:
+                run_routing.main()
+        finally:
+            sys.argv, run_routing.run_once = saved
+        beside = sorted(Path(tmp).glob("e0.*.json"))
+        written = json.loads(beside[0].read_text()) if beside else {}
+        kept = target.read_text()
+    check("must fail: a case file changed while the arm runs does not change what the arm records: cases_sha256 is "
+          "the hash of the bytes it loaded and ran, and a --case run records the ids it ran",
+          (written.get("cases_sha256"), prompts, written.get("case_ids")), (ran_sha, ["should I apply?"], [1]))
+    check("must fail: a results file made by something else during the arm is kept, and the arm's results are "
+          "written beside it under the run's id, with a warning",
+          (kept, len(beside), f"these results are in {beside[0] if beside else None}" in printed.getvalue()),
+          ('{"someone else": true}\n', 1, True))
+
+
+MERGE_CASES = [{"id": 1, "prompt": "should I apply?", "expected": "job-underwriter"},
+               {"id": 2, "prompt": "prep me for the interview", "expected": "mock-interview"},
+               {"id": 3, "prompt": "/mock-interview prep me", "expected": "mock-interview"}]
+MERGE_EXPECT = {"hub_sha256": "h" * 64, "tuesday_sha256": "t" * 64, "cases_sha256": "c" * 64}
+LIMIT_TEXT = '{"type":"assistant","message":{"content":[{"type":"text","text":"You\'ve hit your weekly limit"}]}}'
+
+
+def mrun(outcome: str, session: str | None, **extra) -> dict:
+    """A run record as a Tuesday-arm run outside the project layout writes it."""
+    return {"outcome": outcome, "init_skills": [], "hub_fired": True, "reached": [], "skills_root_named": False,
+            "refused": [], "output_tokens": 10, "seconds": 5.0, "cost_usd": 0.01, "result_read": True,
+            "session_id": session, "init_sha256": "i" * 64, "hub_path_contact": False, **extra}
+
+
+def marm(runs_by_case: dict[int, list[dict]], per_case: int = 2, **meta) -> dict:
+    """A results file as main writes it, its summaries left stale: a merge recomputes them."""
+    results = [{"id": c["id"], "expected": run_routing.passes_on(c), "timeout": 900,
+                "fired": [r["outcome"] for r in runs_by_case[c["id"]]], "runs": runs_by_case[c["id"]],
+                "passed": False, "note": "stale"} for c in MERGE_CASES if c["id"] in runs_by_case]
+    return {"cases_file": "/x/cases.json", "cases_sha256": "c" * 64, "arm": "tuesday", "layout": "plugin",
+            "hub_sha256": "h" * 64, "tuesday_sha256": "t" * 64, "model": "m", "runs_per_case": per_case,
+            "unscored": "stale", "passed": 0, "total": len(results), "reach": {}, "reported": {},
+            "init_events": {"i" * 64: {"type": "system", "subtype": "init"}}, "streams": "streams/e1",
+            "results": results, **meta}
+
+
+def test_routing_merge() -> None:
+    print("\nrouting merge: an arm cut short by the usage limit is filled from re-runs, or refused")
+    transcripts = {"k1": LIMIT_TEXT, "k2": LIMIT_TEXT, "e1": '{"type":"result","is_error":true}'}.get
+
+    def merge(primary, reruns, expect=MERGE_EXPECT):
+        return run_routing.merge_arm(primary, reruns, transcripts, expect, MERGE_CASES)
+
+    def refused(primary, reruns, expect=MERGE_EXPECT) -> str:
+        try:
+            merge(primary, reruns, expect)
+        except run_routing.MergeRefused as exc:
+            return str(exc)
+        return "merged"
+
+    good = {2: [mrun("mock-interview", "a3"), mrun("mock-interview", "a4")],
+            3: [mrun("focused", "a5"), mrun("focused", "a6")]}
+    check("must fail: an arm that wrote no results file is refused whole",
+          refused(None, [marm({1: [mrun("job-underwriter", "r1")]}, 1)]), "no results: run the arm again whole")
+
+    primary = marm({1: [mrun("job-underwriter", "a1"), mrun("error", "k1", result_read=True, cost_usd=None)], **good})
+    before = json.dumps(primary, sort_keys=True)
+    rerun = marm({1: [mrun("job-underwriter", "r1")]}, 1, init_events={"j" * 64: {"type": "system"}})
+    out = merge(primary, [rerun])
+    check("must pass: an error run whose session transcript holds the usage-limit message is replaced by its re-run, "
+          "in place, and the case passes",
+          ([r["session_id"] for r in out["results"][0]["runs"]], out["results"][0]["fired"], out["results"][0]["passed"],
+           out["results"][0]["note"]),
+          (["a1", "r1"], ["job-underwriter", "job-underwriter"], True, "job-underwriter on every run"))
+    check("every summary is recomputed with the runner's functions: passed, reach, explicit, reported, unscored",
+          (out["passed"], out["total"], out["reach"]["decided"], out["reach"]["set_aside"], out["explicit"]["focused"],
+           out["reported"]["result_read"], out["reported"]["cost_read"], out["unscored"]),
+          (3, 3, 4, 0, 2, 6, 6, None))
+    check("the merge says what it filled and whose sessions it replaced; the primary's own fields are kept; the "
+          "files' init events are joined; the primary is not changed",
+          ({k: out["merged"][k] for k in ("reruns", "runs_filled", "killed_by_case", "never_started_by_case",
+                                          "errors_kept_by_case", "replaced_sessions")},
+           out["cases_file"], out["runs_per_case"], sorted(out["init_events"]), "streams" in out,
+           json.dumps(primary, sort_keys=True) == before),
+          ({"reruns": 1, "runs_filled": 1, "killed_by_case": {1: 1}, "never_started_by_case": {},
+            "errors_kept_by_case": {}, "replaced_sessions": {1: ["k1"]}}, "/x/cases.json", 2, ["i" * 64, "j" * 64],
+           False, True))
+    check("must fail: a proven kill offered no re-run is refused, not kept as an error",
+          refused(marm({1: [mrun("job-underwriter", "a1"), mrun("error", "k1")], **good}), []),
+          "case 1: 1 killed run(s) and 0 never-started slot(s), but 0 re-run(s)")
+
+    short = marm({1: [mrun("job-underwriter", "a1")], **good})
+    out = merge(short, [marm({1: [mrun("job-underwriter", "r1")]}, 1)])
+    check("must pass: a never-started slot, a case holding fewer runs than runs_per_case, is filled",
+          ([r["session_id"] for r in out["results"][0]["runs"]], out["merged"]["never_started_by_case"],
+           out["merged"]["runs_filled"], out["passed"]),
+          (["a1", "r1"], {1: 1}, 1, 3))
+    check("must fail: a short case offered no re-run is refused",
+          refused(short, []), "case 1: 0 killed run(s) and 1 never-started slot(s), but 0 re-run(s)")
+
+    mixed = marm({1: [mrun("error", "k1"), mrun("error", "e1")], **good})
+    two = marm({1: [mrun("job-underwriter", "r1"), mrun("job-underwriter", "r2")]}, 2)
+    check("must fail: a mixed kill/error batch, a case with re-runs offered and an error run whose transcript holds "
+          "no usage-limit message, is refused, whatever the number of re-runs",
+          [refused(mixed, [rerun]).startswith("case 1:") and "mixed kill/error batch" in refused(mixed, [rerun])
+           for rerun in (two, marm({1: [mrun("job-underwriter", "r1")]}, 1))], [True, True])
+    kept = merge(marm({1: [mrun("job-underwriter", "a1"), mrun("error", "e1")], **good}), [])
+    check("must pass: an error run with no usage-limit message, offered no re-run, is kept: it counts toward the "
+          "set-aside share, and the arm stays unscored",
+          (kept["merged"]["errors_kept_by_case"], kept["reach"]["set_aside"], kept["unscored"] is not None),
+          ({1: 1}, 1, True))
+    check("must fail: the mixed batch's refusal names why the other error is not proven killed",
+          "run 1: its transcript, found by its session id e1, holds no usage-limit message" in refused(mixed, [two]), True)
+    unproven = [(marm({1: [mrun("job-underwriter", "a1"), mrun("error", None)], **good}),
+                 "run 1: it recorded no session id: a run saved before session ids were recorded"),
+                (marm({1: [mrun("error", "k1"), mrun("error", "k1")], **good}),
+                 "run 0: its session id k1 is shared with another run of the arm"),
+                (marm({1: [mrun("job-underwriter", "a1"), mrun("error", "gone")], **good}),
+                 "run 1: no transcript was found for its session id gone"),
+                (marm({1: [mrun("job-underwriter", "a1"), mrun("error", "e1")], **good}),
+                 "run 1: its transcript, found by its session id e1, holds no usage-limit message")]
+    check("must fail: an error run with no session id, a session id two runs share, no transcript found, or a "
+          "transcript without the usage-limit message is not proven killed, so its re-run is refused, naming that "
+          "cause; with no proven kill beside it, it is no mixed batch",
+          [(cause in (why := refused(arm, [marm({1: [mrun("job-underwriter", "r1")]}, 1)])),
+            "its case takes no re-run" in why, "mixed" in why) for arm, cause in unproven],
+          [(True, True, False)] * 4)
+    beside_slot = marm({1: [mrun("error", "e1")], **good})
+    check("must fail: an error not proven killed beside a never-started slot takes no re-run for the slot either: a "
+          "re-run carries no mark of the run it stands for",
+          refused(beside_slot, [marm({1: [mrun("job-underwriter", "r1")]}, 1)]).endswith(
+              "its case takes no re-run, its never-started slots included, since a re-run carries no mark of the run "
+              "it stands for"), True)
+    first = merge(marm({1: [mrun("error", "k1"), mrun("job-underwriter", "a1")], **good}),
+                  [marm({1: [mrun("job-underwriter", "r1")]}, 1)])
+    check("must pass: a killed run is replaced where it stood, the first run here, never appended",
+          [r["session_id"] for r in first["results"][0]["runs"]], ["r1", "a1"])
+    check("must fail: a case holding more runs than runs_per_case is refused",
+          refused(marm({1: [mrun("job-underwriter", "a1"), mrun("job-underwriter", "a2"), mrun("error", "k1")],
+                        **good}), [marm({1: [mrun("job-underwriter", "r1")]}, 1)]),
+          "case 1: 3 runs, more than the arm's runs_per_case 2")
+    stray = json.loads(json.dumps(primary))
+    stray["results"].append({**stray["results"][1], "id": 9})
+    check("must fail: a case the arm holds that its case file does not is refused",
+          refused(stray, [marm({1: [mrun("job-underwriter", "r1")]}, 1)]), "case 9: not in the cases file")
+    twice = json.loads(json.dumps(primary))
+    twice["results"].append(twice["results"][1])
+    check("must fail: a case listed twice in a file is refused",
+          refused(twice, [marm({1: [mrun("job-underwriter", "r1")]}, 1)]), "the arm: case(s) [2] listed more than once")
+    check("must fail: a re-run for a case with no killed or never-started run is refused",
+          refused(marm({1: [mrun("job-underwriter", "a1"), mrun("job-underwriter", "a2")], **good}),
+                  [marm({1: [mrun("job-underwriter", "r1")]}, 1)]),
+          "case 1: 1 re-run(s) for a case with no killed or never-started run")
+    check("must fail: re-runs that do not number the kills are refused",
+          refused(primary, [two]), "case 1: 1 killed run(s) and 0 never-started slot(s), but 2 re-run(s)")
+    check("must fail: re-runs for a case the arm does not hold are refused",
+          refused(marm({1: [mrun("job-underwriter", "a1"), mrun("job-underwriter", "a2")],
+                        2: good[2]}), [marm({3: [mrun("focused", "r1")]}, 1)]),
+          "re-runs for cases the arm does not hold: [3]")
+
+    rerun = marm({1: [mrun("job-underwriter", "r1")]}, 1)
+    differs = {"tuesday_sha256": "x" * 64, "hub_sha256": "x" * 64, "model": "other", "layout": "personal",
+               "arm": "skills"}
+    check("must fail: a re-run that differs from the arm in Tuesday's digests, model, layout or arm is refused",
+          [refused(primary, [{**rerun, key: value}]).split(" ")[3:5] for key, value in differs.items()],
+          [["tuesday_sha256", repr("x" * 64)], ["hub_sha256", repr("x" * 64)], ["model", "'other'"],
+           ["layout", "'personal'"], ["arm", "'skills'"]])
+    check("must fail: a re-run of another cases file is refused, by its sha256 where both record one, else by name",
+          [refused(primary, [{**rerun, "cases_sha256": "d" * 64}]).startswith("re-run file 1: cases_sha256"),
+           refused({k: v for k, v in primary.items() if k != "cases_sha256"},
+                   [{**rerun, "cases_file": "/x/other.json"}]).startswith("re-run file 1: cases file")], [True, True])
+    recorded = {"modules_sha256": "n" * 64, "harness_sha256": "g" * 64, "skill_md": {}}
+    stamped = {**primary, **recorded}
+    stamped_rerun = {**rerun, **recorded}
+    check("must pass: a re-run that records the arm's module digest, harness digest and --skill-md substitutions "
+          "merges; so does one that records none, as a file saved before them does",
+          [merge(stamped, [stamped_rerun])["merged"]["runs_filled"], merge(stamped, [rerun])["merged"]["runs_filled"]],
+          [1, 1])
+    check("must fail: a re-run made on other module skills, other harness code or another --skill-md is refused, "
+          "naming the field (the skills arm records no other digest of its payload)",
+          [refused(stamped, [{**stamped_rerun, key: value}]).split(" ")[3:4]
+           for key, value in (("modules_sha256", "x" * 64), ("harness_sha256", "x" * 64),
+                              ("skill_md", {"job-underwriter": "s" * 64}))],
+          [["modules_sha256"], ["harness_sha256"], ["skill_md"]])
+    skills_arm = {**stamped, "arm": "skills"}
+    for key in ("hub_sha256", "tuesday_sha256"):
+        skills_arm.pop(key)
+    check("must fail: a skills-arm file, which records no Tuesday digest, is held to the measured commit's modules",
+          [refused(skills_arm, [{**stamped_rerun, "arm": "skills", "hub_sha256": None, "tuesday_sha256": None}],
+                   {**MERGE_EXPECT, "modules_sha256": "q" * 64}).startswith("the arm: modules_sha256"),
+           refused(skills_arm, [{**stamped_rerun, "arm": "skills", "hub_sha256": None, "tuesday_sha256": None,
+                                 "modules_sha256": "x" * 64}]).startswith("re-run file 1: modules_sha256")],
+          [True, True])
+    slow = json.loads(json.dumps(rerun))
+    slow["results"][0]["timeout"] = 240
+    check("must fail: a re-run made at another timeout than the arm's for its case is refused, naming both",
+          refused(primary, [slow]), "case 1: re-run file 1 ran at timeout 240, the arm at 900: a re-run is made with "
+                                    "the arm's flags")
+    rerouted = json.loads(json.dumps(rerun))
+    rerouted["results"][0]["expected"] = "resume-tailor"
+    check("must fail: a re-run that recorded another route for its case is refused",
+          refused(primary, [rerouted]), "case 1: re-run file 1 recorded the route resume-tailor, the arm job-underwriter")
+    check("must fail: a re-run whose session is a run of the arm, or of another re-run, is refused",
+          [refused(primary, [marm({1: [mrun("job-underwriter", "a1")]}, 1)]),
+           refused(marm({1: [mrun("error", "k1"), mrun("error", "k2")], **good}),
+                   [marm({1: [mrun("job-underwriter", "r1")]}, 1), marm({1: [mrun("job-underwriter", "r1")]}, 1)])],
+          ["re-run file 1: case 1: session a1 is already a run of the arm, or of another re-run: a re-run is a session "
+           "of its own",
+           "re-run file 2: case 1: session r1 is already a run of the arm, or of another re-run: a re-run is a session "
+           "of its own"])
+    partial_arm = marm({1: primary["results"][0]["runs"], 2: good[2]})
+    check("must fail: a file that ran the whole case file but holds fewer of its cases is refused; one saved before "
+          "case_ids merges, and the merge lists the case file's ids it does not hold",
+          (refused({**partial_arm, "case_ids": None}, [rerun]),
+           merge(partial_arm, [rerun])["merged"]["cases_not_held"]),
+          ("the arm: holds cases [1, 2], but ran the whole case file, [1, 2, 3]", [3]))
+    check("must pass: a file that ran --case ids holds those, and merges as the subset it is; a re-run must hold the "
+          "--case ids it records",
+          (merge({**partial_arm, "case_ids": [1, 2]}, [{**rerun, "case_ids": [1]}])["merged"]["cases_not_held"],
+           refused({**partial_arm, "case_ids": [1, 2]}, [{**rerun, "case_ids": [2]}])),
+          ([3], "re-run file 1: holds cases [1], but ran --case [2]"))
+    check("must fail: a digest that is not the measured commit's is refused, in the arm or in a re-run",
+          [refused(primary, [rerun], {**MERGE_EXPECT, "tuesday_sha256": "y" * 64}).startswith("the arm: tuesday_sha256"),
+           refused(primary, [rerun], {**MERGE_EXPECT, "cases_sha256": "y" * 64}).startswith("the arm: cases_sha256")],
+          [True, True])
+    check("must fail: a results file of another arm spelling the merge cannot read is refused",
+          refused({**primary, "arm": "front-door"}, [rerun]).startswith("arm 'front-door' is not one of"), True)
+    other_route = json.loads(json.dumps(primary))
+    other_route["results"][0]["expected"] = "resume-tailor"
+    check("must fail: a case whose route the cases file gives otherwise is refused",
+          refused(other_route, [rerun]), "case 1: the cases file expects job-underwriter, the arm recorded resume-tailor")
+
+    # A file saved before this commit: the old spellings, no result_read, cost, session id or cases_sha256.
+    def saved_run(outcome: str, refused_list) -> dict:
+        return {"outcome": outcome, "init_skills": [], "hub_fired": True, "reached": [], "skills_root_named": False,
+                "refused": refused_list, "output_tokens": 7 if refused_list is not None else None, "seconds": 3.0,
+                "hub_path_contact": False}
+    historical = {k: v for k, v in marm({1: [saved_run("job-underwriter", [])],
+                                         2: [saved_run("mock-interview", []), saved_run("mock-interview", None)],
+                                         3: [saved_run("focused", []), saved_run("focused", [])]}).items()
+                  if k not in ("tuesday_sha256", "cases_sha256", "init_events", "streams")}
+    historical.update(arm="frontdoor", frontdoor_sha256="t" * 64)
+    out = merge(historical, [marm({1: [mrun("job-underwriter", "r1")]}, 1)])
+    check("must pass: a saved frontdoor_sha256 file, arm frontdoor, merged with a tuesday_sha256 re-run when the "
+          "values match; its own fields kept as saved",
+          (out["merged"]["never_started_by_case"], out["arm"], out["frontdoor_sha256"], "tuesday_sha256" in out,
+           out["passed"]), ({1: 1}, "frontdoor", "t" * 64, False, 3))
+    check("and its runs are summarised, result_read read from refused where the record has none",
+          {k: out["reported"][k] for k in ("decided", "result_read", "stopped_before_result", "cost_read")},
+          {"decided": 6, "result_read": 5, "stopped_before_result": 1, "cost_read": 1})
+    check_true("its summary lines read the saved arm as the Tuesday arm",
+               run_routing.summary_lines(out["reach"], out["explicit"], run_routing.saved_arm(out["arm"]),
+                                         out["reported"])[1].startswith("tuesday fired on"))
+    check("must fail: the same saved file with a re-run whose digest differs is refused",
+          refused(historical, [marm({1: [mrun("job-underwriter", "r1")]}, 1, tuesday_sha256="z" * 64)]).split(" ")[3],
+          "tuesday_sha256")
+    check("the saved arm spellings: frontdoor reads as tuesday, and a run still refuses it",
+          (run_routing.saved_arm("frontdoor"), run_routing.saved_arm("skills"),
+           run_routing.saved_value({"frontdoor_sha256": "v"}, "tuesday_sha256"),
+           run_routing.saved_value({"tuesday_sha256": "w", "frontdoor_sha256": "v"}, "tuesday_sha256")),
+          ("tuesday", "skills", "v", "w"))
+    again = merge(out, [])
+    check("a merged file merges again, its earlier merge nested",
+          (again["merged"]["previous"]["runs_filled"], again["merged"]["runs_filled"]), (1, 0))
+
+    print("\nrouting merge: the --merge command line never writes over a file")
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        cases_file = tmp / "cases.json"
+        cases_file.write_text(json.dumps({"cases": MERGE_CASES}))
+        sha = run_routing.file_sha256(cases_file)
+        projects = tmp / "projects" / "-tmp-case-1"
+        projects.mkdir(parents=True)
+        (projects / "k1.jsonl").write_text(LIMIT_TEXT + "\n")
+        meta = {"cases_file": str(cases_file), "cases_sha256": sha}
+        (tmp / "e1.json").write_text(json.dumps({**primary, **meta}))
+        (tmp / "e1.gap-1.json").write_text(json.dumps({**marm({1: [mrun("job-underwriter", "r1")]}, 1), **meta}))
+
+        def cli(*args: str) -> tuple[int, str, str]:
+            saved_argv = sys.argv
+            sys.argv = ["run_routing.py", *args]
+            try:
+                with contextlib.redirect_stdout(io.StringIO()) as out_, contextlib.redirect_stderr(io.StringIO()) as err:
+                    code = run_routing.main()
+            finally:
+                sys.argv = saved_argv
+            return code, out_.getvalue(), err.getvalue()
+        common = ["--expect", "h" * 64, "t" * 64, "--projects", str(tmp / "projects")]
+        code, _, err = cli("--merge", str(tmp / "e0.json"), "--json-out", str(tmp / "e0.merged.json"), *common)
+        check("must fail: --merge of an arm with no results file says to run it again whole, and writes nothing",
+              (code, "no results: run the arm again whole" in err, (tmp / "e0.merged.json").exists()), (2, True, False))
+        code, printed, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                                 "--json-out", str(tmp / "e1.merged.json"), *common)
+        merged = json.loads((tmp / "e1.merged.json").read_text())
+        check("must pass: --merge writes the merged arm, proving the kill from the transcript folder it is given, and "
+              "records the files it read and where each one's streams are",
+              (code, err, merged["merged"]["killed_by_case"], merged["merged"]["files"],
+               merged["merged"]["streams"], "filled 1 run(s)" in printed),
+              (0, "", {"1": 1}, [str(tmp / "e1.json"), str(tmp / "e1.gap-1.json")],
+               [str(tmp / "streams/e1")] * 2, True))
+        code, _, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                           "--json-out", str(tmp / "e1.merged.json"), *common)
+        check("must fail: --merge never writes over an existing file, the merged one included",
+              (code, "a merge never writes over a results file" in err,
+               json.loads((tmp / "e1.merged.json").read_text()) == merged), (2, True, True))
+        code, _, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                           "--json-out", str(tmp / "e1.wrong.json"), "--expect", "h" * 64, "z" * 64,
+                           "--projects", str(tmp / "projects"))
+        check("must fail: --merge against another commit's digests is refused, and writes nothing",
+              (code, "is not the measured commit's" in err, (tmp / "e1.wrong.json").exists()), (2, True, False))
+        code, _, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                           "--json-out", str(tmp / "e1.empty.json"), "--expect", "h" * 64, "t" * 64,
+                           "--projects", str(tmp / "nowhere"))
+        check("must fail: with no transcript to prove the kill the re-run is refused, saying none was found",
+              (code, "no transcript was found for its session id k1" in err), (2, True))
+
+        # Another session's usage-limit transcript beside a real error's: the reader takes a session's own file only.
+        (projects / "e1.jsonl").write_text('{"type":"result","is_error":true}\n')
+        read = run_routing.transcript_reader(tmp / "projects")
+        check("must pass: the transcript reader finds a session's transcript by its whole id, and none for a prefix of "
+              "one, a glob, a path or nothing",
+              [read("k1") == LIMIT_TEXT + "\n", read("e1"), read("k"), read("k1*"), read("*"), read("../x"), read("")],
+              [True, '{"type":"result","is_error":true}\n', None, None, None, None, None])
+        real = marm({1: [mrun("job-underwriter", "a1"), mrun("error", "e1")], **good})
+        (tmp / "e2.json").write_text(json.dumps({**real, **meta}))
+        code, _, err = cli("--merge", str(tmp / "e2.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                           "--json-out", str(tmp / "e2.merged.json"), *common)
+        check("must fail: a real error's re-run is refused though another session's transcript in the folder holds "
+              "the usage-limit message, and nothing is written",
+              (code, "its transcript, found by its session id e1, holds no usage-limit message" in err,
+               (tmp / "e2.merged.json").exists()), (2, True, False))
+        code, printed, _ = cli("--merge", str(tmp / "e2.json"), "--json-out", str(tmp / "e2.kept.json"), *common)
+        check("must pass: a merge that keeps a real error, its arm over the set-aside share, exits 3 as a run does",
+              (code, "WARNING:" in printed, json.loads((tmp / "e2.kept.json").read_text())["merged"]["errors_kept_by_case"]),
+              (3, True, {"1": 1}))
+        (tmp / "e1.gap-wrong.json").write_text(json.dumps({**marm({1: [mrun("mock-interview", "r9")]}, 1), **meta}))
+        code, printed, _ = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-wrong.json"),
+                               "--json-out", str(tmp / "e1.failing.json"), *common)
+        check("must pass: a merged arm with a failing case exits 1 as a run does", (code, "2/3 passed" in printed), (1, True))
+
+        saved_config = os.environ.get("CLAUDE_CONFIG_DIR")
+        config = tmp / "config"
+        shutil.copytree(tmp / "projects", config / "projects")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(config)
+        try:
+            code, _, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                               "--json-out", str(tmp / "e1.default-projects.json"), "--expect", "h" * 64, "t" * 64)
+            default_projects = (code, err)
+            code, _, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                               "--json-out", str(tmp / "e1.default-expect.json"), "--projects", str(tmp / "projects"))
+            default_expect = (code, "the arm: hub_sha256 " + "h" * 64 + " is not the measured commit's "
+                              + sync.digests()["hub_sha256"] in err, (tmp / "e1.default-expect.json").exists())
+        finally:
+            if saved_config is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = saved_config
+        check("must pass: with no --projects the kill is proven from the runner's config folder's projects/",
+              default_projects, (0, ""))
+        check("must fail: with no --expect the digests are this checkout's, and another commit's arm is refused",
+              default_expect, (2, True, False))
+        good_cases = cases_file.read_bytes()
+        cases_file.write_text(json.dumps({"cases": [*MERGE_CASES, {"id": 4, "prompt": "p", "expected": "neither"}]}))
+        try:
+            code, _, err = cli("--merge", str(tmp / "e1.json"), "--rerun", str(tmp / "e1.gap-1.json"),
+                               "--json-out", str(tmp / "e1.edited.json"), *common)
+        finally:
+            cases_file.write_bytes(good_cases)
+        check("must fail: a case file edited since the arm ran is refused by its content hash on disk",
+              (code, f"the arm: cases_sha256 {sha} is not the measured commit's" in err, (tmp / "e1.edited.json").exists()),
+              (2, True, False))
+        try:
+            cli("--rerun", str(tmp / "e1.gap-1.json"))
+            loose = "ran"
+        except SystemExit as exc:
+            loose = str(exc)
+        check("must fail: --rerun without --merge is refused before anything runs", loose,
+              "--rerun, --expect and --projects are for --merge")
 
 
 # --- Decline path 3: the CLI declining to answer is not a short answer ---
@@ -4992,6 +5742,7 @@ def test_saved_spellings() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         suite = Path(tmp) / "cases.json"
         suite.write_text(json.dumps({"cases": [{"id": 1, "prompt": "should I apply?", "expected": "job-underwriter"}]}))
+        suite_sha = run_routing.file_sha256(suite)
         saved = (sys.argv, run_routing.run_once)
         run_routing.run_once = lambda *args, **kwargs: {"outcome": "job-underwriter", "init_skills": []}
         written = {}
@@ -5006,10 +5757,14 @@ def test_saved_spellings() -> None:
             sys.argv, run_routing.run_once = saved
     check("must pass: a new Tuesday-arm results file records arm tuesday and the hub's two digests under "
           "hub_sha256 and tuesday_sha256, as sync.digests() gives them, and no frontdoor_sha256; a skills-arm "
-          "file records no digest",
+          "file records no hub digest; both record their case file's, the modules' and the harness's digests",
           ({k: written["tuesday"].get(k) for k in ("arm", "hub_sha256", "tuesday_sha256", "frontdoor_sha256")},
-           written["skills"]["arm"], [k for k in written["skills"] if k.endswith("_sha256")]),
-          ({"arm": "tuesday", **sync.digests(), "frontdoor_sha256": None}, "skills", []))
+           written["skills"]["arm"], [k for k in written["skills"] if k.endswith("_sha256")],
+           {(written[arm]["cases_sha256"], written[arm]["modules_sha256"], written[arm]["harness_sha256"])
+            for arm in run_routing.ARMS}),
+          ({"arm": "tuesday", **sync.digests(), "frontdoor_sha256": None}, "skills",
+           ["cases_sha256", "modules_sha256", "harness_sha256"],
+           {(suite_sha, run_routing.modules_sha256(), run_routing.harness_sha256())}))
 
 
 def test_rerun_stems() -> None:
@@ -5810,7 +6565,7 @@ def main() -> int:
     for test in (test_routing_declines, test_routing_cases, test_child_env, test_routing_timeouts, test_routing_variants, test_tuesday_generation,
                  test_tuesday_clashes, test_tuesday_install, test_module_lists, test_sync, test_tuesday_labels, test_explicit_naming,
                  test_layouts_install, test_layout_naming, test_layout_transcript, test_reported_measures,
-                 test_layout_runs,
+                 test_layout_runs, test_stream_copy_signal, test_routing_evidence, test_routing_merge,
                  test_cli_refusal, test_parse_stream,
                  test_server_url_identity, test_research_server, test_rooms, test_stems, test_grade_parsing,
                  test_classification, test_missing_response,
