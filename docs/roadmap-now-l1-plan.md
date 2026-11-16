@@ -70,6 +70,12 @@ The owner settled E1–E20 and E22–E26 on 2026-11-13. E21 awaits approval of t
 
 **2026-11-14 · CV approval rules and resumed CV regression.** Keep the existing CV approval and rejection rules. Add the resumed CV regression and its smoke to Round 2. Run the control fresh on both revisions and both installs. E21 still governs the priced manifest.
 
+**2026-11-16 · Fix-round outcomes carried into this plan.** The fix round met its bar, and 0.2.0 is accepted and on `main` (PR #16). The owner took four recommendations:
+- **Quote lists.** A list of quotations joined by separators alone shares the origin written after its last quotation. This replaces October's audit reading. It lands as its own harness-only commit before the code-name rename. All three 0.2.0 hashes stay unchanged ([write boundary](#write-boundary-by-phase)).
+- **Opus, the sentence after the fit ledger.** Iteration 2 rides the 1a candidate, with its own measure and marks ([below](#carried-into-1a--the-sentence-after-the-fit-ledger-iteration-2)).
+- **Haiku.** The sentence after the fit ledger and research calls beyond a quick check stay open at iteration 1, with their fix-round rates. No change is aimed at Haiku.
+- **resume-tailor's watch-out.** The line stays as it is. Its quote problem counts as closed by measurement. Any sharper wording waits for Round 2: E10 already rewrites the line there, for CVs, letters and answers. That is the only round that changes resume-tailor's text, since Round 1 requires an empty diff under `skills/resume-tailor/`.
+
 ## Technical Plan
 
 ### Module boundaries
@@ -157,7 +163,7 @@ Work in a Linux checkout. Planning uses main at `7ebb06d`. Recheck this plan's f
 
 | Order | Work and check |
 |---|---|
-| 1 | Accept and record the current fix round at 0.2.0. |
+| 1 | Accept and record the current fix round at 0.2.0. Then land the owner's quote-list rule (2026-11-16) in its own harness-only commit. |
 | 2 | Apply the [live code-name mapping](#code-name-rename) in its own commit. Preserve historical values in the reader and test compatibility with saved records (E25). Check imports, runners, CI callers and documentation. Use current flag names in manifests. |
 | 3 | Land 1a’s tested harness commit with the companion driver, sentinel scan and gate-only fixture contract. Verify the three accepted release digests after the code-name and harness commits. |
 | 4 | Pin 1a and measure its candidate. Smoke the 1b driver in the 19 November window. Accept the 0.3.0 record, finish any tested 1b harness fix and pin 1b against that lineage. |
@@ -189,6 +195,7 @@ Offline, test old and new `via` and `arm` spellings without layout, explicit-lay
 | Phase | Source writes | Generated writes |
 |---|---|---|
 | 0.2.0 record (incoming prerequisite) | Use the existing [fix-round record inventory](fix-round-plan-detail.md#23-ci-and-the-measured-text). Verify its accepted pin before the rename. | Use the fix round’s approved build inventory. |
+| Quote-list rule (2026-11-16) | Modify `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`. | None. All three accepted digest values stay byte-identical. |
 | Code-name rename | Modify the eleven paths in the [live rename list](#code-name-rename). | None. All three accepted digest values stay byte-identical. |
 | 1a harness | Create `evals/run_transcripts.py`. Modify `evals/run_fixtures.py`, `evals/output_checks.py`, `evals/test_harness.py`, `evals/README.md`, `ci/check_skills.py`, `ci/test_checks.py`. | None. |
 | 1a candidate | Modify `skills/job-underwriter/SKILL.md`, `skills/job-underwriter/references/risk-and-decision.md`, `skills/job-underwriter/evals/evals.json`, `skills/job-underwriter/README.md`, `skills/mock-interview/SKILL.md`, `skills/mock-interview/references/output-template.md`, `skills/mock-interview/references/question-rubric.md`, `skills/mock-interview/references/personas.md`, `skills/mock-interview/evals/evals.json`, `skills/mock-interview/README.md`, `docs/roadmap.html`. | Sync affected Tuesday references and package the changed payload. |
@@ -440,6 +447,42 @@ E23's one-arm replay of all three invite positives adds 45 starts and 90 grades,
 #### Risks
 
 A messaging-app invitation can be ordinary scheduling. A warning can also displace a useful prep pack, repeat the sibling name, or encourage activating the other module. Gate the full chat-only condition, count the one pointer in chat, and test the no-pack gate as an output branch. A failed anonymous activation stays visible even if a fresh-room nudge recovers the output.
+
+### Carried into 1a · The sentence after the fit ledger, iteration 2
+
+Round 1a. This is the owner's decision of 2026-11-16, made under the two-iteration rule. In the fix round, Sonnet wrote the new list form in 56 of 79 runs and closed the item. Opus wrote it in 11 of 79 runs and stayed at 11 of 79 above one sentence, against a target of 10%.
+
+#### Files and lines
+
+| Action | Location and change |
+|---|---|
+| Modify | `skills/job-underwriter/references/risk-and-decision.md`, rule 2. Make the list form the one worked example of the sentence after the fit ledger, so the model has that form to copy. Leave the rule's limit of one sentence as it is. The file is already in the 1a candidate's write boundary. Sync its Tuesday reference copy. List any `ci/test_checks.py` amendment caused by the rule's exact text. |
+
+#### Bar
+
+The measure is the fix round's: the share of job-underwriter runs where `ledger_sentence` applied whose `sentences` count is above one, with installs pooled. The baseline is the fix round on 0.2.0: Sonnet 0 of 79, Opus 11 of 79, Haiku 60 of 82. Each comparison is an exact two-sided Fisher test at p below 0.01, as in the fix round. Each threshold is recomputed on the actual denominators; the examples below are at 79 applicable runs.
+
+- **Closed on Opus** at 10% or less, which is 7 of 79.
+- **Worse, a miss of 1a**, if any of these holds:
+  - Opus rises from 11 of 79 (26 or more of 79);
+  - Sonnet rises from 0 of 79 (8 or more);
+  - Haiku rises from 60 of 82;
+  - a guard breaks.
+- **Guards:**
+  - ledger_present does not fall: from 79 of 80 on Sonnet and Opus (broken at 70 or fewer of 80), and from 82 of 160 on Haiku;
+  - claims about sets of rows do not rise: from 1 of 79 on Sonnet, 3 of 79 on Opus and 6 of 82 on Haiku.
+- **Haiku is read for worse only.** It stays open at iteration 1.
+- **If Opus does not close,** iteration 2 is spent, and the item goes to the owner under the two-iteration rule.
+- **Odds of closing:** at 79 runs, a true rate of 5% closes the item 96% of the time; 10%, 46%; 14%, 12%.
+- **False-miss rate:** these tests join E1's whole-round estimate before the 1a freeze.
+
+#### Cost
+
+No added runs. 1a already runs job-underwriter's existing rooms on every model in both installs (E9), and the measure is an automatic check.
+
+#### Risks
+
+1a changes other job-underwriter text in the same file, the posting risk register, so a move in this measure cannot be pinned on the example alone. Keep the edit to rule 2 and its worked example, and read the item by its own measure.
 
 ### Item 2 · Recruiter screens, recorded practice and debriefs
 
