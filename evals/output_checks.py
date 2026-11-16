@@ -30,6 +30,7 @@ import json
 import re
 import sys
 import urllib.parse
+from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ci"))
@@ -1506,21 +1507,25 @@ _POSSESSIVE_ORIGIN = re.compile(r"(?<![\w'’])((?:[A-Za-z][\w.-]*\s+){0,3}([A-Z
 CONTRACTIONS = {"it", "that", "what", "there", "here", "he", "she", "who", "let", "where", "how", "one"}
 ROLE_ORIGIN = re.compile(r"role[\s_-]?profile", re.I)
 _IN_ORIGIN = re.compile(r'^\s*(?:-{1,2}|[–—])\s*([^;"\n]*[^;"\n\s])\s*$')
-# What may stand between two quotations of one list: a separator and nothing else.
-_LIST_SEP = re.compile(r"\s*(?:[;,/&]|,?\s*(?:and|or)\b)?\s*", re.I)
+# What may stand between two quotations of one list, and nothing else: one of `;` `,` `/` `&`,
+# optionally followed by `and` or `or`; `and` or `or` alone; or only a space.
+_LIST_SEP = re.compile(r"\s*(?:[;,/&]\s*(?:(?:and|or)\b)?|(?:and|or)\b)?\s*", re.I)
 
 
-def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None) -> list[tuple[str, str | None]]:
+def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None,
+                             shares: Callable[[str, str], bool] | None = None) -> list[tuple[str, str | None]]:
     """Each quotation in a cell with the origin written beside it, or None. `bare_lead`, when
     given, also reads an origin written right before the quotation with no colon, by that
     pattern's first group (check_traces gives its dossier label).
 
-    A list of quotations joined by separators alone (`;`, `,`, `/`, `&`, `and`, `or`) shares
-    the origin written after its last quotation: '"a"; "b" (your research note)' names the
-    note for both, as a reader takes it (the owner's decision of 16 November 2026, which
-    replaces October's audit reading that the label named "b" alone). A quotation with an
-    origin of its own keeps it. Sharing an origin checks nothing less: a quotation that names
-    another source must still be found in the request or the pages."""
+    `shares`, when given, lets a list share its label: quotations joined by separators alone
+    (_LIST_SEP) take the origin written after the list's last quotation, when `shares(span,
+    origin)` holds for that last quotation and its origin. check_quotes gives it for the
+    question banks, so '"a"; "b" (your research note)' names the note for both, as a reader
+    takes it (the owner's decision of 16 November 2026, which replaces October's audit reading
+    that the label named "b" alone). A quotation with an origin of its own keeps it, and an
+    origin written before a list names its first quotation only. Without `shares` (check_traces)
+    each quotation has only its own origin."""
     plain = cell.translate(DQUOTES).replace("`", "")
     hits = list(re.finditer(r'"([^"\n]+)"', plain))
     out = []
@@ -1543,11 +1548,15 @@ def quoted_spans_with_origin(cell: str, bare_lead: re.Pattern | None = None) -> 
         elif bare_lead is not None and (m := bare_lead.search(before)):
             origin = m.group(1)
         out.append((hit.group(1), origin.strip() if origin and origin.strip() else None))
+    if shares is None:
+        return out
+    # A label shared backward from the list's last quotation, through each separator alone.
+    lends = [trailing[i] and out[i][1] is not None and shares(*out[i]) for i in range(len(out))]
     for i in range(len(hits) - 2, -1, -1):
-        if out[i][1] is None and out[i + 1][1] is not None and trailing[i + 1] \
+        if out[i][1] is None and lends[i + 1] \
                 and _LIST_SEP.fullmatch(plain[hits[i].end():hits[i + 1].start()]):
             out[i] = (out[i][0], out[i + 1][1])
-            trailing[i] = True
+            lends[i] = True
     return out
 
 
@@ -1686,8 +1695,8 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     and one cut otherwise is passed and labelled (below). Three Provenance
     quotations are not the candidate's: one whole item of a dossier field its cell
     names (fields_named); a raising source's line — not in what the candidate gave,
-    with an origin of its own, or one its list shares, naming a source other than the
-    candidate's material (quoted_spans_with_origin, other_source) — checked only for existence in the
+    with an origin of its own, or one its list shares (lends_origin), naming a source other
+    than the candidate's material (quoted_spans_with_origin, other_source) — checked only for existence in the
     request or the room's pages; and the template's token "none given". The
     requirement column quotes the JD, so it is checked against the request and the
     pages, from three words up; a canned room's pages are their title, URL and text
@@ -1698,6 +1707,14 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
     """
     haystack = normalise_quote(prompt + "\n" + "\n".join(corpus_texts))
     own = normalise_quote("\n".join(candidate_text)) if candidate_text is not None else None
+
+    def lends_origin(span: str, origin: str) -> bool:
+        """Whether the origin written after a list's last quotation is shared with the list: it
+        names another source, and that quotation is not the candidate's own words, for a label
+        beside the candidate's words names no other source, whatever it says ("(S1)",
+        "(verbatim)"), and the list before it stays held to what the candidate gave."""
+        return own is not None and other_source(origin) and not all(contains_words(f, own) for f in fragments(span))
+
     dossier = dossier_items(prompt)
     checks, info, unchecked = [], [], []
     counted = {"fit_snapshot": [0, 0], "banks": [0, 0], "requirements": [0, 0]}   # spans, failures
@@ -1737,7 +1754,7 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 f"a dossier row), with nothing else: {cell.strip()[:100]!r}", "format"))
         candidate_column = section in ("fit_snapshot", "banks")
         named = fields_named(cell) if section == "banks" else set()
-        for span, origin in quoted_spans_with_origin(cell):
+        for span, origin in quoted_spans_with_origin(cell, shares=lends_origin if section == "banks" else None):
             whole = normalise_quote(span).strip(EDGE)
             if not whole or (not candidate_column and len(whole.split()) < 3):
                 continue
@@ -1752,7 +1769,7 @@ def check_quotes(response: str, prompt: str, corpus_texts: list[str] | tuple = (
                 bad, where = [], ""
             elif section == "banks" and other_source(origin) and not (
                     own is not None and all(contains_words(f, own) for f in frags)):
-                # A raising source's line, quoted with its own origin, which names
+                # A raising source's line, quoted with its own origin or its list's, which names
                 # no material of the candidate's: checked for existence, as the
                 # requirement column is, at any length. A quotation found in what
                 # the candidate gave stays the candidate's, whatever it claims.

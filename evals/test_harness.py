@@ -4299,6 +4299,18 @@ def test_audit_quotes() -> None:
     check("must fail: a company line joined to the next by more than a separator keeps no origin",
           banks('[grounded] "five hubs over 2027" because "we\'d like you to present a short POV" '
                 '(recruiter\'s email)'), ["FAIL"])
+    for cell in ('[grounded] "consolidate eight branches"; "into five hubs"; "over 2027" — strategy brief',
+                 '[grounded] "consolidate eight branches"; and "five hubs over 2027" (strategy brief)'):
+        check(f"must pass: a longer list, or another separator, shares the origin too: {cell[:70]!r}",
+              banks(cell), ["PASS"])
+    for cell in ('[grounded] "we\'d like you to present a short POV"; "I ran the weekly content-drop calendar" (S1)',
+                 '[grounded] "consolidate eight branches"; "I ran the weekly content-drop calendar" (both verbatim)',
+                 '[grounded] "consolidate eight branches" / "Never led a team" (you said)'):
+        check(f"must fail: a label beside the candidate's own words lends nothing to the list: {cell[:70]!r}",
+              banks(cell), ["FAIL"])
+    check("must fail: a quotation with an origin of its own keeps it inside a list",
+          banks('[grounded] your message: "consolidate eight branches"; "five hubs over 2027" (strategy brief)'),
+          ["FAIL"])
     check("must fail: a label before a list names its first quotation only, as before",
           banks('[grounded] strategy brief: "consolidate eight branches"; "we\'d like you to present a short POV on '
                 'operator partnerships"'),
@@ -5261,6 +5273,11 @@ def test_traces() -> None:
            '| "I\'m trying to move into data engineering from analytics." | `[grounded]` your message | pending your approval |\n')
     check("must pass: fixture 2's candidate_text holds the candidate's sentence in the message (quality check, resume-tailor 2)",
           fails(dev, fixture("resume-tailor", 2)), [])
+    check("must fail: a Traces to cell's list shares no label, so a JD line before the candidate's is still "
+          "held to the candidate's words",
+          fails('| 3 | HubSpot daily for 4 years | Owned demand generation in HubSpot. | reframe '
+                '| "Own demand generation"; "HubSpot daily for 4 years" — the JD | pending your approval |\n', rowan, head5),
+          [("FAIL", "judgement")])
     check("must pass: a quotation cut at an ellipsis, each piece verbatim",
           fails(two.replace('"I pull my own numbers in HubSpot reporting"', '"I pull my own numbers … reporting"'), rowan, head5), [])
     pointer = ('| 4 | built our lifecycle email programme from scratch, 12 automated flows | No change. | none '
