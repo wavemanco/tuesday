@@ -539,14 +539,14 @@ hold. CI reads Tuesday in every per-skill group but a few, and
 `HUB_EXEMPT` in `ci/check_skills.py` states each exemption's reason once; its
 output prints them. Two groups hold what is particular to it.
 
-`--only frontdoor` holds Tuesday to its sources and to its measurement.
+`--only tuesday` holds Tuesday to its sources and to its measurement.
 `skills/tuesday/` holds SKILL.md, LICENSE, README.md and `references/`, and
 nothing else; `references/` is one flat folder, exactly what `ci/sync.py`
 generates. Every module has a playbook there and every file a playbook names is
 there; Tuesday links no file that is not there, and the guidance group, which
 reads it like every skill, holds the other direction. The modules Tuesday
 routes to, read from its slash-command list and its routing table, are
-`skills/` without it, and its description names each one. `MEASURED_FRONTDOOR`
+`skills/` without it, and its description names each one. `MEASURED_TUESDAY`
 records what was last measured (the fix round, on b8702ac) as three hashes: Tuesday's SKILL.md, Tuesday with
 its references, and every file the Claude Code builds ship, Tuesday's and each
 module's, frontmatter, README and LICENSE included. So a change to any shipped
@@ -566,7 +566,7 @@ That line ships nowhere else: no file under `skills/`, and no `.skill` file, sin
 a claude.ai upload refuses the key. Tuesday's build, in both trees and in
 `dist/tuesday.skill`, holds only the files it ships. The plugin's `skills/` is
 `dist/claude-code/` file for file; the plugin manifest names the plugin
-`tuesday` with a description and the version `MEASURED_FRONTDOOR` records; and
+`tuesday` with a description and the version `MEASURED_TUESDAY` records; and
 the marketplace file lists it, under the manifest's name, from the plugin's
 folder. That every built file is current is the package group's. What it does
 not read: whether Claude Code loads the plugin; `claude plugin validate` and a

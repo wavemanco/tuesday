@@ -265,7 +265,7 @@ def tree_digest(files: dict[str, bytes]) -> str:
 def shipped(hub_dir: Path = HUB_DIR) -> tuple[str, dict[str, dict]]:
     """The hub as it ships: its SKILL.md text, and every file under its references/, by its path
     there, in `generate`'s shape. A file in a folder below references/ is read too, so the digest
-    covers it; the frontdoor group fails it."""
+    covers it; the tuesday group fails it."""
     refs = hub_dir / "references"
     files = {p.relative_to(refs).as_posix(): {"text": read_file(p)}
              for p in sorted(refs.rglob("*")) if p.is_file()} if refs.is_dir() else {}
@@ -274,9 +274,11 @@ def shipped(hub_dir: Path = HUB_DIR) -> tuple[str, dict[str, dict]]:
 
 def digests(hub_dir: Path = HUB_DIR) -> dict[str, str]:
     """The two hashes a front-door measurement records, of the hub as it ships: the hub's
-    SKILL.md alone, and the hub with every file in its references/."""
+    SKILL.md alone, and the hub with every file in its references/. A results file saved before
+    the code-name rename (docs/roadmap-now-l1-plan.md, E25) holds the second under its old key,
+    `frontdoor_sha256`."""
     hub_text, files = shipped(hub_dir)
-    return {"hub_sha256": digest({}, hub_text), "frontdoor_sha256": digest(files, hub_text)}
+    return {"hub_sha256": digest({}, hub_text), "tuesday_sha256": digest(files, hub_text)}
 
 
 def plan(repo: Path = REPO) -> tuple[dict[Path, str], list[Path], dict[Path, str]]:

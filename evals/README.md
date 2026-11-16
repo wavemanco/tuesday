@@ -154,7 +154,7 @@ kept in `evals/arms/frontdoor/`; that hub is now `skills/tuesday/SKILL.md`, byte
 for byte, and the folder is gone. The measurement compares it with the three
 skills as they ship, so the harness has two arms. `--arm skills`, the default,
 installs the three modules as before, and never Tuesday. `--arm
-frontdoor` installs `skills/tuesday/` as it ships, its SKILL.md, `references/`
+tuesday` installs `skills/tuesday/` as it ships, its SKILL.md, `references/`
 and LICENSE without its README (`HUB_SHIPS` in `ci/sync.py`), and the three modules, each
 module copy with `disable-model-invocation: true` added to its frontmatter and
 nothing else changed (`hide` in `ci/sync.py`, the transform the Claude Code
@@ -243,8 +243,8 @@ One run of the measurement, per model (`claude-haiku-5-5`, `claude-sonnet-5-5`,
 ```bash
 M=claude-sonnet-5-5
 python evals/run_routing.py --arm skills --model $M --runs 5 --json-out e0-$M.json
-python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e1-$M.json
-python evals/run_routing.py --arm frontdoor --model $M --runs 5 --json-out e2-$M.json \
+python evals/run_routing.py --arm tuesday --model $M --runs 5 --json-out e1-$M.json
+python evals/run_routing.py --arm tuesday --model $M --runs 5 --json-out e2-$M.json \
   --cases evals/suite-explicit.json
 ```
 
@@ -354,14 +354,16 @@ end there. A run that ended before its result event, a skills-arm run that
 fired or a timed-out one, has no `refused` list and no `output_tokens`
 (`null`), never an empty or zero one.
 
-Every results file records its layout. The round 3 measurement, per model:
+Every results file records its layout. The round 3 measurement, per model (its files
+record the arm as `frontdoor` and its second digest as `frontdoor_sha256`, the names
+before the code-name rename):
 
 ```bash
 M=claude-sonnet-5-5
 python evals/run_routing.py --arm skills --layout personal --model $M --runs 5 --json-out e0-$M.json
 for L in plugin personal; do
-  python evals/run_routing.py --arm frontdoor --layout $L --model $M --runs 5 --json-out e1-$L-$M.json
-  python evals/run_routing.py --arm frontdoor --layout $L --model $M --runs 5 --json-out e2-$L-$M.json \
+  python evals/run_routing.py --arm tuesday --layout $L --model $M --runs 5 --json-out e1-$L-$M.json
+  python evals/run_routing.py --arm tuesday --layout $L --model $M --runs 5 --json-out e2-$L-$M.json \
     --cases evals/suite-explicit.json
 done
 ```
@@ -478,13 +480,13 @@ installed skill is harness-invalid: it is not this skill's output.
 
 ### Through Tuesday
 
-`--via frontdoor` runs each module's fixtures with Tuesday installed as
+`--via tuesday` runs each module's fixtures with Tuesday installed as
 the Claude Code plugin ships it, instead of the module alone. It is for a
 non-inferiority check: a module run through Tuesday should do as well on
 its own fixtures as the module alone, since its text is the same.
 
 ```bash
-python evals/run_fixtures.py --via frontdoor --out /tmp/fd --model claude-sonnet-5-5
+python evals/run_fixtures.py --via tuesday --out /tmp/fd --model claude-sonnet-5-5
 python evals/run_fixtures.py --layout plugin --out /tmp/alone --model claude-sonnet-5-5
 ```
 
@@ -538,10 +540,11 @@ permission, counted by tool, and `save_refused`, whether a save (Write, Edit,
 MultiEdit or NotebookEdit) was among them (`run_fixtures.refusals`). A run that ended before its result event
 has both `null`, never an empty count.
 
-`--via frontdoor` has run: the quality check through Tuesday ran it on
-three models, 115 runs each, 345 in all, beside 345 runs of the modules alone, and
-set none aside, so `--plugin-dir` works beside the rooms' `--setting-sources
-project`. The bar each step was held to was fixed by the owner before it ran.
+`--via tuesday` has run, as `--via frontdoor`, its name then: the quality check
+through Tuesday ran it on three models, 115 runs each, 345 in all, beside 345
+runs of the modules alone, and set none aside, so `--plugin-dir` works beside
+the rooms' `--setting-sources project`. The bar each step was held to was fixed
+by the owner before it ran.
 
 ### Dates relative to the run
 
@@ -1054,8 +1057,10 @@ Runs short of graders, runs with no checks file and files that could not be read
 are printed per set; a run whose meta.json cannot be read is left out of
 everything and named. Each set's `via`, `layout` and `room_writable` are printed
 too, `unrecorded` where a set was saved before the field. A run saved before runs
-recorded a layout is read as the layout its `via` always meant then, and the count
-of such runs is printed beside it. Two sets that differ in layout or save policy are
+recorded a layout is read as the layout its `via` always meant then (its `arm` where it
+records no `via`; `tuesday`, or `frontdoor` as runs saved before the code-name rename
+spell it, the plugin, and `skill` the project), and the count of such runs, by the
+field read, is printed beside it. Two sets that differ in layout or save policy are
 flagged NOT LIKE FOR LIKE. Until then nothing flagged the quality check through
 Tuesday, whose two arms differed in layout.
 

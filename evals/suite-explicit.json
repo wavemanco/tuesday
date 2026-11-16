@@ -1,6 +1,6 @@
 {
   "suite": "tuesday",
-  "purpose": "Explicit focus (sub-arm E2 of the front-door measurement): each prompt starts with a module's slash command and must load that module only, with no tuesday fire and no other playbook read, whatever the rest of the message reads like. The runner renames the command to the installed copy's per-run name; run with --arm frontdoor.",
+  "purpose": "Explicit focus (sub-arm E2 of the front-door measurement): each prompt starts with a module's slash command and must load that module only, with no tuesday fire and no other playbook read, whatever the rest of the message reads like. The runner renames the command to the installed copy's per-run name; run with --arm tuesday.",
   "routes": [
     "job-underwriter",
     "mock-interview",

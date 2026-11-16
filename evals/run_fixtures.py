@@ -107,10 +107,10 @@ Usage:
     python evals/run_fixtures.py --regrade-from /tmp/cr --out /tmp/cr-regrade --expectation 14
     python evals/run_fixtures.py --skill job-underwriter --cases probe.json --out /tmp/p
     python evals/run_fixtures.py --stems killed.txt --out /tmp/cr                # re-run named runs in place
-    python evals/run_fixtures.py --via frontdoor --out /tmp/fd   # each fixture through the front door
+    python evals/run_fixtures.py --via tuesday --out /tmp/fd     # each fixture through the front door
     python evals/run_fixtures.py --layout plugin --out /tmp/alone # each module alone, installed as the front door is
 
-`--via frontdoor` runs each module's fixtures with the front door installed as the
+`--via tuesday` runs each module's fixtures with the front door installed as the
 Claude Code plugin ships it; `--layout plugin` installs a module alone the same way, the
 control a comparison through Tuesday uses (evals/README.md, "Through Tuesday").
 """
@@ -134,7 +134,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import output_checks  # noqa: E402
-import run_routing  # noqa: E402  (the front door's plugin install and routing reader, for --via frontdoor)
+import run_routing  # noqa: E402  (the front door's plugin install and routing reader, for --via tuesday)
 from child_env import child_env  # noqa: E402
 from fixture_clauses import dated, load_cases  # noqa: E402
 
@@ -143,7 +143,7 @@ SKILLS = ["job-underwriter", "mock-interview", "resume-tailor"]
 SERVER = Path(__file__).resolve().parent / "research_server.py"
 MODES = ("denied", "canned")
 # How a fixture's module reaches the room: installed alone (`skill`), or through the front door.
-VIAS = ("skill", "frontdoor")
+VIAS = ("skill", "tuesday")
 # Where a run's skills sit (evals/README.md, "Through Tuesday"): the room's own `.claude/skills/`
 # (`project`: the module alone, as every ledger baseline before the arms shared an install), or a
 # plugin of the room's own beside it (`plugin`: the front door as it ships, or the module alone
@@ -300,13 +300,13 @@ def room_writable(flags: list[str], room: Path) -> bool:
     return all(rule in flags for rule in save_rules(room))
 
 
-def frontdoor_fire(lines, names: dict[str, str], skill: str, room: Path) -> str:
+def tuesday_fire(lines, names: dict[str, str], skill: str, room: Path) -> str:
     """`fired` when a run through the front door read `skill`'s playbook through the hub and
     reached no hidden module; otherwise the routing reader's label for what the run did
     instead (`run_routing.RunReader`, front-door arm: another module, `hidden-<module>`,
     `tuesday-unrouted`, `neither`, `void`, `error`). The same reader scores the routing arm,
     so a fire here is a route there."""
-    reader = run_routing.RunReader(names, "frontdoor", None, "plugin", room)
+    reader = run_routing.RunReader(names, "tuesday", None, "plugin", room)
     outcome = None
     for line in lines:
         event = line
@@ -841,8 +841,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     point the route. The fixture's relative dates are written for the run's date, `on` (today
     unless given), which the meta records as `run_date`.
     """
-    layout = layout or ("plugin" if via == "frontdoor" else "project")
-    if via == "frontdoor" and layout != "plugin":
+    layout = layout or ("plugin" if via == "tuesday" else "project")
+    if via == "tuesday" and layout != "plugin":
         raise ValueError("the front door is installed as the plugin it ships as: layout plugin")
     on = on or datetime.date.today()
     case = dated(case, on)
@@ -857,8 +857,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                                 else f"case-{case['id']}-{mode}-{run_id}")
         room.mkdir(parents=True, exist_ok=True)
         if layout == "plugin":
-            skill_dir, names = install_in_plugin(room, run_id, None if via == "frontdoor" else skill)
-            listed = run_routing.HUB if via == "frontdoor" else skill
+            skill_dir, names = install_in_plugin(room, run_id, None if via == "tuesday" else skill)
+            listed = run_routing.HUB if via == "tuesday" else skill
             name = run_routing.installed_command(names[listed], run_routing.plugin_prefix(names, "plugin"))
         else:
             name = install_one(room, skill, run_id)
@@ -888,8 +888,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
                 (out / "streams").mkdir(exist_ok=True)
                 (out / "streams" / f"{room.name}.partial.jsonl").write_text(stdout)
             partial = parse_stream(stdout.splitlines(), name)
-            if via == "frontdoor":
-                partial["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
+            if via == "tuesday":
+                partial["fire"] = tuesday_fire(stdout.splitlines(), names, skill, room)
             invocation.update(outcome="timeout" if isinstance(exc, CLITimeout) else "declined",
                               error=str(exc), fire=partial["fire"], init=partial["init"],
                               result=partial["result"], tool_calls=partial["tool_calls"],
@@ -908,8 +908,8 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
         streams.mkdir(exist_ok=True)
         stdout = parsed.pop("stdout", "")
         (streams / f"{room.name}.jsonl").write_text(stdout)
-        if via == "frontdoor":
-            parsed["fire"] = frontdoor_fire(stdout.splitlines(), names, skill, room)
+        if via == "tuesday":
+            parsed["fire"] = tuesday_fire(stdout.splitlines(), names, skill, room)
         calls = read_calls(paths["calls"]) if paths else []
         invocation.update(outcome="completed", fire=parsed["fire"],
                           skills_fired=parsed["skills_fired"], init=parsed["init"],
@@ -946,7 +946,7 @@ def execute(skill: str, case: dict, out: Path, run: int, timeout: int,
     init = graded.get("init") or {}
     read, unread = output_checks.user_link_reads(graded["research_log"], case.get("research"))
     links = sum(len(fetches) for fetches in [*read.values(), *unread.values()])
-    where = " via the front door" if via == "frontdoor" else " alone, in a plugin" if layout == "plugin" else ""
+    where = " via the front door" if via == "tuesday" else " alone, in a plugin" if layout == "plugin" else ""
     refused = ", ".join(f"{tool} {n}" for tool, n in (meta["refused"] or {}).items())
     print(f"  ran {skill} eval {case['id']} [{mode}]{where} "
           f"(run {run}): {len(text)} chars"
@@ -1442,7 +1442,7 @@ def main() -> int:
     ap.add_argument("--cases", default=None,
                     help="load cases from this JSON instead of skills/<skill>/evals/evals.json")
     ap.add_argument("--via", choices=VIAS, default="skill",
-                    help="skill: each module installed alone (the default); frontdoor: the front door "
+                    help="skill: each module installed alone (the default); tuesday: the front door "
                          "installed as the plugin ships it, a fire counting only through the hub")
     ap.add_argument("--layout", choices=LAYOUTS, default=None,
                     help="where the skills sit: project, the room's .claude/skills/ (the default with --via "
@@ -1454,8 +1454,8 @@ def main() -> int:
                          "number, in --out, where none of their files may exist yet; with --skip-execute, grade "
                          "only those that hold a response and no grade file. No retry pass follows")
     args = ap.parse_args()
-    if args.via == "frontdoor" and args.layout == "project":
-        ap.error("--via frontdoor installs the front door as the plugin it ships as: --layout plugin")
+    if args.via == "tuesday" and args.layout == "project":
+        ap.error("--via tuesday installs the front door as the plugin it ships as: --layout plugin")
 
     if args.stems and args.regrade_from:
         ap.error("--stems re-runs or grades named runs in place, in --out; it does not combine with --regrade-from")

@@ -142,11 +142,23 @@ def fixture_cases() -> dict[tuple[str, int], dict]:
 
 def layout_of(meta: dict) -> str | None:
     """Where a run's skills sat: its recorded `layout`, or, for a run saved before the field, the
-    one its `via` always meant then (the plugin through Tuesday, the room's own .claude/skills/
-    for a module alone, as run_fixtures.execute still defaults); None with neither recorded."""
+    one its `via` (its `arm` where it records no `via`) always meant then (the plugin through
+    Tuesday, `tuesday`, or `frontdoor` as runs saved before the code-name rename spell it; the
+    room's own .claude/skills/ for a module alone, `skill`, as run_fixtures.execute still
+    defaults); None with neither recorded. The meta's own fields are read, never rewritten.
+    It reads a fixture run's meta.json, where no saved run records an `arm`; it is not for a
+    routing results file, whose every arm sat in the project layout before round 3."""
     if meta.get("layout"):
         return meta["layout"]
-    return {"frontdoor": "plugin", "skill": "project"}.get(meta.get("via"))
+    return {"tuesday": "plugin", "frontdoor": "plugin", "skill": "project"}.get(meta.get("via") or meta.get("arm"))
+
+
+def layout_read_from(meta: dict) -> str | None:
+    """The field `layout_of` read a run's layout from, where the run recorded none: `via`, or
+    `arm` where it records no `via`; None when the layout was recorded, or not read."""
+    if meta.get("layout") or not layout_of(meta):
+        return None
+    return "via" if meta.get("via") else "arm"
 
 
 def research_calls(case: dict | None, meta: dict) -> int | None:
@@ -249,7 +261,7 @@ def load(folder: Path, checks_from: Path | None = None, cases: dict | None = Non
         runs.append({
             "stem": stem, "skill": skill, "id": meta.get("id"), "mode": meta.get("mode"), "meta_read": True,
             "model": meta.get("model"), "via": meta.get("via"), "layout": layout_of(meta),
-            "layout_read_from_via": not meta.get("layout") and bool(layout_of(meta)),
+            "layout_read_from": layout_read_from(meta),
             "room_writable": meta.get("room_writable"),
             "valid": status == "ok", "reasons": reasons, "nudged": meta.get("triggered_unprompted") is False,
             "checks": findings,
@@ -688,9 +700,10 @@ def headline(arm: list[dict], ctl: list[dict], names: tuple[str, str], paths: tu
         graded = [g for r in rs if r["valid"] for g in r["graded_by"].values()]
         lines.append(f"    graded under prompt version {tallied(g['version'] for g in graded)}; "
                      f"by {tallied(g['model'] for g in graded)}")
-        from_via = sum(r["layout_read_from_via"] for r in rs)
+        read = [r["layout_read_from"] for r in rs]
+        read_from = ", ".join(f"{read.count(k)} read from {k}" for k in ("via", "arm") if k in read)
         lines.append(f"    installed via {tallied(r['via'] for r in rs)}; layout {tallied(r['layout'] for r in rs)}"
-                     + (f" ({from_via} read from via, saved before runs recorded a layout)" if from_via else "") + "; "
+                     + (f" ({read_from}, saved before runs recorded a layout)" if read_from else "") + "; "
                      f"room_writable {tallied(json_word(r['room_writable']) for r in rs)}")
         files = [f for r in rs for f in r["unreadable"]] + [f for r in lost for f in r["unreadable"]]
         if files:
