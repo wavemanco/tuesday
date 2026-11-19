@@ -6,22 +6,19 @@ Part of [Tuesday](../../README.md), an applicant-side evidence system for job se
 
 ## Install
 
-Skills require code execution to be enabled. Steps below are current as of mid-2026; if a menu has moved, see https://support.claude.com (search "skills").
+This module also comes inside Tuesday, which runs it when a request needs it. Install one or the other, not both: a module Claude can choose competes with Tuesday for every request. Tuesday's [Install section](../../README.md#install) covers every surface; to install this module on its own:
 
-**Web — claude.ai**
-1. Free/Pro/Max: Settings → Capabilities → enable "Code execution and file creation". Team/Enterprise: an owner enables Code execution and Skills under Organization settings → Skills.
-2. Customize → Skills → upload the zip (the zip root must be the `job-underwriter/` folder itself, not loose files), then toggle it on.
-3. Uploaded skills are private to your account unless an org owner provisions them organization-wide.
+**claude.ai, on the web or in the desktop app**
+1. Turn on code execution: Settings → Capabilities → *Code execution and file creation*. On a Team or Enterprise plan, an owner turns on code execution and skills under Organization settings.
+2. Download [`job-underwriter.skill`](../../dist/job-underwriter.skill), upload it under Customize → Skills and switch it on. The desktop app uses the skills on your claude.ai account, so one upload covers both.
 
-**Desktop app**
-Skills are account-level — anything enabled on claude.ai is already available; manage from Customize in the sidebar. Shortcut: if someone shares the packaged `.skill` file in a chat, the file card shows a "Save skill" button. Cowork sessions sync the skills enabled on your account at session start.
+**Claude Code, in one project or in cloud sessions**
+Unzip `dist/job-underwriter.skill` into the project's `.claude/skills/`. It runs as `/job-underwriter`, and Claude also picks it when a request matches its description.
 
-**Claude Code (CLI)**
-Filesystem only — copy the `job-underwriter/` folder to:
-- `~/.claude/skills/job-underwriter/` — personal, available in every project, or
-- `.claude/skills/job-underwriter/` — project-scoped, committed to the repo so teammates get it on clone.
+**Claude Code, for yourself across your projects**
+Install Tuesday's plugin or its personal install instead: both carry this module, hidden so it does not compete, and `/tuesday:job-underwriter` (the plugin) or `/job-underwriter` (the personal install) runs it directly.
 
-New sessions pick it up automatically; it is also invokable directly as `/job-underwriter`.
+Every test ran in Claude Code; this module on claude.ai is untested. A skill uploaded to claude.ai also reaches Claude Code, so keep one copy: where you use the plugin or a personal install, do not upload this module to claude.ai as well. If a menu has moved, see https://support.claude.com (search "skills").
 
 ## First prompt
 
@@ -46,7 +43,9 @@ The bare minimum also works — a JD and a fit question — you'll get a first-p
 
 The skill asks at most three questions per turn, always alongside an updated analysis, and proceeds if you ignore them. It never re-asks, and "skip" is always an accepted answer.
 
-**Privacy by design:** never upload government IDs — the skill refuses them. Candidate-side only; it declines employer-side screening use. Research on named people is public professional footprint only.
+**Privacy by design:** never upload government IDs — the skill won't repeat or use one. A professional license or registration counts as evidence, described by its kind, issuer, class, status and expiry, and its number never goes into a web search or page fetch. Candidate-side only; it declines employer-side screening use. Research on named people is public professional footprint only.
+
+It's an AI assistant and can make mistakes. It points out warning signs in what you share, but it can't confirm who an employer, recruiter or sender really is. Please check before you act; the decision is always yours.
 
 ## The dossier
 
@@ -74,7 +73,7 @@ job-underwriter/
 │   ├── dossier-schema.md               # mirror of conventions/ — the shared dossier's schema
 │   └── citations.md                    # mirror of conventions/ — sources behind the outside claims, verbatim
 └── evals/
-    └── evals.json                      # 6 test fixtures with verifiable expectations
+    └── evals.json                      # 11 test fixtures with verifiable expectations
 ```
 
 `evals/` holds development fixtures and is excluded from the installable `.skill` package. `README.md` rides along inside the package but is inert at runtime — Claude only loads files that `SKILL.md` points to.
