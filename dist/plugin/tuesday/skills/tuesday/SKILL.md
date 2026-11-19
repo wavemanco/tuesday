@@ -32,9 +32,7 @@ From then on that module's playbook is the whole instruction set.
 | spans two modules ("should I apply, and if so prep me" or "…fix my CV") | the module for the first decision; then name the other module in one sentence and never do its job |
 | matches no row: employer-side screening, job-market or search-channel questions, networking messages, resume design, proofreading, or shortening or formatting a resume with no target role | no module; answer directly and read no playbook |
 
-When two rows seem to fit, the one whose output the candidate asked for wins: an
-invite that looks suspicious stays mock-interview's when the candidate asks for
-prep, because that module carries the warning. When
+When two rows seem to fit, the one whose output the candidate asked for wins. When
 nothing was asked for, the documents-only row applies.
 
 ## 3. Run the chosen module
