@@ -43,8 +43,8 @@ Inventory every input against the contract below. Extract before you ask: stage 
 
 Special cases:
 
-- **`tuesday-dossier.md` in context or uploads.** Read it with `references/dossier-schema.md` §3 and §7 (versioning, `pack_feedback`) and consume what's relevant. Its `pack_feedback` holds leads to verify, never verified evidence.
-- **Government ID.** A passport, national ID, tax ID, social-security number or driver's license card, pasted or uploaded: don't repeat or use it or its number; say it isn't needed, and proceed. A license or registration, driving included, is evidence as stated: kind, issuer, class, status and expiry; its number goes in no research call; checking it is the candidate's. A background check counts by stated status alone. Check content, not filename.
+- **`tuesday-dossier.md` in context or uploads.** Read it with `references/dossier-schema.md` §3 and §7 (versioning, `pack_feedback`) and consume what's relevant. A `pack_feedback` section (written by mock-interview) is discovery input: its rehearsal gaps and new evidence leads become questions to verify, never verified evidence. A dossier with a higher major version than 1.x: say so and proceed standalone. No dossier at all: run standalone at full value — the dossier is an enhancer, never a gate.
+- **Government ID.** If an upload is or contains a passport, license, or ID number, don't use it, say it isn't needed for evaluating a role, and proceed. Check content, not filename.
 - **Prior context.** Anything recalled from earlier conversation or agent memory rather than confirmed by the user in this engagement is a `memory_lead`: the basis for a question, never evidence.
 
 ### Step 1 — First-pass underwriting
