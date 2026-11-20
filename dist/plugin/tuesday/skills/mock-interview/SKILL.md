@@ -1,6 +1,6 @@
 ---
 name: mock-interview
-description: Generates a personalized mock-interview prep pack — persona-categorized question banks with grounded answer guidance and rationale, a fit-gap map, company-values alignment, reverse questions, and optional live drill sessions where Claude plays the interviewer. Use this whenever someone is preparing for a job interview, even if they don't say "mock interview" — triggers include "prep me for my interview", "interview questions for this role", "help me practice for my interview at X", "how should I answer questions about my background", an uploaded job description and/or CV in an interview context, or any mention of an upcoming recruiter screen, hiring-manager round, panel, or final round. Also use when tailoring prep to a specific interviewer or company. Candidate-side preparation only — not for employers screening candidates, and not for deciding whether to apply or whether a role is worth pursuing (that is evaluation, not rehearsal).
+description: Generates a personalized mock-interview prep pack — persona-categorized question banks with grounded answer guidance and rationale, a fit-gap map, company-values alignment, reverse questions, and optional live drill sessions where Claude plays the interviewer. Use this whenever someone is preparing for a job interview, even if they don't say "mock interview" — triggers include "prep me for my interview", "interview questions for this role", "help me practice for my interview at X", "how should I answer questions about my background", an uploaded job description and/or CV in an interview context, or any mention of an upcoming recruiter screen, hiring-manager round, panel, or final round. Also use when tailoring prep to a named interviewer or company, or for a suspicious invite, as this skill carries the warning. Candidate-side preparation only — not for employers screening candidates, and not for deciding whether to apply or whether a role is worth pursuing (that is evaluation, not rehearsal).
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ Everything in the pack is either traceable to a provided document, traceable to 
 
 ## Before sending
 
-Copy this list and check the response against it. Each item points to its rule and restates none; rules 1, 5 and 7 are in `references/output-discipline.md`.
+Copy this list and check the response against it. Each item points to its rule and restates none; rules 1, 5 and 7 are in `references/output-discipline.md`. A Gate-tier turn: no pack, closing run or watch-out.
 
 ```text
 1. A complete pack in the same message as any question (Step 1)
@@ -32,15 +32,16 @@ Copy this list and check the response against it. Each item points to its rule a
 
 Inventory every provided input against the contract below. Extract before you ask: seniority and team from an interviewer profile, company and level from a JD, round type from phrases like "final round" or "chat with the hiring manager".
 
-Three special cases:
+Four special cases:
 
 - **`tuesday-dossier.md` in context or uploads.** Read `references/dossier-handoff.md` (its fields are `references/dossier-schema.md`'s) and consume it: `handoff_to_mock_interview` carries verified evidence, allowed strategies per weak area, the objection worth the deepest rehearsal, risks and employer questions for the reverse bank, and absolute `prohibited_claims`; `role_profile` satisfies the JD tier. A dossier sharpens the pack — it never gates it, and a pack built without one is still a complete pack.
-- **Government ID.** If an upload is or contains a passport, license, or ID number, don't use it, tell the user it isn't needed for interview prep, and proceed without it. Check content, not filename.
+- **Government ID.** A passport, national ID, tax ID, social-security number or driver's license card, pasted or uploaded: don't repeat or use it or its number; say it isn't needed, and proceed. A license or registration, driving included, is evidence as stated: kind, issuer, class, status and expiry go in the gap-and-bridge language; its number goes in no research call; checking it is the candidate's. A background check counts by stated status alone. Check content, not filename.
 - **Personality / working-style assessments.** Accept if offered; never solicit one. They feed only the delivery-coaching section (Step 3) under the guardrails below.
+- **Warning signs in an invite.** A demand to pay a fee or for equipment, or to deposit a cheque; bank, tax or government-ID details before an offer; or a hiring process run wholly by chat, named employer or not. Chat scheduling, a generic example or a negated demand is no sign. One paragraph opens the message: it quotes the invite's own words exactly, from the user's message and never from an `ARGUMENTS:` summary of it, warns once, names job-underwriter once as a check the candidate can ask for, and sends any check only through contact details the candidate finds; nothing later in the message or the pack repeats the warning. A complete pack follows, or, if the company or role is missing, one question asking for them (`references/output-template.md`).
 
 ### Step 1 — Elicit only what shapes the skeleton, and never before delivering
 
-**A clarifying message never travels alone.** Whatever is missing, build a complete pack from what is available and deliver it in the same message as the questions: state in one line the assumption it was built on, and frame each question as what would restructure it. Use the degradation ladder below rather than waiting. Delivering does not retire the questions either — whatever is missing from (a) to (d) is still asked, in that same message, within the bounds the next two paragraphs set.
+**Gate tier aside, a clarifying message never travels alone.** Whatever is missing, build a complete pack from what is available and deliver it in the same message as the questions: state in one line the assumption it was built on, and frame each question as what would restructure it. Use the degradation ladder below rather than waiting. Delivering does not retire the questions either — whatever is missing from (a) to (d) is still asked, in that same message, within the bounds the next two paragraphs set.
 
 Ask at most three questions, covering only what's missing from: (a) **round type and relationship to the interviewer(s)** — manager, peer, skip-level, cross-functional, recruiter — folding in any recruiter/HR guidance in the same breath: stated focus areas, pre-declared deliverables (a POV, a presentation, a take-home), process details; (b) **JD and/or CV** if absent, with an explicit offer to proceed without — a dossier's `role_profile` and `verified_candidate_evidence` satisfy these tiers, so with one in hand neither is asked for and both drop to upgrade-menu lines; (c) **research depth consent** (Step 2); (d) **the gates the material says nothing about** — one question naming each such gate row of the fit snapshot, however many there are. It is the one question `references/evidence-conventions.md` §3 allows a gate, asked here because the snapshot's gate rows ask nothing (the routing rule in `references/output-template.md`).
 
@@ -66,7 +67,7 @@ Read `references/personas.md` and `references/question-rubric.md` before writing
 4. **Persona weights** — relationship priors adjusted by interviewer signals and by the loop, as `references/personas.md` weights them (its `(cite C…)` sources in `references/citations.md`), with the reasoning shown.
 5. **Question banks** — per persona, under the coverage rules in the rubric; what a question may presuppose is defined once there too. The single most likely objection to this candidate gets the deepest rehearsal; name it as the highest-ROI prep in the pack. When a dossier named that objection, use theirs rather than inferring one, worded as the rubric's premise rule allows, and hold every guidance cell against its `prohibited_claims` and `allowed_interview_strategy` constraints.
 6. **Values / principles cheat sheet** — only when section 10's condition in `references/output-template.md` holds ("detected" is defined in `references/research-checklist.md`); map each published value to a story one of the candidate's quoted sentences carries, or give a selection scaffold, with the honest branch the rubric requires, where none does.
-7. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in.
+7. **Reverse questions** — with a "why it lands" for each; at least one tied to the interviewer's own path when a profile exists. A dossier's unresolved risks and employer questions arrive interview-ready — carry them in. With an invite warning (Step 0), no reverse question checks the invite or puts its requests to the interviewer, and no "why it lands" says an answer does (`references/output-template.md`).
 8. **Delivery coaching** — only when an assessment was provided; see guardrails.
 
 ### Step 4 — Deliver
@@ -121,7 +122,7 @@ it never goes — the pack file, a drill's in-character turns — is
 
 | Input | Tier | If missing | When to obtain |
 |---|---|---|---|
-| Company + role title | Gate | Can't run — the only hard requirement | At invocation |
+| Company + role title | Gate | Can't run — the only hard requirement; the user's own words can supply it | At invocation |
 | Full JD text | Core | Research a representative JD for the title; label JD-derived questions `[inferred]` | Ask once in Step 1; proceed if not supplied |
 | Candidate CV / background | Core | Fit snapshot becomes a self-assessment worksheet; guidance becomes story-*selection* scaffolds ("pick a time you held a position under pressure…") instead of story-mapped answers — as it does, CV or not, for any question none of the candidate's sentences carries | Ask once in Step 1; proceed if declined |
 | Round type + relationship to interviewer | Structural | Full-loop pack with flat persona weights — noticeably weaker; say so | Always worth the Step 1 question: cheap, un-researchable, shapes the skeleton |
@@ -130,7 +131,7 @@ it never goes — the pack file, a drill's in-character turns — is
 | Working-style assessment | Enhancer | Drop the delivery-coaching section | Never solicit; accept if offered |
 | Recruiter / HR guidance — focus areas, pre-declared deliverables, process details | Enhancer, high-leverage | Coverage assumed from round-type priors; no graded-deliverable sections | Fold into the round-and-relationship question when a Step 1 message is being sent anyway; otherwise upgrade menu — usually one email to the recruiter |
 | Prep time available | Structural-lite | Default to the full pack | Fold into the Step 1 message if natural |
-| `tuesday-dossier.md` from job-underwriter | Enhancer, high-leverage | Build from raw inputs as always — the standalone invariant holds. Without it, the highest-ROI objection is inferred rather than evidence-derived, weak areas carry no strategy constraint, and no `prohibited_claims` guardrail exists | Read if present; never request it as a precondition. One upgrade-menu line on what it would add |
+| `tuesday-dossier.md` from job-underwriter | Enhancer, high-leverage | Build from raw inputs as always — the standalone invariant holds. Without it, the highest-ROI objection is inferred rather than evidence-derived, weak areas carry no strategy constraint, and no `prohibited_claims` guardrail exists | Read if present; never request it as a precondition. One upgrade-menu line on what it would add; with an invite pointer, it names the file alone |
 
 Degrade by dropping or genericizing sections and labeling provenance — never by inventing specifics.
 
