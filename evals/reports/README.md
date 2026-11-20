@@ -8,6 +8,7 @@ it was; anything added later is marked as added.
 |---|---|---|
 | `round-1a/` | Round 1a, 17–19 November: candidate `bb96307` on Haiku and Sonnet | The bar was missed on both models; Opus and the explicit panel were skipped by the owner's decision |
 | `round-1a-2/` | Round 1a-2, 19–20 November: candidate `43fc223` on Haiku and Sonnet | The bar was missed on both models; the round stopped under the owner's plan, before the explicit panel and Opus |
+| `round-1a-3/` | Round 1a-3, 20 November: candidate `1877a75` on Haiku and Sonnet | The bar was missed on both models (Sonnet passed every core screen; one party-accusation run); the round stopped under the owner's plan, before the explicit panel and Opus |
 
 ## What a round folder holds
 
@@ -17,7 +18,7 @@ it was; anything added later is marked as added.
     - `adjudication-summary.md`, the rulings and the leads for the fix;
     - `exceptions.md`, the infrastructure exceptions;
     - `owner-decisions-17-november.md`.
-  - `round-1a-2/`:
+  - `round-1a-2/` and `round-1a-3/`:
     - `report.md`, the whole round;
     - `independent-recheck.md`, the second reader's report, as returned.
 - **`adjudications.jsonl`.** One line per grader event:
@@ -33,13 +34,15 @@ it was; anything added later is marked as added.
   - a reason and a confidence;
   - `owner_review`.
 
-  Round 1a-2's lines also carry `independent_recheck`.
+  From round 1a-2 on, the zero-gate lines also carry `independent_recheck`.
 - **`scores/`.** The tallies as each scorer printed them:
   - `<model>-score.txt` and `.json`, the core screens, gates and health checks;
   - `item-<model>.txt`, the carried item;
   - `compare-<model>-<install>-part-<n>.txt`, the regression comparison against the baseline;
   - `quotecheck.jsonl`, the script's quotation checks;
-  - for round 1a, `core-whys.txt`.
+  - for round 1a, `core-whys.txt`;
+  - for round 1a-3, `located-account-email.json`, where the account email sat in each run that holds it, found from
+    the sealed stream with the value itself never written.
 - **`scripts/` and `recheck/`.** The scoring and adjudication scripts, and the independent reader's scripts. They read
   the measurement folder (`/var/tmp/tuesday-measure/<round>/` on the machine that ran the round). That folder is not
   in the repository, so the scripts document how each number was reached rather than run from a fresh clone.
@@ -50,6 +53,6 @@ it was; anything added later is marked as added.
   sealed copy of each step. They are large.
 - **Section numbers in the reports** (for example "section 13" for adjudication, "section 14" for recovery) refer to
   the round's measurement manifest. Round 1a's manifest is in `1a-version-c-whole-verdict.tar.gz` on the data branch
-  (`claude/skill-job-underwriter-95xjz8-data`). Round 1a-2's manifest is not backed up there yet.
+  (`claude/skill-job-underwriter-95xjz8-data`). The manifests of rounds 1a-2 and 1a-3 are not backed up there yet.
 - **Some run output keeps an old name.** A few compare files print the install name that the baseline recorded
   before the code-name rename. The files are kept as the tool printed them.
