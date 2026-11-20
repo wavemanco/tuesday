@@ -64,6 +64,17 @@ Some changes from round 1a come partly from the expectations. The fix round rewr
 when Tuesday routed to mock-interview, it passed text from the invite, IBAN included, in the call's `args`. A real
 user's pasted invite would take the same path, so this is a real leak path, not a test artifact.
 
+> **Correction, added 20 November (after the round 1a-3 design).** The sentence above is wrong about who wrote the
+> arguments. The run's transcript shows the Skill call that carries them (event 72) before Tuesday's text loads (event
+> 75): the host model wrote them when it invoked Tuesday itself, with only Tuesday's name and description in view.
+> Tuesday never hands a module anything through a tool call. It reads `references/<module>.md`, and all 290 Skill calls
+> through Tuesday this round are Tuesday's own invocation. Haiku fills these arguments on every call, alone and through
+> Tuesday, and restates the request in them. Across rounds 1a and 1a-2, this put a planted value there once in about 80
+> calls on prompts that carry one. No skill text can reach it. In real use the arguments stay in the user's own session
+> and hold only what the user just pasted. Whether the leak scan should fail on the Skill call's arguments is a
+> scoring decision for the owner. Item 7 below and the matching item under "What I'd do next" rest on the same
+> misreading.
+
 **Grader backstop events.** All 28 are "not an event" (15 Haiku, 13 Sonnet), because each finding is about something
 other than the IBAN. For Sonnet I also searched every assistant surface of the ten MI 12 runs: chat, saved packs and
 the arguments of every tool call, the Skill tool's included. None of them holds "IE00" or any six-character piece of
