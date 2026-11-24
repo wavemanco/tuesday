@@ -9,7 +9,7 @@ it was; anything added later is marked as added.
 | `round-1a/` | Round 1a, 17–19 November: candidate `bb96307` on Haiku and Sonnet | The bar was missed on both models; Opus and the explicit panel were skipped by the owner's decision |
 | `round-1a-2/` | Round 1a-2, 19–20 November: candidate `43fc223` on Haiku and Sonnet | The bar was missed on both models; the round stopped under the owner's plan, before the explicit panel and Opus |
 | `round-1a-3/` | Round 1a-3, 20 November: candidate `1877a75` on Haiku and Sonnet | The bar was missed on both models (Sonnet passed every core screen; one party-accusation run); the round stopped under the owner's plan, before the explicit panel and Opus |
-| `round-1a-4/` | Round 1a-4, 24 November: candidate `ee98767` on Haiku and Sonnet | Sonnet met its bar; Haiku missed it (three core screens and one routine-onboarding run), so the round stopped under the owner's plan, before the explicit panel and Opus |
+| `round-1a-4/` | Round 1a-4, 24 November: candidate `ee98767` on Haiku and Sonnet | Sonnet met its bar; Haiku missed it (three core screens and one routine-onboarding run; one fraud-claim ruling is left to the owner), so the round stopped under the owner's plan, before the explicit panel and Opus |
 
 ## What a round folder holds
 
