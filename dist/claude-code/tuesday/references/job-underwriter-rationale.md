@@ -24,8 +24,6 @@ The gap recovery queue holds no questions because a `Question:` line inside the 
 
 Every derived statement carries its provenance label so the reader can always see how far the evidence goes.
 
-Three rules of `references/risk-and-decision.md` are stated twice: in full there, and in short in SKILL.md (the opportunity ledger and the guardrails): the requests made of the candidate, routine steps, and never accusing a party. With the skill installed alone, measured runs often wrote the register without opening that file, or saw only a preview of it, and lost what the candidate most needs: each demand filed as a severe red flag with its question sent to the employer, not back to the sender, and the hold; a routine onboarding step left out of the register; and the sender never called a scammer. The full first pass is delivered however plain the decision for the same reason: runs that judged a case obvious dropped the register. The short forms say only what those runs missed; everything else stays in the reference, which wins on conflict.
-
 ## Step 2 — Research
 
 Model memory is never a source for company facts, market values, or anything current, because those are exactly the facts that drift.
