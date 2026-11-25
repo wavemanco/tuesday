@@ -16,7 +16,7 @@ Depth follows weight: the top persona gets 4–5 questions, mid-weight personas 
 
 | Relationship / round | Dominant personas | Why |
 |---|---|---|
-| Recruiter screen | Conversational + light Skeptic | Logistics (pay, notice, location and the reason for leaving, each a logistics slot under `references/question-rubric.md`), motivation-consistency, and knockout checks in a friendly register; the risk is treating it as unscored |
+| Recruiter screen | Conversational + light Skeptic | Logistics, motivation-consistency, and knockout checks in a friendly register; the risk is treating it as unscored |
 | Hiring manager | Case/Strategist + Skeptic | They're buying capability and derisking gaps; expect live problems on their actual roadmap |
 | Peer | Peer Evaluator + Data-Driven Prober | They're pricing what the hire costs and contributes to *their* work; competence probes come collegially |
 | Skip-level / executive | Case/Strategist (strategy-heavy) + Pressure | Altitude and composure; time-boxed answers; company-strategy fluency separates candidates here |
