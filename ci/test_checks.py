@@ -1032,8 +1032,8 @@ def break_count_definite_frame(root: Path) -> str:
 
 
 def break_close_adverb_imperative(root: Path) -> str:
-    swap_once(root, "skills/job-underwriter/SKILL.md", "not something after them.",
-              "not something after them. Always close with the upgrade menu.",
+    swap_once(root, "skills/job-underwriter/SKILL.md", "because the snapshot at the top is its one summary (Step 1).",
+              "because the snapshot at the top is its one summary (Step 1). Always close with the upgrade menu.",
               "break_close_adverb_imperative")
     return "closing_order ends watch-out"
 
@@ -1138,8 +1138,8 @@ def keep_interview_questions_budget(root: Path) -> None:
 
 
 def keep_close_after_colon(root: Path) -> None:
-    swap_once(root, "skills/job-underwriter/SKILL.md", "not something after them.",
-              "not something after them. The response ends with its three calls to "
+    swap_once(root, "skills/job-underwriter/SKILL.md", "because the snapshot at the top is its one summary (Step 1).",
+              "because the snapshot at the top is its one summary (Step 1). The response ends with its three calls to "
               "action: the dossier offer, then the upgrade menu, then the questions.", "keep_close_after_colon")
 
 
