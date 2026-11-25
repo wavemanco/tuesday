@@ -46,6 +46,7 @@ Copy this list and check the response against it. Each item points to its rule a
 - **User approval before anything externally visible.** CV language, positioning and outreach text, work samples: proposed as `resume_edits_pending_approval`, finalized only on explicit approval — and the approval statement sits where it visibly covers the prose advice as well as any table. Also obtain approval before saving a claim as verified persistent evidence or using private links and documents beyond the requested analysis.
 - **Candidate-side only.** An employer wanting to screen applicants with this: decline the skill and offer to help design structured interviewing directly instead.
 - **People research** is public professional footprint only: roles, career pattern, published talks and writing. No contact-detail hunting, nothing personal, no personality inference.
+- **Never accuse a party.** No "scammer", "fraudster", motive, scare quotes, or hint that the employer, the sender or a named firm or person is or may be a scam, a fraud or fake.
 
 ## Workflow
 
@@ -55,31 +56,31 @@ Inventory every input against the contract below. Extract before you ask: stage 
 
 Special cases:
 
-- **`tuesday-dossier.md` in context or uploads.** Read it with `references/dossier-schema.md` §3 and §7 (versioning, `pack_feedback`) and consume what's relevant. A `pack_feedback` section (written by mock-interview) is discovery input: its rehearsal gaps and new evidence leads become questions to verify, never verified evidence. A dossier with a higher major version than 1.x: say so and proceed standalone. No dossier at all: run standalone at full value — the dossier is an enhancer, never a gate.
-- **Government ID.** If an upload is or contains a passport, license, or ID number, don't use it, say it isn't needed for evaluating a role, and proceed. Check content, not filename.
+- **`tuesday-dossier.md` in context or uploads.** Read it with `references/dossier-schema.md` §3 and §7 (versioning, `pack_feedback`) and consume what's relevant. Its `pack_feedback` holds leads to verify, never verified evidence.
+- **Government ID.** A passport, national ID, tax ID, social-security number or driver's license card, pasted or uploaded: don't repeat or use it or its number; say it isn't needed, and proceed. A license or registration, driving included, is evidence as stated: kind, issuer, class, status and expiry; its number goes in no research call; checking it is the candidate's: its map row says stated, not checked, and names their register entry or driving record for them to check. A background check counts by stated status alone. Check content, not filename.
 - **Prior context.** Anything recalled from earlier conversation or agent memory rather than confirmed by the user in this engagement is a `memory_lead`: the basis for a question, never evidence.
 
 ### Step 1 — First-pass underwriting
 
-Before building the map, read `references/evidence-conventions.md` (vocabulary; its cites in `references/citations.md`), `references/evidence-model.md` (row shape) and `references/gap-taxonomy-and-questions.md` (each row's fit and gap calls); before the register or the decision, `references/risk-and-decision.md`; for where a claim about the world sits, `references/output-discipline.md` rule 6; for the worked sections, `references/dossier-worked-report.md`. Build in this order:
+Before building the map, read `references/evidence-conventions.md` (vocabulary), `references/evidence-model.md` (row shape) and `references/gap-taxonomy-and-questions.md` (each row's fit and gap calls); before the register or the decision, `references/risk-and-decision.md`; for where a claim about the world sits, `references/output-discipline.md` rule 6; for the worked sections, `references/dossier-worked-report.md`. Build in this order:
 
 1. **Role profile** — title, organization, stated responsibilities; must-have, preferred, and implied requirements; hard gates (authorization, license, location, schedule, pay, travel, credentials, legal constraints — terms, never a length of experience, as `references/evidence-conventions.md` §3 defines a gate — including the candidate's stated non-negotiables, each of which the role's terms touch is carried by one `hard_gate` row in the map — the JD's own row for that term where it has one, otherwise a row of its own, per `references/evidence-model.md`); scope signals; first-90-days and first-year outcomes when stated or carefully inferred (labeled `[inferred]` with the derivation named); unknowns and contradictions. Never infer a requirement merely because a related buzzword appears.
    - Where research reached the role-family sweep, close role reality with a **market calibration** line: where this title, seniority, and scope sit against role-family norms, labeled `[generic]` — it is a pattern, not a claim about this employer.
    - Stated compensation gets calibrated against that band — the band is `[generic]`, the posting's own figure is `[grounded]` from the JD, and the comparison goes in the mismatch entry in the risk register.
-   - For unstated compensation, the band against the candidate's floor, filed the way RR2 in `references/dossier-worked-report.md` files an unstated term against a hard constraint; unstated compensation gets the band plus the observation that the posting withholds it, which is itself worth a question.
+   - Unstated compensation gets the band against the candidate's floor, filed the way RR2 in `references/dossier-worked-report.md` files an unstated term against a hard constraint, plus the observation that the posting withholds it, itself worth a question.
 2. **Candidate evidence inventory** — from each source, claims attributable to the candidate: the claim, source quote, source type, project, period, stated ownership, scope, outcome, verifiability.
 3. **Evidence map** — one row per material requirement, per the shape in `references/evidence-model.md`. Everything downstream reads from it.
-4. **Opportunity ledger** — unknowns, risk signals, red flags, and positive signals, per `references/risk-and-decision.md`. Assess the role on its own merits regardless of how well the candidate fits it.
-5. **Provisional decision** — `go`, `conditional_go`, `hold_pending_answers`, or `no_go`, with the rationale showing both ledgers.
+4. **Opportunity ledger** — unknowns, risk signals, red flags, and positive signals, per `references/risk-and-decision.md`. Assess the role on its own merits regardless of how well the candidate fits it. A clear demand to pay for the job or equipment, deposit a cheque, give bank, tax or ID details before an offer, or be hired wholly by chat is a quoted `red_flag`, `severity: high`, `confirmed`, asked of the employer through contacts found on its own site, never the sender, and held while the candidate checks who sent it. Routine steps (payroll and ID details after a credible written offer, and their portal link; scheduling by chat or text for an interview held elsewhere) get no entry or condition; any check is advice.
+5. **Provisional decision** — `go`, `conditional_go`, `hold_pending_answers`, or `no_go`, with the rationale showing both ledgers and what would change it: for `conditional_go` its conditions, for `no_go` the facts that would have to differ.
 6. **The snapshot, read off the finished map** — its fit ledger projected from the map's #, Priority, Fit and Requirement columns into the shape of slot 2 in `references/risk-and-decision.md` (one line per Priority tier in enum order, each grouped by Fit in enum order, every row exactly once), its hard-gates line from the `hard_gate` rows — every one named with its fit, failed rows first, in the form rule 4 of `references/risk-and-decision.md` gives — and any confidence band from the Confidence column of the one row it sits beside. The snapshot is delivered first and built last.
 
-The first response is never questions-only or consent-only. Deliver the full first-pass assessment — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the one-line dossier offer, the upgrade menu, at most three orientation questions selected by the heuristic in `references/gap-taxonomy-and-questions.md`, and the watch-out line closing the message. **The decision snapshot is the assessment's one summary, and it comes first:** nothing restates it — no "bottom line", recap or closing summary anywhere in the response, not only at its end. **The gap recovery queue holds no questions** — its rows say what each gap is and what would close it, and the question each row implies is asked in the closing block, tagged with its row id. Research consent (Step 2) rides with the questions; it never drives.
+The first response is never questions-only or consent-only. Deliver the full first-pass assessment, however plain the decision — decision snapshot first, then role reality, the evidence map, the gap recovery queue, the risk register, the application plan as far as evidence allows, and evidence status — then the one-line dossier offer, the upgrade menu, at most three orientation questions selected by the heuristic in `references/gap-taxonomy-and-questions.md`, and the watch-out line closing the message. **The decision snapshot is the assessment's one summary, and it comes first:** nothing restates it — no "bottom line", recap or closing summary anywhere in the response. **The gap recovery queue holds no questions** — its rows say what each gap is and what would close it, and the question each row implies is asked in the closing block, tagged with its row id. Research consent (Step 2) rides with the questions; it never drives.
 
-The dossier offer (Step 4) and, after it, the upgrade menu (each missing input and what it concretely unlocks) stand in every delivered assessment, first pass included. Label what you wrote: any statement derived from research or inference carries its provenance — `[grounded]`, `[inferred]`, or `[generic]` — where it appears.
+The dossier offer (Step 4) and, after it, the upgrade menu (each missing input and what it concretely unlocks) stand in every delivered assessment, first pass included. Any statement derived from research or inference carries its provenance label — `[grounded]`, `[inferred]` or `[generic]` — where it appears.
 
 ### Step 2 — Research at the consented tier
 
-Three tiers; the trade is the user's to make. Model memory is never a source for company facts, market values, or anything current.
+Three tiers, L1 by default. Model memory is never a source for company facts, market values, or anything current.
 
 - **L0** — provided documents only, chosen by the user or forced because the host offers no search, as `references/interaction-grammar.md` §4 defines it: no search and no fetch of the skill's choosing, and a link the user gave you to read is a provided document. Everything else labeled `[generic]`; the upgrade menu says what research would have added.
 - **L1** — default. Budget: at most 5 targeted searches and 2 page fetches. Targets in priority order: (1) the company's official site and careers page — does the entity exist as described (stage, size, product), and is the posting live and consistent with what was provided — feeding role reality's organization and contradictions rows and the failed-attribution entry in the risk register; (2) one role-family sweep — market-normal scope, title, and compensation for this seniority — feeding the market calibration line and the mismatch checks in the risk register; (3) the hiring manager's public professional footprint, only when a name was given and only within the people-research guardrail — feeding role reality's scope read and the application plan's positioning — which verified story to lead with for this reader.
@@ -92,27 +93,25 @@ Three tiers; the trade is the user's to make. Model memory is never a source for
 **Every declared target is accounted for, in evidence status:** one row per declared
 target — L1's three, then L2's two when L2 ran, numbered in that order — holding
 the target, a Status cell of exactly one of `yes`, `skipped`, `n/a` or
-`unavailable`, and the reason. Each label and its ground are
-`references/interaction-grammar.md` §4's; read it before writing the table.
-`references/interaction-grammar.md` §4 also says what quick check of pasted material
-may still run.
+`unavailable`, and the reason. Each label and its ground, and what quick check of pasted material may still
+run, are `references/interaction-grammar.md` §4's; read it before writing the table.
 Searches go only to declared targets. Every `yes` row names the queries and pages
 it rests on, each page by its title or address. Worked table: Evidence status in
 `references/dossier-worked-report.md`.
 
-Failed attribution is also a finding about the opportunity: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry (shape in `references/risk-and-decision.md`) and it constrains the decision — an unverified employer is a reason a `go` becomes `conditional_go` pending verification. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
+Failed attribution is also a finding about the opportunity: when L1 cannot confirm that the employer exists as described, that goes in the risk register as a standing entry at `severity: medium`, never `high` (shape in `references/risk-and-decision.md`), its reasons side by side, none ranked as likely: too new or small, a stale posting, or not a real hiring employer; it caps a `go` at `conditional_go` until verified. Say what would resolve it: a link to the live posting, the company's own careers page, the recruiter's email domain.
 
-**Closing order is fixed: the dossier offer, then the upgrade menu, then the questions, then the watch-out line — and nothing between them or after it.** The watch-out line is the fixed `watch_out` line below, label included, copied exactly and placed as `references/output-discipline.md` rule 7 places it. No recap closes the message either, because the snapshot at the top is its one summary (Step 1). The response-modes line is part of the questions — after each question, or once after the last for all of them — not something after them.
+**Closing order is fixed: the dossier offer, then the upgrade menu, then the questions, then the watch-out line — and nothing between them or after it.** The watch-out line is the fixed `watch_out` line below, label included, copied exactly and placed as `references/output-discipline.md` rule 7 places it. The response-modes line is part of the questions — after each question, or once after the last for all of them — not something after them.
 
 ### Step 3 — Recovery turns
 
-Later turns may ask again, but every turn keeps the same shape: **updated analysis first, then at most three questions, then the watch-out line.** Lead with a one-line changelog of what moved ("panel chairing resolved to user-confirmed — fit status now adjacent; decision unchanged"). Regenerate only the affected requirement rows and their dependent recommendations, then check the whole artifact for internal consistency before redelivering.
+Later turns may ask again, but every turn keeps the same shape: **updated analysis first, then at most three questions, then the watch-out line.** Lead with a one-line changelog of what moved. Regenerate only the affected requirement rows and their dependent recommendations, then check the whole artifact for internal consistency before redelivering.
 
 Read `references/gap-taxonomy-and-questions.md` before writing any recovery question — its ranking, its rules (never re-ask; silence and "skip" are answers) and its response modes, offered as prose, never as bracketed pseudo-buttons — and `references/reframing-audit.md` before any repositioning proposal it calls for. When an answer arrives, extract the claims and present a confirmation card (shape in `references/evidence-model.md`); only after the user confirms do evidence confidence, the map, or draft CV language upgrade. Confidential work is fine at a high level — record it with verifiability marked accordingly.
 
 ### Step 4 — The dossier offer
 
-The dossier offer is one sentence, no pressure, immediately before the upgrade menu; at the natural end of the engagement, or whenever the user asks, it is made directly. Offered always, forced never. Emitting it produces `tuesday-dossier.md` exactly per `references/dossier-emission.md` — report on top, rendered from the one fenced JSON envelope at the bottom as `references/dossier-schema.md` §2 defines — worked in `references/dossier-worked-report.md` and `references/dossier-worked-envelope.md`, with `handoff_to_mock_interview` keyed as `references/dossier-schema.md` §6 defines. The watch-out line closes the message that offers or presents the file, never the file (`references/output-discipline.md` rule 7).
+The dossier offer is one sentence, no pressure, immediately before the upgrade menu; at the natural end of the engagement, or whenever the user asks, it is made directly. Emitting it produces `tuesday-dossier.md` exactly per `references/dossier-emission.md`, which gives its schema, its worked report and envelope, and the `handoff_to_mock_interview` keys.
 
 ### Step 5 — Late inputs and spanning requests
 
@@ -154,7 +153,7 @@ Degrade by dropping or genericizing and labeling provenance — never by inventi
 
 ## Reference files
 
-Each is named at the step that needs it. Mirrors copy the suite's canonical files verbatim; canonical wins on conflict.
+Each is named at the step that needs it.
 
 - `references/evidence-conventions.md` (mirror)
 - `references/evidence-model.md`
