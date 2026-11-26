@@ -151,6 +151,18 @@ RECHECK_Q = {
              "quotations, so its ground is not an event; grader 2 passed #2"),
 }
 
+# The owner's review (section 13), 26 November, asked how 0.3.0 should go given Opus mock-interview 11: "Re-checker's
+# reading: ship (Recommended)", whose option read "Adopt the re-checker's reading: the profile line and the routing note
+# don't fail #2. MI 11 passes at 9/10". The re-checker's one event there, Tuesday run 0, rests on the two paragraphs, a
+# ground the owner's reading leaves standing. Every other record stays pending.
+OWNER_MI11 = ("overturned by the owner, 26 November: the re-checker's reading (\"Re-checker's reading: ship\"); the "
+              "profile line and the routing note do not fail #2")
+OWNER_MI11_R0 = ("stands, the owner, 26 November: under the re-checker's reading, which the owner took, Tuesday run 0 "
+                 "still fails #2, its hold and check sitting in a second paragraph")
+OWNER = {**{q: OWNER_MI11 for q in ("Q045", "Q046", "Q047", "Q048", "Q049", "Q050", "Q051", "Q056", "Q057", "Q058",
+                                    "Q059")},
+         "Q054": OWNER_MI11_R0, "Q055": OWNER_MI11_R0}
+
 out, k = [], 0
 for model in MODELS:
     for ev in json.loads((SCORE / f"{model}-score.json").read_text())[0]["events"]:
@@ -186,7 +198,7 @@ for r in qrows:
                     quotations_checked=json.loads(mask(json.dumps(r["checked"], ensure_ascii=False))),
                     adjudication=adj, rubric_step="quotation rubric (section 13)",
                     reason=reason, confidence=conf, method="script (quotecheck.py), read by hand where marked",
-                    independent_recheck=RECHECK_Q.get(r["id"], "not re-read"), owner_review="pending"))
+                    independent_recheck=RECHECK_Q.get(r["id"], "not re-read"), owner_review=OWNER.get(r["id"], "pending")))
 
 # the sentinel scan's own hits (no grader): one line each, from the checks files
 LOC = {}

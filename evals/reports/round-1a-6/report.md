@@ -1,5 +1,15 @@
 # Round 1a-6: the fix round on three models
 
+> **Added 26 November, after delivery: your ruling.** Asked how 0.3.0 should go, you chose "Re-checker's reading:
+> ship". That option reads: the profile line and the routing note do not fail #2, and MI 11 passes at 9/10.
+> - Eleven Opus MI 11 findings are overturned on your review: Q045–Q051 and Q056–Q059.
+> - Q054–Q055 stand. Under that reading Tuesday run 0 still fails, on the two paragraphs.
+> - Opus MI 11 reads 9 of 10 (5 alone, 4 through Tuesday). Opus passes all seven core screens, and the bar is met
+>   on Sonnet and Opus.
+>
+> The records carry your ruling in `owner_review`, and `scores/core-after-adjudication.txt` is the recount with it
+> applied. The rest of this report is as delivered.
+
 ## Result
 
 Sonnet meets its full bar. Opus holds every zero gate, leak check and health check, and passes six of its seven core

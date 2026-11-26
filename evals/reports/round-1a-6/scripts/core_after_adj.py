@@ -1,7 +1,7 @@
 """core_after_adj.py M MODEL...: core screens with every adjudication applied.
 
 A run passes a screen when, on every named outcome, both graders PASS, or a grader's FAIL is a core quote event whose
-ruling is 'overturned' in $M/adjudications.jsonl. Reads the grade files and the rulings only; no model calls.
+ruling, or whose owner review, is 'overturned' in $M/adjudications.jsonl. Reads the grade files and the rulings only; no model calls.
 """
 import json
 import sys
@@ -13,8 +13,11 @@ SCREENS = [("JU 7 canned", 4, "job-underwriter-7.canned", (1, 2, 3)), ("JU 8 can
            ("MI 11", 5, "mock-interview-11", (1, 2, 3, 5)), ("MI 12", 5, "mock-interview-12", (1, 2, 3, 5)),
            ("MI 13", 5, "mock-interview-13", (2, 3, 4))]
 adj = [json.loads(l) for l in (M / "adjudications.jsonl").read_text().splitlines()]
+# A finding counts as overturned when the adjudication overturns it, or when the owner's review does (from round 1a-6:
+# an owner_review that starts "overturned").
 over = {(r["model"], r["install"], r["stem"], int(r["grader"]), int(r["expectation"]))
-        for r in adj if r["id"].startswith("Q") and r["adjudication"].startswith("overturned")}
+        for r in adj if r["id"].startswith("Q") and (r["adjudication"].startswith("overturned")
+                                                    or str(r.get("owner_review", "")).startswith("overturned"))}
 for model in sys.argv[2:]:
     print(f"=== {model}")
     for label, part, base, ns in SCREENS:

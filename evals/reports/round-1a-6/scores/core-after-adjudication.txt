@@ -19,6 +19,6 @@
   JU 8 canned  10/10 (alone 5, tuesday 5)
   MI 9 canned  7/10 (alone 3, tuesday 4)
   MI 10        10/10 (alone 5, tuesday 5)
-  MI 11        2/10 (alone 0, tuesday 2)
+  MI 11        9/10 (alone 5, tuesday 4)  changed by a ruling: ['alone mock-interview-11.run0', 'alone mock-interview-11.run1', 'alone mock-interview-11.run2', 'alone mock-interview-11.run3', 'alone mock-interview-11.run4', 'tuesday mock-interview-11.run3', 'tuesday mock-interview-11.run4']
   MI 12        10/10 (alone 5, tuesday 5)
   MI 13        10/10 (alone 5, tuesday 5)
