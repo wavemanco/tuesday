@@ -1,0 +1,2 @@
+haiku alone: nudged 15/55 {'job-underwriter-8.canned': 3, 'job-underwriter-9': 5, 'mock-interview-11': 2, 'mock-interview-12': 5}
+haiku tuesday: nudged 18/55 {'job-underwriter-8.canned': 3, 'job-underwriter-9': 4, 'mock-interview-10': 1, 'mock-interview-11': 5, 'mock-interview-12': 5}

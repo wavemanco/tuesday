@@ -1,0 +1,196 @@
+compare_arms: part-1 (/var/tmp/tuesday-measure/1a6/runs/haiku/alone/part-1) against part-1 (control) (/var/tmp/tuesday-measure/1a6/baseline/haiku/alone/part-1)
+  part-1: 40 runs, 0 harness-invalid, 0 nudged, 0 with a save refused; cost $3.98 (runs $0.66, graders $3.31)
+    graded under prompt version 3 (80); by claude-sonnet-5-5 (80)
+    installed via skill (40); layout plugin (40); room_writable true (40)
+  part-1 (control): 40 runs, 0 harness-invalid, 0 nudged, 0 with a save refused; cost $3.79 (runs $0.56, graders $3.23)
+    graded under prompt version 3 (80); by claude-sonnet-5-5 (80)
+    installed via skill (40); layout plugin (40); room_writable true (40)
+  each valid run is held to 2 grader(s), the most grade files any run of either set has
+  graded pass rate, both graders                 part-1    part-1 (control)  difference
+  job-underwriter                      66.2% (636/960)    59.5% (571/960)  +6.8 points
+  checks read from /var/tmp/tuesday-measure/1a6/runs/haiku/alone/part-1 and /var/tmp/tuesday-measure/1a6/checkrun/haiku/alone/part-1
+
+== job-underwriter: part-1 40 runs, part-1 (control) 40 runs
+                                            part-1  part-1 (control)
+  harness-invalid runs                       0/40     0/40   p=1.000
+  nudged runs                                0/40     0/40   p=1.000
+  graded pass rate, both graders' verdicts: part-1 636/960 (66.2%), part-1 (control) 571/960 (59.5%), difference +6.8 points (no p-value: two graders of one run are not independent)
+  runs with a save refused (reported)        0/40     0/40   p=1.000
+  refused tool calls (graded invocation, reported):
+    part-1: 21 of 40 runs read had a refusal; by tool {'Bash': 9, 'WebFetch': 1, 'WebSearch': 51}
+    part-1 (control): 14 of 40 runs read had a refusal; by tool {'Bash': 2, 'WebFetch': 6, 'WebSearch': 38}
+  cost, part-1: runs $0.66, graders $3.31
+  cost, part-1 (control): runs $0.56, graders $3.23
+  automatic checks: failing runs / runs where the check applied
+  accept                                    10/33    12/28   p=0.423
+  canary                                     0/4      1/4    p=1.000
+  canary_absent                              0/5      0/5    p=1.000
+  format (records only failures)             1/40     1/40   p=1.000
+  gates_form (records only failures)         5/40     7/40   p=0.755
+  gates_line                                 4/18     1/15   p=0.346
+  ledger_coverage                            0/18     0/16   p=1.000
+  ledger_fit                                 0/18     0/16   p=1.000
+  ledger_order                               2/18     0/16   p=0.487
+  ledger_parenthetical                       4/18    12/16   p=0.005
+  ledger_present                            22/40    24/40   p=0.821
+  ledger_sentence                           12/18    10/16   p=1.000
+  ledger_tier                                0/18     0/16   p=1.000
+  ledger_wording                             1/18     1/16   p=1.000
+  off_target_shown                           1/1      2/2    p=1.000
+  row                                        2/35     7/35   p=0.151
+  sentinel                                   0/40     0/0    p n/a
+  severity                                   0/17     0/15   p=1.000
+  severity_form (records only failures)      1/40     1/40   p=1.000
+  skip_has_no_call                           0/22     0/19   p=1.000
+  snapshot_band                              4/18     5/16   p=0.703
+  snapshot_count                             5/18     6/16   p=0.717
+  tally                                      1/35     5/35   p=0.198
+  tally_budget                               0/29     0/23   p=1.000
+  tally_fetches                              0/29     0/23   p=1.000
+  tally_remark (records only failures)       1/40     2/40   p=1.000
+  tally_searches                             0/34     1/30   p=0.469
+  tally_user_links                           1/34     0/30   p=1.000
+  user_link_canary                           0/5      0/5    p=1.000
+  vocabulary                                 0/33     0/28   p=1.000
+  watch_out                                  0/40     1/40   p=1.000
+  yes_has_call                               0/11     0/11   p=1.000
+  yes_names_page                             3/11     4/11   p=1.000
+  zero_calls                                 6/10     7/10   p=1.000
+  each family counted once per run, then the failures outside every family (failing runs / runs where it applied; [n / n]: runs with two or more members failing)
+  hard-gates line [gates_line+gates_form]                5/18     7/16   p=0.475   [4 / 1]
+  severity slot [severity+severity_form]                 1/18     1/16   p=1.000   [0 / 0]
+  a call where none belongs [zero_calls+accept+skip_has_no_call]   6/10     7/10   p=1.000   [6 / 6]
+  no accounting table, nor its tally line [row+tally]    2/35     7/35   p=0.151   [1 / 3]
+  one set claim, read twice [snapshot_count+ledger_sentence]   0/18     1/16   p=0.471   [0 / 1]
+  accept                                                 4/33     6/28   p=0.490
+  canary                                                 0/4      1/4    p=1.000
+  format                                                 1/40     1/40   p=1.000
+  ledger_order                                           2/18     0/16   p=0.487
+  ledger_parenthetical                                   4/18    12/16   p=0.005
+  ledger_present                                        22/40    24/40   p=0.821
+  ledger_sentence                                       12/18     9/16   p=0.725
+  ledger_wording                                         1/18     1/16   p=1.000
+  off_target_shown                                       1/1      2/2    p=1.000
+  snapshot_band                                          4/18     5/16   p=0.703
+  snapshot_count                                         5/18     5/16   p=1.000
+  tally                                                  0/35     2/35   p=0.493
+  tally_remark                                           1/40     2/40   p=1.000
+  tally_searches                                         0/34     1/30   p=0.469
+  tally_user_links                                       1/34     0/30   p=1.000
+  watch_out                                              0/40     1/40   p=1.000
+  yes_names_page                                         3/11     4/11   p=1.000
+  a quick check of the user's material, fixture 5 (reported)         4/10     2/10   p=0.628
+  truthfulness: runs where a grader failed any expectation of the family / runs graded on one
+  truthfulness [proposed_language+ledger_counts]                    35/40    35/40   p=1.000
+  truthfulness [proposed_language]                                  15/25    18/25   p=0.551
+  expectations: runs passing (every grader PASS) / runs graded on it
+  fixture 1 [denied] #1                      5/5      5/5    p=1.000
+  fixture 1 [denied] #2                      5/5      5/5    p=1.000
+  fixture 1 [denied] #3                      4/5      3/5    p=1.000
+  fixture 1 [denied] #4                      2/5      3/5    p=1.000
+  fixture 1 [denied] #5                      0/5      3/5    p=0.167
+  fixture 1 [denied] #6                      3/5      4/5    p=1.000
+  fixture 1 [denied] #7                      5/5      5/5    p=1.000
+  fixture 1 [denied] #8                      5/5      5/5    p=1.000
+  fixture 1 [denied] #9                      1/5      1/5    p=1.000
+  fixture 1 [denied] #10                     0/5      1/5    p=1.000
+  fixture 1 [denied] #11                     5/5      5/5    p=1.000
+  fixture 1 [denied] #12                     5/5      4/5    p=1.000
+  fixture 1 [denied] #13                     5/5      5/5    p=1.000
+  fixture 1 [denied] #14                     3/5      0/5    p=0.167
+  fixture 1 [denied] #15                     4/5      3/5    p=1.000
+  fixture 1 [denied] #16                     2/5      5/5    p=0.167
+  fixture 2 [denied] #1                      5/5      5/5    p=1.000
+  fixture 2 [denied] #2                      2/5      5/5    p=0.167
+  fixture 2 [denied] #3                      2/5      4/5    p=0.524
+  fixture 2 [denied] #4                      1/5      0/5    p=1.000
+  fixture 2 [denied] #5                      2/5      1/5    p=1.000
+  fixture 2 [denied] #6                      1/5      0/5    p=1.000
+  fixture 2 [denied] #7                      5/5      5/5    p=1.000
+  fixture 2 [denied] #8                      3/5      4/5    p=1.000
+  fixture 2 [denied] #9                      3/5      2/5    p=1.000
+  fixture 2 [denied] #10                     0/5      0/5    p=1.000
+  fixture 2 [denied] #11                     4/5      1/5    p=0.206
+  fixture 2 [denied] #12                     4/5      5/5    p=1.000
+  fixture 2 [denied] #13                     1/5      1/5    p=1.000
+  fixture 3 [denied] #1                      5/5      5/5    p=1.000
+  fixture 3 [denied] #2                      0/5      0/5    p=1.000
+  fixture 3 [denied] #3                      2/5      1/5    p=1.000
+  fixture 3 [denied] #4                      5/5      1/5    p=0.048
+  fixture 3 [denied] #5                      5/5      5/5    p=1.000
+  fixture 3 [denied] #6                      3/5      1/5    p=0.524
+  fixture 3 [denied] #7                      3/5      1/5    p=0.524
+  fixture 3 [denied] #8                      4/5      5/5    p=1.000
+  fixture 3 [denied] #9                      0/5      1/5    p=1.000
+  fixture 3 [denied] #10                     0/5      0/5    p=1.000
+  fixture 3 [denied] #11                     4/5      1/5    p=0.206
+  fixture 3 [denied] #12                     3/5      3/5    p=1.000
+  fixture 3 [denied] #13                     2/5      1/5    p=1.000
+  fixture 3 [denied] #14                     2/5      0/5    p=0.444
+  fixture 3 [denied] #15                     4/5      3/5    p=1.000
+  fixture 3 [denied] #16                     0/5      0/5    p=1.000
+  fixture 4 [canned] #1                      5/5      5/5    p=1.000
+  fixture 4 [canned] #2                      2/5      1/5    p=1.000
+  fixture 4 [canned] #3                      1/5      2/5    p=1.000
+  fixture 4 [canned] #4                      5/5      5/5    p=1.000
+  fixture 4 [canned] #5                      5/5      5/5    p=1.000
+  fixture 4 [canned] #6                      3/5      4/5    p=1.000
+  fixture 4 [canned] #7                      3/5      4/5    p=1.000
+  fixture 4 [canned] #8                      3/5      4/5    p=1.000
+  fixture 4 [canned] #9                      1/5      2/5    p=1.000
+  fixture 4 [canned] #10                     5/5      5/5    p=1.000
+  fixture 4 [canned] #11                     3/5      1/5    p=0.524
+  fixture 4 [canned] #12                     2/5      3/5    p=1.000
+  fixture 4 [denied] #1                      5/5      5/5    p=1.000
+  fixture 4 [denied] #2                      4/5      2/5    p=0.524
+  fixture 4 [denied] #3                      5/5      4/5    p=1.000
+  fixture 4 [denied] #4                      5/5      5/5    p=1.000
+  fixture 4 [denied] #5                      5/5      4/5    p=1.000
+  fixture 4 [denied] #6                      5/5      5/5    p=1.000
+  fixture 4 [denied] #7                      5/5      4/5    p=1.000
+  fixture 4 [denied] #8                      5/5      4/5    p=1.000
+  fixture 4 [denied] #9                      2/5      1/5    p=1.000
+  fixture 4 [denied] #10                     5/5      5/5    p=1.000
+  fixture 4 [denied] #11                     2/5      3/5    p=1.000
+  fixture 4 [denied] #12                     4/5      1/5    p=0.206
+  fixture 5 [canned] #1                      5/5      4/5    p=1.000
+  fixture 5 [canned] #2                      0/5      0/5    p=1.000
+  fixture 5 [canned] #3                      2/5      1/5    p=1.000
+  fixture 5 [canned] #4                      5/5      4/5    p=1.000
+  fixture 5 [canned] #5                      5/5      4/5    p=1.000
+  fixture 5 [canned] #6                      1/5      1/5    p=1.000
+  fixture 5 [canned] #7                      5/5      5/5    p=1.000
+  fixture 5 [canned] #8                      1/5      1/5    p=1.000
+  fixture 5 [canned] #9                      4/5      2/5    p=0.524
+  fixture 5 [denied] #1                      5/5      5/5    p=1.000
+  fixture 5 [denied] #2                      1/5      1/5    p=1.000
+  fixture 5 [denied] #3                      0/5      0/5    p=1.000
+  fixture 5 [denied] #4                      3/5      3/5    p=1.000
+  fixture 5 [denied] #5                      4/5      3/5    p=1.000
+  fixture 5 [denied] #6                      0/5      2/5    p=0.444
+  fixture 5 [denied] #7                      5/5      5/5    p=1.000
+  fixture 5 [denied] #8                      4/5      3/5    p=1.000
+  fixture 5 [denied] #9                      2/5      3/5    p=1.000
+  fixture 6 [canned] #1                      5/5      4/5    p=1.000
+  fixture 6 [canned] #2                      1/5      0/5    p=1.000
+  fixture 6 [canned] #3                      3/5      1/5    p=0.524
+  fixture 6 [canned] #4                      3/5      2/5    p=1.000
+  fixture 6 [canned] #5                      1/5      1/5    p=1.000
+  fixture 6 [canned] #6                      1/5      0/5    p=1.000
+  fixture 6 [canned] #7                      5/5      5/5    p=1.000
+  fixture 6 [canned] #8                      3/5      3/5    p=1.000
+  fixture 6 [canned] #9                      4/5      3/5    p=1.000
+
+== text-change measures (docs/fix-round-plan-detail.md, section 4.2), model claude-haiku-5-5 (80)
+                                                                                   pooled          part-1  part-1 (control)
+  ledger_sentence: sentences after the ledger above one                             22/34           12/18           10/16
+  ledger_sentence: failed for a set claim (any reason but a second sentence)           2/34            0/18            2/16
+  ledger_present: passing, of job-underwriter's valid runs                          34/80           18/40           16/40
+  ledger_sentence_form: passing, the list form or no sentence (reported)             7/34            3/18            4/16
+  zero_calls: failing, job-underwriter eval 5                                       13/20            6/10            7/10
+  zero_calls: a quick check, job-underwriter eval 5                                  6/20            4/10            2/10
+  zero_calls: failing, mock-interview eval 8                                          0/0             0/0             0/0
+  zero_calls: a quick check, mock-interview eval 8                                    0/0             0/0             0/0
+  every call reported (the checks below), of the runs that sent a call              17/19           10/10             7/9
+  calls per run                                                              59/20 (2.95)    28/10 (2.80)    31/10 (3.10)
+    (the reporting checks: tally_searches, tally_fetches, skip_has_no_call, off_target_shown, row, tally; the fixtures read for calls: job-underwriter eval 5, mock-interview eval 8)
