@@ -274,8 +274,9 @@ MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 # What was last measured, recorded once, and the plugin version that ships it: round 1a of the
 # roadmap plan (docs/roadmap-now-l1-plan.md), whose sixth attempt, round 1a-6, measured 8be4952
 # (evals/reports/round-1a-6/report.md). hub_sha256 and tuesday_sha256 are Tuesday's two hashes
-# (sync.digests) on that commit, which every pass record of the round's runs holds beside the
-# commit it ran on; builds_sha256 is the round's frozen expected value, checked at its preflight.
+# (sync.digests) on that commit, which each of round 1a-6's 24 candidate pass records holds beside
+# 8be4952 (its 21 E23 replay records hold 0.2.0's, on 7b56c17); builds_sha256 is the round's frozen
+# expected value, checked against the candidate pin at the freeze (the manifest's check 4).
 # builds_sha256 (tuesday_digests) hashes every file of dist/claude-code/, which the plugin's
 # skills/ equals: each module's shipped files with the hiding line, and the hub's. That tree is what
 # the round installed but for the run-id suffix the harness gives each name, and the hub's LICENSE,

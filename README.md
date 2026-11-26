@@ -17,6 +17,7 @@ Tuesday is one Claude skill, `tuesday`: a set of instructions Claude loads for t
 - **It works from your evidence.** Every strength it names, answer it suggests and resume line it proposes traces back to something you told it or wrote. When something is missing, it asks; if you would rather not answer, it still finishes and says what it assumed.
 - **Each module stands alone, and they share what they learn.** Each gives a complete, useful result from just a posting, a CV or a question. job-underwriter offers to save the evidence you confirmed in a file, `tuesday-dossier.md`, and mock-interview offers to add its notes. Keep the file (on claude.ai, download it), attach it to a later conversation, and whichever module runs starts from what is already there. Use one module or all three, in any order.
 - **It tells you what to double-check.** Every result ends with one line naming what to check before you rely on it (*Watch-outs*, below).
+- **The decision is yours.** It's an AI assistant and can make mistakes. It points out warning signs in what you share, but it can't confirm who an employer, recruiter or sender really is. Please check before you act; the decision is always yours.
 
 ## Install
 
@@ -84,10 +85,11 @@ A skill uploaded to claude.ai also reaches Claude Code: a terminal session signe
 
 ### Which model
 
-In Claude Code, where it was tested, Tuesday works best on Sonnet and Opus. On Haiku, use Tuesday (the plugin or a personal install) rather than a module on its own, and start your message with the module's command:
+In Claude Code, where it was tested, Tuesday works best on Sonnet and Opus. On Haiku:
 
-- In round 1a's last test, Haiku's answers met their case's main requirements in at least 3 of 5 runs on 6 of 7 cases through Tuesday, against 2 of 7 with a module on its own (*Round 1a* in [Tracked work](docs/tracked-work.md)).
-- A command kept every model on the named module, while Haiku picked the right module on its own less often (*Tuesday, round 3*).
+- **Install the Tuesday plugin rather than a module on its own, and ask in your own words.** In round 1a's last test, Haiku's answers to requests Tuesday routed met their case's main requirements in at least 3 of 5 runs on 6 of 7 cases, against 2 of 7 with a module on its own (*Round 1a* in [Tracked work](docs/tracked-work.md)). That was measured through the plugin only.
+- **A module's command** (`/tuesday:job-underwriter` and the others) runs that module directly, as on its own. It kept every model on the named module, while Haiku picked the right module on its own less often (*Tuesday, round 3*), but answers started that way were not graded.
+- **In a project install or cloud sessions**, where Tuesday does not ship, Haiku runs a module on its own, so Sonnet or Opus is the safer choice there.
 
 ## Watch-outs: what to double-check
 

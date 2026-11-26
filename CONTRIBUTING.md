@@ -26,12 +26,15 @@ planned exception is the future agent/ directory, below: when it exists it
 will carry its own license, and files are not moved across that boundary in the
 same change that modifies them.
 
-Nothing in the repository is copied from a project whose license does not allow
-it here. From AGPL-licensed or unlicensed projects, such as ApplyPilot and
-OpenResume, the skills and the harness take no code, no prompt text and no word
-lists. An idea may come from one: work from a description of what the tool does,
-written in your own words, not from its files. A change that takes anything from
-another project names the project and its license.
+Nothing under the repository's MIT grant, the skills, `conventions/`, `evals/`
+and `ci/` among it, is copied from a project whose license does not allow it
+here. From AGPL-licensed or unlicensed projects, such as ApplyPilot and
+OpenResume, it takes no code, no prompt text and no word lists. An idea may come from one: take it from what the
+tool does, as its public description or its behaviour shows, and write the rule
+in your own words, without opening or copying its code, prompts or word lists. A
+change that takes an idea or anything else from another project names the
+project and its license. The future agent/ directory, below, has its own license
+and terms.
 
 ## agent/ contributions require a CLA
 
