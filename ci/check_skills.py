@@ -271,22 +271,23 @@ def packaged_files(skill: Path) -> set[str]:
 CLAUDE_CODE = DIST / "claude-code"
 PLUGIN = DIST / "plugin" / sync.HUB_NAME
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
-# What was last measured, recorded once, and the plugin version that ships it: the fix round
-# (docs/fix-round-plan-detail.md), on b8702ac. hub_sha256 and tuesday_sha256 are the front door's
-# two hashes (sync.digests) on that commit, which every Tuesday-arm routing results file of the round
-# records, the second under its key before the code-name rename, frontdoor_sha256; its quality runs
-# are tied to the commit through the run log and the pinned worktree.
+# What was last measured, recorded once, and the plugin version that ships it: round 1a of the
+# roadmap plan (docs/roadmap-now-l1-plan.md), whose sixth attempt, round 1a-6, measured 8be4952
+# (evals/reports/round-1a-6/report.md). hub_sha256 and tuesday_sha256 are Tuesday's two hashes
+# (sync.digests) on that commit, which every pass record of the round's runs holds beside the
+# commit it ran on; builds_sha256 is the round's frozen expected value, checked at its preflight.
 # builds_sha256 (tuesday_digests) hashes every file of dist/claude-code/, which the plugin's
 # skills/ equals: each module's shipped files with the hiding line, and the hub's. That tree is what
 # the round installed but for the run-id suffix the harness gives each name, and the hub's LICENSE,
-# the modules' LICENSE byte for byte. Round 3 measured the text before it, on b2f424b, which then
-# shipped as plugin 0.1.0. plugin_version is the manifest's: an installed plugin keeps its version
+# the modules' LICENSE byte for byte. The fix round measured the text before it, on b8702ac, which
+# shipped as plugin 0.2.0, and round 3 the text before that, on b2f424b, plugin 0.1.0.
+# plugin_version is the manifest's: an installed plugin keeps its version
 # until the version string changes (Claude Code's plugin docs), so an update to the hashes moves it.
 MEASURED_TUESDAY = {
-    "hub_sha256": "4d10c30930488ed3f63067f9dc47651dad6c2874f3a992817f87951332f1ce80",
-    "tuesday_sha256": "8d10162a0a58e5f99fb39356b473c79952cd8faa5533c4a909cecdd28261af12",
-    "builds_sha256": "d6670eeaebcc12864e5925bbc8c128e330e47a083bdcaccb61865679ce63c752",
-    "plugin_version": "0.2.0",
+    "hub_sha256": "e05945f94bc34e5a49158eb25aad5aff08b0eed635708f041bfb4431eb8b006f",
+    "tuesday_sha256": "5cebc97a8899d3fee7a832f5d0e9602b784cd22eb679b086de709c94279750ba",
+    "builds_sha256": "cbda6e8cc8ead59cb1945cdba7c593e1a974d4b8457ee391db7c0e969d5a7e1d",
+    "plugin_version": "0.3.0",
 }
 MEASURED_HASHES = [key for key in MEASURED_TUESDAY if key.endswith("_sha256")]
 PLUGIN_MANIFEST = {

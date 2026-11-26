@@ -84,7 +84,10 @@ A skill uploaded to claude.ai also reaches Claude Code: a terminal session signe
 
 ### Which model
 
-In Claude Code, where it was tested, Tuesday works best on Sonnet and Opus. On Haiku, start your message with the module's command: in testing, a command kept every model on the named module, while Haiku picked the right module on its own less often (*Tuesday, round 3* in [Tracked work](docs/tracked-work.md)).
+In Claude Code, where it was tested, Tuesday works best on Sonnet and Opus. On Haiku, use Tuesday (the plugin or a personal install) rather than a module on its own, and start your message with the module's command:
+
+- In round 1a's last test, Haiku's answers met their case's main requirements in at least 3 of 5 runs on 6 of 7 cases through Tuesday, against 2 of 7 with a module on its own (*Round 1a* in [Tracked work](docs/tracked-work.md)).
+- A command kept every model on the named module, while Haiku picked the right module on its own less often (*Tuesday, round 3*).
 
 ## Watch-outs: what to double-check
 
