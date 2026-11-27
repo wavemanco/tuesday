@@ -48,4 +48,4 @@ The dollar figures in both plan documents, such as "about $1,070 of runs", are A
 
 - **Run records:** each run's stream ends with a result event carrying `total_cost_usd`, and the run's `*.meta.json` keeps the same cost in its invocations' `modelUsage`. Each grade file carries the grader's `model_usage` with `costUSD`.
 - **Meter readings:** taken before and after each step.
-- **Backup:** the meta and grade files for the fix round and the quality check, and the fix round's routing results, without the transcripts, are kept on the branch `claude/skill-job-underwriter-95xjz8-data`. The smoke's records are not on it, and neither are round 1a's run records: their score summaries, rulings and scripts are in `evals/reports/round-1a*/`.
+- **Backup:** the meta and grade files for the fix round and the quality check, and the fix round's routing results, without the transcripts, are kept on the branch `claude/skill-job-underwriter-95xjz8-data`. The smoke's records are not on it. Round 1a's six attempts are, without the transcripts: each attempt's runs per model, and its frozen folder, run and meter logs and rulings (`round-1a*-*.tar.gz`).

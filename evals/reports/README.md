@@ -57,9 +57,10 @@ it was; anything added later is marked as added.
 ## Where the rest lives
 
 - **The runs themselves are not in the repository.** That means every run's output, checks and grades, and the
-  sealed copy of each step. They are large.
+  sealed copy of each step. They are large. The data branch (`claude/skill-job-underwriter-95xjz8-data`) keeps
+  each attempt's runs, without the transcripts, in `round-1a*-<model>.tar.gz`.
 - **Section numbers in the reports** (for example "section 13" for adjudication, "section 14" for recovery) refer to
-  the round's measurement manifest. Round 1a's manifest is in `1a-version-c-whole-verdict.tar.gz` on the data branch
-  (`claude/skill-job-underwriter-95xjz8-data`). The manifests of rounds 1a-2 to 1a-6 are not backed up there yet.
+  the round's measurement manifest. Each attempt's manifest is in its `round-1a*-scripts-and-logs.tar.gz` on the data
+  branch, and round 1a's is also in `1a-version-c-whole-verdict.tar.gz`.
 - **Some run output keeps an old name.** A few compare files print the install name that the baseline recorded
   before the code-name rename. The files are kept as the tool printed them.
