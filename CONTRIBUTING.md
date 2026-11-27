@@ -26,6 +26,16 @@ planned exception is the future agent/ directory, below: when it exists it
 will carry its own license, and files are not moved across that boundary in the
 same change that modifies them.
 
+Nothing under the repository's MIT grant, the skills, `conventions/`, `evals/`
+and `ci/` among it, is copied from a project whose license does not allow it
+here. From AGPL-licensed or unlicensed projects, such as ApplyPilot and
+OpenResume, it takes no code, no prompt text and no word lists. An idea may come from one: take it from what the
+tool does, as its public description or its behaviour shows, and write the rule
+in your own words, without opening or copying its code, prompts or word lists. A
+change that takes an idea or anything else from another project names the
+project and its license. The future agent/ directory, below, has its own license
+and terms.
+
 ## agent/ contributions require a CLA
 
 The (future) agent/ directory is planned as AGPL-3.0 with dual-licensing
@@ -592,7 +602,7 @@ there; Tuesday links no file that is not there, and the guidance group, which
 reads it like every skill, holds the other direction. The modules Tuesday
 routes to, read from its slash-command list and its routing table, are
 `skills/` without it, and its description names each one. `MEASURED_TUESDAY`
-records what was last measured (the fix round, on b8702ac) as three hashes: Tuesday's SKILL.md, Tuesday with
+records what was last measured (round 1a, on 8be4952) as three hashes: Tuesday's SKILL.md, Tuesday with
 its references, and every file the Claude Code builds ship, Tuesday's and each
 module's, frontmatter, README and LICENSE included. So a change to any shipped
 file of Tuesday or a module, or to a convention a module mirrors, fails until it

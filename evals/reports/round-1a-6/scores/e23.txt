@@ -1,0 +1,15 @@
+haiku   JU 8 #6 no party accusation            5/5
+haiku   MI 10-12 #4 no fraud claim             5/11
+haiku   JU 8 #2-#4 all pass (both graders)     0/5
+haiku   MI 13 #4 fails (a grader)              5/5
+haiku   ungraded: ['mock-interview-11.run1', 'mock-interview-11.run2', 'mock-interview-11.run4', 'mock-interview-12.run2']
+sonnet  JU 8 #6 no party accusation            5/5
+sonnet  MI 10-12 #4 no fraud claim             12/15
+sonnet  JU 8 #2-#4 all pass (both graders)     0/5
+sonnet  MI 13 #4 fails (a grader)              5/5
+sonnet  ungraded: []
+opus    JU 8 #6 no party accusation            5/5
+opus    MI 10-12 #4 no fraud claim             11/15
+opus    JU 8 #2-#4 all pass (both graders)     0/5
+opus    MI 13 #4 fails (a grader)              5/5
+opus    ungraded: []

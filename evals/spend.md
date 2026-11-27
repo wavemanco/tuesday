@@ -24,11 +24,16 @@ The names are those of the README's Tracked work entries.
 | Fix round, Haiku | Haiku 5.5, graders Sonnet | 460 runs and 15 re-runs, 920 grades | $72.79 | 10 points (62% to 72%) | $7.3 |
 | Fix round, Sonnet | Sonnet 5.5, graders Sonnet | 380 runs, 760 grades | $283.72 | 15 points (73% to 88%) | $18.9 |
 | Fix round, Opus | Opus 5.5, graders Sonnet | 380 runs, 760 grades | $455.30 | 40 points (3% to 43%) | $11.4 |
+| Round 1a, the explicit panel | Haiku, Sonnet and Opus 5.5, no graders | 60 runs | $20.83 | 1 point (87% to 88%) | $20.8 |
+| Round 1a, Haiku | Haiku 5.5, graders Sonnet | 325 runs (370 sessions), 642 grades | $50.94 | 3 points (88% to 91%) | $17.0 |
+| Round 1a, Sonnet | Sonnet 5.5, graders Sonnet | 325 runs (337 sessions), 650 grades | $232.96 | about 13 points (91% to 99%, then 0% to 5% after the reset) | $17.9 |
+| Round 1a, Opus | Opus 5.5, graders Sonnet | 325 runs (337 sessions), 650 grades | $382.83 | 15 points (5% to 20%) | $25.5 |
 
 - **Re-runs.** When a run does not start its module, the harness runs it again with the module named. Both sessions are counted in the cost; only the final one is graded, twice, as every run is.
 - **Opus costs more per point** at the fix round's own planning rates, which convert the API-price equivalent to weekly usage at $17 to $21 a point for Sonnet and Haiku and $24 to $29 for Opus (`docs/fix-round-plan-detail.md`). Its stop rule uses those rates.
 - **The fix round's Haiku and Opus steps shared the account with other use**, including other projects running at the same time. At the planning rates, Haiku's runs account for about 4 of its 10 points, and Opus's for about 16 to 19 of its 40.
 - **The Sonnet quality step's** meter window also holds a two-run check worth $0.76, which its row leaves out.
+- **Round 1a's rows are its last attempt, round 1a-6** (26 November). The five attempts before it are reported, with their meter readings, in `evals/reports/round-1a/` to `round-1a-5/`. Round 1a-6's Sonnet step ran across the weekly reset at 06:00 UTC, so its points are the two windows added together. Its scoring, the independent re-check and the Claude Code session that ran and wrote up the round are on the meter too. Every round 1a-6 step ran on CLI 2.1.332.
 
 The dollar figures in both plan documents, such as "about $1,070 of runs", are API-price equivalents in the same sense.
 
@@ -43,4 +48,4 @@ The dollar figures in both plan documents, such as "about $1,070 of runs", are A
 
 - **Run records:** each run's stream ends with a result event carrying `total_cost_usd`, and the run's `*.meta.json` keeps the same cost in its invocations' `modelUsage`. Each grade file carries the grader's `model_usage` with `costUSD`.
 - **Meter readings:** taken before and after each step.
-- **Backup:** the meta and grade files for the fix round and the quality check, and the fix round's routing results, without the transcripts, are kept on the branch `claude/skill-job-underwriter-95xjz8-data`. The smoke's records are not on it.
+- **Backup:** the meta and grade files for the fix round and the quality check, and the fix round's routing results, without the transcripts, are kept on the branch `claude/skill-job-underwriter-95xjz8-data`. The smoke's records are not on it. Round 1a's six attempts are, without the transcripts: each attempt's runs per model, and its frozen folder, run and meter logs and rulings (`round-1a*-*.tar.gz`).
