@@ -20,6 +20,8 @@ field of `adjudications.jsonl`. The reader's map of item ids to runs is in `rech
 
 Its scripts are in `recheck/`; they read the measurement folder, which is not in the repository. The only change
 from the report as returned is the scripts' location, given here as `recheck/` in place of the scratch folder it named.
+[Added 27 November: one pattern in `recheck/mask.py`, `IBANISH_RE`, was rewritten after the run because code scanning
+flagged it for exponential backtracking. The new pattern matches the same spans; the file says how that was checked.]
 
 ## Task A: rulings
 

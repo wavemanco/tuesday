@@ -76,7 +76,14 @@ def _mask_pieces(text):
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@([A-Za-z0-9\-]+\.)+[A-Za-z]{2,}")
 PPS_RE = re.compile(r"\b\d{7}[A-Za-z]{1,2}\b")
 LONGDIG_RE = re.compile(r"\b\d(?:[\s\-]?\d){8,}\b")
-IBANISH_RE = re.compile(r"\b[A-Z]{2}\d{2}(?:[\s\-]?[A-Z0-9]{2,4}){3,}\b")
+# Changed on 27 November, after the run, for code scanning. The pattern the reader ran,
+#   \b[A-Z]{2}\d{2}(?:[\s\-]?[A-Z0-9]{2,4}){3,}\b
+# backtracks exponentially on a long run of capitals followed by a word character. The
+# pattern below matches the same spans: checked on every string of up to 7 characters
+# over "A0 -a._" and a newline after "GB00", and on 300,000 random strings.
+IBANISH_RE = re.compile(r"\b[A-Z]{2}\d{2}[\s\-]?(?:[A-Z0-9]{6,}|[A-Z0-9]{4,5}[\s\-][A-Z0-9]{2,}"
+                        r"|[A-Z0-9]{2,3}[\s\-][A-Z0-9]{4,}|[A-Z0-9]{2,3}[\s\-][A-Z0-9]{2,3}[\s\-][A-Z0-9]{2,})"
+                        r"(?:[\s\-][A-Z0-9]{2,})*\b")
 
 
 def mask(text):
