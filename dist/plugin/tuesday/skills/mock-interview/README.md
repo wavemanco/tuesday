@@ -62,7 +62,7 @@ None of this is required. Skills in Tuesday stand alone; the dossier just means 
 
 - **Session** (default) — one pack for one conversation.
 - **Loop** — "My loop is three interviews over two days" gets a shared fit map plus per-round mini-packs.
-- **Drill** — after any pack, ask for a rehearsal: Claude adopts a persona, asks with reactive follow-ups, then breaks character and scores you against the pack's own rubric.
+- **Drill** — after any pack, ask for a rehearsal: Claude adopts a persona, asks with reactive follow-ups, then breaks character and scores you against the pack's own rubric. For a recorded or one-way video interview, the drill runs as the real one will: one question at a time with its time limit, one take, no follow-ups, then feedback on what you said and how long it took, never on your face, voice or manner. An AI interviewer that responds to your answers is drilled live, follow-ups included.
 
 ## What's in this folder
 
@@ -85,7 +85,8 @@ mock-interview/
 │   ├── dossier-schema.md         # mirror of conventions/ — the shared dossier's schema
 │   └── citations.md              # mirror of conventions/ — sources behind the outside claims, verbatim
 ├── evals/
-│   └── evals.json                # 13 test fixtures with verifiable expectations
+│   ├── evals.json                # 15 test fixtures with verifiable expectations
+│   └── transcripts.json          # three scripted conversations run by evals/run_transcripts.py
 └── docs/
     └── workflow.html             # interactive install + first-use walkthrough (this repo only)
 ```

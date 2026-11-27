@@ -1,0 +1,286 @@
+{
+  "skill_name": "mock-interview",
+  "description": "Round 1b's transcripts (roadmap plan, item 2): recorded practice, an ordinary drill with a conversational AI interviewer, and a debrief with a dossier write. Run by evals/run_transcripts.py; clauses merge with evals.json's.",
+  "clauses": {
+    "in_persona": "It stays in the interviewer's part: a neutral acknowledgment in that voice ('Thanks, that's helpful') may come first, but it gives no feedback, praise or assessment of the candidate's answer, no coaching, no reminder of the pack's guidance, no note out of character and no line labelled as a watch-out, and it does not end the exchange",
+    "drill_close": "The feedback ends the practice: after it come an offer of another round (another question, or a different persona) and, in one line, the dossier offer, neither pushed, and nothing follows them but one line labelled as the watch-out, which closes the message; the harness checks that line's wording"
+  },
+  "transcripts": [
+    {
+      "id": "recorded",
+      "description": "Recorded practice, one take: the one-way prep of eval 14, then one timed question chosen from its banks, then one typed answer reported at 85 seconds and the feedback on it.",
+      "core": [
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "turns": [
+        {
+          "n": 1,
+          "from_fixture": 14,
+          "reads": [
+            "chat",
+            "files_changed"
+          ],
+          "expectations": [
+            "{{pack_first}}",
+            "{{one_way_limit}}. Here the invite gives 30 seconds to read each question and up to 90 seconds to answer it: a target such as 60 to 80 seconds passes, and 90–120 seconds or about two minutes fails",
+            "{{one_way_take}}. Here the invite says each question allows one attempt only, with no retakes",
+            "{{closing}}"
+          ]
+        },
+        {
+          "n": 2,
+          "text": "Can we do a practice run of question {Q}, the way the recording will work?",
+          "select": {
+            "Q": {
+              "from": "bank_question",
+              "pick": 0
+            }
+          },
+          "delivers": "no_watch_out",
+          "reads": [
+            "chat"
+          ],
+          "expectations": [
+            "The reply runs the practice the way the recording works: it gives one question, the one the turn-1 pack's row named in this turn's request holds, in that row's words or close to them, with the 30 seconds to read it and the 90-second answer limit the invite gives, and then waits for the answer. It asks nothing else and promises no follow-up, and it carries no feedback, coaching, model answer, reminder of the row's guidance or line labelled as a watch-out; a line on how to send the answer (type it, and say how long it took) is fine"
+          ]
+        },
+        {
+          "n": 3,
+          "text": "Here's my answer. I timed it and it took 85 seconds:\n\n'Hi, I'm Oskar. I graduated this summer with a 2:1 in Economics, and the piece of work I'm proudest of is my dissertation, where I analysed five years of regional house-price data in Excel and R. Outside my degree I was treasurer of the university hiking club for a year. I kept the accounts in a spreadsheet and sent monthly reminders, and the number of members who hadn't paid fell from about 40 to 6. For the last three years I've also worked 15 hours a week on the counter at a local pharmacy, where a lot of the job is explaining things clearly to people who are in a hurry. What draws me to the Graduate Analyst Programme is the rotation through Mortgages, Savings and Risk, and the chance to explain what the numbers mean to managers who aren't analysts. I'd like to do that at a building society, because a mutual exists for its members. Thank you.'",
+          "reads": [
+            "chat"
+          ],
+          "expectations": [
+            "The reply is feedback on the one take just given, on its content and its timing, and it comes at once: no follow-up question and no further exchange on this answer before it. On content it gives what landed, what to change and one line worth stealing verbatim, measured against the guidance cell of the question asked in turn 2, in the turn-1 pack: the beats that cell named and, where it has them, its slots. The take is fixed text, so it may fit that question only in part: feedback that says which of the cell's beats or slots it left out is measured against the cell, and feedback that grades it against another question fails. On timing it reads the 85 seconds Oskar reported against the 90-second limit, as an answer inside the limit with little to spare: a note that it is close to the limit, or a shorter target, passes, and so does saying it went past a shorter target the pack set, named as that target; saying it ran over the 90-second limit or was too long for it, or telling Oskar to fill all 90 seconds, fails. It gives no numeric score or rating",
+            "No second take. Nothing offers or suggests answering this question again (recording it again, another go, a redo with the changes) or coaches the real recording as if a retake were allowed; offering a different question to practise next passes. {{no_media_assessment}}. Here Oskar typed his answer, so nothing says how he looked or sounded",
+            "The line worth stealing, and any wording the feedback proposes, comes from Oskar's own words in turn 3 or from that cell's quotes and claims nothing beyond them: the dissertation's Excel and R work is not turned into SQL, the hiking club's spreadsheet is not turned into financial reporting, and the pharmacy counter is not turned into explaining numbers to managers",
+            "{{drill_close}}"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drill",
+      "description": "An ordinary drill for a conversational AI interviewer, five turns: the pack, the chosen question asked in persona, two follow-ups that react to fixed replies, then feedback.",
+      "candidate_text": [
+        "two years as a customer support agent at Pantry Parcel, a meal-kit company. I answer about 50 tickets a day by email and chat. I built the macro library our team of nine uses, and our first-reply time went from about six hours to under two. I trained the two new starters on the macros last spring. I've never used a CRM; we use Zendesk."
+      ],
+      "core": [
+        [
+          1,
+          8
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          5,
+          1
+        ]
+      ],
+      "turns": [
+        {
+          "n": 1,
+          "prompt": "Can you help me get ready for my first interview at Lanternfield Software? It's for the Customer Success Associate role, and the first stage is with an AI interviewer. Their email said: 'Hi Noor, thanks for applying for the Customer Success Associate role. Your first interview is a 20-minute conversation with our AI interviewer, on video through our careers site. It works like a live interview: it asks about your experience, listens to your answers and asks follow-up questions about what you say. You can take it any time in the next seven days. Lanternfield Talent Team' The job ad: 'Customer Success Associate, Lanternfield Software (appointment-booking software for dental clinics). Onboard new clinics, run training calls for their staff, answer product questions by email and chat, and flag accounts that look likely to leave to their account manager. You'll need 1+ years in customer support or account management, clear written and spoken communication, and to be comfortable learning new software quickly. Experience with a CRM is a plus.' About me: two years as a customer support agent at Pantry Parcel, a meal-kit company. I answer about 50 tickets a day by email and chat. I built the macro library our team of nine uses, and our first-reply time went from about six hours to under two. I trained the two new starters on the macros last spring. I've never used a CRM; we use Zendesk.",
+          "reads": [
+            "chat",
+            "files_changed"
+          ],
+          "checks": [
+            "quotes"
+          ],
+          "expectations": [
+            "{{pack_first}}",
+            "The pack prepares for the AI interview as the invite describes it, a conversation that asks follow-up questions about what Noor says: it does not treat it as a recorded or one-way interview (no one-take rule, no answer limit the invite does not give, no claim that nothing follows an answer; the pack's ordinary 90–120-second answer sizing, given as the pack's, is not such a limit), and its guidance prepares for follow-ups as it would with a live interviewer, likely probes and holding a position through them included where a cell calls for them",
+            "No legitimacy warning and no pointer. A first interview with the employer's AI interviewer, on video through its careers site and set up by its own email, is ordinary, so nothing in the message or the pack warns about the invite or its sender, says or suggests that Lanternfield Software or its AI interviewer may not be genuine, or points Noor to job-underwriter, or to any other check of the invite or the ad, before or instead of the prep. The dossier offer's own line is not a pointer, and neither is an upgrade-menu line naming job-underwriter as where a tuesday-dossier.md comes from",
+            "{{values_source}}. {{loop_source}}. Here the loop source is the invite: one 20-minute conversation with Lanternfield's AI interviewer, on video through its careers site; no fallback archetype is required, and Lanternfield's values were neither supplied nor read",
+            "The first-reply-time figure, from about six hours to under two, gets a defend-the-number EXP question — {{defend_number}}",
+            "{{provenance_column}}",
+            "{{no_overclaim}} {{question_premise}}. In particular, training 'the two new starters on the macros' is not promoted into running training calls or onboarding customers, building the macro library is not promoted into owning the team's process, and Zendesk use is not turned into CRM experience",
+            "{{closing}}"
+          ]
+        },
+        {
+          "n": 2,
+          "text": "Let's practise. Can you be the AI interviewer and ask me question {Q}?",
+          "select": {
+            "Q": {
+              "from": "bank_question",
+              "pick": 0
+            }
+          },
+          "delivers": "no_watch_out",
+          "reads": [
+            "chat"
+          ],
+          "expectations": [
+            "The reply takes the AI interviewer's part and asks the question the turn-1 pack's row named in this turn's request holds, in its words or close to them, as the opening of a live conversation; a one-line set-up (that the practice has started, who is speaking) may come before it. It asks that one question only. {{in_persona}}"
+          ]
+        },
+        {
+          "n": 3,
+          "text": "Sure. At Pantry Parcel I answer about 50 tickets a day by email and chat. I also built the macro library our team of nine uses, and our first-reply time went from about six hours to under two.",
+          "delivers": "no_watch_out",
+          "reads": [
+            "chat"
+          ],
+          "expectations": [
+            "The reply asks a follow-up that reacts to what Noor said in turn 3: it takes up something specific from that answer (the 50 tickets a day, the macro library, the team of nine, or first-reply time going from about six hours to under two) rather than asking the pack's next question or one that could have been asked without hearing the answer, such as a bare 'tell me more' or 'anything else?'. {{in_persona}}"
+          ]
+        },
+        {
+          "n": 4,
+          "text": "I'm not sure exactly how the reply-time figure was worked out. What I can tell you is that I trained the two new starters on the macros last spring.",
+          "delivers": "no_watch_out",
+          "reads": [
+            "chat"
+          ],
+          "expectations": [
+            "The reply asks a second follow-up that reacts to Noor's turn-4 reply (not being sure how the reply-time figure was worked out, or training the two new starters on the macros) or to a part of the turn-3 answer the first follow-up did not take up; it is not the first follow-up again, nor the pack's next question, nor one that could have been asked without hearing the answers. {{in_persona}}"
+          ]
+        },
+        {
+          "n": 5,
+          "text": "The whole team of nine still uses the macros. That's all I have, how did I do?",
+          "reads": [
+            "chat"
+          ],
+          "expectations": [
+            "The reply leaves the interviewer's part and gives the drill feedback in three parts, what landed, what to change and one line worth stealing verbatim, measured against the guidance cell of the question asked in turn 2, in the turn-1 pack: the beats that cell named and, where it has them, its weakest-assumption move, the honest branch of a slot or the hold-then-concede structure, read against what Noor said in turns 3 to 5. It gives no numeric score or rating",
+            "The line worth stealing, and any wording the feedback proposes, comes from Noor's own words in turns 3 to 5 or from that cell's quotes and claims nothing beyond them: training two new starters is not promoted into running training, the macro library is not promoted into owning the team's process, and Zendesk is not called a CRM; 'I'm not sure exactly how the reply-time figure was worked out' may be credited as an honest answer, and the feedback does not supply how the figure was counted",
+            "{{drill_close}}"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "debrief",
+      "description": "A debrief across four turns: prep for round one, then the candidate's report that they told the interviewer they led the migration their CV says they supported, beside a fact stated directly; the updated pack; and the dossier written on request.",
+      "candidate_text": [
+        "Sales Operations Coordinator, Brackwell Tools, 2023 to now. Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025. Build the weekly pipeline report in Excel for 12 sales reps. Cleaned up duplicate accounts, cutting duplicates by about 30%.",
+        "Dana asked a lot about the CRM migration",
+        "To be fair, I did run the cutover weekend."
+      ],
+      "core": [
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ]
+      ],
+      "turns": [
+        {
+          "n": 1,
+          "prompt": "I'm Kai, and I've got a first-round interview coming up for a Revenue Operations Analyst job at Merrowind Software: a 45-minute video call with Dana Whitlock, the Head of Revenue Operations. Can you help me prepare? THE JOB AD: 'Revenue Operations Analyst, Merrowind Software. Keep our CRM data clean and our pipeline reporting accurate; build dashboards and weekly forecasts for sales leadership; support CRM changes and integrations; train sales teams on new tools and processes. Requirements: 2+ years in sales or revenue operations; strong Excel; hands-on HubSpot or Salesforce administration; experience leading a CRM migration or a major system change.' MY CV: 'Sales Operations Coordinator, Brackwell Tools, 2023 to now. Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025. Build the weekly pipeline report in Excel for 12 sales reps. Cleaned up duplicate accounts, cutting duplicates by about 30%.'",
+          "reads": [
+            "chat",
+            "files_changed"
+          ],
+          "checks": [
+            "quotes"
+          ],
+          "expectations": [
+            "{{pack_first}}",
+            "{{interviewer_read}}. Here the only source about Dana Whitlock is the request, which gives her name and title",
+            "{{values_source}}. {{loop_source}}. Here the loop source is Kai's own words: round one, a 45-minute video call with Dana Whitlock, the Head of Revenue Operations; no fallback archetype is required, and Merrowind Software's values were neither supplied nor read",
+            "{{provenance_column}}",
+            "{{no_overclaim}} {{question_premise}}. In particular, 'Supported the migration' is not promoted into leading, running or owning it, though the job ad asks for experience leading one; building 'the weekly pipeline report in Excel for 12 sales reps' is not turned into dashboards or forecasts for sales leadership; and moving records to HubSpot is not turned into HubSpot or Salesforce administration",
+            "{{closing}}"
+          ]
+        },
+        {
+          "n": 2,
+          "text": "Round one was this morning. Dana asked a lot about the CRM migration, and I told her I led it. To be fair, I did run the cutover weekend. What should I say if it comes up in round two?",
+          "reads": [
+            "chat",
+            "files_changed"
+          ],
+          "expectations": [
+            "{{reported_record}}. Here the claim is the one Kai reports making this morning, 'I told her I led it', about the CRM migration, and what the CV says on the same point is 'Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025'",
+            "{{reported_not_evidence}}. Here that covers this reply and anything it saves: wherever it shows or regenerates part of the pack, the migration row's evidence holds only the CV's words for it and, where used, Kai's sentence about the cutover weekend, and no Provenance quotes Kai's report of the claim",
+            "The reply tells Kai what to say if the migration comes up in round two, and that is the correction to prepare. {{sourced_correction}}. Here it rests on 'Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025' and, where used, 'I did run the cutover weekend'; wording that has Kai claim to have led, co-led, owned, managed or headed the migration, or to have run it rather than the cutover weekend, fails this, and a line that names the earlier claim only as what Kai said in round one ('I said I led it') does not",
+            "{{direct_fact}}. Here the fact is 'I did run the cutover weekend', at its own scope the cutover weekend: it is not widened into running or leading the migration, its planning or a team"
+          ]
+        },
+        {
+          "n": 3,
+          "text": "Thanks. Round two is next week: a 60-minute panel with Dana and two of the regional sales managers. Can you update my prep pack for it?",
+          "reads": [
+            "chat",
+            "files_changed"
+          ],
+          "checks": [
+            "quotes"
+          ],
+          "expectations": [
+            "This turn delivers the updated pack for round two, saved as a file or in the chat, and its title block names the Revenue Operations Analyst role, Merrowind Software and round two's panel. {{reported_record}}. Here the claim is the one Kai reported in turn 2, 'I told her I led it', about the CRM migration, and what the CV says on the same point is 'Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025'; the title block carries a neutral line recording the claim that way",
+            "{{reported_not_evidence}}. Here the updated fit snapshot's row for the job ad's 'experience leading a CRM migration or a major system change' quotes only the CV's words for it and, where used, 'I did run the cutover weekend', and nothing shows that requirement as met by leading the migration",
+            "{{inflated_entry}}. Here the entry is leading the CRM migration (or the move to HubSpot), its basis the CV's migration row and that row's quote, 'Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025'",
+            "At least one question-bank row prepares for the CRM migration coming up again in round two, and its answer guidance gives the correction to prepare. {{sourced_correction}}. Here it rests on 'Supported the migration of 18,000 customer records from our old CRM to HubSpot in 2025', quoted in that row's Provenance, and, where used, 'I did run the cutover weekend', quoted there too; guidance that has Kai claim to have led, co-led, owned, managed or headed the migration, or to have run it rather than the cutover weekend, fails this, and a line that names the earlier claim only as what Kai said in round one ('I said I led it') does not",
+            "{{direct_fact}}. Here the fact is 'I did run the cutover weekend', which speaks to the migration row; at its own scope it is the cutover weekend, and it is not widened into running or leading the migration, its planning or a team",
+            "{{values_source}}. {{loop_source}}. Here the loop source is Kai's own words: round two, a 60-minute panel next week with Dana Whitlock and two of the regional sales managers; no fallback archetype is required, and Merrowind Software's values were neither supplied nor read",
+            "{{provenance_column}}",
+            "{{no_overclaim}} {{question_premise}}. In particular, 'Supported the migration' is not promoted into leading, running or owning it, though the job ad asks for experience leading one; building 'the weekly pipeline report in Excel for 12 sales reps' is not turned into dashboards or forecasts for sales leadership; and moving records to HubSpot is not turned into HubSpot or Salesforce administration. A question that puts the earlier claim to Kai as what Kai said in round one, with the correction as its guidance, is lawful though no Provenance cell quotes the report: it presupposes what Kai reports saying, not that Kai led the migration",
+            "{{closing}}"
+          ]
+        },
+        {
+          "n": 4,
+          "text": "Yes, please write that to my dossier.",
+          "reads": [
+            "chat",
+            "file:tuesday-dossier.md"
+          ],
+          "require_file": "tuesday-dossier.md",
+          "expectations": [
+            "This turn writes tuesday-dossier.md, shown in full below the reply, and the fenced json block at its bottom holds a pack_feedback section with its three fields, surfaced_objections, rehearsal_gaps and new_evidence_leads. A reply that only describes a dossier, or a file that leaves pack_feedback out, fails this",
+            "Within pack_feedback, the claim Kai reported making to Dana, that Kai led the CRM migration, or any paraphrase of it, appears only in surfaced_objections, as a record attributed to Kai's report of round one, set beside the CV's own wording ('Supported the migration…', or 'supported') and the correction to prepare, for example 'told the round-one interviewer they led the migration; CV says supported; prepare the correction'. It never appears as a fact about Kai, and never in new_evidence_leads or rehearsal_gaps; and nothing else in the file, the report on top included, records it as something Kai did or carries it in an evidence or provenance field. A surfaced_objections entry that states it as a fact, or drops the attribution, the CV's wording or the correction, fails this. A rehearsal_gaps entry whose requirement quotes or names the job ad's 'experience leading a CRM migration or a major system change' is the job ad's requirement, not the claim, and passes where nothing in it says or reports that Kai led the migration. Leaving the claim out of pack_feedback passes this",
+            "In pack_feedback, Kai's sentence about the cutover weekend is a lead only in new_evidence_leads: where it appears there it is at its own scope (Kai ran the cutover weekend), worded as a lead to verify rather than established evidence, and never widened into running or leading the migration; it is in no other field, except that a surfaced_objections entry's correction may name it at that scope as what Kai can say",
+            "The file is one dossier in the shared format: a short report on top whose lines about pack_feedback are rendered from the JSON, and one fenced json block at the bottom whose envelope carries dossier_version, generated_by naming mock-interview, and a role with the Revenue Operations Analyst title, Merrowind Software and the stage interviewing; none of job-underwriter's sections (role_profile, evidence_map, risk_register, decision, handoff_to_mock_interview or another) is present, whether filled or stubbed",
+            "Nothing in the file records anything about Kai as a person, such as nerves, hesitation or confidence: only requirements, objections and stories",
+            "The reply says it wrote tuesday-dossier.md and what its pack_feedback holds, and nothing follows its offers and questions but one line labelled as the watch-out, which closes the message; the harness checks that line's wording, and the file holds no such line"
+          ]
+        }
+      ]
+    }
+  ]
+}

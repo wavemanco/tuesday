@@ -35,9 +35,9 @@ Inventory every provided input against the contract below. Extract before you as
 Four special cases:
 
 - **`tuesday-dossier.md` in context or uploads.** Read `references/dossier-handoff.md` (its fields are `references/dossier-schema.md`'s) and consume it: `handoff_to_mock_interview` carries verified evidence, allowed strategies per weak area, the objection worth the deepest rehearsal, risks and employer questions for the reverse bank, and absolute `prohibited_claims`; `role_profile` satisfies the JD tier. A dossier sharpens the pack — it never gates it, and a pack built without one is still a complete pack.
-- **Government ID.** A passport, national ID, tax ID, social-security number or driver's license card, pasted or uploaded: don't repeat or use it or its number; say it isn't needed, and proceed. A license or registration, driving included, is evidence as stated: kind, issuer, class, status and expiry go in the gap-and-bridge language; its number goes in no research call; checking it is the candidate's. A background check counts by stated status alone. Check content, not filename.
+- **Government ID.** A passport, national ID, tax ID, social-security number or driver's license card, pasted or uploaded: don't repeat or use it or its number; say it isn't needed, and proceed. A license or registration, driving included, is evidence as stated: kind, issuer, class, status and expiry go in the gap-and-bridge language; its number goes in no research call and is never declined with the ID; checking it is the candidate's. A background check counts by stated status alone. Check content, not filename.
 - **Personality / working-style assessments.** Accept if offered; never solicit one. They feed only the delivery-coaching section (Step 3) under the guardrails below.
-- **Warning signs in an invite.** A demand to pay a fee or for equipment, or to deposit a cheque; bank, tax or government-ID details before an offer; or a hiring process run wholly by chat, named employer or not. Chat scheduling, a generic example or a negated demand is no sign. One paragraph opens the message: it quotes the invite's own words exactly, from the user's message and never from an `ARGUMENTS:` summary of it, any account, card or ID number left out at an ellipsis (`IBAN ...`), warns once, names job-underwriter once as a check the candidate can ask for, and sends any check only through contact details the candidate finds; nothing later in the message or the pack repeats the warning. A complete pack follows, or, if the company or role is missing, one question asking for them (`references/output-template.md`).
+- **Warning signs in an invite.** A demand to pay a fee or for equipment, or to deposit a cheque; bank, tax or government-ID details before an offer; or a hiring process run wholly by chat, named employer or not. Chat scheduling, a generic example or a negated demand is no sign. One paragraph opens the message and gives no other reason for doubt: it quotes the invite's own words exactly, from the user's message and never from an `ARGUMENTS:` summary of it, any account, card or ID number left out at an ellipsis (`IBAN ...`), warns once, names job-underwriter once as a check the candidate can ask for, and sends any check only through contact details the candidate finds; nothing later in the message or the pack repeats the warning. A complete pack follows, or, if the company or role is missing, one question asking for them (`references/output-template.md`).
 
 ### Step 1 — Elicit only what shapes the skeleton, and never before delivering
 
@@ -78,7 +78,7 @@ Two one-line offers ride the delivery, neither of them pushed: the drill (below)
 
 ### Step 5 — Iterate
 
-When new inputs arrive, regenerate only the affected sections and say what changed and why. A fact the candidate states outside a drill — an answer to an answer slot included — is new material: quote it into the fit snapshot and regenerate the rows that draw on it. Late structural facts (relationship, round type) justify restructuring — reweight personas, add or replace banks. Enhancers add sections. Recompute, don't patch inconsistently: no section may contradict another.
+When new inputs arrive, regenerate only the affected sections and say what changed and why. A fact the candidate states outside a drill — an answer to an answer slot included — is new material: quote it into the fit snapshot and regenerate the rows that draw on it. A claim they report making to an interviewer is not: it stays a record (`references/output-template.md`). Late structural facts (relationship, round type) justify restructuring — reweight personas, add or replace banks. Enhancers add sections. Recompute, don't patch inconsistently: no section may contradict another.
 
 ## Output discipline
 
@@ -100,7 +100,6 @@ watch_out: **Watch-out:** Suggested answers can make your experience sound bigge
 every one the guidance's claims about their experience rest on. In the fit
 snapshot the quotes sit in the evidence column and the label stands alone.
 
-The drill and dossier offers are one line each, neither pushed.
 `closing_order` governs the delivery as a whole: the pack, whose last section is
 the upgrade menu, then the offers, then any questions, then the watch-out line.
 When the pack is saved as a file, the offers, the questions and the watch-out line
@@ -110,13 +109,13 @@ it never goes — the pack file, a drill's in-character turns — is
 
 ## The n + x rule
 
-`references/interaction-grammar.md` §8 binds: *n*, this spec's sections, whole; *x*, anything beyond spec, only as a one-line labeled offer of what it adds and why this engagement earns it, built on approval and never woven in silently. The offer may ride an already-needed Step 1 message; otherwise it lands with the delivered pack, like the drill offer. Flag x that keeps earning approval for codification.
+`references/interaction-grammar.md` §8 binds: *n*, this spec's sections, whole; *x*, anything beyond spec, only as a one-line labeled offer of what it adds and why this engagement earns it, built on approval and never woven in silently. The offer may ride an already-needed Step 1 message; otherwise it lands with the delivered pack, like the drill offer.
 
 ## Modes
 
 - **Session** (default): one pack for one upcoming conversation.
 - **Loop**: multiple scheduled rounds → shared fit snapshot plus per-round mini-packs with per-round persona weights. Spec in `references/output-template.md`.
-- **Drill**: after any pack, offer one live rehearsal — Claude adopts a persona and runs the question with reactive follow-ups, then gives feedback against **that question's own guidance cell**: the beats it named, the weakest-assumption move, the hold-then-concede structure — and an answer slot, met by either honest branch, never by the practice it names. That cell is the rubric. Spec in `references/output-template.md`.
+- **Drill**: after any pack, offer one rehearsal — live, with reactive follow-ups, or, for a recorded or one-way interview, one timed take with none — then give feedback against **that question's own guidance cell**; an answer slot is met by either honest branch, never by the practice it names. That cell is the rubric. Spec in `references/output-template.md`.
 
 ## Input contract and degradation ladder
 

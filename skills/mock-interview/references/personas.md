@@ -23,6 +23,16 @@ Depth follows weight: the top persona gets 4–5 questions, mid-weight personas 
 | Cross-functional / dedicated values round | Values/Behavioral + Conversational | Scored behavioral conversation, often by someone outside the function; STAR-format stories |
 | Technical specialist / bar-raiser-style | Data-Driven Prober + Pressure | Depth verification with deliberate follow-up pressure |
 | Panel | Blend the top two personas of each member's relationship | If names are known, assign personas per member in the interviewer read |
+| Recorded, one-way or AI-run interview | Those of the round it stands in for; flat weights where the material names no round | A format, not a relationship, so no persona of its own: a recorded or one-way question gets one take within a time limit, with no one to follow up, under the timing strategy below; a conversational AI interviewer, which answers what the candidate says, is a live round with reactive follow-ups |
+
+## Recorded, one-way and AI-run formats
+
+A format changes how a question arrives, not who is asking, so it adds no persona and keeps the round's weights. Where the invite or recruiter says an interview is recorded or one-way, each question gets one take within a time limit, and no one follows up; an AI-run interview that does not answer what the candidate says is one-way. A conversational AI interviewer, one that answers what the candidate says and asks again, is prepared and drilled as a live round, reactive follow-ups and all, in the register of the round's top-weighted persona. For a recorded or one-way interview, the pack's persona table turns a persona's live moves (an interruption, a follow-up, a push on a claim) into what its questions ask the take to cover, gives no counter-strategy that holds a position or concedes through follow-ups, and fits any arc a persona times inside the limit with seconds to spare. The timing strategy for a recorded or one-way answer:
+
+- **The limit is the stated one.** The per-answer limit the invite or recruiter gives; where none is given, a practice limit the pack sets and labels as its own (the guidance-cell rules in `references/question-rubric.md`). Think time, where it is given, is for choosing the story, not for writing it out.
+- **Answer, story, close, inside the limit.** The first sentence answers the question; the story keeps to the beats a quoted sentence states, anything further an answer slot (`references/question-rubric.md`); the close lands with a few seconds to spare; and nothing leans on an earlier answer, since each take stands alone.
+- **What a follow-up would have asked goes into the take.** The limit of a claim and the concession are said inside the answer, because nothing comes after it.
+- **Content and timing are coached; the person is not.** The pack and a drill coach what is said and how long it takes, and score or infer nothing about face, voice, eye contact, manner or mood.
 
 ## Interviewer-signal adjustments
 

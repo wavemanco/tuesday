@@ -903,6 +903,19 @@ for a fixture's run: a fit_ledger fixture without it, or with any other value,
 fails the run as a `fixture` error, and the response's own envelope never stands
 in for it.
 
+`candidate_text` is what the candidate gave as material, and a claim they report
+having made to an interviewer is not that. mock-interview's debrief cases, eval 15
+and the `debrief` transcript in `skills/mock-interview/evals/transcripts.json`,
+keep the CV, the facts the candidate states directly ("I trained the 12 reps on
+HubSpot after we went live.", "To be fair, I did run the cutover weekend.") and
+their account of what the interviewer asked ("She asked a lot about the CRM
+migration on my CV") in it, and leave the reported answer out ("I told her I led
+it"), so a verbatim evidence cell or a Provenance quotation that cites that answer
+as the candidate's fails the quotes check. A quotation of it under a label naming
+another source, such as the interviewer, is read as a raising source's line and
+passes the check: the cases' expectation on evidence, which the graders judge and
+the round adjudicates, holds that case.
+
 - **denied** is the historical condition, now pinned: `--setting-sources project
   --strict-mcp-config`, with WebSearch and WebFetch present and refused. Never
   `--disallowedTools` here — refused, not absent, is what the historical data
@@ -1746,6 +1759,17 @@ Relative dates are written for the run's date, as a fixture's are ("Dates
 relative to the run"). The scenario record, each turn record and each grade carry
 `script_sha256`, the sha256 of the script's canonical JSON once its clauses
 expand, and each pass records the scripts file's sha256.
+
+A module's scripts live beside its fixtures, in `skills/<module>/evals/transcripts.json`,
+which its README's tree names; `evals/` is never packaged, so a script, like a
+fixture, changes nothing a skill ships. The driver reads a script's clauses and its
+`from_fixture` cases from the worktree's `skills/<module>/evals/evals.json`, not from
+the scripts file's folder, so a frozen copy of the scripts file may sit anywhere. CI does not read a scripts file, so
+`load_scripts` and review hold it: the answer-keys group reads fixtures only, and a
+script carries the watch-out line only through the module's own clauses, leaving
+its wording on other turns to the harness's check. A clause only a script uses is
+defined in the scripts file, since `check_skills.py` fails a clause in evals.json
+that no fixture uses.
 
 ### Rooms, sessions and the nudge
 
